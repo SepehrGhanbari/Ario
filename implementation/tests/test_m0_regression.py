@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 from core.audit_engine import AuditEngine, AuditInput
 from core.schema import (
     Evidence,
@@ -5,6 +7,8 @@ from core.schema import (
     IntegrityRepresentation,
     HistoricalState,
     IndependenceStatus,
+    LineageAuthorizationDecision,
+    LineageCompatibilityAuthorization,
     LineageEdge,
     LineageCandidate,
     Provenance,
@@ -40,27 +44,49 @@ def evidence(eid, obs, independence):
     )
 
 
-def state(sid):
+def state(sid, *, state_id=None, content_reference=None):
     return HistoricalState(
-        state_id=f"STATE-{sid}",
+        state_id=state_id or f"STATE-{sid}",
         claim_id="CLAIM-M0-14J",
         state_version=sid,
         observed_at=TS,
         state_context=TemporalContext(snapshot_id=sid),
-        content_reference=ref(sid),
+        content_reference=content_reference or ref(sid),
         provenance=prov(f"PROV-{sid}"),
     )
 
 
-def edge(a, b):
+def edge(a, b, *, from_reference=None, to_reference=None):
     return LineageEdge(
         lineage_id=f"EDGE-{a}-{b}",
-        from_reference=ref(a),
-        to_reference=ref(b),
+        from_reference=from_reference or ref(a),
+        to_reference=to_reference or ref(b),
         relation_type="EXPLICIT_RELATION",
         derivation_reference=ref(f"DER-{a}-{b}"),
         admissibility_status="ADMISSIBLE",
         provenance=prov(f"PROV-{a}-{b}"),
+    )
+
+
+def lineage_authorization(
+    authorization_id,
+    source_type,
+    target_type,
+    decision=LineageAuthorizationDecision.AUTHORIZED,
+    *,
+    rule_id="M0-LRT01-XTYPE",
+    rule_version="1.0",
+    relation_type="EXPLICIT_RELATION",
+):
+    return LineageCompatibilityAuthorization(
+        authorization_id=authorization_id,
+        rule_id=rule_id,
+        rule_version=rule_version,
+        source_reference_type=source_type,
+        target_reference_type=target_type,
+        relation_type=relation_type,
+        decision=decision,
+        provenance=prov(f"PROV-{authorization_id}"),
     )
 
 
@@ -187,6 +213,380 @@ def test_d06_two_state_relation():
     )
 
     assert "TEMPORALLY_UNRESOLVED" not in r.violations
+
+
+def test_lrt01_same_type_temporal_edge_connects_states():
+    reference_a = Reference("CONTENT-LRT01-A", "STATE_CONTENT")
+    reference_b = Reference("CONTENT-LRT01-B", "STATE_CONTENT")
+    same_type_edge = edge(
+        "A",
+        "B",
+        from_reference=reference_a,
+        to_reference=reference_b,
+    )
+    related_pairs, authorization_violations = AuditEngine._collect_temporal_pairs(
+        {
+            (reference_a.reference_id, reference_a.reference_type),
+            (reference_b.reference_id, reference_b.reference_type),
+        },
+        (same_type_edge,),
+        ("M0-1.0",),
+    )
+    typed_pair = frozenset(
+        {
+            (reference_a.reference_id, reference_a.reference_type),
+            (reference_b.reference_id, reference_b.reference_type),
+        }
+    )
+
+    assert typed_pair in related_pairs
+    assert authorization_violations == []
+
+    r = run(
+        "LRT01-SAME-TYPE",
+        AuditInput(
+            historical_states=(
+                state("A", content_reference=reference_a),
+                state("B", content_reference=reference_b),
+            ),
+            lineage_edges=(same_type_edge,),
+        ),
+    )
+
+    assert "TEMPORALLY_UNRESOLVED" not in r.violations
+    assert r.verdict == "PASS"
+
+
+def test_lrt01_matching_ids_with_mismatched_endpoint_type_do_not_connect():
+    reference_a = Reference("CONTENT-LRT01-MISMATCH-A", "STATE_CONTENT")
+    reference_b = Reference("CONTENT-LRT01-MISMATCH-B", "STATE_CONTENT")
+    r = run(
+        "LRT01-TYPE-MISMATCH",
+        AuditInput(
+            historical_states=(
+                state("A", content_reference=reference_a),
+                state("B", content_reference=reference_b),
+            ),
+            lineage_edges=(
+                edge(
+                    "A",
+                    "B",
+                    from_reference=Reference(
+                        reference_a.reference_id, "OTHER_KIND"
+                    ),
+                    to_reference=reference_b,
+                ),
+            ),
+        ),
+    )
+
+    assert "TEMPORALLY_UNRESOLVED" in r.violations
+    assert r.verdict == "FAIL"
+
+
+def test_lrt01_duplicate_typed_content_references_are_unknown():
+    shared_reference = Reference("CONTENT-LRT01-SHARED", "STATE_CONTENT")
+    r = run(
+        "LRT01-DUPLICATE-TYPED-REFERENCE",
+        AuditInput(
+            historical_states=(
+                state(
+                    "A",
+                    state_id="STATE-LRT01-A",
+                    content_reference=shared_reference,
+                ),
+                state(
+                    "B",
+                    state_id="STATE-LRT01-B",
+                    content_reference=shared_reference,
+                ),
+            ),
+        ),
+    )
+
+    assert "UNKNOWN" in r.violations
+    assert r.verdict == "FAIL"
+
+
+def test_lrt01_distinct_state_ids_and_content_references_keep_edge_semantics():
+    references = (
+        Reference("CONTENT-LRT01-CHAIN-A", "STATE_CONTENT"),
+        Reference("CONTENT-LRT01-CHAIN-B", "STATE_CONTENT"),
+        Reference("CONTENT-LRT01-CHAIN-C", "STATE_CONTENT"),
+    )
+    r = run(
+        "LRT01-DISTINCT-STATE-AND-CONTENT-IDS",
+        AuditInput(
+            historical_states=(
+                state(
+                    "VERSION-A",
+                    state_id="STATE-INSTANCE-A",
+                    content_reference=references[0],
+                ),
+                state(
+                    "VERSION-B",
+                    state_id="STATE-INSTANCE-B",
+                    content_reference=references[1],
+                ),
+                state(
+                    "VERSION-C",
+                    state_id="STATE-INSTANCE-C",
+                    content_reference=references[2],
+                ),
+            ),
+            lineage_edges=(
+                edge(
+                    "CHAIN-A",
+                    "CHAIN-B",
+                    from_reference=references[0],
+                    to_reference=references[1],
+                ),
+                edge(
+                    "CHAIN-B",
+                    "CHAIN-C",
+                    from_reference=references[1],
+                    to_reference=references[2],
+                ),
+            ),
+        ),
+    )
+
+    assert "TEMPORALLY_UNRESOLVED" not in r.violations
+    assert r.verdict == "PASS"
+
+
+def test_lrt01_caller_authorized_cross_type_edge_remains_unknown():
+    source = Reference("CONTENT-LRT01-CROSS-SHARED", "STATE_CONTENT")
+    target = Reference("CONTENT-LRT01-CROSS-SHARED", "EVENT_RECORD")
+    cross_edge = edge(
+        "A",
+        "B",
+        from_reference=source,
+        to_reference=target,
+    )
+
+    cross_edge = replace(
+        cross_edge,
+        compatibility_authorizations=(
+            lineage_authorization("AUTH-A-B", "STATE_CONTENT", "EVENT_RECORD"),
+        ),
+    )
+    typed_pair = frozenset(
+        {
+            (source.reference_id, source.reference_type),
+            (target.reference_id, target.reference_type),
+        }
+    )
+    related_pairs, temporal_violations = AuditEngine._collect_temporal_pairs(
+        {
+            (source.reference_id, source.reference_type),
+            (target.reference_id, target.reference_type),
+        },
+        (cross_edge,),
+        ("M0-1.0", "M0-LRT01-XTYPE-1.0"),
+    )
+
+    assert typed_pair not in related_pairs
+    assert temporal_violations == ["UNKNOWN"]
+
+    r = run(
+        "LRT01-AUTHORIZED-CROSS-TYPE",
+        AuditInput(
+            historical_states=(
+                state("A", content_reference=source),
+                state("B", content_reference=target),
+            ),
+            lineage_edges=(cross_edge,),
+        ),
+        rule_versions=("M0-1.0", "M0-LRT01-XTYPE-1.0"),
+    )
+
+    assert "UNKNOWN" in r.violations
+    assert r.verdict == "FAIL"
+
+
+def test_lrt01_cross_type_edge_without_authorization_is_unresolved():
+    source = Reference("CONTENT-LRT01-NOAUTH-SHARED", "STATE_CONTENT")
+    target = Reference("CONTENT-LRT01-NOAUTH-SHARED", "EVENT_RECORD")
+    unresolved_edge = edge(
+        "A", "B", from_reference=source, to_reference=target
+    )
+    typed_pair = frozenset(
+        {
+            (source.reference_id, source.reference_type),
+            (target.reference_id, target.reference_type),
+        }
+    )
+    related_pairs, authorization_violations = AuditEngine._collect_temporal_pairs(
+        {
+            (source.reference_id, source.reference_type),
+            (target.reference_id, target.reference_type),
+        },
+        (unresolved_edge,),
+        ("M0-1.0",),
+    )
+
+    assert typed_pair not in related_pairs
+    assert authorization_violations == []
+
+    r = run(
+        "LRT01-CROSS-TYPE-NO-AUTHORIZATION",
+        AuditInput(
+            historical_states=(
+                state("A", content_reference=source),
+                state("B", content_reference=target),
+            ),
+            lineage_edges=(unresolved_edge,),
+        ),
+    )
+
+    assert "TEMPORALLY_UNRESOLVED" in r.violations
+    assert r.verdict == "FAIL"
+
+
+def test_lrt01_cross_type_authorization_is_directional():
+    source = Reference("CONTENT-LRT01-DIRECTION-A", "STATE_CONTENT")
+    target = Reference("CONTENT-LRT01-DIRECTION-B", "EVENT_RECORD")
+    cross_edge = edge(
+        "A", "B", from_reference=source, to_reference=target
+    )
+
+    cross_edge = replace(
+        cross_edge,
+        compatibility_authorizations=(
+            lineage_authorization("AUTH-REVERSED", "EVENT_RECORD", "STATE_CONTENT"),
+        ),
+    )
+    r = run(
+        "LRT01-CROSS-TYPE-REVERSED-AUTHORIZATION",
+        AuditInput(
+            historical_states=(
+                state("A", content_reference=source),
+                state("B", content_reference=target),
+            ),
+            lineage_edges=(cross_edge,),
+        ),
+        rule_versions=("M0-1.0", "M0-LRT01-XTYPE-1.0"),
+    )
+
+    assert "TEMPORALLY_UNRESOLVED" in r.violations
+
+
+def test_lrt01_explicit_cross_type_denial_is_inadmissible():
+    source = Reference("CONTENT-LRT01-DENIED-A", "STATE_CONTENT")
+    target = Reference("CONTENT-LRT01-DENIED-B", "EVENT_RECORD")
+    cross_edge = edge(
+        "A", "B", from_reference=source, to_reference=target
+    )
+
+    cross_edge = replace(
+        cross_edge,
+        compatibility_authorizations=(
+            lineage_authorization(
+                "AUTH-DENIED",
+                "STATE_CONTENT",
+                "EVENT_RECORD",
+                LineageAuthorizationDecision.DENIED,
+            ),
+        ),
+    )
+    typed_pair = frozenset(
+        {
+            (source.reference_id, source.reference_type),
+            (target.reference_id, target.reference_type),
+        }
+    )
+    related_pairs, temporal_violations = AuditEngine._collect_temporal_pairs(
+        {
+            (source.reference_id, source.reference_type),
+            (target.reference_id, target.reference_type),
+        },
+        (cross_edge,),
+        ("M0-1.0", "M0-LRT01-XTYPE-1.0"),
+    )
+
+    assert typed_pair not in related_pairs
+    assert temporal_violations == ["LINEAGE_INADMISSIBLE"]
+
+    r = run(
+        "LRT01-CROSS-TYPE-DENIED",
+        AuditInput(
+            historical_states=(
+                state("A", content_reference=source),
+                state("B", content_reference=target),
+            ),
+            lineage_edges=(cross_edge,),
+        ),
+        rule_versions=("M0-1.0", "M0-LRT01-XTYPE-1.0"),
+    )
+
+    assert "LINEAGE_INADMISSIBLE" in r.violations
+    assert r.verdict == "FAIL"
+
+
+def test_lrt01_unsupported_or_conflicting_authorization_is_unknown():
+    source = Reference("CONTENT-LRT01-CONFLICT-A", "STATE_CONTENT")
+    target = Reference("CONTENT-LRT01-CONFLICT-B", "EVENT_RECORD")
+    cross_edge = edge(
+        "A", "B", from_reference=source, to_reference=target
+    )
+
+    unsupported = replace(
+        cross_edge,
+        compatibility_authorizations=(
+            lineage_authorization(
+                "AUTH-UNSUPPORTED", "STATE_CONTENT", "EVENT_RECORD",
+                rule_version="9.9",
+            ),
+        ),
+    )
+    conflicting = replace(
+        cross_edge,
+        compatibility_authorizations=(
+            lineage_authorization("AUTH-ALLOW", "STATE_CONTENT", "EVENT_RECORD"),
+            lineage_authorization(
+                "AUTH-DENY", "STATE_CONTENT", "EVENT_RECORD",
+                LineageAuthorizationDecision.DENIED,
+            ),
+        ),
+    )
+    states = (
+        state("A", content_reference=source),
+        state("B", content_reference=target),
+    )
+
+    unsupported_result = run(
+        "LRT01-UNSUPPORTED-AUTHORIZATION",
+        AuditInput(historical_states=states, lineage_edges=(unsupported,)),
+        rule_versions=("M0-1.0", "M0-LRT01-XTYPE-9.9"),
+    )
+    conflicting_result = run(
+        "LRT01-CONFLICTING-AUTHORIZATION",
+        AuditInput(historical_states=states, lineage_edges=(conflicting,)),
+        rule_versions=("M0-1.0", "M0-LRT01-XTYPE-1.0"),
+    )
+    undeclared_result = run(
+        "LRT01-UNDECLARED-AUTHORIZATION",
+        AuditInput(
+            historical_states=states,
+            lineage_edges=(replace(
+                cross_edge,
+                compatibility_authorizations=(
+                    lineage_authorization(
+                        "AUTH-UNDECLARED", "STATE_CONTENT", "EVENT_RECORD"
+                    ),
+                ),
+            ),),
+        ),
+        rule_versions=("M0-1.0",),
+    )
+
+    assert "UNKNOWN" in unsupported_result.violations
+    assert "UNKNOWN" in conflicting_result.violations
+    assert "UNKNOWN" in undeclared_result.violations
+    assert unsupported_result.verdict == "FAIL"
+    assert conflicting_result.verdict == "FAIL"
+    assert undeclared_result.verdict == "FAIL"
 
 
 def test_r01_two_independent_evidence_records():

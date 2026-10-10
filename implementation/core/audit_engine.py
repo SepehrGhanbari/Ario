@@ -17,11 +17,33 @@ from .schema import (
     HistoricalMutationCandidate,
     IndependenceStatus,
     LineageCandidate,
+    LineageAuthorizationDecision,
+    LineageCompatibilityAuthorization,
     LineageEdge,
     RetrievalEvent,
     Reference,
     TemporalRelation,
     Timestamp,
+)
+
+
+# Engine-owned allowlist: request declarations and edge authorizations are claims,
+# and cannot add rules or type/relation bindings to this policy.
+TRUSTED_LINEAGE_COMPATIBILITY_POLICIES = frozenset(
+    {
+        (
+            "M0-LRT01-XTYPE",
+            "1.0",
+            "STATE_CONTENT",
+            "EVENT_RECORD",
+            "EXPLICIT_RELATION",
+        ),
+    }
+)
+SUPPORTED_LINEAGE_AUTHORIZATION_RULES = frozenset(
+    (rule_id, rule_version)
+    for rule_id, rule_version, _, _, _
+    in TRUSTED_LINEAGE_COMPATIBILITY_POLICIES
 )
 
 
@@ -56,6 +78,14 @@ class AuditInput:
                     edge.from_reference,
                     edge.to_reference,
                     edge.derivation_reference,
+                )
+            )
+            references.extend(
+                authorization.provenance.source_reference
+                for authorization in edge.compatibility_authorizations
+                if (
+                    authorization.provenance is not None
+                    and authorization.provenance.source_reference is not None
                 )
             )
 
@@ -189,6 +219,7 @@ class AuditEngine:
                 self._check_temporal_relations(
                     artifacts.historical_states,
                     artifacts.lineage_edges,
+                    rule_versions,
                 )
             )
             violations.extend(
@@ -395,6 +426,12 @@ class AuditEngine:
         for edge in lineage_edges:
             if edge.provenance is None:
                 violations.append("MISSING_PROVENANCE")
+            if any(
+                authorization.provenance is None
+                or authorization.provenance.source_reference is None
+                for authorization in edge.compatibility_authorizations
+            ):
+                violations.append("MISSING_PROVENANCE")
 
         for event in retrieval_events:
             if event.provenance is None:
@@ -521,49 +558,46 @@ class AuditEngine:
     def _check_temporal_relations(
         historical_states: Iterable[HistoricalState],
         lineage_edges: Iterable[LineageEdge],
+        rule_versions: tuple[str, ...],
     ) -> list[str]:
         states = tuple(historical_states)
 
         if len(states) < 2:
             return []
 
-        state_references = {
-            state.content_reference.reference_id
+        state_references = [
+            (
+                state.content_reference.reference_id,
+                state.content_reference.reference_type,
+            )
             for state in states
-        }
+        ]
+        if len(set(state_references)) != len(state_references):
+            # A typed content reference that names multiple state occurrences
+            # cannot identify an edge endpoint unambiguously.
+            return ["UNKNOWN"]
 
-        related_state_pairs: set[frozenset[str]] = set()
+        state_reference_set = set(state_references)
+        related_state_pairs, violations = AuditEngine._collect_temporal_pairs(
+            state_reference_set,
+            lineage_edges,
+            rule_versions,
+        )
 
-        for edge in lineage_edges:
-            endpoints = {
-                edge.from_reference.reference_id,
-                edge.to_reference.reference_id,
-            }
-
-            state_endpoints = endpoints.intersection(state_references)
-
-            if len(state_endpoints) == 2:
-                related_state_pairs.add(
-                    frozenset(state_endpoints)
-                )
+        if violations:
+            return violations
 
         if len(states) == 2:
             first, second = states
-            pair = frozenset(
-                (
-                    first.content_reference.reference_id,
-                    second.content_reference.reference_id,
-                )
-            )
+            pair = frozenset(state_references)
 
             if pair not in related_state_pairs:
                 return ["TEMPORALLY_UNRESOLVED"]
 
             return []
 
-        adjacency: dict[str, set[str]] = {
-            state.content_reference.reference_id: set()
-            for state in states
+        adjacency: dict[tuple[str, str], set[tuple[str, str]]] = {
+            reference: set() for reference in state_references
         }
 
         for pair in related_state_pairs:
@@ -571,8 +605,8 @@ class AuditEngine:
             adjacency[first].add(second)
             adjacency[second].add(first)
 
-        start = states[0].content_reference.reference_id
-        visited: set[str] = {start}
+        start = state_references[0]
+        visited: set[tuple[str, str]] = {start}
         frontier = [start]
 
         while frontier:
@@ -589,6 +623,104 @@ class AuditEngine:
             return ["TEMPORALLY_UNRESOLVED"]
 
         return []
+
+    @staticmethod
+    def _collect_temporal_pairs(
+        state_reference_set: set[tuple[str, str]],
+        lineage_edges: Iterable[LineageEdge],
+        rule_versions: tuple[str, ...],
+    ) -> tuple[set[frozenset[tuple[str, str]]], list[str]]:
+        """Resolve and collect only temporally admissible typed edge pairs."""
+        related_state_pairs: set[frozenset[tuple[str, str]]] = set()
+
+        violations: list[str] = []
+        for edge in lineage_edges:
+            source = (
+                edge.from_reference.reference_id,
+                edge.from_reference.reference_type,
+            )
+            target = (
+                edge.to_reference.reference_id,
+                edge.to_reference.reference_type,
+            )
+
+            # Resolve both typed endpoints before evaluating the relationship.
+            if (
+                source not in state_reference_set
+                or target not in state_reference_set
+            ):
+                continue
+
+            if source[1] != target[1]:
+                authorized, violation = AuditEngine._authorize_cross_type_edge(
+                    edge, rule_versions
+                )
+                if violation is not None:
+                    violations.append(violation)
+                if not authorized:
+                    continue
+
+            if source != target:
+                related_state_pairs.add(frozenset((source, target)))
+
+        return related_state_pairs, violations
+
+    @staticmethod
+    def _authorize_cross_type_edge(
+        edge: LineageEdge,
+        rule_versions: tuple[str, ...],
+    ) -> tuple[bool, str | None]:
+        authorizations = edge.compatibility_authorizations
+        if not authorizations:
+            return False, None
+
+        applicable: list[LineageCompatibilityAuthorization] = []
+        for authorization in authorizations:
+            if (
+                authorization.provenance is None
+                or authorization.provenance.source_reference is None
+            ):
+                return False, "UNKNOWN"
+            rule = (authorization.rule_id, authorization.rule_version)
+            if (
+                rule not in SUPPORTED_LINEAGE_AUTHORIZATION_RULES
+                or f"{authorization.rule_id}-{authorization.rule_version}"
+                not in rule_versions
+            ):
+                return False, "UNKNOWN"
+
+            if (
+                authorization.source_reference_type
+                == edge.from_reference.reference_type
+                and authorization.target_reference_type
+                == edge.to_reference.reference_type
+                and authorization.relation_type == edge.relation_type
+            ):
+                applicable.append(authorization)
+
+        if not applicable:
+            return False, None
+        if len(applicable) != 1:
+            return False, "UNKNOWN"
+
+        authorization = applicable[0]
+        trusted_policy = (
+            authorization.rule_id,
+            authorization.rule_version,
+            authorization.source_reference_type,
+            authorization.target_reference_type,
+            authorization.relation_type,
+        )
+        if trusted_policy not in TRUSTED_LINEAGE_COMPATIBILITY_POLICIES:
+            return False, "UNKNOWN"
+
+        if authorization.decision is LineageAuthorizationDecision.DENIED:
+            return False, "LINEAGE_INADMISSIBLE"
+
+        # The request's AUTHORIZED record is only a claim. No independent
+        # per-edge authorization source exists, so preserve UNKNOWN and fail
+        # closed even when the claim matches the engine compatibility policy.
+        return False, "UNKNOWN"
 
     @staticmethod
     def _check_lineage_candidates(
