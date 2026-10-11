@@ -550,7 +550,9 @@ def execute_action(action: dict, root: Path, backup_root: Path | None = None) ->
         tests = root / "implementation" / "tests"
         if not tests.is_dir():
             raise AgentRequestError("implementation/tests directory not found")
-        result = _run([sys.executable, "-m", "pytest", "-q", "tests"], root / "implementation", timeout=180)
+        result = _run([
+            sys.executable, "-B", "-m", "pytest", "-p", "no:cacheprovider", "-q", "tests",
+        ], root / "implementation", timeout=180)
     else:
         raise AgentRequestError("tool is not allowlisted")
     return {"ok": result["exit_code"] == 0, **result}
@@ -701,6 +703,7 @@ def _run_task_locked(task: dict, root: Path, ledger: Path) -> dict:
         criteria = task.get("success_criteria", [])
         if criteria:
             result["goal_verification"] = []
+            criteria_passed = True
             for criterion in criteria:
                 try:
                     observation = execute_action({
@@ -724,13 +727,13 @@ def _run_task_locked(task: dict, root: Path, ledger: Path) -> dict:
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                 })
                 if criterion_result["status"] != "PASSED":
+                    criteria_passed = False
                     result["status"] = "STOPPED"
                     result["recovery"] = (
                         "Declared actions returned success, but independent goal verification failed. "
                         "No automatic retry, rollback, or corrective write was attempted."
                     )
-                    break
-            else:
+            if criteria_passed:
                 result["status"] = "COMPLETED"
         else:
             result["status"] = "COMPLETED"
@@ -744,7 +747,8 @@ def inspect_execution_lock(ledger_path: str | Path) -> dict:
     ledger = Path(ledger_path).resolve()
     lock_path = ledger.with_name(ledger.name + ".lock")
     try:
-        raw = lock_path.read_bytes()
+        with lock_path.open("rb") as stream:
+            raw = stream.read(MAX_READ_BYTES + 1)
     except FileNotFoundError:
         return {
             "status": "NO_LOCK",
@@ -757,6 +761,15 @@ def inspect_execution_lock(ledger_path: str | Path) -> dict:
             "status": "UNKNOWN",
             "lock_path": str(lock_path),
             "error": str(exc),
+            "write_performed": False,
+            "automatic_removal": False,
+        }
+
+    if len(raw) > MAX_READ_BYTES:
+        return {
+            "status": "UNKNOWN",
+            "lock_path": str(lock_path),
+            "error": f"lock file exceeds the {MAX_READ_BYTES}-byte inspection limit",
             "write_performed": False,
             "automatic_removal": False,
         }

@@ -7,7 +7,7 @@ from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from ario_agent import AgentRequestError
+from ario_agent import AgentRequestError, MAX_READ_BYTES
 import ario_planner
 from ario_planner import _local_ollama_endpoint, _validate_plan_quality, build_observation, request_plan
 
@@ -247,6 +247,46 @@ class LocalOllamaPlannerTests(unittest.TestCase):
                 expected = (Path(directory) / relative).read_text(encoding="utf-8")
                 self.assertEqual(observed, expected, relative)
             self.assertTrue(all(step["status"] == "SUCCEEDED" for step in steps))
+
+    def test_oversized_source_line_is_rejected_with_bounded_reads(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "implementation/source.py"
+            target.parent.mkdir(parents=True)
+            target.write_bytes(b"x" * (MAX_READ_BYTES + 100))
+
+            original_open = Path.open
+            read_sizes = []
+
+            class ReadlineRecorder:
+                def __init__(self, stream):
+                    self.stream = stream
+
+                def __enter__(self):
+                    self.stream.__enter__()
+                    return self
+
+                def __exit__(self, *args):
+                    return self.stream.__exit__(*args)
+
+                def __iter__(self):
+                    return iter(self.stream)
+
+                def readline(self, size=-1):
+                    read_sizes.append(size)
+                    return self.stream.readline(size)
+
+            def tracked_open(path, *args, **kwargs):
+                stream = original_open(path, *args, **kwargs)
+                if path == target:
+                    return ReadlineRecorder(stream)
+                return stream
+
+            with patch.object(Path, "open", tracked_open):
+                with self.assertRaisesRegex(AgentRequestError, "line longer than"):
+                    ario_planner._read_action_chunks(root, "implementation/source.py", "step-read")
+
+            self.assertEqual(read_sizes, [MAX_READ_BYTES + 1])
 
     @patch("ario_planner.urllib.request.urlopen")
     def test_recommendation_schema_error_gets_one_correction_attempt(self, urlopen):

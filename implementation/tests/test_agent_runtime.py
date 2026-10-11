@@ -1,10 +1,12 @@
 import hashlib
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-from ario_agent import AgentRequestError, execute_action, inspect_execution_lock, inspect_task_history, parse_task, run_task
+from ario_agent import MAX_READ_BYTES, AgentRequestError, execute_action, inspect_execution_lock, inspect_task_history, parse_task, run_task
 
 
 class BoundedAgentTests(unittest.TestCase):
@@ -26,6 +28,23 @@ class BoundedAgentTests(unittest.TestCase):
             result = run_task(task, root, root / "audit.jsonl")
             self.assertEqual(result["status"], "STOPPED")
             self.assertIn("workspace", result["steps"][0]["observation"]["error"])
+
+    @patch("ario_agent._run")
+    def test_run_tests_disables_bytecode_and_pytest_cache(self, run):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "implementation" / "tests").mkdir(parents=True)
+            run.return_value = {"exit_code": 0, "stdout": "tests passed", "stderr": ""}
+
+            result = execute_action({"tool": "run_tests"}, root)
+
+            self.assertTrue(result["ok"])
+            command, working_directory = run.call_args.args
+            self.assertEqual(command, [
+                sys.executable, "-B", "-m", "pytest", "-p", "no:cacheprovider", "-q", "tests",
+            ])
+            self.assertEqual(working_directory, root / "implementation")
+            self.assertEqual(run.call_args.kwargs, {"timeout": 180})
 
     def test_inspect_execution_lock_reports_valid_record_without_modifying_it(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -65,6 +84,48 @@ class BoundedAgentTests(unittest.TestCase):
             result = inspect_execution_lock(ledger)
 
             self.assertEqual(result["status"], "UNKNOWN")
+            self.assertFalse(result["write_performed"])
+            self.assertFalse(result["automatic_removal"])
+            self.assertEqual(lock.read_bytes(), original)
+
+    def test_inspect_execution_lock_bounds_oversized_file_read_without_modification(self):
+        with tempfile.TemporaryDirectory() as directory:
+            ledger = Path(directory) / "audit.jsonl"
+            lock = Path(str(ledger) + ".lock")
+            original = b"x" * (MAX_READ_BYTES + 100)
+            lock.write_bytes(original)
+
+            original_open = Path.open
+            read_sizes = []
+
+            class ReadRecorder:
+                def __init__(self, stream):
+                    self.stream = stream
+
+                def __enter__(self):
+                    self.stream.__enter__()
+                    return self
+
+                def __exit__(self, *args):
+                    return self.stream.__exit__(*args)
+
+                def read(self, size=-1):
+                    read_sizes.append(size)
+                    return self.stream.read(size)
+
+            def tracked_open(path, *args, **kwargs):
+                stream = original_open(path, *args, **kwargs)
+                if path == lock:
+                    return ReadRecorder(stream)
+                return stream
+
+            with patch.object(Path, "open", tracked_open):
+                result = inspect_execution_lock(ledger)
+
+            self.assertEqual(result["status"], "UNKNOWN")
+            self.assertIn("exceeds the", result["error"])
+            self.assertNotIn("sha256", result)
+            self.assertEqual(read_sizes, [MAX_READ_BYTES + 1])
             self.assertFalse(result["write_performed"])
             self.assertFalse(result["automatic_removal"])
             self.assertEqual(lock.read_bytes(), original)
@@ -667,6 +728,48 @@ class BoundedAgentTests(unittest.TestCase):
             self.assertFalse(result["goal_verification"][0]["observation"]["matches"])
             self.assertIn("independent goal verification failed", result["recovery"])
             self.assertEqual(target.read_text(encoding="utf-8"), "actual")
+
+    def test_goal_contract_observes_later_criteria_after_a_failure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "action.txt").write_text("inspect", encoding="utf-8")
+            (root / "first.txt").write_text("actual", encoding="utf-8")
+            (root / "second.txt").write_text("expected", encoding="utf-8")
+            ledger = root / "audit.jsonl"
+            task = {
+                **self.task([{
+                    "step_id": "inspect", "tool": "read_text", "path": "action.txt"
+                }]),
+                "success_criteria": [
+                    {
+                        "criterion_id": "first-mismatch",
+                        "path": "first.txt",
+                        "expected_text": "expected",
+                    },
+                    {
+                        "criterion_id": "second-match",
+                        "path": "second.txt",
+                        "expected_text": "expected",
+                    },
+                ],
+            }
+
+            result = run_task(task, root, ledger)
+
+            self.assertEqual(result["status"], "STOPPED")
+            self.assertEqual(
+                [(item["criterion_id"], item["status"]) for item in result["goal_verification"]],
+                [("first-mismatch", "FAILED"), ("second-match", "PASSED")],
+            )
+            events = [json.loads(line) for line in ledger.read_text(encoding="utf-8").splitlines()]
+            criterion_events = [
+                event for event in events if event["event"] == "GOAL_CRITERION_OBSERVED"
+            ]
+            self.assertEqual(
+                [event["criterion_id"] for event in criterion_events],
+                ["first-mismatch", "second-match"],
+            )
+            self.assertEqual(events[-1]["status"], "STOPPED")
 
     def test_invalid_goal_contract_is_rejected_before_any_action(self):
         with tempfile.TemporaryDirectory() as directory:

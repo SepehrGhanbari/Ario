@@ -338,7 +338,10 @@ def _read_action_chunks(root: Path, relative: str, step_prefix: str) -> list[dic
     next_line = 1
     chunk_bytes = 0
     with target.open("rb") as stream:
-        for raw_line in stream:
+        while True:
+            raw_line = stream.readline(MAX_READ_BYTES + 1)
+            if not raw_line:
+                break
             if len(raw_line) > MAX_READ_BYTES:
                 raise AgentRequestError(
                     f"planner source review cannot chunk a line longer than {MAX_READ_BYTES} bytes: {relative}"

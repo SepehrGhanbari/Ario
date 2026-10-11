@@ -79,7 +79,7 @@ The placeholder hash is illustrative, not executable. If the precondition fails,
 - `inspect_backup`: read-only SHA-256 and byte count for an existing backup selected by a relative path under the external backup directory; it rejects traversal and symbolic-link paths.
 - `git_status`: run fixed `git status --short --branch`.
 - `compile_python`: compile one existing `.py` file.
-- `run_tests`: run the fixed `python -m pytest -q tests` command from `implementation/`.
+- `run_tests`: run the fixed `python -B -m pytest -p no:cacheprovider -q tests` command from `implementation/`. `-B` and the disabled pytest cache provider prevent the runner from writing Python bytecode or pytest cache files; they do not sandbox side effects implemented by the test code itself.
 - `replace_text`: replace an existing UTF-8 text file only when its current SHA-256 matches the task's expected hash. It writes a byte-for-byte backup outside the workspace (under the ledger directory's `backups/` folder), atomically replaces the file, and verifies the resulting hash. Original and replacement content are capped at 20,000 bytes.
 - `restore_backup`: restore a backup selected by a relative path beneath the external `backups/` folder, only when the current target's SHA-256 matches the task's expected hash. Before restoration, it preserves the current target as a new backup and verifies the restored hash. A backup path cannot escape the backup folder.
 - `verify_text`: compare an existing UTF-8 text file against an explicitly declared `expected_text` postcondition. A mismatch fails the step and stops the task, preventing later steps from running. This is exact text verification, not proof of broader semantic success.
