@@ -981,7 +981,7 @@ def main(argv=None) -> int:
         result = run_task(payload, args.workspace, args.ledger)
         print(json.dumps(result, ensure_ascii=False, sort_keys=True))
         return 0 if result["status"] == "COMPLETED" else 2
-    except (OSError, json.JSONDecodeError, AgentRequestError) as exc:
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError, AgentRequestError) as exc:
         print(json.dumps({"status": "UNKNOWN", "error": str(exc)}, ensure_ascii=False, sort_keys=True), file=sys.stderr)
         return 2
 

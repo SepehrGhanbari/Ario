@@ -1,5 +1,6 @@
 import hashlib
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -12,6 +13,69 @@ from ario_agent import MAX_READ_BYTES, AgentRequestError, execute_action, inspec
 class BoundedAgentTests(unittest.TestCase):
     def task(self, actions):
         return {"task_id": "TASK-001", "goal": "Inspect a workspace safely", "actions": actions}
+
+    def test_cli_rejects_invalid_task_input_before_execution(self):
+        cli = Path(__file__).resolve().parents[1] / "ario_agent.py"
+        for label, raw in (("invalid-utf8", b"\xff"), ("invalid-json", b"{")):
+            with self.subTest(input=label), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                target = root / "evidence.txt"
+                target.write_bytes(b"preserve")
+                task_file = root / "task.json"
+                task_file.write_bytes(raw)
+                ledger = root / "ledger" / "events.jsonl"
+
+                result = subprocess.run(
+                    [sys.executable, "-B", "-X", "utf8", str(cli), "--task", str(task_file),
+                     "--workspace", str(root), "--ledger", str(ledger)],
+                    capture_output=True, text=True, encoding="utf-8", check=False,
+                )
+
+                self.assertEqual(result.returncode, 2, result.stderr)
+                self.assertEqual(result.stdout, "")
+                response = json.loads(result.stderr)
+                self.assertEqual(set(response), {"status", "error"})
+                self.assertEqual(response["status"], "UNKNOWN")
+                self.assertIsInstance(response["error"], str)
+                self.assertTrue(response["error"])
+                self.assertNotIn("Traceback", result.stderr)
+                self.assertEqual(target.read_bytes(), b"preserve")
+                self.assertFalse(ledger.parent.exists())
+                self.assertFalse(ledger.exists())
+                self.assertFalse(ledger.with_name(ledger.name + ".lock").exists())
+                self.assertEqual(sorted(path.name for path in root.iterdir()),
+                                 ["evidence.txt", "task.json"])
+
+    def test_cli_accepts_valid_utf8_task_input_with_or_without_bom(self):
+        cli = Path(__file__).resolve().parents[1] / "ario_agent.py"
+        for bom in (False, True):
+            with self.subTest(bom=bom), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                target = root / "evidence.txt"
+                target.write_bytes(b"ready")
+                task = self.task([
+                    {"step_id": "read", "tool": "read_text", "path": "evidence.txt"},
+                ])
+                task["goal"] = "Read caf\u00e9"
+                raw = json.dumps(task, ensure_ascii=False).encode("utf-8")
+                task_file = root / "task.json"
+                task_file.write_bytes((b"\xef\xbb\xbf" if bom else b"") + raw)
+                ledger = root / "ledger" / "events.jsonl"
+
+                result = subprocess.run(
+                    [sys.executable, "-B", "-X", "utf8", str(cli), "--task", str(task_file),
+                     "--workspace", str(root), "--ledger", str(ledger)],
+                    capture_output=True, text=True, encoding="utf-8", check=False,
+                )
+
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stderr, "")
+                response = json.loads(result.stdout)
+                self.assertEqual(response["status"], "COMPLETED")
+                self.assertEqual(response["goal"], task["goal"])
+                self.assertEqual(target.read_bytes(), b"ready")
+                self.assertTrue(ledger.is_file())
+                self.assertFalse(ledger.with_name(ledger.name + ".lock").exists())
 
     def test_rejects_unknown_fields_and_non_allowlisted_tools(self):
         with self.assertRaisesRegex(AgentRequestError, "exactly"):

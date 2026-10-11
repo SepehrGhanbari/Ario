@@ -26,6 +26,8 @@ From the repository root, run:
 python .\implementation\ario_agent.py --task "$env:TEMP\ario-task.json" --workspace "$HOME\Ario" --ledger "$HOME\Ario\runtime\agent-events.jsonl"
 ```
 
+Invalid task-file UTF-8 decoding or JSON parsing is reported as JSON with `status: UNKNOWN` on stderr, exit code `2`, and empty stdout, before task execution or ledger/lock creation. Valid UTF-8 task files with or without a UTF-8 BOM remain accepted.
+
 The ledger is append-only JSONL. Keep it in a trusted directory and protect it with normal filesystem permissions.
 
 ## Read-only execution-lock inspection
