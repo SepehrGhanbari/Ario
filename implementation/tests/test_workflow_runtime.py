@@ -137,6 +137,60 @@ class BoundedWorkflowTests(unittest.TestCase):
         with self.assertRaisesRegex(AgentRequestError, "exactly workflow_id"):
             parse_workflow(unknown)
 
+    def test_stage_count_accepts_eight_and_rejects_nine(self):
+        stages = [
+            self.stage(
+                f"stage-{index}",
+                f"TASK-{index}",
+                [{"step_id": "status", "tool": "git_status"}],
+            )
+            for index in range(1, 9)
+        ]
+
+        parsed = parse_workflow(self.workflow(stages))
+        self.assertEqual(len(parsed["stages"]), 8)
+
+        too_many_stages = [
+            self.stage(
+                f"stage-{index}",
+                f"TASK-{index}",
+                [{"step_id": "status", "tool": "git_status"}],
+            )
+            for index in range(1, 10)
+        ]
+        with self.assertRaisesRegex(AgentRequestError, "between 1 and 8 stages"):
+            parse_workflow(self.workflow(too_many_stages))
+
+    def test_eight_stage_workflow_executes_and_records_every_stage(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "evidence.txt").write_text("observed", encoding="utf-8")
+            ledger = root / "events.jsonl"
+            stages = [
+                self.stage(
+                    f"stage-{index}",
+                    f"TASK-{index}",
+                    [{"step_id": "read", "tool": "read_text", "path": "evidence.txt"}],
+                )
+                for index in range(1, 9)
+            ]
+
+            result = run_workflow(
+                self.workflow(stages, workflow_id="WF-EIGHT-STAGES"), root, ledger
+            )
+
+            self.assertEqual(result["status"], "COMPLETED")
+            self.assertEqual([stage["status"] for stage in result["stages"]], ["COMPLETED"] * 8)
+            events = [json.loads(line) for line in ledger.read_text(encoding="utf-8").splitlines()]
+            stage_events = [
+                event for event in events if event["event"] == "WORKFLOW_STAGE_OBSERVED"
+            ]
+            self.assertEqual([event["stage_id"] for event in stage_events], [
+                f"stage-{index}" for index in range(1, 9)
+            ])
+            self.assertEqual(events[-1]["event"], "WORKFLOW_FINISHED")
+            self.assertEqual(events[-1]["status"], "COMPLETED")
+
     def test_duplicate_workflow_id_is_rejected_before_new_stages(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
