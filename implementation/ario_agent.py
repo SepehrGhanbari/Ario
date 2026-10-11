@@ -17,8 +17,28 @@ MAX_READ_BYTES = 20_000
 ALLOWED_TOOLS = {"inspect_directory", "read_text", "file_fingerprint", "inspect_backup", "recovery_preflight", "git_status", "compile_python", "run_tests", "replace_text", "restore_backup", "verify_text"}
 
 
+RUN_TEST_MODULES = {
+    "test_agent_runtime.py": "tests/test_agent_runtime.py",
+    "test_m0_regression.py": "tests/test_m0_regression.py",
+    "test_planner_runtime.py": "tests/test_planner_runtime.py",
+    "test_runtime_cli.py": "tests/test_runtime_cli.py",
+    "test_workflow_runtime.py": "tests/test_workflow_runtime.py",
+}
+
+
 class AgentRequestError(ValueError):
     pass
+
+
+def _test_target(action: dict) -> str:
+    if "test_module" not in action:
+        return "tests"
+    if action.get("tool") != "run_tests":
+        raise AgentRequestError("test_module is valid only for run_tests")
+    module = action["test_module"]
+    if not isinstance(module, str) or module not in RUN_TEST_MODULES:
+        raise AgentRequestError("test_module must name one of the five allowlisted regression modules")
+    return RUN_TEST_MODULES[module]
 
 
 def _inside(root: Path, relative: str) -> Path:
@@ -65,7 +85,7 @@ def parse_task(payload: Any) -> dict:
     seen: set[str] = set()
     normalized = []
     for index, action in enumerate(actions):
-        if not isinstance(action, dict) or set(action) - {"step_id", "tool", "path", "content", "expected_sha256", "backup_path", "expected_text", "start_line", "expected_next_start_line", "expected_truncated"}:
+        if not isinstance(action, dict) or set(action) - {"step_id", "tool", "path", "content", "expected_sha256", "backup_path", "expected_text", "start_line", "expected_next_start_line", "expected_truncated", "test_module"}:
             raise AgentRequestError(f"actions[{index}] has an invalid shape")
         if not {"step_id", "tool"} <= set(action):
             raise AgentRequestError(f"actions[{index}] requires step_id and tool")
@@ -76,6 +96,7 @@ def parse_task(payload: Any) -> dict:
             raise AgentRequestError(f"actions[{index}].step_id must be unique and non-empty")
         if tool not in ALLOWED_TOOLS:
             raise AgentRequestError(f"actions[{index}].tool is not allowlisted")
+        _test_target(action)
         if tool in {"inspect_directory", "read_text", "file_fingerprint", "inspect_backup", "recovery_preflight", "compile_python", "replace_text", "restore_backup", "verify_text"}:
             if not isinstance(action.get("path"), str):
                 raise AgentRequestError(f"actions[{index}] requires a relative path")
@@ -127,7 +148,7 @@ def parse_task(payload: Any) -> dict:
                 raise AgentRequestError(f"actions[{index}].expected_truncated must be a boolean")
         seen.add(step_id)
         normalized_action = {"step_id": step_id, "tool": tool}
-        for field in ("path", "content", "expected_sha256", "backup_path", "expected_text", "start_line", "expected_next_start_line", "expected_truncated"):
+        for field in ("path", "content", "expected_sha256", "backup_path", "expected_text", "start_line", "expected_next_start_line", "expected_truncated", "test_module"):
             if field in action:
                 normalized_action[field] = action[field]
         normalized.append(normalized_action)
@@ -388,6 +409,7 @@ def _validate_read_text_observation(action: dict, observation: dict) -> dict:
 
 
 def execute_action(action: dict, root: Path, backup_root: Path | None = None) -> dict:
+    test_target = _test_target(action)
     tool = action["tool"]
     if tool == "file_fingerprint":
         target = _inside(root, action["path"])
@@ -550,7 +572,9 @@ def execute_action(action: dict, root: Path, backup_root: Path | None = None) ->
         tests = root / "implementation" / "tests"
         if not tests.is_dir():
             raise AgentRequestError("implementation/tests directory not found")
-        result = _run([sys.executable, "-m", "pytest", "-q", "tests"], root / "implementation", timeout=180)
+        result = _run([
+            sys.executable, "-B", "-m", "pytest", "-p", "no:cacheprovider", "-q", test_target,
+        ], root / "implementation", timeout=180)
     else:
         raise AgentRequestError("tool is not allowlisted")
     return {"ok": result["exit_code"] == 0, **result}
@@ -701,6 +725,7 @@ def _run_task_locked(task: dict, root: Path, ledger: Path) -> dict:
         criteria = task.get("success_criteria", [])
         if criteria:
             result["goal_verification"] = []
+            criteria_passed = True
             for criterion in criteria:
                 try:
                     observation = execute_action({
@@ -724,13 +749,13 @@ def _run_task_locked(task: dict, root: Path, ledger: Path) -> dict:
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                 })
                 if criterion_result["status"] != "PASSED":
+                    criteria_passed = False
                     result["status"] = "STOPPED"
                     result["recovery"] = (
                         "Declared actions returned success, but independent goal verification failed. "
                         "No automatic retry, rollback, or corrective write was attempted."
                     )
-                    break
-            else:
+            if criteria_passed:
                 result["status"] = "COMPLETED"
         else:
             result["status"] = "COMPLETED"
@@ -744,7 +769,8 @@ def inspect_execution_lock(ledger_path: str | Path) -> dict:
     ledger = Path(ledger_path).resolve()
     lock_path = ledger.with_name(ledger.name + ".lock")
     try:
-        raw = lock_path.read_bytes()
+        with lock_path.open("rb") as stream:
+            raw = stream.read(MAX_READ_BYTES + 1)
     except FileNotFoundError:
         return {
             "status": "NO_LOCK",
@@ -757,6 +783,15 @@ def inspect_execution_lock(ledger_path: str | Path) -> dict:
             "status": "UNKNOWN",
             "lock_path": str(lock_path),
             "error": str(exc),
+            "write_performed": False,
+            "automatic_removal": False,
+        }
+
+    if len(raw) > MAX_READ_BYTES:
+        return {
+            "status": "UNKNOWN",
+            "lock_path": str(lock_path),
+            "error": f"lock file exceeds the {MAX_READ_BYTES}-byte inspection limit",
             "write_performed": False,
             "automatic_removal": False,
         }
@@ -968,7 +1003,7 @@ def main(argv=None) -> int:
         result = run_task(payload, args.workspace, args.ledger)
         print(json.dumps(result, ensure_ascii=False, sort_keys=True))
         return 0 if result["status"] == "COMPLETED" else 2
-    except (OSError, json.JSONDecodeError, AgentRequestError) as exc:
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError, AgentRequestError) as exc:
         print(json.dumps({"status": "UNKNOWN", "error": str(exc)}, ensure_ascii=False, sort_keys=True), file=sys.stderr)
         return 2
 

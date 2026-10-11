@@ -124,6 +124,71 @@ Implementation MUST support:
 - branch preservation;
 - rejection of lineage inferred solely from identity, similarity, temporal proximity, or endpoint equality.
 
+Temporal lineage endpoints MUST resolve independently by typed reference identity
+(`reference_id`, `reference_type`). Endpoint resolution alone does not establish
+that the relationship is admissible. Under current M0 rules, same-type edges
+that satisfy the implemented structural checks may contribute to temporal
+connectivity. This is a structural result
+only; it is not an evidence-supported admissibility assessment or independent
+authorization.
+
+`LineageEdge.admissibility_status` is caller-supplied free-form input. Current M0
+checks only that it is nonempty; it does not independently derive, authenticate,
+or validate its meaning. The strings `ADMISSIBLE` and `DENIED` in that field
+therefore have no independent normative enforcement semantics.
+
+As a normative requirement for a future independent admissibility assessment,
+an independently assessed `UNKNOWN` or unresolved admissibility result MUST NOT
+contribute to connectivity. Current M0 does not perform that assessment; this
+requirement does not mean that M0 interprets the caller-supplied status as such
+an assessment. It does not relax IRG-03’s evidence requirements.
+
+For any future independent edge-specific assessment, `SUPPORTED`,
+`CONTRADICTED`, `NOT_OBSERVED`, and `AMBIGUOUS` are per-edge IRG-03
+assessment outcomes, not `AuditResult.verdict` values, and MUST NOT be inferred
+from `LineageEdge.admissibility_status`. Only an independently assessed
+`SUPPORTED` edge may become eligible for evidence-supported connectivity.
+`UNKNOWN`, unresolved, `NOT_OBSERVED`, `AMBIGUOUS`, and `CONTRADICTED`
+outcomes MUST NOT contribute to connectivity. The applicable probe MUST define
+how its per-edge outcome maps to existing violation codes. Any emitted
+violation continues through current M0 aggregate verdict behavior. Current M0
+does not perform this assessment; this clarification does not alter current
+connectivity behavior or introduce an overall `UNKNOWN` verdict.
+
+A lineage edge between different reference types MUST NOT
+establish temporal connectivity unless a supported, explicit, auditable
+`LineageCompatibilityAuthorization` matches the ordered source type, target
+type, and relation type. The authorization MUST identify its rule ID and
+version, an explicit `AUTHORIZED` or `DENIED` decision, and provenance. The
+engine-controlled trusted policy for `M0-LRT01-XTYPE` version `1.0` currently
+allows only the ordered binding (`STATE_CONTENT`, `EVENT_RECORD`,
+`EXPLICIT_RELATION`). The audit's `rule_versions` declaration and the edge's
+authorization record are claims that MUST match this policy; neither creates
+or extends it. Provenance is retained for auditability, but its presence alone
+does not authenticate authorization. A free-form `admissibility_status` alone
+MUST NOT authorize cross-type connectivity. Missing or inapplicable
+authorization leaves the relationship `TEMPORALLY_UNRESOLVED`; explicit denial
+for a trusted binding is `LINEAGE_INADMISSIBLE`; unsupported rules or bindings,
+multiple applicable authorizations, and ambiguous endpoint identity remain
+`UNKNOWN`. Authorization is directional; reversed types do not match. This
+requirement does not imply that all cross-type relations are invalid. As a
+temporary fail-closed policy, no independent per-edge authorization source is
+implemented. A caller-supplied `AUTHORIZED` record, its provenance, or
+compatibility-policy membership MUST NOT authorize an individual cross-type
+edge; such an authorization claim remains `UNKNOWN` and MUST NOT establish
+connectivity. Cross-type connectivity is unavailable until an independent
+authorization source is established. This unresolved audit result does not
+disprove the underlying relationship.
+
+For the current M0 audit input, every supplied temporal lineage edge is in scope
+for endpoint resolution. If either typed endpoint does not resolve to a
+historical-state content reference, the audit MUST report
+`TEMPORALLY_UNRESOLVED` and MUST NOT add that edge to temporal connectivity.
+Such an edge MUST NOT be silently ignored even when the other supplied edges
+connect all historical states. This requirement is scoped to the current
+all-edges M0 audit and does not define behavior for a future explicitly scoped
+path or subgraph query.
+
 Minimum negative tests:
 
 - identity-only lineage;
@@ -231,6 +296,10 @@ Supported statuses:
 - `TEMPORALLY_UNRESOLVED`.
 
 Temporal overlap is not required.
+
+For temporal connectivity established by lineage edges, cross-type endpoint
+relationships are subject to the explicit lineage-authorization requirement in
+IRG-03. Endpoint resolution and relationship admissibility remain separate.
 
 Required negative test:
 

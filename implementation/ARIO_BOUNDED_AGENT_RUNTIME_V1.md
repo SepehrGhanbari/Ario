@@ -26,6 +26,8 @@ From the repository root, run:
 python .\implementation\ario_agent.py --task "$env:TEMP\ario-task.json" --workspace "$HOME\Ario" --ledger "$HOME\Ario\runtime\agent-events.jsonl"
 ```
 
+Invalid task-file UTF-8 decoding or JSON parsing is reported as JSON with `status: UNKNOWN` on stderr, exit code `2`, and empty stdout, before task execution or ledger/lock creation. Valid UTF-8 task files with or without a UTF-8 BOM remain accepted.
+
 The ledger is append-only JSONL. Keep it in a trusted directory and protect it with normal filesystem permissions.
 
 ## Read-only execution-lock inspection
@@ -79,7 +81,7 @@ The placeholder hash is illustrative, not executable. If the precondition fails,
 - `inspect_backup`: read-only SHA-256 and byte count for an existing backup selected by a relative path under the external backup directory; it rejects traversal and symbolic-link paths.
 - `git_status`: run fixed `git status --short --branch`.
 - `compile_python`: compile one existing `.py` file.
-- `run_tests`: run the fixed `python -m pytest -q tests` command from `implementation/`.
+- `run_tests`: run the fixed `python -B -m pytest -p no:cacheprovider -q tests` command from `implementation/` when `test_module` is omitted. The optional selector accepts exactly `test_agent_runtime.py`, `test_m0_regression.py`, `test_planner_runtime.py`, `test_runtime_cli.py`, `test_workflow_runtime.py`; Ario maps it locally to `tests/<module>` instead of the whole-suite target. Explicit null, other types/values, paths/options, and the selector on other tools are rejected before execution, including direct action calls. The working directory, 180-second timeout, `-B`, and disabled pytest cache provider remain unchanged. These flags prevent Python bytecode or pytest cache writes; they do not sandbox side effects implemented by test code.
 - `replace_text`: replace an existing UTF-8 text file only when its current SHA-256 matches the task's expected hash. It writes a byte-for-byte backup outside the workspace (under the ledger directory's `backups/` folder), atomically replaces the file, and verifies the resulting hash. Original and replacement content are capped at 20,000 bytes.
 - `restore_backup`: restore a backup selected by a relative path beneath the external `backups/` folder, only when the current target's SHA-256 matches the task's expected hash. Before restoration, it preserves the current target as a new backup and verifies the restored hash. A backup path cannot escape the backup folder.
 - `verify_text`: compare an existing UTF-8 text file against an explicitly declared `expected_text` postcondition. A mismatch fails the step and stops the task, preventing later steps from running. This is exact text verification, not proof of broader semantic success.

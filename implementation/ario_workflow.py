@@ -48,7 +48,7 @@ def parse_workflow(payload: Any) -> dict:
 
         condition = stage.get("when")
         normalized_condition = None
-        if condition is not None:
+        if "when" in stage:
             if not isinstance(condition, dict) or set(condition) != {"stage_id", "status"}:
                 raise AgentRequestError(f"stages[{index}].when must contain exactly stage_id and status")
             ref_id, expected_status = condition["stage_id"], condition["status"]

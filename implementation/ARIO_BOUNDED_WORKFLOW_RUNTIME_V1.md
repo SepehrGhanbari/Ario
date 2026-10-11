@@ -61,6 +61,7 @@ Exit code `0` means the workflow completed; `1` means at least one executed stag
 
 - Maximum eight predeclared stages; each stage uses the existing strict bounded-task schema and allowlisted tools.
 - A `when` condition compares one earlier stage's final status exactly against `COMPLETED` or `STOPPED`. It cannot refer to future stages or evaluate expressions/code.
+- Omitting `when` declares an unconditional stage, subject to the continuation rules below. If present, `when` must be an object containing exactly `stage_id` and `status`; `null` is invalid and rejected before workflow execution or ledger/lock creation.
 - A stage whose condition expects `STOPPED` is restricted to read-only actions at validation time.
 - Once any stage stops, the workflow's final status remains `STOPPED`. Read-only diagnostic stages may still run when explicitly selected, but any later stage containing a write/restore action is skipped.
 - A condition that does not match yields `SKIPPED`; this is recorded and is not itself a failure.

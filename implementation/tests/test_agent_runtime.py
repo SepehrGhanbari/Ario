@@ -1,15 +1,81 @@
 import hashlib
 import json
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-from ario_agent import AgentRequestError, execute_action, inspect_execution_lock, inspect_task_history, parse_task, run_task
+from ario_agent import MAX_READ_BYTES, AgentRequestError, execute_action, inspect_execution_lock, inspect_task_history, parse_task, run_task
 
 
 class BoundedAgentTests(unittest.TestCase):
     def task(self, actions):
         return {"task_id": "TASK-001", "goal": "Inspect a workspace safely", "actions": actions}
+
+    def test_cli_rejects_invalid_task_input_before_execution(self):
+        cli = Path(__file__).resolve().parents[1] / "ario_agent.py"
+        for label, raw in (("invalid-utf8", b"\xff"), ("invalid-json", b"{")):
+            with self.subTest(input=label), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                target = root / "evidence.txt"
+                target.write_bytes(b"preserve")
+                task_file = root / "task.json"
+                task_file.write_bytes(raw)
+                ledger = root / "ledger" / "events.jsonl"
+
+                result = subprocess.run(
+                    [sys.executable, "-B", "-X", "utf8", str(cli), "--task", str(task_file),
+                     "--workspace", str(root), "--ledger", str(ledger)],
+                    capture_output=True, text=True, encoding="utf-8", check=False,
+                )
+
+                self.assertEqual(result.returncode, 2, result.stderr)
+                self.assertEqual(result.stdout, "")
+                response = json.loads(result.stderr)
+                self.assertEqual(set(response), {"status", "error"})
+                self.assertEqual(response["status"], "UNKNOWN")
+                self.assertIsInstance(response["error"], str)
+                self.assertTrue(response["error"])
+                self.assertNotIn("Traceback", result.stderr)
+                self.assertEqual(target.read_bytes(), b"preserve")
+                self.assertFalse(ledger.parent.exists())
+                self.assertFalse(ledger.exists())
+                self.assertFalse(ledger.with_name(ledger.name + ".lock").exists())
+                self.assertEqual(sorted(path.name for path in root.iterdir()),
+                                 ["evidence.txt", "task.json"])
+
+    def test_cli_accepts_valid_utf8_task_input_with_or_without_bom(self):
+        cli = Path(__file__).resolve().parents[1] / "ario_agent.py"
+        for bom in (False, True):
+            with self.subTest(bom=bom), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                target = root / "evidence.txt"
+                target.write_bytes(b"ready")
+                task = self.task([
+                    {"step_id": "read", "tool": "read_text", "path": "evidence.txt"},
+                ])
+                task["goal"] = "Read caf\u00e9"
+                raw = json.dumps(task, ensure_ascii=False).encode("utf-8")
+                task_file = root / "task.json"
+                task_file.write_bytes((b"\xef\xbb\xbf" if bom else b"") + raw)
+                ledger = root / "ledger" / "events.jsonl"
+
+                result = subprocess.run(
+                    [sys.executable, "-B", "-X", "utf8", str(cli), "--task", str(task_file),
+                     "--workspace", str(root), "--ledger", str(ledger)],
+                    capture_output=True, text=True, encoding="utf-8", check=False,
+                )
+
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stderr, "")
+                response = json.loads(result.stdout)
+                self.assertEqual(response["status"], "COMPLETED")
+                self.assertEqual(response["goal"], task["goal"])
+                self.assertEqual(target.read_bytes(), b"ready")
+                self.assertTrue(ledger.is_file())
+                self.assertFalse(ledger.with_name(ledger.name + ".lock").exists())
 
     def test_rejects_unknown_fields_and_non_allowlisted_tools(self):
         with self.assertRaisesRegex(AgentRequestError, "exactly"):
@@ -26,6 +92,104 @@ class BoundedAgentTests(unittest.TestCase):
             result = run_task(task, root, root / "audit.jsonl")
             self.assertEqual(result["status"], "STOPPED")
             self.assertIn("workspace", result["steps"][0]["observation"]["error"])
+
+    @patch("ario_agent._run")
+    def test_run_tests_disables_bytecode_and_pytest_cache(self, run):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "implementation" / "tests").mkdir(parents=True)
+            run.return_value = {"exit_code": 0, "stdout": "tests passed", "stderr": ""}
+
+            result = execute_action({"tool": "run_tests"}, root)
+
+            self.assertTrue(result["ok"])
+            command, working_directory = run.call_args.args
+            self.assertEqual(command, [
+                sys.executable, "-B", "-m", "pytest", "-p", "no:cacheprovider", "-q", "tests",
+            ])
+            self.assertEqual(working_directory, root / "implementation")
+            self.assertEqual(run.call_args.kwargs, {"timeout": 180})
+
+    @patch("ario_agent._run")
+    def test_run_tests_selects_each_allowlisted_module_and_retains_selector(self, run):
+        modules = (
+            "test_agent_runtime.py", "test_m0_regression.py", "test_planner_runtime.py",
+            "test_runtime_cli.py", "test_workflow_runtime.py",
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "implementation" / "tests").mkdir(parents=True)
+            run.return_value = {"exit_code": 0, "stdout": "selected tests passed", "stderr": ""}
+            for module in modules:
+                with self.subTest(module=module):
+                    action = {"step_id": "verify", "tool": "run_tests", "test_module": module}
+                    normalized = parse_task(self.task([action]))["actions"][0]
+                    self.assertEqual(normalized, action)
+                    result = execute_action(normalized, root)
+                    self.assertTrue(result["ok"])
+                    self.assertEqual(run.call_args.args, ([
+                        sys.executable, "-B", "-m", "pytest", "-p", "no:cacheprovider",
+                        "-q", f"tests/{module}",
+                    ], root / "implementation"))
+                    self.assertEqual(run.call_args.kwargs, {"timeout": 180})
+
+    def test_run_tests_selector_is_retained_in_failure_diagnostics(self):
+        diagnostic = {
+            "step_id": "verify", "tool": "run_tests",
+            "test_module": "test_agent_runtime.py",
+        }
+        payload = {
+            **self.task([{"step_id": "read", "tool": "read_text", "path": "evidence.txt"}]),
+            "failure_diagnostics": [diagnostic],
+        }
+        self.assertEqual(parse_task(payload)["failure_diagnostics"], [diagnostic])
+
+    def test_run_tests_rejects_invalid_selectors_before_actions_or_ledger(self):
+        invalid = (None, False, 123, [], {}, "", "test_unknown.py",
+                   "../test_agent_runtime.py", "test_agent_runtime.py -q")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "implementation" / "tests").mkdir(parents=True)
+            target = root / "evidence.txt"
+            target.write_bytes(b"preserve")
+            ledger = root / "ledger" / "events.jsonl"
+            for module in invalid:
+                with self.subTest(module=module):
+                    action = {"step_id": "verify", "tool": "run_tests", "test_module": module}
+                    payload = self.task([
+                        {"step_id": "read", "tool": "read_text", "path": "evidence.txt"},
+                        action,
+                    ])
+                    with (
+                        patch("ario_agent.execute_action") as execute,
+                        patch("ario_agent._append_event") as append_event,
+                        patch("ario_agent.os.open") as open_lock,
+                    ):
+                        with self.assertRaisesRegex(AgentRequestError, "allowlisted regression modules"):
+                            run_task(payload, root, ledger)
+                    execute.assert_not_called()
+                    append_event.assert_not_called()
+                    open_lock.assert_not_called()
+                    self.assertFalse(ledger.parent.exists())
+                    self.assertFalse(ledger.exists())
+                    self.assertFalse(ledger.with_name(ledger.name + ".lock").exists())
+                    self.assertEqual(target.read_bytes(), b"preserve")
+                    with patch("ario_agent._run") as run:
+                        with self.assertRaisesRegex(AgentRequestError, "allowlisted regression modules"):
+                            execute_action(action, root)
+                        run.assert_not_called()
+
+    def test_run_tests_selector_is_invalid_on_other_tools(self):
+        action = {
+            "step_id": "inspect", "tool": "inspect_directory", "path": ".",
+            "test_module": "test_agent_runtime.py",
+        }
+        with self.assertRaisesRegex(AgentRequestError, "valid only for run_tests"):
+            parse_task(self.task([action]))
+        with tempfile.TemporaryDirectory() as directory, patch("ario_agent._run") as run:
+            with self.assertRaisesRegex(AgentRequestError, "valid only for run_tests"):
+                execute_action(action, Path(directory))
+            run.assert_not_called()
 
     def test_inspect_execution_lock_reports_valid_record_without_modifying_it(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -65,6 +229,48 @@ class BoundedAgentTests(unittest.TestCase):
             result = inspect_execution_lock(ledger)
 
             self.assertEqual(result["status"], "UNKNOWN")
+            self.assertFalse(result["write_performed"])
+            self.assertFalse(result["automatic_removal"])
+            self.assertEqual(lock.read_bytes(), original)
+
+    def test_inspect_execution_lock_bounds_oversized_file_read_without_modification(self):
+        with tempfile.TemporaryDirectory() as directory:
+            ledger = Path(directory) / "audit.jsonl"
+            lock = Path(str(ledger) + ".lock")
+            original = b"x" * (MAX_READ_BYTES + 100)
+            lock.write_bytes(original)
+
+            original_open = Path.open
+            read_sizes = []
+
+            class ReadRecorder:
+                def __init__(self, stream):
+                    self.stream = stream
+
+                def __enter__(self):
+                    self.stream.__enter__()
+                    return self
+
+                def __exit__(self, *args):
+                    return self.stream.__exit__(*args)
+
+                def read(self, size=-1):
+                    read_sizes.append(size)
+                    return self.stream.read(size)
+
+            def tracked_open(path, *args, **kwargs):
+                stream = original_open(path, *args, **kwargs)
+                if path == lock:
+                    return ReadRecorder(stream)
+                return stream
+
+            with patch.object(Path, "open", tracked_open):
+                result = inspect_execution_lock(ledger)
+
+            self.assertEqual(result["status"], "UNKNOWN")
+            self.assertIn("exceeds the", result["error"])
+            self.assertNotIn("sha256", result)
+            self.assertEqual(read_sizes, [MAX_READ_BYTES + 1])
             self.assertFalse(result["write_performed"])
             self.assertFalse(result["automatic_removal"])
             self.assertEqual(lock.read_bytes(), original)
@@ -667,6 +873,48 @@ class BoundedAgentTests(unittest.TestCase):
             self.assertFalse(result["goal_verification"][0]["observation"]["matches"])
             self.assertIn("independent goal verification failed", result["recovery"])
             self.assertEqual(target.read_text(encoding="utf-8"), "actual")
+
+    def test_goal_contract_observes_later_criteria_after_a_failure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "action.txt").write_text("inspect", encoding="utf-8")
+            (root / "first.txt").write_text("actual", encoding="utf-8")
+            (root / "second.txt").write_text("expected", encoding="utf-8")
+            ledger = root / "audit.jsonl"
+            task = {
+                **self.task([{
+                    "step_id": "inspect", "tool": "read_text", "path": "action.txt"
+                }]),
+                "success_criteria": [
+                    {
+                        "criterion_id": "first-mismatch",
+                        "path": "first.txt",
+                        "expected_text": "expected",
+                    },
+                    {
+                        "criterion_id": "second-match",
+                        "path": "second.txt",
+                        "expected_text": "expected",
+                    },
+                ],
+            }
+
+            result = run_task(task, root, ledger)
+
+            self.assertEqual(result["status"], "STOPPED")
+            self.assertEqual(
+                [(item["criterion_id"], item["status"]) for item in result["goal_verification"]],
+                [("first-mismatch", "FAILED"), ("second-match", "PASSED")],
+            )
+            events = [json.loads(line) for line in ledger.read_text(encoding="utf-8").splitlines()]
+            criterion_events = [
+                event for event in events if event["event"] == "GOAL_CRITERION_OBSERVED"
+            ]
+            self.assertEqual(
+                [event["criterion_id"] for event in criterion_events],
+                ["first-mismatch", "second-match"],
+            )
+            self.assertEqual(events[-1]["status"], "STOPPED")
 
     def test_invalid_goal_contract_is_rejected_before_any_action(self):
         with tempfile.TemporaryDirectory() as directory:
