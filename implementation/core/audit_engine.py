@@ -561,10 +561,6 @@ class AuditEngine:
         rule_versions: tuple[str, ...],
     ) -> list[str]:
         states = tuple(historical_states)
-
-        if len(states) < 2:
-            return []
-
         state_references = [
             (
                 state.content_reference.reference_id,
@@ -572,11 +568,9 @@ class AuditEngine:
             )
             for state in states
         ]
-        if len(set(state_references)) != len(state_references):
-            # A typed content reference that names multiple state occurrences
-            # cannot identify an edge endpoint unambiguously.
-            return ["UNKNOWN"]
-
+        has_duplicate_references = (
+            len(set(state_references)) != len(state_references)
+        )
         state_reference_set = set(state_references)
         related_state_pairs, violations = AuditEngine._collect_temporal_pairs(
             state_reference_set,
@@ -584,8 +578,16 @@ class AuditEngine:
             rule_versions,
         )
 
+        if has_duplicate_references:
+            # Resolve every supplied edge, but never use candidate pairs when a
+            # typed content reference names multiple state occurrences.
+            return ["UNKNOWN", *violations]
+
         if violations:
             return violations
+
+        if len(states) < 2:
+            return []
 
         if len(states) == 2:
             first, second = states
@@ -649,6 +651,7 @@ class AuditEngine:
                 source not in state_reference_set
                 or target not in state_reference_set
             ):
+                violations.append("TEMPORALLY_UNRESOLVED")
                 continue
 
             if source[1] != target[1]:

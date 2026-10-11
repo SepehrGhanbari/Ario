@@ -79,8 +79,14 @@ Required conceptual fields:
 - `to_reference`
 - `relation_type`
 - `derivation_reference`
-- `admissibility_status`
-- `provenance`
+- `admissibility_status` — caller-supplied descriptive input. Current M0
+  requires it to be nonempty but does not independently derive, authenticate,
+  or validate its meaning. Values such as `ADMISSIBLE` or `DENIED` do not by
+  themselves establish evidence-supported admissibility or independently
+  authorize an edge.
+- `provenance` — source/derivation metadata. Its presence preserves
+  traceability but does not by itself authenticate a source, establish
+  independence, or demonstrate support for the represented relation.
 
 Identity equality, content similarity, or temporal proximity MUST NOT create a lineage edge by themselves.
 
@@ -268,6 +274,12 @@ where those verdicts are defined by the relevant probe.
 
 `UNKNOWN` remains representable as an epistemic state/reason, but MUST NOT be silently converted into a positive verdict.
 
+The current F07 candidate check is a rule/input filter. A candidate declaring
+`EXPLICIT_RELATION` may produce no F07 violation when the supported rule
+version is enabled. This result does not establish an evidence-supported
+assessment of a specific lineage edge under IRG-03.P02. Similarity-only
+candidates remain subject to the existing F07 rejection rule.
+
 ## 8. Evidence Independence
 
 M0 MUST track evidence ancestry sufficiently to prevent evidence inflation.
@@ -447,14 +459,14 @@ Before production integration, M0 should be tested against a minimal fixture mat
 | Duplicate Claim ID | identity conflict |
 | Historical append | accepted |
 | Historical overwrite | mutation failure |
-| Explicit lineage edge | accepted |
+| Explicit lineage edge | represented structurally; evidence-supported admissibility is not assessed |
 | Similarity-only lineage | inadmissible |
 | Retrieval with declared transform | auditable |
 | Retrieval with hidden transform | discrepancy/failure |
 | Assessment with declared evidence | accepted |
 | Assessment using verdict as evidence | forbidden |
 | Same observation copied twice | not independent |
-| T1 → T2 with explicit relation | admissible |
+| T1 → T2 with explicit relation | structural temporal relation only; evidence-supported admissibility is not assessed |
 | T1 + T2 without relation | temporally unresolved |
 | Five local PASSes → global truth | composition forbidden |
 | Missing provenance | provenance failure |

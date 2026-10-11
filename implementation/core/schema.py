@@ -234,6 +234,7 @@ class LineageEdge:
     derivation_reference: Reference
     admissibility_status: str
     provenance: Provenance
+    compatibility_authorizations: tuple["LineageCompatibilityAuthorization", ...] = ()
 
     def __post_init__(self) -> None:
         if not self.lineage_id or not self.lineage_id.strip():
@@ -245,6 +246,38 @@ class LineageEdge:
             or not self.admissibility_status.strip()
         ):
             raise ValueError("admissibility_status must be non-empty")
+
+
+class LineageAuthorizationDecision(str, Enum):
+    AUTHORIZED = "AUTHORIZED"
+    DENIED = "DENIED"
+
+
+@dataclass(frozen=True)
+class LineageCompatibilityAuthorization:
+    authorization_id: str
+    rule_id: str
+    rule_version: str
+    source_reference_type: str
+    target_reference_type: str
+    relation_type: str
+    decision: LineageAuthorizationDecision
+    provenance: Provenance
+
+    def __post_init__(self) -> None:
+        for name in (
+            "authorization_id",
+            "rule_id",
+            "rule_version",
+            "source_reference_type",
+            "target_reference_type",
+            "relation_type",
+        ):
+            value = getattr(self, name)
+            if not value or not value.strip():
+                raise ValueError(f"{name} must be non-empty")
+        if not isinstance(self.decision, LineageAuthorizationDecision):
+            raise ValueError("decision must be a LineageAuthorizationDecision")
 
 
 @dataclass(frozen=True)
