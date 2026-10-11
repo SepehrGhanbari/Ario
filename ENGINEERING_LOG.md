@@ -110,3 +110,19 @@ Recovery and limitations: one functions.exec helper-generation string failed wit
 
 Planned feature commit message: feat: support focused regression modules in bounded tasks
 Per the owner's new policy, the actual feature commit hash will be appended after that commit, following a uniquely named verified backup of the current log. A single log-only bookkeeping commit is authorized; its hash will be reported in the final result without a recursive recording loop.
+
+### ARIO-FOCUSED-TESTS-20261011-01 — feature commit recorded
+
+Actual feature commit: bb2d482fb856ec03a1108e75c8684c0c68ebab5e
+Message: feat: support focused regression modules in bounded tasks
+Branch: main. Parent checkpoint: b94f2a0bb412ca4c0a9d749092ba26d5a3c6fb73.
+The feature commit contains only implementation/ario_agent.py, implementation/tests/test_agent_runtime.py, implementation/ARIO_BOUNDED_AGENT_RUNTIME_V1.md, and ENGINEERING_LOG.md.
+
+Validation retained: focused selector checks passed (5 tests, 14 subtests); scratch selection/default integration behaved as expected; the authorized full-suite checkpoint passed once (186 tests, 39 subtests). No source changes or repeated tests were required for this bookkeeping append.
+
+Before recording this actual hash, the current 16285-byte log was backed up byte-for-byte and SHA256-verified at C:\Users\xx4773\AppData\Local\Ario\engineering-backups\focused-tests-20261011-01\backups\ENGINEERING_LOG.md.pre-commit-hash-record-20261011-01.
+Backup SHA256: 70457cd296dcf00f0e3864efc375a784a0066f8623f3f75a8c43c4b350c45b5f.
+Both the original 11160-byte task-start prefix and the complete pre-append log prefix are preserved.
+
+Planned log-only checkpoint message: docs: record focused test execution checkpoint
+The bookkeeping commit's own hash is reported in the final task result. No recursive hash-recording append or further commit is required.
