@@ -1,6 +1,7 @@
 import json
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 from ario_agent import AgentRequestError
@@ -79,6 +80,52 @@ class BoundedWorkflowTests(unittest.TestCase):
             self.assertEqual(result["status"], "COMPLETED")
             self.assertEqual(result["stages"][1]["status"], "SKIPPED")
             self.assertIn("condition not met", result["stages"][1]["reason"])
+
+    def test_explicit_null_condition_is_rejected_by_parser(self):
+        stage = self.stage("first", "TASK-NULL", [
+            {"step_id": "read", "tool": "read_text", "path": "evidence.txt"},
+        ])
+        stage["when"] = None
+
+        with self.assertRaisesRegex(
+            AgentRequestError, r"stages\[0\]\.when must contain exactly stage_id and status"
+        ):
+            parse_workflow(self.workflow([stage]))
+
+    def test_null_condition_in_any_stage_rejects_before_actions_or_ledger_locks(self):
+        for null_index in range(3):
+            with self.subTest(null_index=null_index), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                target = root / "evidence.txt"
+                target.write_text("preserve", encoding="utf-8")
+                ledger = root / "ledger" / "events.jsonl"
+                stages = [
+                    self.stage(f"stage-{index}", f"TASK-{index}", [
+                        {"step_id": "read", "tool": "read_text", "path": "evidence.txt"},
+                    ])
+                    for index in range(3)
+                ]
+                stages[null_index]["when"] = None
+
+                with (
+                    patch("ario_workflow.run_task") as execute,
+                    patch("ario_workflow._append_event") as append_event,
+                    patch("ario_workflow.os.open") as open_lock,
+                ):
+                    with self.assertRaisesRegex(
+                        AgentRequestError,
+                        rf"stages\[{null_index}\]\.when must contain exactly stage_id and status",
+                    ):
+                        run_workflow(self.workflow(stages), root, ledger)
+
+                execute.assert_not_called()
+                append_event.assert_not_called()
+                open_lock.assert_not_called()
+                self.assertFalse(ledger.parent.exists())
+                self.assertFalse(ledger.exists())
+                self.assertFalse(ledger.with_name(ledger.name + ".workflow.lock").exists())
+                self.assertFalse(ledger.with_name(ledger.name + ".lock").exists())
+                self.assertEqual(target.read_text(encoding="utf-8"), "preserve")
 
     def test_writes_are_rejected_in_a_stopped_branch_before_any_execution(self):
         with tempfile.TemporaryDirectory() as directory:
