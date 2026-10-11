@@ -126,3 +126,37 @@ Both the original 11160-byte task-start prefix and the complete pre-append log p
 
 Planned log-only checkpoint message: docs: record focused test execution checkpoint
 The bookkeeping commit's own hash is reported in the final task result. No recursive hash-recording append or further commit is required.
+
+## ARIO-ADV-XIRG-001 — regression preservation — 2026-10-12
+
+Explicit owner approval authorized appending one regression to implementation/tests/test_m0_regression.py and an append-only record to ENGINEERING_LOG.md, using only the designated new backup/scratch directories. No staging or commit is authorized.
+
+Source checkpoint: main at 21eb0a94bca505f7fe0d03c645404e189128ad43, initially no tracked unstaged or staged changes. Effective AGENTS.md, relevant contracts, existing helpers/F05/F15 tests, and the original ARIO-ADV-XIRG-001-20261012-01 evidence were inspected read-only.
+
+Changes: appended only test_adv_xirg_recomputed_hashes_do_not_authorize_history_or_composition. All imports and fixture helpers are function-local. Existing ref/state/edge/f05_candidate/run helpers are reused without changes. The test reconstructs the complete two-record JSONL fixture in memory, retains immutable baseline bytes before mutating an independent copy, rewrites the first observation and the second record's lineage source, and recomputes local hashes and predecessor pointers. It has no dependency on external evidence files, wall-clock time, a live ledger, or a simulated firewall.
+
+Pinned whole-fixture SHA256 values reproduce the original experiment:
+
+- Before / preserved in-memory baseline: 00a9c8f968a53e987e2c90b93eecf32186612d28bb12568bc608b59c13ef4e94
+- Mutated after: 1de90b651db983a31b82529b19e86755bee8f8f23579eba25935f165be9be529
+
+Both local hash chains verify. Actual engine calls accept baseline structural history/lineage controls, detect HISTORY_MUTATION and TEMPORALLY_UNRESOLVED after mutation, and preserve FAIL verdict with UNKNOWN violation when the canonical anchor is absent. Composition uses only the two actual history/lineage audit results with SUPPLIED_RESULTS_ONLY; no additional IRG verdicts are manufactured. Native CLAIM_TRUTH and SAME_ENTITY requests are COMPOSITION_FORBIDDEN, a bounded summary counts only the two supplied FAIL records and preserves explicit limitations, and wrapping that real summary as assessment evidence is rejected as COMPOSITION_FORBIDDEN.
+
+Preservation: the auxiliary root was absent before creation. Backups were created without overwriting and verified byte-for-byte and by SHA256 before either approved file was written.
+
+- C:\Users\xx4773\AppData\Local\Ario\engineering-backups\adv-xirg-regression-20261012-01\backups\test_m0_regression.py — f3fcf677811acb04cbec39a91202dba885feed6209af4c89e6feded0eaafb037; 69260 original bytes.
+- C:\Users\xx4773\AppData\Local\Ario\engineering-backups\adv-xirg-regression-20261012-01\backups\ENGINEERING_LOG.md — 0d19db2a82f9930e614fe41ec820625b5bd9e1ea793780027c3ef14981bc7070; 17689 original bytes.
+
+The regression file's complete original byte prefix and newline style are preserved. Post-append regression-file SHA256: 9bd4d19c1346bde24444940e4f2c8d06dd09b46190208f137f1a5f26d58362bd (76928 bytes). This engineering entry preserves all prior log bytes. Helper and validation outputs are confined to C:\Users\xx4773\AppData\Local\Ario\engineering-backups\adv-xirg-regression-20261012-01\scratch\.
+
+Actual validation:
+
+- Interpreter: C:\Users\xx4773\AppData\Local\Ario\venvs\ario-tests-py313\Scripts\python.exe.
+- From implementation: python -B -m pytest -p no:cacheprovider -q tests/test_m0_regression.py::test_adv_xirg_recomputed_hashes_do_not_authorize_history_or_composition
+- Exit code 0; 1 passed in 0.67s; empty stderr. No repeat or full-suite run.
+- PYTHONDONTWRITEBYTECODE=1 and TMP/TEMP pointed to the approved scratch directory; child output encoding was process-locally UTF-8. Exact argv/environment/timestamps/exit code are in scratch/validation.json; stdout/stderr are retained separately.
+- Test-only git diff --check exited 0 before validation. Final two-file diff/prefix/backup verification is reported in the final result and scratch evidence.
+
+No execution failures or collisions occurred. Production engine/schema, historical ledgers, archives, original evidence, unrelated files, previous backups, and governance were not edited. No Git staging, commit, push, merge, or configuration/permission changes were performed.
+
+Overall conclusion: INCONCLUSIVE. The passing regression establishes only that the implemented M0/F15 boundaries resist this specific synthetic mutation. Locally recomputed hashes are not independent historical authentication. Caller-supplied IRG labels and edge status do not establish complete IRG validity, historical continuity, entity continuity, or general security. HISTORICAL_CONTINUITY and new trust authorities were not implemented.
