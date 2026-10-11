@@ -74,3 +74,39 @@ Limitations: the complete agent module was not rerun after the isolated test-har
 
 Planned local commit message: fix: report invalid UTF-8 task input as unknown
 Task commit reference: the commit containing this task entry, discoverable through git log --format=%H -- ENGINEERING_LOG.md. Report the actual full hash in the task final result; do not insert a self-referential hash here.
+
+## ARIO-FOCUSED-TESTS-20261011-01 — 2026-10-11
+
+Ava-authorized bounded task applying the owner's productivity/resource policy. Starting checkpoint: main at b94f2a0bb412ca4c0a9d749092ba26d5a3c6fb73, no tracked unstaged or staged changes. Effective AGENTS.md was read and verified once; only the latest engineering-log entry was used as context. Unrelated historical/untracked artifacts were not inventoried or rehashed.
+
+Objective and benefit: allow one declared regression module through the existing run_tests tool, rather than forcing a whole-suite run for every bounded validation action. Omission preserves the existing whole-suite command. This implements proportionate validation without adding tools, arbitrary command options, dependencies, trust authorities, or security mechanisms.
+
+Exact repository scope:
+
+- C:\Users\xx4773\Ario\implementation\ario_agent.py
+- C:\Users\xx4773\Ario\implementation\tests\test_agent_runtime.py
+- C:\Users\xx4773\Ario\implementation\ARIO_BOUNDED_AGENT_RUNTIME_V1.md
+- C:\Users\xx4773\Ario\ENGINEERING_LOG.md (append only)
+
+Implementation: fixed mapping of test_agent_runtime.py, test_m0_regression.py, test_planner_runtime.py, test_runtime_cli.py, and test_workflow_runtime.py to tests/<module>. A shared validator rejects explicit null, wrong types/values, paths/options, and use of test_module on other tools before execution, including direct execute_action calls. Task and diagnostic normalization retain the selector. Omission still targets tests; -B, no:cacheprovider, implementation working directory, and 180-second timeout are unchanged.
+
+Auxiliary directories were verified unused before creation. All four originals were backed up byte-for-byte and SHA256-verified before edits under C:\Users\xx4773\AppData\Local\Ario\engineering-backups\focused-tests-20261011-01\backups\:
+
+- ario_agent.py — 220d5e75e0fb2796c01d9c9d5f59ea563c71034523af5d1a62a1e6a6c60823a8
+- test_agent_runtime.py — 6700f7b7926abcbe8fc4dcaf54d8d5f7219aacf9d644a87e7a0957c668f24004
+- ARIO_BOUNDED_AGENT_RUNTIME_V1.md — e80fc50012eb674adf9b9ef68bb03806a595778dfb5753e365df269079d5c386
+- ENGINEERING_LOG.md — 3eb8d4ec73ea561a39a01a15c6a866e6a3b4228422031cbc2fa705f8e25ac191 (11160 original bytes)
+
+The small manifest.json records source/backup paths and hashes. Helper scripts, fixture tests, runtime ledger, and integration output/evidence stay under the sibling scratch\ directory. Original implementation newline styles are preserved; prior engineering-log bytes are retained as an identical prefix.
+
+Actual validation, using C:\Users\xx4773\AppData\Local\Ario\venvs\ario-tests-py313\Scripts\python.exe with -B, inherited PYTHONDONTWRITEBYTECODE=1 and TMP/TEMP confined to scratch:
+
+- From implementation: python -B -m pytest -p no:cacheprovider -q tests/test_agent_runtime.py -k run_tests — exit 0; 5 passed, 46 deselected, 14 subtests passed in 0.47s. Covers all five module mappings, normalization including failure diagnostics, unchanged default command, and parser/direct-call rejection before actions/ledger effects.
+- One real scratch integration through run_task: selected test_agent_runtime.py collected one passing test; pytest exit 0, task COMPLETED, whole-task elapsed 0.963440 seconds. Omitted/default selection collected both fixture tests, including the deliberately failing unselected test_workflow_runtime.py; one passed and one failed, pytest exit 1, task STOPPED, elapsed 0.991202 seconds. The harness exited 0 because both outcomes were expected. Output and evidence.json are retained under scratch\selection-integration\. No broader timing savings are inferred.
+- Full implementation suite, exactly once as the authorized accumulated-change checkpoint: python -B -m pytest -p no:cacheprovider -q tests — exit 0; 186 passed, 39 subtests passed in 7.00s. No unchanged whole agent module was separately repeated.
+- git diff --check passed before this entry. Exact source/staged scope and whitespace checks, commits, and final backup/prefix/state verification are reported in the final task result.
+
+Recovery and limitations: one functions.exec helper-generation string failed with SyntaxError before execution because of an embedded Markdown backtick. No files were changed by that failed call; the corrected scratch-only helper applied the scoped changes successfully. No validation failures required source repair. The scratch counts/timings demonstrate selection, not a general performance benchmark. Unrelated/ignored artifact contents were not exhaustively fingerprinted, as instructed. All intentional writes were confined to authorized repository/auxiliary paths. No remote, branch, history, governance, permission/configuration, scheduler, or foundational changes were performed.
+
+Planned feature commit message: feat: support focused regression modules in bounded tasks
+Per the owner's new policy, the actual feature commit hash will be appended after that commit, following a uniquely named verified backup of the current log. A single log-only bookkeeping commit is authorized; its hash will be reported in the final result without a recursive recording loop.

@@ -110,6 +110,87 @@ class BoundedAgentTests(unittest.TestCase):
             self.assertEqual(working_directory, root / "implementation")
             self.assertEqual(run.call_args.kwargs, {"timeout": 180})
 
+    @patch("ario_agent._run")
+    def test_run_tests_selects_each_allowlisted_module_and_retains_selector(self, run):
+        modules = (
+            "test_agent_runtime.py", "test_m0_regression.py", "test_planner_runtime.py",
+            "test_runtime_cli.py", "test_workflow_runtime.py",
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "implementation" / "tests").mkdir(parents=True)
+            run.return_value = {"exit_code": 0, "stdout": "selected tests passed", "stderr": ""}
+            for module in modules:
+                with self.subTest(module=module):
+                    action = {"step_id": "verify", "tool": "run_tests", "test_module": module}
+                    normalized = parse_task(self.task([action]))["actions"][0]
+                    self.assertEqual(normalized, action)
+                    result = execute_action(normalized, root)
+                    self.assertTrue(result["ok"])
+                    self.assertEqual(run.call_args.args, ([
+                        sys.executable, "-B", "-m", "pytest", "-p", "no:cacheprovider",
+                        "-q", f"tests/{module}",
+                    ], root / "implementation"))
+                    self.assertEqual(run.call_args.kwargs, {"timeout": 180})
+
+    def test_run_tests_selector_is_retained_in_failure_diagnostics(self):
+        diagnostic = {
+            "step_id": "verify", "tool": "run_tests",
+            "test_module": "test_agent_runtime.py",
+        }
+        payload = {
+            **self.task([{"step_id": "read", "tool": "read_text", "path": "evidence.txt"}]),
+            "failure_diagnostics": [diagnostic],
+        }
+        self.assertEqual(parse_task(payload)["failure_diagnostics"], [diagnostic])
+
+    def test_run_tests_rejects_invalid_selectors_before_actions_or_ledger(self):
+        invalid = (None, False, 123, [], {}, "", "test_unknown.py",
+                   "../test_agent_runtime.py", "test_agent_runtime.py -q")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "implementation" / "tests").mkdir(parents=True)
+            target = root / "evidence.txt"
+            target.write_bytes(b"preserve")
+            ledger = root / "ledger" / "events.jsonl"
+            for module in invalid:
+                with self.subTest(module=module):
+                    action = {"step_id": "verify", "tool": "run_tests", "test_module": module}
+                    payload = self.task([
+                        {"step_id": "read", "tool": "read_text", "path": "evidence.txt"},
+                        action,
+                    ])
+                    with (
+                        patch("ario_agent.execute_action") as execute,
+                        patch("ario_agent._append_event") as append_event,
+                        patch("ario_agent.os.open") as open_lock,
+                    ):
+                        with self.assertRaisesRegex(AgentRequestError, "allowlisted regression modules"):
+                            run_task(payload, root, ledger)
+                    execute.assert_not_called()
+                    append_event.assert_not_called()
+                    open_lock.assert_not_called()
+                    self.assertFalse(ledger.parent.exists())
+                    self.assertFalse(ledger.exists())
+                    self.assertFalse(ledger.with_name(ledger.name + ".lock").exists())
+                    self.assertEqual(target.read_bytes(), b"preserve")
+                    with patch("ario_agent._run") as run:
+                        with self.assertRaisesRegex(AgentRequestError, "allowlisted regression modules"):
+                            execute_action(action, root)
+                        run.assert_not_called()
+
+    def test_run_tests_selector_is_invalid_on_other_tools(self):
+        action = {
+            "step_id": "inspect", "tool": "inspect_directory", "path": ".",
+            "test_module": "test_agent_runtime.py",
+        }
+        with self.assertRaisesRegex(AgentRequestError, "valid only for run_tests"):
+            parse_task(self.task([action]))
+        with tempfile.TemporaryDirectory() as directory, patch("ario_agent._run") as run:
+            with self.assertRaisesRegex(AgentRequestError, "valid only for run_tests"):
+                execute_action(action, Path(directory))
+            run.assert_not_called()
+
     def test_inspect_execution_lock_reports_valid_record_without_modifying_it(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
