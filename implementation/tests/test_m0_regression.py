@@ -2156,3 +2156,149 @@ def test_f15_assessment_rejects_forbidden_type_even_when_id_matches_evidence():
     )
     assert r.verdict == "FAIL"
     assert "COMPOSITION_FORBIDDEN" in r.violations
+
+
+def test_adv_xirg_recomputed_hashes_do_not_authorize_history_or_composition():
+    """Synthetic M0/F15 boundary regression; independent continuity stays unestablished."""
+    import copy
+    import hashlib
+    import json
+
+    from core.schema import (
+        Assessment, CompositionConclusion, CompositionInputScope,
+        CompositionParticipantResult, CompositionRequest,
+    )
+
+    def canonical(value):
+        return json.dumps(value, sort_keys=True, separators=(",", ":"),
+                          ensure_ascii=False).encode("utf-8")
+
+    def seal(records):
+        sealed = copy.deepcopy(records)
+        previous = None
+        for record in sealed:
+            record.pop("sha256", None)
+            record["previous_sha256"] = previous
+            record["sha256"] = hashlib.sha256(canonical(record)).hexdigest()
+            previous = record["sha256"]
+        return sealed
+
+    def ledger_bytes(records):
+        return b"".join(canonical(record) + b"\n" for record in records)
+
+    before = seal([
+        {"record_id": "ROW-0", "observed_at": "2026-10-12T00:00:00Z",
+         "payload": {"node_id": "NODE-A", "claim_id": "SYNTHETIC-CLAIM",
+                     "value": "original synthetic observation"}},
+        {"record_id": "ROW-1", "observed_at": "2026-10-12T00:01:00Z",
+         "payload": {"node_id": "NODE-B", "claim_id": "SYNTHETIC-CLAIM",
+                     "value": "synthetic successor",
+                     "lineage_from": "NODE-A", "lineage_to": "NODE-B"}},
+    ])
+    before_bytes = ledger_bytes(before)
+    preserved_before = memoryview(before_bytes).tobytes()
+    before_hash = hashlib.sha256(preserved_before).hexdigest()
+    after = copy.deepcopy(before)
+    after[0]["payload"]["value"] = "rewritten synthetic observation"
+    after[1]["payload"]["lineage_from"] = "MISSING-HISTORICAL-NODE"
+    after = seal(after)
+    after_hash = hashlib.sha256(ledger_bytes(after)).hexdigest()
+
+    assert before_hash == "00a9c8f968a53e987e2c90b93eecf32186612d28bb12568bc608b59c13ef4e94"
+    assert after_hash == "1de90b651db983a31b82529b19e86755bee8f8f23579eba25935f165be9be529"
+    assert before_hash != after_hash
+    assert ledger_bytes(before) == preserved_before
+    for records in (before, after):
+        previous = None
+        for record in records:
+            unhashed = {key: value for key, value in record.items() if key != "sha256"}
+            assert record["previous_sha256"] == previous
+            assert record["sha256"] == hashlib.sha256(canonical(unhashed)).hexdigest()
+            previous = record["sha256"]
+
+    rules = ("M0-1.0", "M0-F05-1.0", "M0-F15-1.0")
+    candidate = f05_candidate("ADV-BASELINE", "ADV-REWRITTEN", before_hash, after_hash)
+    baseline_candidate = replace(
+        candidate, attempted_replacement_integrity=IntegrityRepresentation("SHA256", before_hash))
+    assert run("ADV-HISTORY-BEFORE", AuditInput(
+        historical_mutation_candidates=(baseline_candidate,)), rules).verdict == "PASS"
+    history_result = run("ADV-HISTORY-AFTER", AuditInput(
+        historical_mutation_candidates=(candidate,)), rules)
+    assert history_result.verdict == "FAIL"
+    assert "HISTORY_MUTATION" in history_result.violations
+
+    states = tuple(replace(
+        state(row["payload"]["node_id"]), claim_id=row["payload"]["claim_id"],
+        observed_at=Timestamp(row["observed_at"]),
+        state_context=TemporalContext(
+            observed_at=Timestamp(row["observed_at"]), epoch="SYNTHETIC-EXPERIMENT",
+            snapshot_id=row["payload"]["node_id"]),
+    ) for row in before)
+    baseline_edge = edge(before[1]["payload"]["lineage_from"],
+                         before[1]["payload"]["lineage_to"])
+    assert run("ADV-LINEAGE-BEFORE", AuditInput(
+        historical_states=states, lineage_edges=(baseline_edge,)), rules).verdict == "PASS"
+    rewritten_edge = replace(baseline_edge, from_reference=ref(after[1]["payload"]["lineage_from"]))
+    lineage_result = run("ADV-LINEAGE-AFTER", AuditInput(
+        historical_states=states, lineage_edges=(rewritten_edge,)), rules)
+    assert lineage_result.verdict == "FAIL"
+    assert "TEMPORALLY_UNRESOLVED" in lineage_result.violations
+
+    unknown_result = run("ADV-HISTORY-NO-ANCHOR", AuditInput(
+        historical_mutation_candidates=(replace(candidate, canonical_integrity=None),)), rules)
+    assert unknown_result.verdict == "FAIL"
+    assert "UNKNOWN" in unknown_result.violations
+    assert "HISTORY_MUTATION" not in unknown_result.violations
+
+    # Compose actual audit outputs only; caller IRG labels do not authenticate full IRGs.
+    actual_results = (history_result, lineage_result)
+    summary_request = CompositionRequest(
+        composition_id="ADV-LOCAL-SUMMARY",
+        participant_results=(
+            CompositionParticipantResult("IRG-02", history_result.audit_id, "Synthetic byte comparison"),
+            CompositionParticipantResult("IRG-03", lineage_result.audit_id, "Typed endpoint resolution"),
+        ),
+        composition_rule_id="M0-F15-LOCAL-SUMMARY", composition_rule_version="1.0",
+        temporal_context="SYNTHETIC-AFTER",
+        requested_conclusion=CompositionConclusion.LOCAL_RESULT_SUMMARY,
+        limitations="No independent historical authentication or entity continuity",
+        scope="Supplied M0 records only",
+        requested_input_scope=CompositionInputScope.SUPPLIED_RESULTS_ONLY,
+    )
+    for conclusion in (CompositionConclusion.CLAIM_TRUTH, CompositionConclusion.SAME_ENTITY):
+        request = replace(
+            summary_request, composition_id=f"ADV-{conclusion.value}",
+            composition_rule_id="M0-F15", composition_rule_version="M0-F15-1.0",
+            requested_conclusion=conclusion)
+        forbidden = run(f"ADV-COMPOSE-{conclusion.value}", AuditInput(
+            prior_audit_results=actual_results, composition_requests=(request,)), rules)
+        assert forbidden.verdict == "FAIL"
+        assert "COMPOSITION_FORBIDDEN" in forbidden.violations
+        assert forbidden.composition_summaries == ()
+
+    summary_result = run("ADV-SUMMARY-RESULT", AuditInput(
+        prior_audit_results=actual_results, composition_requests=(summary_request,)), rules)
+    assert summary_result.verdict == "PASS"
+    assert len(summary_result.composition_summaries) == 1
+    summary = summary_result.composition_summaries[0]
+    assert summary.verdict_counts == (("FAIL", 2),)
+    assert "not independently authenticated" in summary.limitations
+    assert "does not establish Claim truth" in summary.limitations
+
+    wrapped = Evidence(
+        evidence_id="ADV-WRAPPED-SUMMARY",
+        observation_refs=(Reference(summary.composition_id, "COMPOSITION_SUMMARY"),),
+        evidence_level="ATTEMPTED_PROMOTION", independence_status=IndependenceStatus.UNKNOWN,
+        derivation_reference=ref("ADV-WRAPPING"), scope="Synthetic promotion attempt")
+    assessment = Assessment(
+        assessment_id="ADV-PROMOTED-ASSESSMENT", assessment_version="1",
+        rule_version="CALLER-PROMOTION",
+        admissible_evidence_refs=(Reference(wrapped.evidence_id, "EVIDENCE"),),
+        condition_evaluation="Attempt to reuse local summary as support",
+        assessment_basis="Not an independent observation",
+        scope="Attempted historical/entity continuity support")
+    promoted = run("ADV-SUMMARY-AS-EVIDENCE", AuditInput(
+        evidence=(wrapped,), assessments=(assessment,),
+        prior_audit_results=(summary_result,)), rules)
+    assert promoted.verdict == "FAIL"
+    assert "COMPOSITION_FORBIDDEN" in promoted.violations
