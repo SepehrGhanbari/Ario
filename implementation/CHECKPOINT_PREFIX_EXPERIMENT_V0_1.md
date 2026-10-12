@@ -184,3 +184,73 @@ This continuation uses C:\Users\xx4773\AppData\Local\Ario\engineering-backups\ch
 The 70 previously visible unrelated untracked paths remain protected. Inventory and metadata are compared during this continuation; retrospective content fingerprints were not available. Inaccessible existing pytest-cache contents were not inspected or changed. No owner secrets, real private keys, USB vault or production ledger contents are needed.
 
 Overall independent historical-continuity conclusion: **INCONCLUSIVE**.
+
+
+## Post-session regression milestones — 2026-10-12
+
+This append reconciles the completed test-only session without changing the comparator, fixtures or earlier evidence. The preceding **60-case count**, original test SHA256 **7d2699cf6532ca7bd77226f9f1a5751c455f3d107cffa005c182f3d253fb117c**, and **60-passed reproduction expectation** describe the historical retained checkpoint. They are not the current test-module count/hash. Their original text remains preserved byte-for-byte.
+
+At current tested module SHA256 **79e69726192c9a716caca875a3822c5be4c88afca9459907f588a9675ba139e7**, the latest retained targeted run reports **73 passed**. Current reproduction is expected to collect 73 cases; no pytest execution was performed during this documentation reconciliation.
+
+| Milestone | Local commit | Actual retained targeted result |
+|---|---|---|
+| Phase 1: mixed findings, missing floor, conflict and determinism coverage | 9ea4f094acb36fc29f910387d3b66c137b19c275 | 70 passed in 0.66s; exit 0; empty stderr |
+| Phase 3: exact checkpoint metadata across oracle orders | b45f971524ac26740cc5de78d9c2bb12b9383e42 | 73 passed in 0.68s; exit 0; empty stderr |
+
+Phase 1 adds ten cases covering required FAIL with UNKNOWN findings, absent known floors versus supplied-floor rollback, oracle conflicts with local mismatches, and repeated non-authorizing outputs. Phase 3 adds three scenarios, each comparing two oracle orders: exact A declaration/A descriptor PASS; exact B declaration/A descriptor FAIL with descriptor MISMATCH; unadmitted C declaration FAIL with checkpoint MISMATCH and descriptor UNKNOWN. Full results are identical between the two orders, and metadata-only differences do not manufacture commitment conflicts.
+
+These were regression-coverage improvements. No source vulnerability or incorrect comparator behavior was reproduced; no source correction or authority expansion occurred. Phase 2's independent review/probe is attributed to Ava in the engineering record and session evidence.
+
+Saved provenance:
+- [Exact 70-test command/environment/output/result](C:/Users/xx4773/AppData/Local/Ario/engineering-backups/checkpoint-boundary-tests-20261012-01/scratch/pytest-result.json).
+- [Exact 73-test command/environment/output/result](C:/Users/xx4773/AppData/Local/Ario/engineering-backups/checkpoint-metadata-regression-20261012-01/scratch/pytest-result.json).
+- [Completed-session commits, backups, prefix verification and limitations](C:/Users/xx4773/AppData/Local/Ario/engineering-backups/checkpoint-metadata-regression-20261012-01/scratch/final-session-verification.json).
+
+The exact saved argv arrays, including executable, are quoted below. Both ran from C:\Users\xx4773\Ario using the existing Python environment. These are **historical execution commands, not instructions to reuse old evidence paths**.
+
+70-test argv:
+
+~~~json
+[
+  "C:\\Users\\xx4773\\AppData\\Local\\Ario\\venvs\\ario-tests-py313\\Scripts\\python.exe",
+  "-B",
+  "-m",
+  "pytest",
+  "-p",
+  "no:cacheprovider",
+  "-q",
+  "-o",
+  "junit_family=xunit1",
+  "implementation/tests/test_checkpoint_prefix_experiment.py",
+  "--junitxml=C:\\Users\\xx4773\\AppData\\Local\\Ario\\engineering-backups\\checkpoint-boundary-tests-20261012-01\\scratch\\pytest.xml"
+]
+~~~
+
+73-test argv:
+
+~~~json
+[
+  "C:\\Users\\xx4773\\AppData\\Local\\Ario\\venvs\\ario-tests-py313\\Scripts\\python.exe",
+  "-B",
+  "-m",
+  "pytest",
+  "-p",
+  "no:cacheprovider",
+  "-q",
+  "-o",
+  "junit_family=xunit1",
+  "implementation/tests/test_checkpoint_prefix_experiment.py",
+  "--junitxml=C:\\Users\\xx4773\\AppData\\Local\\Ario\\engineering-backups\\checkpoint-metadata-regression-20261012-01\\scratch\\pytest.xml"
+]
+~~~
+
+Both executions used PYTHONDONTWRITEBYTECODE=1, PYTHONIOENCODING=utf-8, PYTHONPATH=C:\Users\xx4773\Ario\implementation and TMP/TEMP confined to their corresponding new scratch directory. The report-only -o junit_family=xunit1 option preserves actual per-case output properties.
+
+For a fresh current reproduction, use the earlier collision-free scratch procedure, retain the same existing Python, -B and no:cacheprovider restrictions, add -o junit_family=xunit1 to the pytest argv, and write JUnit output to **new scratch storage**. Never execute the quoted historical JUnit paths or overwrite their outputs. Expected current module count: **73**, with no timing guarantee.
+
+Comparator SHA256 remains **e17b929913623ed8027dcd08e5054a42a68a6723b00dd7780300a0622aa58e16**. Signature validity remains NOT_CHECKED; human authorization and evidence admission remain NOT_EVALUATED; historical event truth and entity/ontological continuity remain UNKNOWN; independent historical continuity remains INCONCLUSIVE. Matching checkpoints do not establish consciousness or independent production security.
+
+Reconciliation status at this append: Ava reported the supported automation pause as verified, with target and 30-minute cadence preserved. Replacement of its stale checkpoint prompt is **PLANNED** until Ava applies it. Conditional GitHub publication is **NOT YET ATTEMPTED**; every outgoing commit and all owner-required remote safeguards remain subject to separate preflight/review. No automation or remote operation was performed by this documentation executor.
+
+
+Coordination update confirmed by Ava before the local reconciliation commit: the stale automation checkpoint paragraph has now been replaced through the supported management interface and read back. The automation remains PAUSED with its existing target and 30-minute cadence; the revised prompt permits monitoring only unless a fresh bounded task is authorized, and forbids competing dispatch during manual work. This updates the earlier PLANNED status while preserving prior records. GitHub push is still NOT YET ATTEMPTED; remote preflight and review of every outgoing commit remain pending. Automation operations were performed by Ava, not by this documentation executor.
