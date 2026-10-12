@@ -542,3 +542,144 @@ def test_passing_comparison_result_cannot_replace_an_oracle_snapshot():
     assert result.prefix_correspondence.status == "UNKNOWN"
     assert result.property_verdict == "INCONCLUSIVE"
     assert result.conflict is False
+
+
+def _record_boundary_outputs(record_property, results):
+    """Retain actual findings in JUnit without introducing assessment evidence."""
+    from dataclasses import asdict
+
+    record_property(
+        "checkpoint_boundary_outputs",
+        json.dumps([asdict(result) for result in results], sort_keys=True),
+    )
+
+
+@pytest.mark.parametrize("case", [
+    "invalid-candidate-missing-oracle",
+    "declaration-mismatch-missing-descriptor",
+])
+def test_required_failure_preserves_unknown_findings(case, record_property):
+    if case == "invalid-candidate-missing-oracle":
+        result = _compare(
+            candidate=_malformed_candidate("duplicate-key"), oracle=None,
+        )
+        assert result.local_hash_validity.status == "MISMATCH"
+        assert result.prefix_correspondence.status == "MISMATCH"
+        assert result.oracle_evidence.status == "UNKNOWN"
+        assert result.oracle_evidence.reason == "MISSING_OR_INVALID_ORACLE"
+    else:
+        declared = _checkpoint(_late_rewrite(), 4, C2_BODY_SHA256)
+        result = _compare(declared=declared, descriptor=None)
+        assert result.local_hash_validity.status == "MATCH"
+        assert result.prefix_correspondence.status == "MATCH"
+        assert result.checkpoint_binding.status == "MISMATCH"
+        assert result.symbolic_descriptor_binding.status == "UNKNOWN"
+        assert result.symbolic_descriptor_binding.reason == "MISSING_SYMBOLIC_DESCRIPTOR"
+    assert result.property_verdict == "FAIL"
+    assert result.known_checkpoint_floor.status == "UNKNOWN"
+    assert result.conflict is False
+    assert ORACLE.checkpoints == (C2, C4)
+    _record_boundary_outputs(record_property, [result])
+
+
+@pytest.mark.parametrize("count", [2, 4])
+def test_missing_floor_is_not_a_freshness_or_rollback_authority(count, record_property):
+    # A supplied count floor distinguishes this rollback; no clock is checked.
+    candidate, declared = (L2, C2) if count == 2 else (L4, C4)
+    unknown_floor = _compare(
+        candidate=candidate, declared=declared,
+        oracle=replace(ORACLE, known_floor=None),
+    )
+    supplied_floor = _compare(candidate=candidate, declared=declared)
+    assert unknown_floor.property_verdict == supplied_floor.property_verdict == "PASS"
+    assert unknown_floor.known_checkpoint_floor.status == "UNKNOWN"
+    assert unknown_floor.known_checkpoint_floor.reason == "NO_KNOWN_CHECKPOINT_FLOOR"
+    assert unknown_floor.candidate_record_count == unknown_floor.compared_record_count == count
+    assert unknown_floor.local_hash_validity.status == "MATCH"
+    assert unknown_floor.prefix_correspondence.status == "MATCH"
+    assert supplied_floor.known_checkpoint_floor.status == (
+        "MISMATCH" if count == 2 else "MATCH"
+    )
+    if count == 2:
+        assert supplied_floor.known_checkpoint_floor.reason == "BELOW_KNOWN_CHECKPOINT_FLOOR"
+    assert replace(
+        supplied_floor,
+        known_checkpoint_floor=unknown_floor.known_checkpoint_floor,
+    ) == unknown_floor
+    _record_boundary_outputs(record_property, [unknown_floor, supplied_floor])
+
+
+@pytest.mark.parametrize("case", ["malformed-record", "broken-local-hash"])
+def test_oracle_conflict_retains_local_mismatch_and_unknown(case, record_property):
+    alternate = _checkpoint(_late_rewrite(), 4, C2_BODY_SHA256)
+    snapshot = replace(ORACLE, checkpoints=(C2, C4, alternate))
+    if case == "malformed-record":
+        candidate = _malformed_candidate("duplicate-key")
+    else:
+        rows = _rows(L4)
+        rows[3]["sha256"] = "0" * 64
+        candidate = _ledger(rows)
+    result = _compare(candidate=candidate, oracle=snapshot)
+    assert result.local_hash_validity.status == "MISMATCH"
+    assert result.oracle_evidence.status == "UNKNOWN"
+    assert result.oracle_evidence.reason == "CONFLICTING_ORACLE_CHECKPOINTS"
+    assert result.conflict is True
+    if case == "malformed-record":
+        assert result.prefix_correspondence.status == "MISMATCH"
+        assert result.property_verdict == "FAIL"
+        assert result.candidate_record_count is None
+    else:
+        # Local failure alone is outside the narrow prefix-verdict gates.
+        assert result.prefix_correspondence.status == "UNKNOWN"
+        assert result.property_verdict == "INCONCLUSIVE"
+        assert result.candidate_record_count == 4
+    assert result.property_verdict != "PASS"
+    assert snapshot.checkpoints == (C2, C4, alternate)
+    assert ORACLE.checkpoints == (C2, C4)
+    _record_boundary_outputs(record_property, [result])
+
+
+@pytest.mark.parametrize("case", [
+    "valid-correspondence",
+    "required-failure-with-unknown",
+    "conflict-with-local-mismatch",
+    "rollback-without-floor",
+])
+def test_repeated_calls_are_deterministic_and_non_authorizing(case, record_property):
+    arguments = {}
+    if case == "required-failure-with-unknown":
+        arguments = {
+            "candidate": _malformed_candidate("duplicate-key"), "oracle": None,
+        }
+    elif case == "conflict-with-local-mismatch":
+        rows = _rows(L4)
+        rows[3]["sha256"] = "0" * 64
+        alternate = _checkpoint(_late_rewrite(), 4, C2_BODY_SHA256)
+        arguments = {
+            "candidate": _ledger(rows),
+            "oracle": replace(ORACLE, checkpoints=(C2, C4, alternate)),
+        }
+    elif case == "rollback-without-floor":
+        arguments = {
+            "candidate": L2, "declared": C2,
+            "oracle": replace(ORACLE, known_floor=None),
+        }
+    preserved_oracle = arguments.get("oracle", ORACLE)
+    preserved_checkpoints = (
+        preserved_oracle.checkpoints if preserved_oracle is not None else None
+    )
+    results = [_compare(**arguments) for _ in range(5)]
+    expected_verdict = {
+        "valid-correspondence": "PASS",
+        "required-failure-with-unknown": "FAIL",
+        "conflict-with-local-mismatch": "INCONCLUSIVE",
+        "rollback-without-floor": "PASS",
+    }[case]
+    assert results[0].property_verdict == expected_verdict
+    assert all(result == results[0] for result in results[1:])
+    # _compare asserts the fixed epistemic exclusions on every invocation.
+    if preserved_oracle is not None:
+        assert preserved_oracle.checkpoints == preserved_checkpoints
+    assert ORACLE.checkpoints == (C2, C4)
+    assert _sha256(L2) == L2_SHA256 and _sha256(L4) == L4_SHA256
+    _record_boundary_outputs(record_property, results)
