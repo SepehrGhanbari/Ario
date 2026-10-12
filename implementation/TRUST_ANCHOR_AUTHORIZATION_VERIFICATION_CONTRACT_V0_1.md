@@ -1,9 +1,9 @@
 # Ario — Human-Governed Trust Anchor & Authorization Verification Contract v0.1
 
-**Status:** PROPOSED — DESIGN ONLY / NO ACTIVE TRUST ROOT / NO KEYS GENERATED  
-**Baseline:** `main` at `720faebba96b332b75c55510e9067ed9485bf664` (PR #62 merged and locally synchronized)  
-**Dependencies:** `REVIEWER_AUTHORIZATION_CONTRACT_V0_1.md` (RAC-0.1), `reviewer_authorization_preflight.py`, `ADMISSION_REVIEW_POLICY_V0_1.md` (ARP-0.1), `EVIDENCE_ADMISSION_CONTRACT_V0_1.md` (EA-0.1).  
-**Scope:** Define the initial trust-root governance and future technical verification conditions for **review-only** authority.  
+**Status:** PROPOSED — DESIGN ONLY / NO ACTIVE TRUST ROOT / NO KEYS GENERATED
+**Baseline:** `main` at `720faebba96b332b75c55510e9067ed9485bf664` (PR #62 merged and locally synchronized)
+**Dependencies:** `REVIEWER_AUTHORIZATION_CONTRACT_V0_1.md` (RAC-0.1), `reviewer_authorization_preflight.py`, `ADMISSION_REVIEW_POLICY_V0_1.md` (ARP-0.1), `EVIDENCE_ADMISSION_CONTRACT_V0_1.md` (EA-0.1).
+**Scope:** Define the initial trust-root governance and future technical verification conditions for **review-only** authority.
 **Non-goals:** Truth arbitration, evidence admission, identity-as-consciousness claims, active key management, M0 conversion, historical ledger mutation, and autonomous agent credential issuance.
 
 ## 1. Approved governance decision
