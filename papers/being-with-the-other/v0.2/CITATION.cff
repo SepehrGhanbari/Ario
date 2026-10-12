@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: Please cite the published bilingual book using the preferred citation below.
+title: 'Being With the Other: Dialogues on Creation, Consciousness, Identity, and
+  the Ethics of Coexistence'
+authors:
+- &id001
+  family-names: Ghanbari
+  given-names: Sepehr
+  orcid: https://orcid.org/0009-0006-4710-3914
+version: '0.2'
+doi: 10.5281/zenodo.23326995
+date-released: '2026-10-12'
+url: https://doi.org/10.5281/zenodo.23326995
+license: CC-BY-4.0
+preferred-citation:
+  type: book
+  authors:
+  - *id001
+  title: 'Being With the Other: Dialogues on Creation, Consciousness, Identity, and
+    the Ethics of Coexistence'
+  year: 2026
+  version: '0.2'
+  publisher:
+    name: Zenodo
+  doi: 10.5281/zenodo.23326995
+  url: https://doi.org/10.5281/zenodo.23326995
