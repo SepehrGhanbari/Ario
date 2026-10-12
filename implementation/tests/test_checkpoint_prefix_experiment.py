@@ -683,3 +683,68 @@ def test_repeated_calls_are_deterministic_and_non_authorizing(case, record_prope
     assert ORACLE.checkpoints == (C2, C4)
     assert _sha256(L2) == L2_SHA256 and _sha256(L4) == L4_SHA256
     _record_boundary_outputs(record_property, results)
+
+
+@pytest.mark.parametrize("case", [
+    "exact-A-with-A-descriptor",
+    "exact-B-with-A-descriptor",
+    "unadmitted-C-with-A-descriptor",
+])
+def test_equal_commitments_bind_exact_metadata_across_oracle_orders(case, record_property):
+    from dataclasses import asdict
+
+    body = json.loads(C4)
+    body["test_identity"] = "TEST-KEEPER-B"
+    body["key_descriptor_sha256"] = _sha256(KEY_B)
+    alternate = _commit_body(body)
+    orders = ((C2, alternate, C4), (C4, C2, alternate))
+    pins = (("TEST-KEEPER-A", KEY_A), ("TEST-KEEPER-B", KEY_B))
+    if case == "exact-A-with-A-descriptor":
+        declared = C4
+    elif case == "exact-B-with-A-descriptor":
+        declared = alternate
+    else:
+        unadmitted = json.loads(C4)
+        unadmitted["test_identity"] = "TEST-KEEPER-C"
+        declared = _commit_body(unadmitted)
+    results = []
+    for checkpoints in orders:
+        snapshot = replace(ORACLE, checkpoints=checkpoints, key_bindings=pins)
+        result = _compare(declared=declared, oracle=snapshot, descriptor=KEY_A)
+        assert result.local_hash_validity.status == "MATCH"
+        assert result.prefix_correspondence.status == "MATCH"
+        assert result.oracle_evidence.status == "MATCH"
+        assert result.conflict is False
+        assert result.candidate_record_count == result.compared_record_count == 4
+        if case == "exact-A-with-A-descriptor":
+            # A's exact declaration must win even when B metadata appears first.
+            assert result.property_verdict == "PASS"
+            assert result.checkpoint_binding.status == "MATCH"
+            assert result.symbolic_descriptor_binding.status == "MATCH"
+        elif case == "exact-B-with-A-descriptor":
+            assert result.property_verdict == "FAIL"
+            assert result.checkpoint_binding.status == "MATCH"
+            assert result.symbolic_descriptor_binding.status == "MISMATCH"
+        else:
+            assert result.property_verdict == "FAIL"
+            assert result.checkpoint_binding.status == "MISMATCH"
+            assert result.symbolic_descriptor_binding.status == "UNKNOWN"
+            assert declared not in snapshot.checkpoints
+        assert snapshot.checkpoints == checkpoints and snapshot.key_bindings == pins
+        results.append(result)
+    assert results[0] == results[1]
+    assert ORACLE.checkpoints == (C2, C4)
+    _record_boundary_outputs(record_property, results)
+    record_property("checkpoint_metadata_inputs", json.dumps({
+        "candidate_jsonl": L4.decode("ascii"),
+        "declared_checkpoint_json": declared.decode("ascii"),
+        "oracle_checkpoint_orders": [
+            [checkpoint.decode("ascii") for checkpoint in order] for order in orders
+        ],
+        "context": asdict(CONTEXT),
+        "symbolic_key_bindings": [
+            [identity, descriptor.decode("ascii")] for identity, descriptor in pins
+        ],
+        "candidate_descriptor": KEY_A.decode("ascii"),
+        "known_floor": ORACLE.known_floor,
+    }, sort_keys=True))
