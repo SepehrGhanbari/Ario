@@ -146,6 +146,13 @@ def execute_request(payload):
         execution_timestamp=timestamp,
         audit_id=audit_id,
     )
+    # Do not let the CLI serialize an unqualified PASS (or FAIL/UNKNOWN)
+    # as if the caller-controlled rule list were the complete policy.
+    if (
+        result.inspector_version == AuditEngine.INSPECTOR_VERSION
+        and AuditEngine.ALWAYS_ON_FIREWALL_VERSION not in result.verdict_basis
+    ):
+        raise ValueError("M0 security profile missing from verdict_basis")
     return result_to_dict(result)
 
 

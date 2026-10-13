@@ -346,5 +346,58 @@ class RuntimeEntryPointTests(unittest.TestCase):
         self.assertIn("TEMPORALLY_UNRESOLVED", result["violations"])
 
 
+    # Always-on M0 reference firewall; JSON CLI must reflect the core contract.
+    def test_m0_guard_cli_typed_audit_observation_without_f15(self):
+        evidence = {
+            "evidence_id": "GUARD-CLI-E",
+            "observation_refs": [self.reference("GUARD-CLI-AUDIT", "AUDIT_RESULT")],
+            "evidence_level": "STRUCTURAL_ONLY",
+            "independence_status": "UNKNOWN",
+            "derivation_reference": self.reference("GUARD-CLI-DER", "DERIVATION"),
+            "scope": "SYNTHETIC-CLI-GUARD",
+        }
+        result = self.run_cli_audit("GUARD-CLI-BLOCK", {"evidence": [evidence]})
+        self.assertEqual(result["verdict"], "FAIL")
+        self.assertIn("COMPOSITION_FORBIDDEN", result["violations"])
+
+    def test_m0_guard_cli_scope_annotation_and_rule_profile(self):
+        evidence = {
+            "evidence_id": "GUARD-CLI-NORMAL-E",
+            "observation_refs": [self.reference("GUARD-CLI-NORMAL-O", "OBSERVATION")],
+            "evidence_level": "STRUCTURAL_ONLY",
+            "independence_status": "UNKNOWN",
+            "derivation_reference": self.reference("GUARD-CLI-NORMAL-D", "DERIVATION"),
+            "scope": "SYNTHETIC-CLI-GUARD",
+        }
+        base = self.run_cli_audit("GUARD-CLI-BASE", {"evidence": [evidence]})
+        declared = self.run_cli_audit(
+            "GUARD-CLI-DECLARED", {"evidence": [evidence]},
+            ["M0-1.0", "M0-F15-1.0"],
+        )
+        self.assertEqual(base["verdict"], "PASS")
+        self.assertEqual(declared["verdict"], "PASS")
+        self.assertNotEqual(base["verdict_basis"], declared["verdict_basis"])
+        self.assertIn("M0-REF-GUARD-1.0", base["verdict_basis"])
+        self.assertEqual(base["inspector_version"], "M0-1.1")
+        self.assertEqual(base["rule_versions"], ["M0-1.0"])
+
+    def test_m0_guard_cli_no_bypass_by_declared_rule_list(self):
+        evidence = {
+            "evidence_id": "GUARD-CLI-BYPASS",
+            "observation_refs": [self.reference("GUARD-CLI-ANOTHER-AUDIT", "AUDIT_RESULT")],
+            "evidence_level": "STRUCTURAL_ONLY",
+            "independence_status": "UNKNOWN",
+            "derivation_reference": self.reference("GUARD-CLI-SAFE-DER", "DERIVATION"),
+            "scope": "SYNTHETIC-CLI-GUARD",
+        }
+        for versions in (["M0-1.0"], ["M0-1.0", "M0-F11-1.0"], ["M0-1.0", "M0-F15-1.0"]):
+            result = self.run_cli_audit(
+                "GUARD-CLI-DECLARATION-" + str(len(versions)),
+                {"evidence": [evidence]}, versions,
+            )
+            self.assertEqual(result["verdict"], "FAIL")
+            self.assertIn("COMPOSITION_FORBIDDEN", result["violations"])
+
+
 if __name__ == "__main__":
     unittest.main()

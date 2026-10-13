@@ -149,7 +149,8 @@ class AuditInput:
 
 class AuditEngine:
     INSPECTOR_ID = "ARIO_M0_DETERMINISTIC_AUDIT"
-    INSPECTOR_VERSION = "M0-1.0"
+    INSPECTOR_VERSION = "M0-1.1"
+    ALWAYS_ON_FIREWALL_VERSION = "M0-REF-GUARD-1.0"
 
     def audit(
         self,
@@ -256,6 +257,15 @@ class AuditEngine:
                 "All implemented M0 structural rules "
                 "completed without an observed violation."
             )
+
+        # Version-aware report: declared rule packs differ from engine-owned
+        # nonoptional invariants; never present an unqualified structural PASS.
+        verdict_basis = (
+            f"{verdict_basis} Declared rule versions: {rule_versions!r}. "
+            f"Engine-enforced reference firewall: {self.ALWAYS_ON_FIREWALL_VERSION}. "
+            "PASS, if any, is limited to implemented structural checks and "
+            "does not establish truth, identity, or independent provenance."
+        )
 
         return AuditResult(
             audit_id=audit_id,
@@ -485,7 +495,8 @@ class AuditEngine:
     ) -> list[str]:
         evidence_items = tuple(evidence)
         violations: list[str] = []
-        f15_enabled = "M0-F15-1.0" in rule_versions
+        # Nonoptional M0-REF-GUARD-1.0: caller rule-version selection
+        # cannot authorize composition artifacts to masquerade as evidence.
         prior_results = tuple(prior_audit_results)
         summary_ids = {
             summary.composition_id
@@ -509,7 +520,7 @@ class AuditEngine:
             # wrapper, not only observation_refs. Otherwise a composition
             # artifact can be smuggled through derivation_reference and the
             # wrapper can then be cited as ordinary evidence.
-            if f15_enabled and item.derivation_reference is not None:
+            if item.derivation_reference is not None:
                 reference = item.derivation_reference
                 reference_id = reference.reference_id
                 if (
@@ -523,7 +534,7 @@ class AuditEngine:
             for reference in item.observation_refs:
                 observation_id = reference.reference_id
 
-                if f15_enabled and (
+                if (
                     reference.reference_type in forbidden_reference_types
                     or observation_id in summary_ids
                     or observation_id in audit_result_ids
@@ -804,15 +815,26 @@ class AuditEngine:
         # remains unchanged and an audit-result-only ID is simply inadmissible.
         f11_enabled = "M0-F11-1.0" in rule_versions
         f15_enabled = "M0-F15-1.0" in rule_versions
+        # Always-on collision detection uses the entire supplied record set,
+        # without declaring an optional F11/F15 rule to be active.
+        supplied_prior_results = tuple(prior_audit_results)
+        supplied_requests = tuple(composition_requests)
+        forbidden_source_ids = {item.audit_id for item in supplied_prior_results}
+        forbidden_source_ids.update(
+            summary.composition_id
+            for item in supplied_prior_results
+            for summary in item.composition_summaries
+        )
+        forbidden_source_ids.update(request.composition_id for request in supplied_requests)
         audit_results_by_id: dict[str, list[AuditResult]] = {}
         summary_ids: dict[str, int] = {}
         request_ids: dict[str, int] = {}
-        for request in composition_requests:
+        for request in supplied_requests:
             request_ids[request.composition_id] = (
                 request_ids.get(request.composition_id, 0) + 1
             )
         if f11_enabled or f15_enabled:
-            for result in prior_audit_results:
+            for result in supplied_prior_results:
                 audit_results_by_id.setdefault(result.audit_id, []).append(result)
                 for summary in result.composition_summaries:
                     summary_ids[summary.composition_id] = (
@@ -826,7 +848,8 @@ class AuditEngine:
                 reference_id = reference.reference_id
                 matches = evidence_by_id.get(reference_id, [])
 
-                if f15_enabled and reference.reference_type in {
+                # Always-on typed reference firewall (v1.1).
+                if reference.reference_type in {
                     "AUDIT_RESULT",
                     "COMPOSITION_REQUEST",
                     "COMPOSITION_SUMMARY",
@@ -855,6 +878,13 @@ class AuditEngine:
                     ):
                         violations.append("COMPOSITION_FORBIDDEN")
                         continue
+
+                # A caller cannot manufacture an accepted Evidence ID by
+                # reusing the ID of a supplied result/summary/request. The
+                # collision remains UNKNOWN, not inferred as evidence.
+                if not f15_enabled and matches and reference_id in forbidden_source_ids:
+                    violations.append("UNKNOWN")
+                    continue
 
                 if f11_enabled:
                     result_matches = audit_results_by_id.get(reference_id, [])
