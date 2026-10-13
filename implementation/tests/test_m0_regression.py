@@ -2302,3 +2302,156 @@ def test_adv_xirg_recomputed_hashes_do_not_authorize_history_or_composition():
         prior_audit_results=(summary_result,)), rules)
     assert promoted.verdict == "FAIL"
     assert "COMPOSITION_FORBIDDEN" in promoted.violations
+
+
+# M0 F11/F15 security repair: v1.1 always-on reference firewall.
+# Appended, not substituted for the historical versioned F11/F15 tests.
+
+def _m0_guard_evidence(observation=None, *, derivation=None, evidence_id="GUARD-E-1"):
+    return Evidence(
+        evidence_id=evidence_id,
+        observation_refs=(observation or Reference("GUARD-REAL-OBS", "OBSERVATION"),),
+        evidence_level="STRUCTURAL_ONLY",
+        independence_status=IndependenceStatus.UNKNOWN,
+        derivation_reference=derivation or Reference("GUARD-DER", "DERIVATION"),
+        scope="SYNTHETIC-M0-GUARD",
+    )
+
+
+def _m0_guard_prior(audit_id="GUARD-OLD-AUDIT"):
+    from core.schema import AuditResult
+    return AuditResult(
+        audit_id=audit_id,
+        inspector_id="FIXTURE-NOT-TRUSTED",
+        inspector_version="0",
+        execution_timestamp=TS,
+        configuration_id="GUARD-LAB",
+        rule_versions=("M0-1.0",),
+        artifacts_examined=(),
+        violations=(),
+        verdict="PASS",
+        verdict_basis="Untrusted synthetic prior fixture",
+    )
+
+
+def test_m0_guard_typed_audit_observation_without_f15():
+    result = run("GUARD-TYPED-AUDIT", AuditInput(
+        evidence=(_m0_guard_evidence(Reference("GUARD-UNSEEN", "AUDIT_RESULT")),),
+    ))
+    assert result.verdict == "FAIL"
+    assert "COMPOSITION_FORBIDDEN" in result.violations
+
+
+def test_m0_guard_typed_summary_observation_without_f15():
+    result = run("GUARD-TYPED-SUMMARY", AuditInput(
+        evidence=(_m0_guard_evidence(Reference("GUARD-SUMMARY", "COMPOSITION_SUMMARY")),),
+    ))
+    assert result.verdict == "FAIL"
+    assert "COMPOSITION_FORBIDDEN" in result.violations
+
+
+def test_m0_guard_typed_request_observation_without_f15():
+    result = run("GUARD-TYPED-REQUEST", AuditInput(
+        evidence=(_m0_guard_evidence(Reference("GUARD-REQUEST", "COMPOSITION_REQUEST")),),
+    ))
+    assert result.verdict == "FAIL"
+    assert "COMPOSITION_FORBIDDEN" in result.violations
+
+
+def test_m0_guard_typed_derivation_without_f15():
+    result = run("GUARD-DERIVATION", AuditInput(
+        evidence=(_m0_guard_evidence(derivation=Reference("GUARD-DER-OLD", "AUDIT_RESULT")),),
+    ))
+    assert result.verdict == "FAIL"
+    assert "COMPOSITION_FORBIDDEN" in result.violations
+
+
+def test_m0_guard_prior_audit_id_mislabelled_as_observation_without_f15():
+    result = run("GUARD-MISLABELLED-OBS", AuditInput(
+        evidence=(_m0_guard_evidence(Reference("GUARD-OLD-AUDIT", "TEST")),),
+        prior_audit_results=(_m0_guard_prior(),),
+    ))
+    assert result.verdict == "FAIL"
+    assert "COMPOSITION_FORBIDDEN" in result.violations
+
+
+def test_m0_guard_f11_only_cannot_disable_observation_firewall():
+    result = run("GUARD-F11-ONLY", AuditInput(
+        evidence=(_m0_guard_evidence(Reference("GUARD-FAKE", "AUDIT_RESULT")),),
+    ), ("M0-1.0", "M0-F11-1.0"))
+    assert result.verdict == "FAIL"
+    assert "COMPOSITION_FORBIDDEN" in result.violations
+
+
+def test_m0_guard_assessment_reference_typed_result_forbidden_without_f15():
+    from core.schema import Assessment
+    assessment = Assessment(
+        assessment_id="GUARD-ASSESS-TYPED", assessment_version="1",
+        rule_version="GUARD-LAB", admissible_evidence_refs=(Reference("GUARD-E-1", "AUDIT_RESULT"),),
+        condition_evaluation="LAB", assessment_basis="LAB", scope="LAB",
+    )
+    result = run("GUARD-ASSESS-TYPED", AuditInput(
+        evidence=(_m0_guard_evidence(),), assessments=(assessment,),
+    ))
+    assert result.verdict == "FAIL"
+    assert "COMPOSITION_FORBIDDEN" in result.violations
+
+
+def test_m0_guard_cross_kind_assessment_alias_remains_unknown_without_f15():
+    from core.schema import Assessment
+    evidence = _m0_guard_evidence(evidence_id="GUARD-OLD-AUDIT")
+    assessment = Assessment(
+        assessment_id="GUARD-ASSESS-ALIAS", assessment_version="1",
+        rule_version="GUARD-LAB",
+        admissible_evidence_refs=(Reference("GUARD-OLD-AUDIT", "EVIDENCE"),),
+        condition_evaluation="LAB", assessment_basis="LAB", scope="LAB",
+    )
+    result = run("GUARD-ASSESS-ALIAS", AuditInput(
+        evidence=(evidence,), assessments=(assessment,),
+        prior_audit_results=(_m0_guard_prior(),),
+    ))
+    assert result.verdict == "FAIL"
+    assert "UNKNOWN" in result.violations
+
+
+def test_m0_guard_f11_legacy_result_only_reference_still_inadmissible():
+    from core.schema import Assessment
+    assessment = Assessment(
+        assessment_id="GUARD-F11-LEGACY", assessment_version="1",
+        rule_version="GUARD-LAB",
+        admissible_evidence_refs=(Reference("GUARD-OLD-AUDIT", "TEST"),),
+        condition_evaluation="LAB", assessment_basis="LAB", scope="LAB",
+    )
+    result = run("GUARD-F11-LEGACY", AuditInput(
+        assessments=(assessment,), prior_audit_results=(_m0_guard_prior(),),
+    ))
+    assert result.verdict == "FAIL"
+    assert "EVIDENCE_INADMISSIBLE" in result.violations
+    assert "COMPOSITION_FORBIDDEN" not in result.violations
+
+
+def test_m0_guard_keyword_without_identity_collision_still_passes():
+    result = run("GUARD-KEYWORD-FALSE-POSITIVE", AuditInput(
+        evidence=(_m0_guard_evidence(Reference("AUDIT-VERDICT-IS-IN-NAME", "OBSERVATION")),),
+    ))
+    assert result.verdict == "PASS"
+    assert "COMPOSITION_FORBIDDEN" not in result.violations
+
+
+def test_m0_guard_verdict_basis_declares_effective_profile_and_version():
+    primary = AuditInput(evidence=(_m0_guard_evidence(),))
+    base = run("GUARD-PROFILE-BASE", primary, ("M0-1.0",))
+    full = run("GUARD-PROFILE-FULL", primary, ("M0-1.0", "M0-F11-1.0", "M0-F15-1.0"))
+    assert base.verdict == full.verdict == "PASS"
+    assert base.verdict_basis != full.verdict_basis
+    assert "Declared rule versions" in base.verdict_basis
+    assert "M0-REF-GUARD-1.0" in base.verdict_basis
+    assert "M0-F15-1.0" in full.verdict_basis
+    assert base.inspector_version == full.inspector_version == "M0-1.1"
+
+
+def test_m0_guard_empty_primary_unknown_and_scoped():
+    result = run("GUARD-EMPTY-PRIMARY", AuditInput())
+    assert result.verdict == "UNKNOWN"
+    assert "Declared rule versions" in result.verdict_basis
+    assert "M0-REF-GUARD-1.0" in result.verdict_basis
