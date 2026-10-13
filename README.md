@@ -5,6 +5,15 @@
 **Project Architect & Creator: Sepehr Ghanbari**  
 **Project Role:** Architect, Creator, and Principal Researcher
 
+**Research identity:** **Ario — Auditable Epistemic Framework for AI**  
+**نام پژوهشی فارسی:** آریو — چارچوب معرفتی ممیزی‌پذیر برای هوش مصنوعی  
+**Official website:** https://ario-research-independent.vercel.app/  
+**Secondary website mirror:** https://sepehrghanbari.github.io/Ario/  
+**Researcher ORCID:** https://orcid.org/0009-0006-4710-3914
+
+The full descriptive name distinguishes this research framework from other uses of the word “Ario.” It does **not** imply exclusive rights to that word, affiliation with similarly named organizations, or a claim that the framework has proved machine consciousness.
+
+
 
 Ario is an experimental research project investigating how an AI system can represent, examine, and revise claims about its own identity, memory, continuity, and self-model without treating those claims as established facts.
 

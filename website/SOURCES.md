@@ -33,3 +33,13 @@ Owner approval (2026-10-13): English-first / Persian-second publication and Pers
 - Published research DOI facts continue to come from the tracked repository paper READMEs; Zenodo record pages could not be independently verified during this review.
 - Owner authorized website-focused updates; this is not blanket authority to modify the repository's core, scientific findings, governance, or archives.
 - The repo's existing `docs/` directory is excluded from the site build. Intended future publication is limited to the two web assets, with a separate Pages publishing surface.
+
+## Identity disambiguation — 2026-10-13
+
+The public research descriptor **Ario — Auditable Epistemic Framework for AI** (Persian: **آریو — چارچوب معرفتی ممیزی‌پذیر برای هوش مصنوعی**) follows the project's stated scope in [README.md](../README.md) and [implementation/M0_STRUCTURAL_CORE_DESIGN_V1.md](../implementation/M0_STRUCTURAL_CORE_DESIGN_V1.md).
+
+It is a descriptive project identifier, not a statement of exclusive rights to “Ario”, registered trademark ownership, or affiliation with other same-name products. Ario here is a research framework, not a commercial personal AI assistant or robotics dataset.
+
+Preferred public URL: https://ario-research-independent.vercel.app/ ; GitHub Pages is a secondary mirror. Search engines choose the canonical URL independently.
+
+This metadata-only clarification does not change the underlying research, test outcomes, book manuscripts, or independently verify Zenodo records.
