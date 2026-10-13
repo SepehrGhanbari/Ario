@@ -1,8 +1,10 @@
 cff-version: 1.2.0
 message: "If you use Ario in your research, please cite this repository."
-title: "Ario"
+title: "Ario — Auditable Epistemic Framework for AI"
 type: software
 authors:
   - family-names: "Ghanbari"
     given-names: "Sepehr"
-repository-code: "https://github.com/Mrxxir/Ario"
+    orcid: "https://orcid.org/0009-0006-4710-3914"
+repository-code: "https://github.com/SepehrGhanbari/Ario"
+url: "https://ario-research-independent.vercel.app/"
