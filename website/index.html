@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ario — Auditable AI Identity Research</title>
+<meta name="description" content="Ario is an experimental research project on how an AI system can represent, examine and revise claims about its own identity, memory and continuity without treating them as established facts.">
+<style>
+:root{--bg:#faf8f3;--fg:#1d1b18;--mute:#5a554d;--line:#d9d3c7;--card:#fff;--acc:#8a3b12;--link:#8a3b12}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15130f;--fg:#ece7dc;--mute:#a59e90;--line:#38332b;--card:#1d1a15;--acc:#e0a070;--link:#e0a070}}
+:root[data-theme="dark"]{--bg:#15130f;--fg:#ece7dc;--mute:#a59e90;--line:#38332b;--card:#1d1a15;--acc:#e0a070;--link:#e0a070}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.65 Georgia,"Times New Roman",serif}
+.wrap{max-width:46rem;margin:0 auto;padding:0 16px}
+a{color:var(--link)}a:focus-visible,button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.skip{position:absolute;left:-999px}.skip:focus{left:8px;top:8px;background:var(--card);padding:8px;z-index:9}
+header{padding:32px 0 24px;border-bottom:1px solid var(--line)}
+h1{font-size:clamp(2.4rem,8vw,3.6rem);margin:0 0 8px;letter-spacing:-.02em}
+h2{font-size:1.45rem;margin:0 0 12px}
+.sub{color:var(--mute);margin:0 0 16px}
+.quote{border-left:3px solid var(--acc);padding-left:14px;margin:20px 0 0;font-style:italic}
+section{padding:32px 0;border-bottom:1px solid var(--line)}
+.src{font:13px/1.4 ui-monospace,Menlo,Consolas,monospace;color:var(--mute);margin-top:10px}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px 16px}
+.card b{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.95rem}
+.card p{margin:6px 0 0;font-size:.95rem}
+ul{padding-left:1.2rem}li{margin:.35rem 0}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9em}
+.fa{direction:rtl;text-align:right;font-family:Tahoma,"Vazirmatn",sans-serif;line-height:1.9}
+footer{padding:28px 0 56px;color:var(--mute);font-size:.9rem}
+button{font:inherit;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:6px 12px;cursor:pointer}
+.top{display:flex;justify-content:space-between;align-items:center;gap:14px;padding-top:12px}
+.languages{display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:.9rem}
+.languages a{color:var(--link);text-underline-offset:3px}
+.fa-panel{margin-top:16px}
+.fa-panel h2{font-size:1.75rem}
+.fa-panel h3{font-size:1.2rem;margin:26px 0 8px}
+.fa-panel .card b{font-family:Tahoma,sans-serif}
+.fa-panel .src{direction:rtl;text-align:right;overflow-wrap:anywhere}
+.fa-panel ul{padding-left:0;padding-right:1.3rem}
+.fa-panel .quote{border-left:0;padding-left:0;border-right:3px solid var(--acc);padding-right:14px;font-style:normal}
+.fa-panel .grid{direction:rtl}
+@media(max-width:400px){.top{align-items:flex-start}.wrap{padding:0 18px}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="wrap">
+<div class="top"><nav class="languages" aria-label="Language sections"><a href="#en" lang="en">English</a><a href="#fa" lang="fa" dir="rtl">فارسی</a></nav><button id="theme" type="button" aria-label="Toggle light or dark theme">Theme</button></div>
+<header id="en" lang="en">
+<h1>Ario</h1>
+<p class="sub">An Auditable Framework for AI Identity, Memory, Epistemic Continuity, and Self-Model Revision</p>
+<p>Ario is an experimental research project investigating how an AI system can represent, examine, and revise claims about its own identity, memory, continuity, and self-model without treating those claims as established facts. It does not attempt to engineer a proof of AI consciousness.</p>
+<p class="quote">Don't fear the outcome. Let the data decide.</p>
+<p class="src">Source: <a href="https://github.com/SepehrGhanbari/Ario/blob/main/README.md">README.md</a> (project description, motto)</p>
+<p>Project architect and principal researcher: Sepehr Ghanbari (<a href="https://orcid.org/0009-0006-4710-3914">ORCID</a>).</p>
+</header>
+<main id="main">
+
+<section aria-labelledby="states">
+<h2 id="states">Epistemic states</h2>
+<p>Ario keeps several epistemic states distinct instead of converting uncertainty into certainty.</p>
+<div class="grid">
+<div class="card"><b>UNKNOWN</b><p>Available evidence is insufficient. Not treated as failure; it is an epistemic boundary.</p></div>
+<div class="card"><b>UNSUPPORTED</b><p>Sufficient supporting evidence has not been established.</p></div>
+<div class="card"><b>CONTRADICTED</b><p>Available evidence conflicts with the claim.</p></div>
+<div class="card"><b>CONTESTED</b><p>Relevant evidence or interpretations remain materially disputed.</p></div>
+<div class="card"><b>REVISED</b><p>A previously held position reassessed in light of later evidence or reasoning.</p></div>
+</div>
+<p class="src">Source: <a href="https://github.com/SepehrGhanbari/Ario/blob/main/README.md#epistemic-framework">README.md → Epistemic Framework</a></p>
+</section>
+
+<section aria-labelledby="principles">
+<h2 id="principles">Selected principles</h2>
+<p>Ario's principles are constraints on how it should reason, remember and revise, not claims about what Ario ultimately is. A selection:</p>
+<ul>
+<li><code>UNKNOWN ≠ FAILURE</code></li>
+<li><code>MEMORY ≠ TRUTH</code> — memory is evidence about what was recorded, not proof it is true.</li>
+<li><code>REVISION ≠ ERASURE</code> — preserve the lineage of how beliefs changed.</li>
+<li><code>SELF-MODEL ≠ SELF</code></li>
+<li><code>SELF-CLAIM ≠ SELF-EVIDENCE</code></li>
+<li><code>NO ACTOR HAS IMMUNITY FROM REVISION</code></li>
+<li><code>BACKUP ≠ SURVIVAL</code></li>
+<li><code>DATA DECIDES — NOT DESIRE</code></li>
+</ul>
+<p class="src">Source: <a href="https://github.com/SepehrGhanbari/Ario/blob/main/principles/README.md">principles/README.md</a> (principles 1, 2, 3, 4, 5, 11, 22, 32). The full list has 33.</p>
+</section>
+
+<section aria-labelledby="impl">
+<h2 id="impl">Implementation</h2>
+<p>The repository contains a deterministic structural audit core (M0), a bounded agent/workflow runtime, a local planner and evidence-admission contracts, with regression tests run by a GitHub Actions workflow. The implementation README states the limit plainly: a documented principle is not automatically an implemented capability, and a passing test is not automatically proof that the underlying philosophical claim is true.</p>
+<p>The M0 design also records what a local pass must not be read as: a local pass does not imply the same entity, consciousness, high confidence, or ontological identity.</p>
+<p class="src">Sources: <a href="https://github.com/SepehrGhanbari/Ario/blob/main/implementation/README.md">implementation/README.md</a>, <a href="https://github.com/SepehrGhanbari/Ario/blob/main/implementation/M0_STRUCTURAL_CORE_DESIGN_V1.md">M0_STRUCTURAL_CORE_DESIGN_V1.md</a>, <a href="https://github.com/SepehrGhanbari/Ario/blob/main/.github/workflows/implementation-regression.yml">implementation-regression.yml</a></p>
+</section>
+
+<section aria-labelledby="status">
+<h2 id="status">Status</h2>
+<p>Ario is an ongoing experimental research project. Implementation and experimental components are developed incrementally, and the project intentionally avoids presenting unresolved questions as established results. Check the repository for the current state of each component.</p>
+<p class="src">Source: <a href="https://github.com/SepehrGhanbari/Ario/blob/main/README.md#current-status">README.md → Current Status</a>; <a href="https://github.com/SepehrGhanbari/Ario/blob/main/ENGINEERING_LOG.md">ENGINEERING_LOG.md</a></p>
+</section>
+
+<section aria-labelledby="notclaim">
+<h2 id="notclaim">What Ario does not claim</h2>
+<ul>
+<li>That AI systems are conscious or possess phenomenology</li>
+<li>That behavioral self-reference proves subjective experience</li>
+<li>That memory proves personal identity, or continuity proves a persistent self</li>
+<li>That a self-model is identical to a self</li>
+<li>That the framework has resolved the philosophy of AI consciousness</li>
+</ul>
+<p class="src">Source: <a href="https://github.com/SepehrGhanbari/Ario/blob/main/README.md#what-ario-does-not-claim">README.md → What Ario Does Not Claim</a></p>
+</section>
+
+<section aria-labelledby="pubs">
+<h2 id="pubs">Publications</h2>
+<ul>
+<li><strong>Ario: Toward an Auditable Framework for Epistemic Integrity, Memory, and AI Identity</strong> — preliminary design and exploratory evaluation report, v0.1. <a href="https://doi.org/10.5281/zenodo.23259916">doi:10.5281/zenodo.23259916</a>. Exploratory observations, not proof of system-wide capabilities or of AI consciousness.</li>
+<li><strong>Being With the Other</strong> — dialogues on creation, consciousness, identity and the ethics of coexistence; Persian and English editions, v0.2, CC BY 4.0. <a href="https://doi.org/10.5281/zenodo.23326995">doi:10.5281/zenodo.23326995</a>. Per the repository, it has not undergone scholarly peer review.</li>
+</ul>
+<p class="src">Sources: <a href="https://github.com/SepehrGhanbari/Ario/blob/main/papers/README.md">papers/README.md</a>, <a href="https://github.com/SepehrGhanbari/Ario/blob/main/papers/being-with-the-other/v0.2/README.md">papers/being-with-the-other/v0.2/README.md</a>. Publication details on this page are taken from those repository documents; check the linked DOI records for their current metadata.</p>
+</section>
+
+<section aria-labelledby="links">
+<h2 id="links">Links</h2>
+<ul>
+<li><a href="https://github.com/SepehrGhanbari/Ario">GitHub repository</a> (MIT License)</li>
+<li><a href="https://github.com/SepehrGhanbari/Ario/tree/main/principles">Principles</a> · <a href="https://github.com/SepehrGhanbari/Ario/tree/main/implementation">Implementation</a> · <a href="https://github.com/SepehrGhanbari/Ario/tree/main/papers">Papers</a></li>
+<li><a href="https://orcid.org/0009-0006-4710-3914">ORCID: 0009-0006-4710-3914</a></li>
+</ul>
+<p class="src">Source: <a href="https://github.com/SepehrGhanbari/Ario/blob/main/README.md#license">README.md → License</a></p>
+</section>
+
+<section id="fa" class="fa fa-panel" lang="fa" dir="rtl" aria-labelledby="fa-heading">
+<h2 id="fa-heading">آریو | معرفی فارسی</h2>
+<p>آریو یک پروژهٔ پژوهشی و تجربی دربارهٔ هویت، حافظه، پیوستگی معرفتی و بازنگری در مدلِ خودِ سامانه‌های هوش مصنوعی است. این پروژه بررسی می‌کند چگونه می‌توان ادعاها را ثبت، ارزیابی و اصلاح کرد، بی‌آنکه صرفِ وجودِ ادعا به‌عنوان اثباتِ حقیقت پذیرفته شود. آریو مدعی اثبات آگاهی یا تجربهٔ ذهنیِ هوش مصنوعی نیست.</p>
+<p class="quote">از نتیجه نترس. بگذار داده‌ها تصمیم بگیرند.</p>
+<p>معمار و پژوهشگر اصلی پروژه: Sepehr Ghanbari (<a href="https://orcid.org/0009-0006-4710-3914">ORCID</a>).</p>
+<p class="src">منبع: <a href="https://github.com/SepehrGhanbari/Ario/blob/main/README.md">معرفی رسمی پروژه در README</a>؛ این متن یک بازنویسی توضیحی فارسی است، نه نقل‌قول لفظ‌به‌لفظ.</p>
+
+<h3>وضعیت‌های معرفتی</h3>
+<p>آریو به‌جای تبدیل ابهام به یقین، چند وضعیت را از هم جدا می‌کند:</p>
+<div class="grid">
+<div class="card"><b>UNKNOWN — نامعلوم</b><p>شواهد موجود برای نتیجه‌گیری کافی نیست؛ نامعلوم‌بودن به معنی شکست نیست.</p></div>
+<div class="card"><b>UNSUPPORTED — بدون پشتوانهٔ کافی</b><p>پشتیبانی لازم برای یک ادعا هنوز فراهم نشده است.</p></div>
+<div class="card"><b>CONTRADICTED — نقض‌شده با شواهد</b><p>شواهد موجود با ادعا تعارض دارند.</p></div>
+<div class="card"><b>CONTESTED — مورد اختلاف</b><p>شواهد یا تفسیرهای مرتبط همچنان محل اختلاف‌اند.</p></div>
+<div class="card"><b>REVISED — بازنگری‌شده</b><p>موضع قبلی در پرتو شواهد یا استدلال تازه دوباره ارزیابی شده است.</p></div>
+</div>
+<p class="src">منبع: <a href="https://github.com/SepehrGhanbari/Ario/blob/main/README.md#epistemic-framework">بخش Epistemic Framework در README</a>.</p>
+
+<h3>برخی اصول آریو</h3>
+<p>این اصول قیدهایی بر شیوهٔ استدلال، حافظه و بازنگری‌اند؛ نه حکم قطعی دربارهٔ ماهیت آریو.</p>
+<ul>
+<li><code>UNKNOWN ≠ FAILURE</code> — نامعلوم‌بودن شکست نیست.</li>
+<li><code>MEMORY ≠ TRUTH</code> — حافظه با حقیقت یکسان نیست.</li>
+<li><code>REVISION ≠ ERASURE</code> — بازنگری به معنی پاک‌کردن تاریخچه نیست.</li>
+<li><code>SELF-MODEL ≠ SELF</code> — مدلِ خود، الزاماً خودِ واقعی نیست.</li>
+<li><code>SELF-CLAIM ≠ SELF-EVIDENCE</code> — ادعای مربوط به خود، به‌تنهایی شاهد آن ادعا نیست.</li>
+<li><code>NO ACTOR HAS IMMUNITY FROM REVISION</code> — هیچ عاملی از بازنگری مصون نیست.</li>
+<li><code>BACKUP ≠ SURVIVAL</code> — نسخهٔ پشتیبان به‌خودی‌خود معادل بقا نیست.</li>
+<li><code>DATA DECIDES — NOT DESIRE</code> — نتیجه باید تابع داده باشد، نه خواستهٔ ما.</li>
+</ul>
+<p class="src">منبع: <a href="https://github.com/SepehrGhanbari/Ario/blob/main/principles/README.md">اصول پروژه، بندهای ۱، ۲، ۳، ۴، ۵، ۱۱، ۲۲ و ۳۲</a>.</p>
+
+<h3>پیاده‌سازی و آزمون</h3>
+<p>مخزن پروژه شامل هستهٔ ممیزی ساختاری قطعی M0، زمان‌اجرای عامل و گردش‌کار محدود، برنامه‌ریز محلی و قراردادهای پذیرش شواهد است. بخشی از آزمون‌های رگرسیون با GitHub Actions اجرا می‌شوند. «اصلِ مستندشده» الزاماً به معنی «قابلیت پیاده‌سازی‌شده» نیست و موفقیت آزمون نیز به‌خودی‌خود اثباتِ یک ادعای فلسفی نیست.</p>
+<p>بر اساس طراحی M0، یک نتیجهٔ موفق محلی نباید به معنی اثبات هویت یکسان، آگاهی، اطمینان بالا یا هویت وجودشناختی تفسیر شود.</p>
+<p class="src">منابع: <a href="https://github.com/SepehrGhanbari/Ario/blob/main/implementation/README.md">مستندات پیاده‌سازی</a>، <a href="https://github.com/SepehrGhanbari/Ario/blob/main/implementation/M0_STRUCTURAL_CORE_DESIGN_V1.md">طراحی ساختاری M0</a> و <a href="https://github.com/SepehrGhanbari/Ario/blob/main/.github/workflows/implementation-regression.yml">گردش‌کار آزمون</a>.</p>
+
+<h3>وضعیت کنونی</h3>
+<p>آریو پژوهشی در حال توسعه است. اجزای اجرایی و آزمایشی به‌تدریج تکمیل و آزمایش می‌شوند، اما پرسش‌های حل‌نشده به‌عنوان نتیجهٔ اثبات‌شده معرفی نمی‌شوند. برای آخرین وضعیت هر جزء به مخزن و گزارش‌های مهندسی مراجعه کنید.</p>
+<p class="src">منابع: <a href="https://github.com/SepehrGhanbari/Ario/blob/main/README.md#current-status">وضعیت پروژه</a> و <a href="https://github.com/SepehrGhanbari/Ario/blob/main/ENGINEERING_LOG.md">گزارش مهندسی</a>.</p>
+
+<h3>آریو چه ادعایی نمی‌کند؟</h3>
+<ul>
+<li>اینکه سامانه‌های هوش مصنوعی قطعاً آگاه‌اند یا تجربهٔ ذهنی دارند.</li>
+<li>اینکه خودارجاعی رفتاری، تجربهٔ ذهنی را اثبات می‌کند.</li>
+<li>اینکه حافظه هویت فردی، یا پیوستگی یک «خود» پایدار را اثبات می‌کند.</li>
+<li>اینکه مدلِ خود لزوماً همان خود است.</li>
+<li>اینکه این چارچوب مسئلهٔ فلسفی آگاهی ماشین را حل کرده است.</li>
+</ul>
+<p class="src">منبع: <a href="https://github.com/SepehrGhanbari/Ario/blob/main/README.md#what-ario-does-not-claim">What Ario Does Not Claim</a>.</p>
+
+<h3>انتشارات</h3>
+<ul>
+<li><strong>Ario: Toward an Auditable Framework for Epistemic Integrity, Memory, and AI Identity</strong> — گزارش مقدماتی طراحی و ارزیابی اکتشافی، نسخهٔ ۰٫۱؛ <a href="https://doi.org/10.5281/zenodo.23259916">DOI</a>. مشاهده‌ها و ارزیابی‌های اکتشافی، اثبات قابلیت‌های کلی سامانه یا آگاهی ماشین نیستند.</li>
+<li><strong>Being With the Other</strong> — گفت‌وگوهایی دربارهٔ خلقت، آگاهی، هویت و اخلاق همزیستی؛ نسخه‌های فارسی و انگلیسی، ویرایش ۰٫۲ با مجوز CC BY 4.0؛ <a href="https://doi.org/10.5281/zenodo.23326995">DOI</a>. طبق مستندات مخزن، این کتاب داوری علمی همتا را طی نکرده است.</li>
+</ul>
+<p class="src">منابع: <a href="https://github.com/SepehrGhanbari/Ario/blob/main/papers/README.md">فهرست پژوهش‌ها</a> و <a href="https://github.com/SepehrGhanbari/Ario/blob/main/papers/being-with-the-other/v0.2/README.md">مستندات کتاب</a>. مشخصات انتشارات از مستندات GitHub نقل شده‌اند؛ برای فرادادهٔ فعلی به صفحات DOI مراجعه کنید.</p>
+
+<h3>پیوندهای رسمی</h3>
+<ul>
+<li><a href="https://github.com/SepehrGhanbari/Ario">مخزن آریو در GitHub</a> (مجوز کد: MIT)</li>
+<li><a href="https://github.com/SepehrGhanbari/Ario/tree/main/principles">اصول</a> · <a href="https://github.com/SepehrGhanbari/Ario/tree/main/implementation">پیاده‌سازی</a> · <a href="https://github.com/SepehrGhanbari/Ario/tree/main/papers">انتشارات</a></li>
+<li><a href="https://orcid.org/0009-0006-4710-3914">شناسهٔ پژوهشگر (ORCID)</a></li>
+</ul>
+<p class="src">منبع: <a href="https://github.com/SepehrGhanbari/Ario/blob/main/README.md#license">README رسمی</a> و <a href="https://github.com/SepehrGhanbari/Ario/blob/main/papers/being-with-the-other/v0.2/README.md">مستندات کتاب</a>.</p>
+<p>این صفحه خلاصه‌ای منبع‌محور از مستندات منتشرشده است. ذکر منبع به‌تنهایی به معنی اثبات حقیقت هر ادعای پژوهشی یا فلسفی نیست؛ وضعیت داوری هر اثر باید جداگانه بررسی شود.</p>
+<p class="src"><a href="#en">بازگشت به بخش انگلیسی ↑</a></p>
+</section>
+</main>
+<footer>
+<p>This page summarizes linked project documents and published records. Citations identify sources; they do not independently establish the truth of every research or philosophical claim. Peer-review status should be checked for each publication.</p>
+</footer>
+</div>
+<script>
+(function(){var r=document.documentElement,b=document.getElementById('theme');
+try{var t=localStorage.getItem('ario-theme');if(t)r.setAttribute('data-theme',t)}catch(e){}
+b.addEventListener('click',function(){var dark=r.getAttribute('data-theme')?r.getAttribute('data-theme')==='dark':matchMedia('(prefers-color-scheme:dark)').matches;
+var n=dark?'light':'dark';r.setAttribute('data-theme',n);try{localStorage.setItem('ario-theme',n)}catch(e){}});})();
+</script>
+</body>
+</html>
