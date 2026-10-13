@@ -1,8 +1,0 @@
-cff-version: 1.2.0
-message: "If you use Ario in your research, please cite this repository."
-title: "Ario"
-type: software
-authors:
-  - family-names: "Ghanbari"
-    given-names: "Sepehr"
-repository-code: "https://github.com/Mrxxir/Ario"
