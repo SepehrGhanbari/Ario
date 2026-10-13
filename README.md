@@ -1,6 +1,8 @@
-# Ario
+# Ario — Auditable Epistemic Framework for AI
 
-## An Auditable Framework for AI Identity, Memory, Epistemic Continuity, and Self-Model Revision
+## Independent Research on AI Identity, Memory, Evidence, and Revision
+
+**فارسی: آریو — چارچوب معرفتی ممیزی‌پذیر برای هوش مصنوعی**
 
 **Project Architect & Creator: Sepehr Ghanbari**  
 **Project Role:** Architect, Creator, and Principal Researcher
@@ -370,13 +372,11 @@ These are research constraints, not claims that the underlying philosophical que
 
 ## Current Status
 
-Ario is an ongoing experimental research project.
+Ario is an ongoing independent, experimental research project. This repository includes conceptual and architectural documents **and an incrementally developed Python implementation with automated tests**.
 
-The public repository currently contains the project's conceptual and research structure.
+The `implementation/` directory includes an M0 structural audit engine, bounded agent and workflow components, supporting CLI functionality, technical contracts, and regression tests. A successful local or CI test establishes only the specific tested behavior, not machine consciousness, historical authenticity, external-world truth, or universal AI safety.
 
-The implementation and experimental components are being developed incrementally.
-
-Public code, reproducible experiments, and additional research artifacts will be added when they are sufficiently documented and auditable for release.
+Implementation status evolves through reviewable changes. For exact current behavior, consult the [implementation directory](./implementation/), relevant contracts, versioned commits and CI evidence.
 
 The project intentionally avoids presenting unresolved questions as established results.
 
@@ -390,6 +390,9 @@ See:
 
 * [`papers/`](./papers/)
 * [Ario: Toward an Auditable Framework for Epistemic Integrity, Memory, and AI Identity — A Preliminary Design and Exploratory Evaluation Report](https://doi.org/10.5281/zenodo.23259916) — Zenodo, version 0.1 (preliminary report).
+* [Being With the Other: Dialogues on Creation, Consciousness, Identity, and the Ethics of Coexistence](https://doi.org/10.5281/zenodo.23326995) — bilingual English/Persian philosophical book, version 0.2. See [book's repository record](./papers/being-with-the-other/v0.2/README.md).
+
+For source-linked bilingual introductions, visit the [official Ario research and sources page](https://ario-research-independent.vercel.app/research.html).
 
 The repository does not treat a publication as proof of the claims it discusses. Publications document research, arguments, methods, and results that remain open to evaluation and revision.
 
