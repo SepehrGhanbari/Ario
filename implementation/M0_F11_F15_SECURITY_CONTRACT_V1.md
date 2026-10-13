@@ -1,6 +1,6 @@
 # M0 F11/F15 Non-Optional Reference Firewall — Security Contract V1
 
-**Status:** proposed engine behavior, owner-approved isolated candidate, not yet a live `main` release.
+**Status (verified 2026-10-13):** the M0-1.1 reference firewall is implemented on `main` (introduced in commit `700130a48fd222d8905f145598212b60f6ff303f`); GitHub Actions regression passed at `97d249e36764401c7e234fee7e97b0b317302128`. This records bounded implementation and test evidence, not a claim of comprehensive security assurance.
 
 **Pinned baseline:** `8ce95148636e2e65915c055c667573514c8d19a1`.
 
@@ -14,7 +14,7 @@ The caller cannot be allowed to disable the **reference-type boundary** merely b
 
 ## 2. Versioned engine-owned mandatory invariant
 
-- The candidate M0 inspector reports `inspector_version = M0-1.1` (prior M0-1.0 remains recoverable at the pinned Git commit).
+- The M0 inspector on `main` reports `inspector_version = M0-1.1` (prior M0-1.0 remains recoverable at the pinned Git commit).
 - The engine enforces the new nonoptional baseline `M0-REF-GUARD-1.0` whenever it audits primary artifacts, independent of caller-declared `rule_versions`.
 - Evidence observation and derivation references of typed kinds `AUDIT_RESULT`, `COMPOSITION_REQUEST`, and `COMPOSITION_SUMMARY` MUST NOT be accepted as ordinary observations/derivations. Violation: `COMPOSITION_FORBIDDEN`.
 - Even a differently typed evidence reference with an **exact ID** equal to a supplied prior audit result, supplied composition summary, or current composition request MUST NOT silently pass. Violation: `COMPOSITION_FORBIDDEN`.
@@ -32,7 +32,7 @@ The caller cannot be allowed to disable the **reference-type boundary** merely b
 - Existing immutable audit records and historical source remain untouched. Changing inspector behavior is signaled by its explicit v1.1 identifier, not by rewriting past results.
 - CLI output keeps the existing JSON field set and append-only ledger behavior. It fails closed if an M0-v1.1 result lacks its mandatory scope statement.
 
-## 4. Acceptance evidence
+## 4. Original acceptance requirements (historical plan, not a completion record)
 
 1. Exact hashes of each original tracked source and test from pinned commit are checked before any patch.
 2. Two sentinel new tests run *before* engine edits, demonstrating failing security invariants; stage must report two expected assertion failures, not errors.
@@ -40,6 +40,14 @@ The caller cannot be allowed to disable the **reference-type boundary** merely b
 4. Full tracked M0/CLI/TB suites run from an isolated scratch export of the pinned commit; no live edits, no commits, no pushes.
 5. Additional red-team characterization can be rerun **with updated baseline expectations**; tests that encode the old vulnerability as expected behavior must not be called passing security tests after the fix.
 6. On any mismatch stop, preserve scratch and outputs. Seek separate owner approval before any branch publication or merge.
+
+## 4a. Observed main-branch evidence (2026-10-13)
+
+- The five-path implementation change was introduced by commit [`700130a48fd222d8905f145598212b60f6ff303f`](https://github.com/SepehrGhanbari/Ario/commit/700130a48fd222d8905f145598212b60f6ff303f); the original pinned baseline remains identified above.
+- On `main` at [`97d249e36764401c7e234fee7e97b0b317302128`](https://github.com/SepehrGhanbari/Ario/commit/97d249e36764401c7e234fee7e97b0b317302128), `implementation/core/audit_engine.py` declares `INSPECTOR_VERSION = "M0-1.1"` and `ALWAYS_ON_FIREWALL_VERSION = "M0-REF-GUARD-1.0"`; its evidence and assessment checks apply the reference-type guard without requiring callers to declare F15.
+- GitHub Actions [Implementation Regression run 38398626666](https://github.com/SepehrGhanbari/Ario/actions/runs/38398626666) completed successfully on that `main` commit, reporting **520 passed, 92 subtests passed**. This is evidence for the executed test suite only.
+- The original acceptance requirements above remain historical requirements; this status update does **not** independently establish that every pre-patch red sentinel, scratch-export step, or red-team characterization was performed exactly as specified. Those particulars remain unverified here.
+- This documentation correction changes no engine, CLI, tests, historical ledger, or immutable artifact; it does not establish provenance authenticity, real-world truth, or comprehensive security.
 
 ## 5. Limits
 
