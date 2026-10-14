@@ -21,7 +21,8 @@ The Persian edition has **58 PDF pages**, the English edition **62 PDF pages**. 
 
 - Previous published version **0.2**: https://doi.org/10.5281/zenodo.23326995
 - Historical repository record, retained unchanged: [v0.2](../v0.2/README.md).
-- **Version 0.3 has no new assigned Zenodo DOI yet.** The previous DOI must not be represented as the version-specific DOI of 0.3.
+- **Version 0.3 book DOI:** https://doi.org/10.5281/zenodo.23375350 (published 14 October 2026). The previous version DOI must not be reused for this edition.
+- **Related Ario/project-plus-book record (author-supplied DOI):** https://doi.org/10.5281/zenodo.23375401. This is a distinct record, not a replacement identifier for the book-only edition.
 - All v0.2 historical files remain intact. This version is append-only at the edition level rather than a silent historical replacement.
 
 ## Epistemic and publication limitations
@@ -36,12 +37,12 @@ Sepehr Ghanbari is the designated human author. ChatGPT (Ava) assisted with edit
 
 The repository's MIT software license does not replace or expand the book's CC BY 4.0 license.
 
-## Citation pending the v0.3 Zenodo deposit
+## Citation for the published v0.3 edition
 
-> Ghanbari, S. (2026). *Being With the Other: Dialogues on Creation, Consciousness, Identity, and the Ethics of Coexistence* (Version 0.3) [Book; bilingual Persian and English editions]. Ario Research. GitHub repository: https://github.com/SepehrGhanbari/Ario/tree/main/papers/being-with-the-other/v0.3
+> Ghanbari, S. (2026). *Being With the Other: Dialogues on Creation, Consciousness, Identity, and the Ethics of Coexistence* (Version 0.3) [Book; Persian and English editions]. Zenodo. https://doi.org/10.5281/zenodo.23375350
 
-**DOI:** Pending new Zenodo version/deposit. Do not reuse the 0.2 version DOI as the identifier of v0.3.
+**Book edition DOI:** https://doi.org/10.5281/zenodo.23375350. **Related project-plus-book DOI (author-reported):** https://doi.org/10.5281/zenodo.23375401.
 
 ## معرفی فارسی
 
-این پوشه نسخهٔ عمومیِ ۰٫۳ کتاب «بودن در کنار دیگری» را به دو زبان فارسی و انگلیسی نگه می‌دارد. فصل‌های ۱ تا ۳۰ از نسخهٔ پیشین حفظ شده و ده فصل و پیوست چهار افزوده شده‌اند. روایت خصوصیِ خواب و جزئیات خانوادگی در متن افزوده یا بستهٔ انتشار نیامده‌اند. انتشار این کتاب با اجازهٔ نویسنده انجام می‌شود، ولی این اجازه به اسناد خصوصی سرایت نمی‌کند. نسخهٔ ۰٫۲ و شناسهٔ تاریخی آن بدون تغییر محفوظ‌اند. برای نسخهٔ ۰٫۳ هنوز DOI تازه‌ای صادر نشده است.
+این پوشه نسخهٔ عمومیِ ۰٫۳ کتاب «بودن در کنار دیگری» را به دو زبان فارسی و انگلیسی نگه می‌دارد. فصل‌های ۱ تا ۳۰ از نسخهٔ پیشین حفظ شده و ده فصل و پیوست چهار افزوده شده‌اند. روایت خصوصیِ خواب و جزئیات خانوادگی در متن افزوده یا بستهٔ انتشار نیامده‌اند. انتشار این کتاب با اجازهٔ نویسنده انجام می‌شود، ولی این اجازه به اسناد خصوصی سرایت نمی‌کند. نسخهٔ ۰٫۲ و شناسهٔ تاریخی آن بدون تغییر محفوظ‌اند. شناسهٔ DOI نسخهٔ ۰٫۳ کتاب: https://doi.org/10.5281/zenodo.23375350 ؛ رکورد مرتبط با پروژه و کتاب بنا بر گزارش نویسنده: https://doi.org/10.5281/zenodo.23375401 .
