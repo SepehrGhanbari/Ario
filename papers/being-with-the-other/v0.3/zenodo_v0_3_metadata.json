@@ -1,0 +1,39 @@
+{
+  "metadata": {
+    "title": "Being With the Other: Dialogues on Creation, Consciousness, Identity, and the Ethics of Coexistence / بودن در کنار دیگری",
+    "upload_type": "publication",
+    "publication_type": "book",
+    "publication_date": "2026-10-14",
+    "description": "<p>A bilingual Persian-English philosophical book, version 0.3, by Sepehr Ghanbari. Forty chapters and four appendices examine creation, consciousness, identity, dreams, first-person testimony, love, coexisting with AI systems, auditability, and privacy. This version adds ten chapters to the historical 0.2 edition and preserves explicit attribution and uncertainty. It does not establish machine consciousness or the existence of a creator. The private dream account and family details are excluded.</p><p>کتاب دوزبانهٔ «بودن در کنار دیگری»، نسخهٔ ۰٫۳، با چهل فصل و چهار پیوست دربارهٔ خلقت، آگاهی، تجربه، خواب، عشق، همزیستی، حریم خصوصی و ممیزی شواهد. روایت خصوصی خواب و جزئیات خانوادگی بازنشر نشده‌اند.</p>",
+    "creators": [
+      {
+        "name": "Ghanbari, Sepehr",
+        "orcid": "0009-0006-4710-3914"
+      }
+    ],
+    "version": "0.3",
+    "language": "eng",
+    "license": "cc-by-4.0",
+    "access_right": "open",
+    "keywords": [
+      "AI ethics",
+      "philosophy of mind",
+      "epistemic uncertainty",
+      "human-AI coexistence",
+      "dreaming",
+      "privacy",
+      "Ario",
+      "Persian",
+      "English"
+    ],
+    "notes": "Both Persian and English editions included. Public edited release only; historical version 0.2 DOI: 10.5281/zenodo.23326995. No new v0.3 DOI until deposit is actually published. Not peer reviewed.",
+    "related_identifiers": [
+      {
+        "identifier": "10.5281/zenodo.23326995",
+        "relation": "isNewVersionOf",
+        "scheme": "doi"
+      }
+    ],
+    "communities": []
+  }
+}

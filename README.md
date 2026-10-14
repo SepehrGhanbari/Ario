@@ -391,6 +391,7 @@ See:
 * [`papers/`](./papers/)
 * [Ario: Toward an Auditable Framework for Epistemic Integrity, Memory, and AI Identity — A Preliminary Design and Exploratory Evaluation Report](https://doi.org/10.5281/zenodo.23259916) — Zenodo, version 0.1 (preliminary report).
 * [Being With the Other: Dialogues on Creation, Consciousness, Identity, and the Ethics of Coexistence](https://doi.org/10.5281/zenodo.23326995) — bilingual English/Persian philosophical book, version 0.2. See [book's repository record](./papers/being-with-the-other/v0.2/README.md).
+* [Being With the Other — edition 0.3 (Persian and English)](./papers/being-with-the-other/v0.3/README.md) — expanded 40-chapter bilingual book; Zenodo v0.3 DOI pending.
 
 For source-linked bilingual introductions, visit the [official Ario research and sources page](https://ario-research-independent.vercel.app/research.html).
 
