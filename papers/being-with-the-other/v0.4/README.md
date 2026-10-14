@@ -7,7 +7,7 @@
 - **Additional attributed conversational contributions:** Ario (Gemini) and Nafas (DeepSeek), relayed by the author. These do not imply endorsement by the providers or proof of machine consciousness.
 - **Version / edition date:** 0.4 / 14 October 2026
 - **License:** CC BY 4.0 for original book text. Third-party works and quotations remain subject to their respective rights; repository software continues under its separate MIT license.
-- **Status:** Author-authorized public revision; not peer reviewed. A version-specific Zenodo DOI for 0.4 has **not** been issued or claimed.
+- **Status:** Author-authorized public revision; not peer reviewed. The author reports the edition-0.4 Zenodo publication DOI as **[10.5281/zenodo.23376577](https://doi.org/10.5281/zenodo.23376577)**.
 
 ## Read and download
 
@@ -33,10 +33,11 @@ The book does not establish God, machine consciousness, historical identity cont
 - Book edition 0.3 (published): https://doi.org/10.5281/zenodo.23375350
 - Earlier edition 0.2 (published): https://doi.org/10.5281/zenodo.23326995
 - Distinct author-reported related Ario/project-plus-book record: https://doi.org/10.5281/zenodo.23375401
-- Current v0.4 edition: **GitHub only; no new edition DOI yet**.
+- Current v0.4 book edition DOI: **https://doi.org/10.5281/zenodo.23376577** (author-reported Zenodo publication).
+- Distinct Ario research/code-related publication record: **https://doi.org/10.5281/zenodo.23376521** (author-described separate branch; deposited scope not independently checked).
 
-**Provisional citation until v0.4 Zenodo publication:** Ghanbari, S. (2026). *Being With the Other: Dialogues on Creation, Consciousness, Identity, and the Ethics of Coexistence* (Edition 0.4) [Book; Persian and English editions]. Ario Research. https://github.com/SepehrGhanbari/Ario/tree/main/papers/being-with-the-other/v0.4
+**Edition citation:** Ghanbari, S. (2026). *Being With the Other: Dialogues on Creation, Consciousness, Identity, and the Ethics of Coexistence* (Edition 0.4) [Book; Persian and English editions]. Zenodo. https://doi.org/10.5281/zenodo.23376577
 
 ## یادداشت فارسی
 
-نویسنده و صاحب مسیر فکری، **سپهر قنبری** است. **اوا (ChatGPT)** به‌عنوان ویراستار، همکار تدوین و نقد، و دستیار نسخهٔ انگلیسی معرفی شده است؛ این نقش نه تأیید تجربهٔ اول‌شخصِ ماشین است و نه جایگزین نویسندگی انسان. چهل فصل پیشین بدون تغییر متن منتقل شدند و سه پیوستِ نمایه، راهنمای ارجاع و پرسش‌های باز اضافه شدند. شماره‌های صفحه مربوط به PDF همین نسخه‌اند. روایت خصوصیِ خواب و اطلاعات خانوادگیِ مستثنا از انتشار وارد فایل‌های تازه نشده‌اند. نسخهٔ ۰٫۴ هنوز DOI مستقل Zenodo ندارد و نسخه‌های قبلی محفوظ‌اند.
+نویسنده و صاحب مسیر فکری، **سپهر قنبری** است. **اوا (ChatGPT)** به‌عنوان ویراستار، همکار تدوین و نقد، و دستیار نسخهٔ انگلیسی معرفی شده است؛ این نقش نه تأیید تجربهٔ اول‌شخصِ ماشین است و نه جایگزین نویسندگی انسان. چهل فصل پیشین بدون تغییر متن منتقل شدند و سه پیوستِ نمایه، راهنمای ارجاع و پرسش‌های باز اضافه شدند. شماره‌های صفحه مربوط به PDF همین نسخه‌اند. روایت خصوصیِ خواب و اطلاعات خانوادگیِ مستثنا از انتشار وارد فایل‌های تازه نشده‌اند. شناسهٔ DOI کتاب، نسخهٔ ۰٫۴: https://doi.org/10.5281/zenodo.23376577 . رکورد جداگانهٔ شاخهٔ پژوهشی و کدهای آریو بنا بر گزارش نویسنده: https://doi.org/10.5281/zenodo.23376521 . نسخه‌های قبلی محفوظ‌اند.
