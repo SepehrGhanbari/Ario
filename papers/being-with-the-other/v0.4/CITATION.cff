@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "Please cite the author and book edition when using this publication."
+title: "Being With the Other: Dialogues on Creation, Consciousness, Identity, and the Ethics of Coexistence"
+type: book
+authors:
+  - family-names: Ghanbari
+    given-names: Sepehr
+    orcid: https://orcid.org/0009-0006-4710-3914
+version: "0.4"
+date-released: 2026-10-14
+license: CC-BY-4.0
+repository-code: https://github.com/SepehrGhanbari/Ario
+url: https://github.com/SepehrGhanbari/Ario/tree/main/papers/being-with-the-other/v0.4
+abstract: >-
+  Bilingual philosophical book on creation, identity, consciousness,
+  other minds, memory, love and ethical coexistence under uncertainty.
+  Editorial assistance: Ava (ChatGPT). Peer review has not been performed.

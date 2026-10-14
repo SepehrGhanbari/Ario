@@ -1,0 +1,32 @@
+{
+  "title": "Being With the Other: Dialogues on Creation, Consciousness, Identity, and the Ethics of Coexistence — Edition 0.4",
+  "creators": [
+    {
+      "name": "Ghanbari, Sepehr",
+      "orcid": "0009-0006-4710-3914"
+    }
+  ],
+  "upload_type": "publication",
+  "publication_type": "book",
+  "version": "0.4",
+  "language": "eng",
+  "license": "cc-by-4.0",
+  "keywords": [
+    "Ario",
+    "epistemic uncertainty",
+    "AI ethics",
+    "identity",
+    "consciousness",
+    "philosophy of mind",
+    "human–AI coexistence",
+    "bilingual book"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "10.5281/zenodo.23375350",
+      "relation": "isNewVersionOf",
+      "resource_type": "publication-book"
+    }
+  ],
+  "notes": "Draft only. Do not treat as a published record or claim a DOI until deposited. Both Persian and English files are included. Ava (ChatGPT) credited for editorial and translation assistance; author Sepehr Ghanbari."
+}
