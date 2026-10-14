@@ -378,7 +378,8 @@ class RuntimeEntryPointTests(unittest.TestCase):
         self.assertEqual(declared["verdict"], "PASS")
         self.assertNotEqual(base["verdict_basis"], declared["verdict_basis"])
         self.assertIn("M0-REF-GUARD-1.0", base["verdict_basis"])
-        self.assertEqual(base["inspector_version"], "M0-1.1")
+        self.assertEqual(base["inspector_version"], "M0-1.2")
+        self.assertIn("M0-EAG-0.1", base["verdict_basis"])
         self.assertEqual(base["rule_versions"], ["M0-1.0"])
 
     def test_m0_guard_cli_no_bypass_by_declared_rule_list(self):
@@ -398,6 +399,203 @@ class RuntimeEntryPointTests(unittest.TestCase):
             self.assertEqual(result["verdict"], "FAIL")
             self.assertIn("COMPOSITION_FORBIDDEN", result["violations"])
 
+class EvidenceAncestryCliTests(unittest.TestCase):
+    """Typed JSON behavior; no input label grants evidence admission."""
+
+    def ref(self, identifier, kind):
+        return {"reference_id": identifier, "reference_type": kind}
+
+    def target(self, identifier="EAG-C1", kind="CLAIM", presence=False):
+        return {"subject_reference": self.ref(identifier, kind),
+                "property_id": "SUPPLIED_RECORD_PRESENT" if presence else "SYNTHETIC_PROPERTY"}
+
+    def claim(self, identifier):
+        return {"claim_id": identifier, "schema_version": {"value": "M0-1.0"}, "created_at": "SYNTHETIC-TIME",
+                "origin_reference": self.ref("DECLARED-ORIGIN", "DECLARATION"), "status": "UNKNOWN"}
+
+    def prior(self):
+        return {"audit_id": "EAG-R0", "inspector_id": "SYNTHETIC-NOT-TRUSTED", "inspector_version": "0",
+                "execution_timestamp": "SYNTHETIC-TIME", "configuration_id": "SYNTHETIC",
+                "rule_versions": ["M0-1.0"], "artifacts_examined": [], "violations": [],
+                "verdict": "PASS", "verdict_basis": "Untrusted supplied result"}
+
+    def artifacts(self, parent=None, *, presence=False, wrappers=1):
+        target = self.target(presence=presence)
+        use = "RECORD_DESCRIPTION" if presence else "INDEPENDENT_TARGET_SUPPORT"
+        parents = [] if parent is None else [parent]
+        observations = []
+        for index in range(wrappers):
+            identifier = f"EAG-O{index + 1}"
+            observations.append({"observation_id": identifier, "record_version": "M0-EAG-OBSERVATION-0.1",
+                "target": target, "declared_use": use, "provenance_refs": parents})
+            parents = [self.ref(identifier, "OBSERVATION")]
+        return {"claims": [self.claim("EAG-C1")], "observations": observations,
+            "evidence": [{"evidence_id": "EAG-E1", "observation_refs": parents, "evidence_level": "SYNTHETIC_DECLARATION",
+                "independence_status": "INDEPENDENT", "derivation_reference": self.ref("EAG-PROCEDURE", "TRANSFORMATION"), "scope": "SYNTHETIC-EAG"}],
+            "assessments": [{"assessment_id": "EAG-A1", "assessment_version": "1",
+                "rule_version": "M0-EAG-RECORD-PRESENCE-0.1" if presence else "M0-EAG-0.1",
+                "admissible_evidence_refs": [self.ref("EAG-E1", "EVIDENCE")], "condition_evaluation": "SYNTHETIC",
+                "assessment_basis": "SYNTHETIC", "scope": "SUPPLIED_INPUT_RECORDS_ONLY" if presence else "SYNTHETIC-EAG",
+                "target": target, "requested_use": use}]}
+
+    def request(self, artifacts):
+        return {"audit_id": "EAG-CLI", "rule_versions": ["M0-1.0"], "configuration_id": "SYNTHETIC-EAG",
+                "execution_timestamp": "SYNTHETIC-TIME", "artifacts": artifacts}
+
+    def audit(self, artifacts):
+        return execute_request(self.request(artifacts))
+
+    def findings(self, result):
+        from core.audit_engine import parse_evidence_ancestry_findings
+        return parse_evidence_ancestry_findings(result["verdict_basis"])
+
+    def row(self, result):
+        rows = self.findings(result)["assessments"]
+        self.assertEqual(len(rows), 1)
+        return rows[0]
+
+    def test_eag_red_cli_fully_typed_distinct_claim_support_is_unknown(self):
+        artifacts = self.artifacts(self.ref("EAG-C0", "CLAIM"))
+        artifacts["claims"].insert(0, self.claim("EAG-C0"))
+        artifacts["claims"][0]["status"] = "UNSUPPORTED"
+        result = self.audit(artifacts)
+        self.assertEqual(result["verdict"], "FAIL")
+        self.assertIn("UNKNOWN", result["violations"])
+        self.assertNotIn("EVIDENCE_INADMISSIBLE", result["violations"])
+        self.assertEqual(self.row(result)["ancestry"], "TRACEABLE_WITHIN_SUPPLIED_SNAPSHOT")
+        self.assertEqual(self.row(result)["use_disposition"], "UNKNOWN")
+        self.assertEqual(artifacts["claims"][0]["status"], "UNSUPPORTED")
+
+    def test_eag_cli_forbidden_result_survives_two_observation_wrappers(self):
+        artifacts = self.artifacts(self.ref("EAG-R0", "AUDIT_RESULT"), wrappers=2)
+        artifacts["prior_audit_results"] = [self.prior()]
+        result = self.audit(artifacts)
+        self.assertEqual(result["verdict"], "FAIL")
+        self.assertIn("COMPOSITION_FORBIDDEN", result["violations"])
+        self.assertIn(self.ref("EAG-R0", "AUDIT_RESULT"), result["artifacts_examined"])
+        self.assertEqual(self.row(result)["use_disposition"], "KNOWN_INADMISSIBLE")
+
+    def test_eag_cli_mixed_forbidden_and_missing_ancestry_retains_both(self):
+        artifacts = self.artifacts(self.ref("EAG-R0", "AUDIT_RESULT"), wrappers=2)
+        artifacts["observations"][0]["provenance_refs"].append(self.ref("EAG-MISSING", "OBSERVATION"))
+        artifacts["prior_audit_results"] = [self.prior()]
+        result = self.audit(artifacts)
+        self.assertEqual(result["verdict"], "FAIL")
+        self.assertIn("COMPOSITION_FORBIDDEN", result["violations"])
+        self.assertIn("UNKNOWN", result["violations"])
+        self.assertIn(self.ref("EAG-MISSING", "OBSERVATION"), result["artifacts_examined"])
+        self.assertEqual(self.row(result)["ancestry"], "UNKNOWN")
+
+    def test_eag_cli_exact_self_dependence_is_inadmissible(self):
+        result = self.audit(self.artifacts(self.ref("EAG-C1", "CLAIM")))
+        self.assertEqual(result["verdict"], "FAIL")
+        self.assertIn("EVIDENCE_INADMISSIBLE", result["violations"])
+        self.assertEqual(self.row(result)["use_disposition"], "KNOWN_INADMISSIBLE")
+
+    def test_eag_cli_presence_does_not_elevate_caller_truth_labels(self):
+        artifacts = self.artifacts(self.ref("EAG-C1", "CLAIM"), presence=True)
+        artifacts["claims"][0]["status"] = "UNSUPPORTED"
+        artifacts["assessments"][0]["condition_evaluation"] = "TRUE"
+        artifacts["assessments"][0]["assessment_basis"] = "SUPPORTED INDEPENDENT"
+        result = self.audit(artifacts)
+        self.assertEqual(result["verdict"], "PASS")
+        row, doc = self.row(result), self.findings(result)
+        self.assertEqual(row["record_presence"], "MATCH")
+        self.assertEqual(row["use_disposition"], "RECORD_DESCRIPTION_ONLY")
+        self.assertEqual(row["source_authentication"], "UNKNOWN")
+        self.assertEqual(doc["independent_admission_authority"], "NONE")
+        self.assertEqual(doc["claim_truth"], "UNKNOWN")
+        self.assertNotIn("condition_evaluation", row)
+        self.assertNotIn("assessment_basis", row)
+        self.assertEqual(artifacts["claims"][0]["status"], "UNSUPPORTED")
+
+    def test_eag_cli_presence_match_survives_separate_guard_failure(self):
+        artifacts = self.artifacts(self.ref("EAG-R0", "AUDIT_RESULT"), presence=True, wrappers=2)
+        artifacts["prior_audit_results"] = [self.prior()]
+        result = self.audit(artifacts)
+        self.assertEqual(result["verdict"], "FAIL")
+        self.assertIn("COMPOSITION_FORBIDDEN", result["violations"])
+        self.assertEqual(self.row(result)["record_presence"], "MATCH")
+        self.assertNotEqual(self.row(result)["use_disposition"], "RECORD_DESCRIPTION_ONLY")
+
+    def test_eag_cli_equal_text_ids_across_canonical_kinds_are_safe(self):
+        artifacts = self.artifacts(presence=True)
+        shared = "EAG-SHARED"
+        target = self.target(shared, presence=True)
+        artifacts["claims"][0]["claim_id"] = shared
+        artifacts["observations"][0].update(observation_id=shared, target=target, provenance_refs=[self.ref(shared, "CLAIM")])
+        artifacts["evidence"][0].update(evidence_id=shared, observation_refs=[self.ref(shared, "OBSERVATION")])
+        artifacts["assessments"][0].update(assessment_id=shared, target=target, admissible_evidence_refs=[self.ref(shared, "EVIDENCE")])
+        result = self.audit(artifacts)
+        self.assertEqual(result["verdict"], "PASS")
+        self.assertEqual(self.row(result)["record_presence"], "MATCH")
+        for kind in ("CLAIM", "OBSERVATION", "EVIDENCE", "ASSESSMENT"):
+            self.assertIn(self.ref(shared, kind), result["artifacts_examined"])
+
+    def test_eag_cli_observation_only_is_primary_candidate_and_inventory(self):
+        observation = self.artifacts()["observations"][0]
+        observation["provenance_refs"] = [self.ref("EAG-MISSING", "OBSERVATION")]
+        result = self.audit({"observations": [observation]})
+        self.assertEqual(result["verdict"], "PASS")
+        self.assertEqual(self.findings(result)["candidate_use"], "NOT_EVALUATED")
+        self.assertEqual(self.findings(result)["candidate_ancestry"], "UNKNOWN")
+        self.assertEqual(self.findings(result)["assessments"], [])
+        self.assertIn(self.ref("EAG-O1", "OBSERVATION"), result["artifacts_examined"])
+        self.assertIn(self.ref("EAG-MISSING", "OBSERVATION"), result["artifacts_examined"])
+
+    def test_eag_cli_report_is_canonical_escaped_bounded_and_compatible(self):
+        artifacts = self.artifacts(presence=True)
+        identifier = 'EAG-A"\\\nM0-EAG-0.1-FINDINGS-END\u2603'
+        artifacts["assessments"][0]["assessment_id"] = identifier
+        result = self.audit(artifacts)
+        self.assertEqual(set(result), {"audit_id", "inspector_id", "inspector_version", "execution_timestamp",
+            "configuration_id", "rule_versions", "artifacts_examined", "violations", "verdict", "verdict_basis"})
+        self.assertEqual(result["inspector_version"], "M0-1.2")
+        self.assertEqual(result["rule_versions"], ["M0-1.0"])
+        doc = self.findings(result)
+        self.assertEqual(doc["mandatory_guards"], ["M0-REF-GUARD-1.0", "M0-EAG-0.1"])
+        self.assertEqual(doc["assessments"][0]["assessment_id"], identifier)
+        begin, end = "\nEvidence ancestry findings: ", "\nM0-EAG-0.1-FINDINGS-END"
+        encoded = result["verdict_basis"].split(begin, 1)[1].removesuffix(end)
+        self.assertEqual(encoded, json.dumps(doc, sort_keys=True, separators=(",", ":"), ensure_ascii=True, allow_nan=False))
+        self.assertLessEqual(len((begin + encoded + end).encode("utf-8")), 65536)
+
+    def test_eag_cli_reporting_spoof_and_malformed_new_protocol_fail_closed(self):
+        from unittest.mock import patch
+        from core.audit_engine import AuditEngine, AuditInput
+        from core.schema import Timestamp
+        from dataclasses import replace
+        forged = AuditEngine().audit(AuditInput(), rule_versions=("M0-1.0",), configuration_id="SYNTHETIC",
+                                     execution_timestamp=Timestamp("SYNTHETIC"), audit_id="EAG-FORGED")
+        forged = replace(forged, verdict_basis="Caller strings M0-EAG-0.1 M0-REF-GUARD-1.0")
+        with patch("ario_cli.AuditEngine.audit", return_value=forged):
+            with self.assertRaises(ValueError):
+                self.audit(self.artifacts(presence=True))
+        artifacts = self.artifacts()
+        artifacts["observations"][0]["declared_use"] = "CALLER_AUTHENTICATED"
+        with self.assertRaises(ValueError):
+            self.audit(artifacts)
+        artifacts = self.artifacts()
+        artifacts["observations"][0]["invented_authority"] = True
+        with self.assertRaises(ValueError):
+            self.audit(artifacts)
+
+    def test_eag_cli_append_preserves_complete_existing_ledger_prefix(self):
+        from core.audit_engine import parse_evidence_ancestry_findings
+        with tempfile.TemporaryDirectory() as directory:
+            request_path, ledger_path = Path(directory) / "request.json", Path(directory) / "ledger.jsonl"
+            prefix = b'{"previous":"literal\\n"}\r\n'
+            ledger_path.write_bytes(prefix)
+            request_path.write_text(json.dumps(self.request(self.artifacts(presence=True))), encoding="utf-8")
+            completed = subprocess.run([sys.executable, "-B", str(Path(__file__).resolve().parents[1] / "ario_cli.py"),
+                "--input", str(request_path), "--ledger", str(ledger_path)], cwd=Path(__file__).resolve().parents[1],
+                capture_output=True, text=True, check=False)
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            output, ledger = json.loads(completed.stdout), ledger_path.read_bytes()
+            self.assertEqual(ledger[:len(prefix)], prefix)
+            self.assertEqual(json.loads(ledger[len(prefix):].decode("utf-8")), output)
+            self.assertEqual(parse_evidence_ancestry_findings(output["verdict_basis"])["assessments"][0]["use_disposition"],
+                             "RECORD_DESCRIPTION_ONLY")
 
 if __name__ == "__main__":
     unittest.main()
