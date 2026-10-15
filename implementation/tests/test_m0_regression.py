@@ -1,5 +1,7 @@
 from dataclasses import replace
 
+import pytest
+
 from core.audit_engine import AuditEngine, AuditInput
 from core.schema import (
     Evidence,
@@ -1021,7 +1023,11 @@ def test_f10_assessment_with_declared_admissible_evidence():
         ),
     )
 
+    # Frozen F10 remains historical; M0-1.2 cannot infer this legacy use.
     assert "EVIDENCE_INADMISSIBLE" not in r.violations
+    assert r.verdict == "FAIL"
+    assert "UNKNOWN" in r.violations
+    assert _eag_row(r)["requested_use"] is None
 def test_f02_missing_claim_id():
     from core.schema import Claim, EpistemicStatus, SchemaVersion, Timestamp
 
@@ -1427,7 +1433,10 @@ def test_f11_a_real_evidence_reference_remains_admissible():
 
     r = _run_f11("F11-A", AuditInput(evidence=(ev,), assessments=(assessment,)))
 
-    assert r.verdict == "PASS"
+    # Successor migration: reference availability is not independent support.
+    assert r.verdict == "FAIL"
+    assert "UNKNOWN" in r.violations
+    assert _eag_row(r)["requested_use"] is None
     assert "COMPOSITION_FORBIDDEN" not in r.violations
     assert "EVIDENCE_INADMISSIBLE" not in r.violations
 
@@ -1637,7 +1646,10 @@ def test_f11_false_positive_control_allows_evidence_ids_containing_keywords():
 
     assert "COMPOSITION_FORBIDDEN" not in r.violations
     assert "EVIDENCE_INADMISSIBLE" not in r.violations
-    assert r.verdict == "PASS"
+    # Successor migration: reference availability is not independent support.
+    assert r.verdict == "FAIL"
+    assert "UNKNOWN" in r.violations
+    assert _eag_row(r)["requested_use"] is None
 
 
 def test_f11_ambiguous_duplicate_evidence_ids_remain_unknown():
@@ -2447,7 +2459,9 @@ def test_m0_guard_verdict_basis_declares_effective_profile_and_version():
     assert "Declared rule versions" in base.verdict_basis
     assert "M0-REF-GUARD-1.0" in base.verdict_basis
     assert "M0-F15-1.0" in full.verdict_basis
-    assert base.inspector_version == full.inspector_version == "M0-1.1"
+    assert base.inspector_version == full.inspector_version == "M0-1.2"
+    assert "M0-EAG-0.1" in base.verdict_basis
+    assert _eag_doc(base)["candidate_use"] == "NOT_EVALUATED"
 
 
 def test_m0_guard_empty_primary_unknown_and_scoped():
@@ -2455,3 +2469,532 @@ def test_m0_guard_empty_primary_unknown_and_scoped():
     assert result.verdict == "UNKNOWN"
     assert "Declared rule versions" in result.verdict_basis
     assert "M0-REF-GUARD-1.0" in result.verdict_basis
+
+# Issue #75: fully typed successor behavior; no positive admission authority.
+
+def _eag_ref(identifier, kind):
+    return Reference(identifier, kind)
+
+
+def _eag_claim(identifier, status=None):
+    from core.schema import Claim, EpistemicStatus, SchemaVersion
+    return Claim(identifier, SchemaVersion("M0-1.0"), TS,
+                 _eag_ref("DECLARED-ORIGIN", "DECLARATION"),
+                 status or EpistemicStatus.UNKNOWN)
+
+
+def _eag_target(identifier="EAG-C1", kind="CLAIM", presence=False):
+    from core.schema import SupportTarget
+    return SupportTarget(_eag_ref(identifier, kind),
+                         "SUPPLIED_RECORD_PRESENT" if presence else "SYNTHETIC_PROPERTY")
+
+
+def _eag_obs(identifier, target, parents=(), *, presence=False):
+    from core.schema import EvidenceUse, ObservationRecord
+    use = EvidenceUse.RECORD_DESCRIPTION if presence else EvidenceUse.INDEPENDENT_TARGET_SUPPORT
+    return ObservationRecord(identifier, "M0-EAG-OBSERVATION-0.1", target, use, tuple(parents))
+
+
+def _eag_ev(identifier="EAG-E1", observations=("EAG-O1",), independence=IndependenceStatus.INDEPENDENT):
+    return Evidence(identifier, tuple(_eag_ref(item, "OBSERVATION") for item in observations),
+                    "SYNTHETIC_DECLARATION", independence,
+                    _eag_ref("EAG-PROCEDURE", "TRANSFORMATION"), "SYNTHETIC-EAG")
+
+
+def _eag_assessment(target, *, identifier="EAG-A1", evidence_ids=("EAG-E1",),
+                    presence=False, condition="SYNTHETIC", basis="SYNTHETIC"):
+    from core.schema import Assessment, EvidenceUse
+    return Assessment(identifier, "1", "M0-EAG-RECORD-PRESENCE-0.1" if presence else "M0-EAG-0.1",
+                      tuple(_eag_ref(item, "EVIDENCE") for item in evidence_ids),
+                      condition, basis, "SUPPLIED_INPUT_RECORDS_ONLY" if presence else "SYNTHETIC-EAG",
+                      target, EvidenceUse.RECORD_DESCRIPTION if presence else EvidenceUse.INDEPENDENT_TARGET_SUPPORT)
+
+
+def _eag_doc(result):
+    from core.audit_engine import parse_evidence_ancestry_findings
+    return parse_evidence_ancestry_findings(result.verdict_basis)
+
+
+def _eag_row(result, identifier=None):
+    rows = _eag_doc(result)["assessments"]
+    if identifier is None:
+        assert len(rows) == 1
+        return rows[0]
+    matches = [row for row in rows if row["assessment_id"] == identifier]
+    assert len(matches) == 1
+    return matches[0]
+
+
+def _eag_fixture(*, parent=None, presence=False, wrappers=1):
+    target = _eag_target(presence=presence)
+    observations = []
+    parents = () if parent is None else (parent,)
+    for index in range(wrappers):
+        identifier = f"EAG-O{index + 1}"
+        observations.append(_eag_obs(identifier, target, parents, presence=presence))
+        parents = (_eag_ref(identifier, "OBSERVATION"),)
+    return AuditInput(claims=(_eag_claim("EAG-C1"),), observations=tuple(observations),
+                      evidence=(_eag_ev(observations=(observations[-1].observation_id,)),),
+                      assessments=(_eag_assessment(target, presence=presence),))
+
+
+def _eag_inventory(result):
+    return {(item.reference_type, item.reference_id) for item in result.artifacts_examined}
+
+
+def test_eag_red_distinct_claim_ancestry_is_unknown():
+    from core.schema import EpistemicStatus
+    source_claim = _eag_claim("EAG-C0", EpistemicStatus.UNSUPPORTED)
+    artifacts = _eag_fixture(parent=_eag_ref("EAG-C0", "CLAIM"))
+    artifacts = replace(artifacts, claims=(source_claim, *artifacts.claims))
+    result = run("EAG-RED-DISTINCT", artifacts)
+    assert result.verdict == "FAIL"
+    assert "UNKNOWN" in result.violations
+    assert "EVIDENCE_INADMISSIBLE" not in result.violations
+    assert "COMPOSITION_FORBIDDEN" not in result.violations
+    row = _eag_row(result)
+    assert row["ancestry"] == "TRACEABLE_WITHIN_SUPPLIED_SNAPSHOT"
+    assert row["use_disposition"] == "UNKNOWN"
+    assert row["source_authentication"] == "UNKNOWN"
+    assert source_claim.status == EpistemicStatus.UNSUPPORTED
+    assert artifacts.claims[1].status == EpistemicStatus.UNKNOWN
+
+
+def test_eag_red_two_wrappers_cannot_launder_audit_result():
+    artifacts = _eag_fixture(parent=_eag_ref("EAG-R0", "AUDIT_RESULT"), wrappers=2)
+    artifacts = replace(artifacts, prior_audit_results=(_f11_audit_result("EAG-R0"),))
+    result = run("EAG-RED-WRAPPERS", artifacts)
+    assert result.verdict == "FAIL"
+    assert "COMPOSITION_FORBIDDEN" in result.violations
+    assert _eag_row(result)["use_disposition"] == "KNOWN_INADMISSIBLE"
+    assert ("AUDIT_RESULT", "EAG-R0") in _eag_inventory(result)
+
+
+def test_eag_red_forbidden_and_missing_branches_are_both_retained():
+    artifacts = _eag_fixture(parent=_eag_ref("EAG-R0", "AUDIT_RESULT"), wrappers=2)
+    first = replace(artifacts.observations[0], provenance_refs=(
+        _eag_ref("EAG-R0", "AUDIT_RESULT"), _eag_ref("EAG-MISSING", "OBSERVATION")))
+    artifacts = replace(artifacts, observations=(first, artifacts.observations[1]),
+                        prior_audit_results=(_f11_audit_result("EAG-R0"),))
+    result = run("EAG-RED-BRANCHES", artifacts)
+    assert result.verdict == "FAIL"
+    assert "COMPOSITION_FORBIDDEN" in result.violations
+    assert "UNKNOWN" in result.violations
+    assert _eag_row(result)["ancestry"] == "UNKNOWN"
+    assert ("OBSERVATION", "EAG-MISSING") in _eag_inventory(result)
+
+
+def test_eag_empty_parent_declaration_never_authenticates_independence():
+    result = run("EAG-EMPTY-ROOT", _eag_fixture())
+    assert result.verdict == "FAIL"
+    assert "UNKNOWN" in result.violations
+    row = _eag_row(result)
+    assert row["ancestry"] == "TRACEABLE_WITHIN_SUPPLIED_SNAPSHOT"
+    assert row["source_authentication"] == row["use_disposition"] == "UNKNOWN"
+    assert _eag_doc(result)["independent_admission_authority"] == "NONE"
+
+
+def test_eag_exact_claim_self_confirmation_is_inadmissible():
+    result = run("EAG-EXACT-SELF", _eag_fixture(parent=_eag_ref("EAG-C1", "CLAIM")))
+    assert result.verdict == "FAIL"
+    assert "EVIDENCE_INADMISSIBLE" in result.violations
+    assert _eag_row(result)["use_disposition"] == "KNOWN_INADMISSIBLE"
+
+
+def test_eag_current_assessment_feedback_is_inadmissible():
+    result = run("EAG-ASSESSMENT-SELF", _eag_fixture(parent=_eag_ref("EAG-A1", "ASSESSMENT")))
+    assert result.verdict == "FAIL"
+    assert "EVIDENCE_INADMISSIBLE" in result.violations
+    assert _eag_row(result)["use_disposition"] == "KNOWN_INADMISSIBLE"
+
+
+def test_eag_presence_is_bounded_despite_caller_truth_strings():
+    from core.schema import EpistemicStatus
+    artifacts = _eag_fixture(parent=_eag_ref("EAG-C1", "CLAIM"), presence=True)
+    assessment = replace(artifacts.assessments[0], condition_evaluation="TRUE", assessment_basis="SUPPORTED INDEPENDENT")
+    unsupported = _eag_claim("EAG-C1", EpistemicStatus.UNSUPPORTED)
+    artifacts = replace(artifacts, claims=(unsupported,), assessments=(assessment,))
+    result = run("EAG-PRESENCE", artifacts)
+    assert result.verdict == "PASS"
+    row = _eag_row(result)
+    assert row["record_presence"] == "MATCH"
+    assert row["use_disposition"] == "RECORD_DESCRIPTION_ONLY"
+    assert row["source_authentication"] == "UNKNOWN"
+    assert unsupported.status == EpistemicStatus.UNSUPPORTED
+    assert _eag_doc(result)["claim_truth"] == _eag_doc(result)["entity_continuity"] == "UNKNOWN"
+    assert "condition_evaluation" not in row and "assessment_basis" not in row
+
+
+def test_eag_presence_match_can_coexist_with_forbidden_failure():
+    artifacts = _eag_fixture(parent=_eag_ref("EAG-R0", "AUDIT_RESULT"), presence=True, wrappers=2)
+    artifacts = replace(artifacts, prior_audit_results=(_f11_audit_result("EAG-R0"),))
+    result = run("EAG-PRESENCE-FAIL", artifacts)
+    assert result.verdict == "FAIL"
+    assert "COMPOSITION_FORBIDDEN" in result.violations
+    assert _eag_row(result)["record_presence"] == "MATCH"
+    assert _eag_row(result)["use_disposition"] != "RECORD_DESCRIPTION_ONLY"
+
+
+def test_eag_well_typed_kinds_can_share_equal_text_identifiers():
+    target = _eag_target("EAG-SHARED", presence=True)
+    artifacts = AuditInput(claims=(_eag_claim("EAG-SHARED"),),
+        observations=(_eag_obs("EAG-SHARED", target, (_eag_ref("EAG-SHARED", "CLAIM"),), presence=True),),
+        evidence=(_eag_ev("EAG-SHARED", ("EAG-SHARED",)),),
+        assessments=(_eag_assessment(target, identifier="EAG-SHARED", evidence_ids=("EAG-SHARED",), presence=True),))
+    result = run("EAG-TYPED-SHARED", artifacts)
+    assert result.verdict == "PASS"
+    assert _eag_row(result)["record_presence"] == "MATCH"
+    for kind in ("CLAIM", "OBSERVATION", "EVIDENCE", "ASSESSMENT"):
+        assert (kind, "EAG-SHARED") in _eag_inventory(result)
+
+
+def test_eag_duplicate_same_typed_observation_definitions_are_ambiguous():
+    artifacts = _eag_fixture(presence=True)
+    artifacts = replace(artifacts, observations=artifacts.observations * 2)
+    result = run("EAG-DUP-OBS", artifacts)
+    assert result.verdict == "FAIL"
+    assert "UNKNOWN" in result.violations
+    assert _eag_row(result)["ancestry"] == "UNKNOWN"
+
+
+def test_eag_observation_target_mismatch_cannot_transfer_support():
+    artifacts = _eag_fixture(presence=True)
+    observation = replace(artifacts.observations[0], target=_eag_target("EAG-C0", presence=True))
+    result = run("EAG-TARGET-MISMATCH", replace(artifacts, observations=(observation,)))
+    assert result.verdict == "FAIL"
+    assert "UNKNOWN" in result.violations
+    assert _eag_row(result)["use_disposition"] != "RECORD_DESCRIPTION_ONLY"
+
+
+def test_eag_presence_requires_exact_property_rule_and_scope():
+    artifacts = _eag_fixture(presence=True)
+    assessment = artifacts.assessments[0]
+    for changed in (replace(assessment, rule_version="CALLER-APPROVED"),
+                    replace(assessment, scope="ALL-HISTORY"),
+                    replace(assessment, target=replace(assessment.target, property_id="CLAIM_TRUE"))):
+        result = run("EAG-PRESENCE-BINDINGS", replace(artifacts, assessments=(changed,)))
+        assert result.verdict == "FAIL"
+        assert "UNKNOWN" in result.violations
+        assert _eag_row(result)["use_disposition"] != "RECORD_DESCRIPTION_ONLY"
+
+
+def test_eag_description_replayed_as_independent_support_stays_unknown():
+    from core.schema import EvidenceUse
+    artifacts = _eag_fixture(presence=True)
+    target = _eag_target()
+    observation = replace(artifacts.observations[0], target=target, declared_use=EvidenceUse.INDEPENDENT_TARGET_SUPPORT)
+    assessment = _eag_assessment(target)
+    result = run("EAG-DESCRIPTION-REPLAY", replace(artifacts, observations=(observation,), assessments=(assessment,)))
+    assert result.verdict == "FAIL"
+    assert "UNKNOWN" in result.violations
+    assert _eag_row(result)["record_presence"] == "NOT_EVALUATED"
+    assert _eag_row(result)["use_disposition"] == "UNKNOWN"
+
+
+def test_eag_observation_own_presence_binding_is_not_a_dependency_cycle():
+    target = _eag_target("EAG-O1", "OBSERVATION", presence=True)
+    artifacts = AuditInput(observations=(_eag_obs("EAG-O1", target, presence=True),),
+                          evidence=(_eag_ev(),), assessments=(_eag_assessment(target, presence=True),))
+    result = run("EAG-OWN-PRESENCE", artifacts)
+    assert result.verdict == "PASS"
+    assert _eag_row(result)["record_presence"] == "MATCH"
+
+
+def test_eag_explicit_observation_self_parent_is_a_cycle():
+    artifacts = _eag_fixture(presence=True)
+    observation = replace(artifacts.observations[0], provenance_refs=(_eag_ref("EAG-O1", "OBSERVATION"),))
+    result = run("EAG-SELF-PARENT", replace(artifacts, observations=(observation,)))
+    assert result.verdict == "FAIL"
+    assert "UNKNOWN" in result.violations
+    assert _eag_row(result)["ancestry"] == "UNKNOWN"
+
+
+def test_eag_long_cycle_does_not_disappear_in_shared_graph_resolution():
+    artifacts = _eag_fixture(wrappers=3, presence=True)
+    first = replace(artifacts.observations[0], provenance_refs=(_eag_ref("EAG-O3", "OBSERVATION"),))
+    result = run("EAG-LONG-CYCLE", replace(artifacts, observations=(first, *artifacts.observations[1:])))
+    assert result.verdict == "FAIL"
+    assert "UNKNOWN" in result.violations
+    assert _eag_row(result)["ancestry"] == "UNKNOWN"
+
+
+def test_eag_observations_alone_are_primary_candidates_not_support():
+    artifacts = _eag_fixture()
+    result = run("EAG-OBS-CANDIDATE", AuditInput(observations=artifacts.observations))
+    assert result.verdict == "PASS"
+    doc = _eag_doc(result)
+    assert doc["candidate_use"] == "NOT_EVALUATED"
+    assert doc["assessments"] == []
+    assert doc["independent_admission_authority"] == "NONE"
+    assert ("OBSERVATION", "EAG-O1") in _eag_inventory(result)
+
+
+def test_eag_legacy_candidates_remain_not_evaluated_and_inventory_is_explicit():
+    result = run("EAG-LEGACY-CANDIDATE", AuditInput(evidence=(_m0_guard_evidence(),)))
+    assert result.verdict == "PASS"
+    assert _eag_doc(result)["candidate_use"] == "NOT_EVALUATED"
+    assert _eag_doc(result)["candidate_ancestry"] == "UNKNOWN"
+    assert ("EVIDENCE", "GUARD-E-1") in _eag_inventory(result)
+    assert ("OBSERVATION", "GUARD-REAL-OBS") in _eag_inventory(result)
+
+
+def test_eag_candidate_only_nested_forbidden_ancestry_is_screened():
+    artifacts = _eag_fixture(parent=_eag_ref("EAG-R0", "AUDIT_RESULT"), wrappers=2)
+    artifacts = replace(artifacts, assessments=(), prior_audit_results=(_f11_audit_result("EAG-R0"),))
+    result = run("EAG-CANDIDATE-FORBIDDEN", artifacts)
+    assert result.verdict == "FAIL"
+    assert "COMPOSITION_FORBIDDEN" in result.violations
+    assert _eag_doc(result)["candidate_use"] == "NOT_EVALUATED"
+
+
+def test_eag_inventory_mentions_do_not_instantiate_observation_records():
+    artifacts = _eag_fixture()
+    prior = _f11_audit_result("EAG-R0", examined=(_eag_ref("EAG-O1", "OBSERVATION"),))
+    result = run("EAG-MENTION-NOT-OBJECT", replace(artifacts, observations=(), prior_audit_results=(prior,)))
+    assert result.verdict == "FAIL"
+    assert "UNKNOWN" in result.violations
+    assert _eag_row(result)["ancestry"] == "UNKNOWN"
+
+
+def _eag_retrieval(identifier, source, child):
+    from core.schema import RetrievalEvent
+    procedure = _eag_ref("EAG-PROCEDURE", "TRANSFORMATION")
+    return RetrievalEvent(identifier, source, child, TS, procedure, "UNKNOWN", prov(identifier), procedure)
+
+
+def test_eag_exact_typed_retrieval_endpoint_retains_forbidden_dependency():
+    artifacts = _eag_fixture(presence=True)
+    retrieval = _eag_retrieval("EAG-RET", _eag_ref("EAG-R0", "AUDIT_RESULT"), _eag_ref("EAG-O1", "OBSERVATION"))
+    result = run("EAG-RETRIEVAL-FORBIDDEN", replace(artifacts, retrieval_events=(retrieval,), prior_audit_results=(_f11_audit_result("EAG-R0"),)))
+    assert result.verdict == "FAIL"
+    assert "COMPOSITION_FORBIDDEN" in result.violations
+    assert ("AUDIT_RESULT", "EAG-R0") in _eag_inventory(result)
+    assert _eag_row(result)["record_presence"] == "MATCH"
+
+
+def test_eag_different_well_typed_retrieval_key_is_not_id_contamination():
+    artifacts = _eag_fixture(presence=True)
+    other_claim = _eag_claim("EAG-O1")
+    retrieval = _eag_retrieval("EAG-RET-OTHER", _eag_ref("EAG-R0", "AUDIT_RESULT"), _eag_ref("EAG-O1", "CLAIM"))
+    result = run("EAG-RETRIEVAL-SEPARATE", replace(artifacts, claims=(*artifacts.claims, other_claim),
+                 retrieval_events=(retrieval,), prior_audit_results=(_f11_audit_result("EAG-R0"),)))
+    assert result.verdict == "PASS"
+    assert "COMPOSITION_FORBIDDEN" not in result.violations
+    assert _eag_row(result)["record_presence"] == "MATCH"
+
+
+def test_eag_shared_graph_facts_do_not_transfer_self_dependence_between_targets():
+    target0, target1 = _eag_target("EAG-C0"), _eag_target("EAG-C1")
+    common = _eag_ref("EAG-C0", "CLAIM")
+    artifacts = AuditInput(claims=(_eag_claim("EAG-C0"), _eag_claim("EAG-C1")),
+        observations=(_eag_obs("EAG-O0", target0, (common,)), _eag_obs("EAG-O1", target1, (common,))),
+        evidence=(_eag_ev("EAG-E0", ("EAG-O0",), IndependenceStatus.DEPENDENT), _eag_ev("EAG-E1", ("EAG-O1",), IndependenceStatus.DEPENDENT)),
+        assessments=(_eag_assessment(target0, identifier="EAG-A0", evidence_ids=("EAG-E0",)), _eag_assessment(target1)))
+    result = run("EAG-MULTI-TARGET", artifacts)
+    assert _eag_row(result, "EAG-A0")["use_disposition"] == "KNOWN_INADMISSIBLE"
+    assert _eag_row(result, "EAG-A1")["use_disposition"] == "UNKNOWN"
+
+
+def test_eag_fresh_ids_with_shared_resolved_roots_do_not_inflate_independence():
+    artifacts = _eag_fixture(parent=_eag_ref("EAG-C0", "CLAIM"))
+    second = _eag_obs("EAG-O2", artifacts.assessments[0].target, (_eag_ref("EAG-C0", "CLAIM"),))
+    artifacts = replace(artifacts, claims=(_eag_claim("EAG-C0"), *artifacts.claims),
+        observations=(*artifacts.observations, second), evidence=(*artifacts.evidence, _eag_ev("EAG-E2", ("EAG-O2",))),
+        assessments=(_eag_assessment(artifacts.assessments[0].target, evidence_ids=("EAG-E1", "EAG-E2")),))
+    result = run("EAG-SHARED-ROOT", artifacts)
+    assert result.verdict == "FAIL"
+    assert "EVIDENCE_INFLATION" in result.violations
+    assert _eag_row(result)["use_disposition"] != "RECORD_DESCRIPTION_ONLY"
+
+
+def _eag_depth_fixture(observation_count, shortcut=False):
+    target = _eag_target(presence=True)
+    observations = tuple(_eag_obs(f"DEPTH-{index}", target,
+        (_eag_ref(f"DEPTH-{index + 1}", "OBSERVATION"),) if index + 1 < observation_count
+        else (_eag_ref("EAG-C1", "CLAIM"),), presence=True) for index in range(observation_count))
+    children = (f"DEPTH-{observation_count - 1}", "DEPTH-0") if shortcut else ("DEPTH-0",)
+    return AuditInput(claims=(_eag_claim("EAG-C1"),), observations=observations,
+                      evidence=(_eag_ev(observations=children),), assessments=(_eag_assessment(target, presence=True),))
+
+
+def test_eag_depth_boundary_and_short_path_cache_preserve_deeper_limit():
+    allowed = run("EAG-DEPTH-64", _eag_depth_fixture(63))
+    assert allowed.verdict == "PASS"
+    assert _eag_row(allowed)["ancestry"] == "TRACEABLE_WITHIN_SUPPLIED_SNAPSHOT"
+    exceeded = run("EAG-DEPTH-65-SHARED", _eag_depth_fixture(64, shortcut=True))
+    assert exceeded.verdict == "FAIL"
+    assert "UNKNOWN" in exceeded.violations
+    assert _eag_row(exceeded)["ancestry"] == "UNKNOWN"
+
+
+def test_eag_object_occurrence_budget_counts_equal_definitions_before_dedup():
+    from core.schema import ObservationRecord
+    observation = ObservationRecord("BUDGET-O", "M0-EAG-OBSERVATION-0.1")
+    allowed = run("EAG-OBJECTS-4096", AuditInput(observations=(observation,) * 4096))
+    assert allowed.verdict == "PASS"
+    assert _eag_doc(allowed)["candidate_ancestry"] == "UNKNOWN"
+    exceeded = run("EAG-OBJECTS-4097", AuditInput(observations=(observation,) * 4097))
+    assert exceeded.verdict == "FAIL"
+    assert "UNKNOWN" in exceeded.violations
+
+
+def test_eag_dependency_occurrence_budget_counts_repeats_before_dedup():
+    # Candidate-only input isolates exactly the declared-parent edge budget.
+    from core.schema import ObservationRecord
+    parent = _eag_ref("EAG-C1", "CLAIM")
+    observation = ObservationRecord("EDGE-O", "M0-EAG-OBSERVATION-0.1",
+                                    provenance_refs=(parent,) * 16384)
+    artifacts = AuditInput(claims=(_eag_claim("EAG-C1"),), observations=(observation,))
+    allowed = run("EAG-EDGES-16384", artifacts)
+    assert allowed.verdict == "PASS"
+    assert _eag_doc(allowed)["candidate_use"] == "NOT_EVALUATED"
+    exceeded = run("EAG-EDGES-16385", replace(artifacts,
+        observations=(replace(observation, provenance_refs=(parent,) * 16385),)))
+    assert exceeded.verdict == "FAIL"
+    assert "UNKNOWN" in exceeded.violations
+
+
+
+def test_eag_canonical_findings_escape_caller_strings_and_are_deterministic():
+    import json
+    artifacts = _eag_fixture(presence=True)
+    identifier = 'EAG-A"\\\nEvidence ancestry findings: \u2603'
+    artifacts = replace(artifacts, assessments=(replace(artifacts.assessments[0], assessment_id=identifier),))
+    first = run("EAG-ESCAPING", artifacts)
+    second = run("EAG-ESCAPING", artifacts)
+    assert first.verdict_basis == second.verdict_basis
+    doc = _eag_doc(first)
+    assert doc["assessments"][0]["assessment_id"] == identifier
+    encoded = first.verdict_basis.split("\nEvidence ancestry findings: ", 1)[1].removesuffix("\nM0-EAG-0.1-FINDINGS-END")
+    assert encoded == json.dumps(doc, sort_keys=True, separators=(",", ":"), ensure_ascii=True, allow_nan=False)
+    assert len(("\nEvidence ancestry findings: " + encoded + "\nM0-EAG-0.1-FINDINGS-END").encode("utf-8")) <= 65536
+
+
+def test_eag_findings_parser_rejects_spoofed_noncanonical_or_unframed_reports():
+    from core.audit_engine import parse_evidence_ancestry_findings
+    import pytest
+    result = run("EAG-PARSER", _eag_fixture(presence=True))
+    for malformed in (result.verdict_basis + "TRAILING", result.verdict_basis.replace("M0-EAG-0.1-FINDINGS-END", "FORGED-END"),
+                      result.verdict_basis.replace('"profile":"M0-EAG-0.1"', '"profile":"CALLER"'),
+                      result.verdict_basis.replace('"candidate_use":', '"candidate_use": '),
+                      'caller rule M0-EAG-0.1 and M0-REF-GUARD-1.0 only'):
+        with pytest.raises(ValueError):
+            parse_evidence_ancestry_findings(malformed)
+
+
+def test_eag_report_overflow_is_bounded_fail_closed_and_retains_forbidden_code():
+    artifacts = _eag_fixture(presence=True)
+    assessments = tuple(replace(artifacts.assessments[0], assessment_id=f"EAG-LONG-{index:04d}-" + "x" * 100) for index in range(400))
+    forbidden = _eag_obs("EAG-FORBIDDEN", artifacts.assessments[0].target,
+                         (_eag_ref("EAG-R0", "AUDIT_RESULT"),), presence=True)
+    artifacts = replace(artifacts, assessments=assessments, observations=(*artifacts.observations, forbidden),
+                        prior_audit_results=(_f11_audit_result("EAG-R0"),))
+    result = run("EAG-REPORT-LIMIT", artifacts)
+    assert result.verdict == "FAIL"
+    assert "UNKNOWN" in result.violations and "COMPOSITION_FORBIDDEN" in result.violations
+    doc = _eag_doc(result)
+    assert doc["report_complete"] is False and doc["report_limit_exceeded"] is True
+    assert doc["assessments"] == []
+    appendix = result.verdict_basis[result.verdict_basis.index("\nEvidence ancestry findings: "):]
+    assert len(appendix.encode("utf-8")) <= 65536
+
+
+def test_eag_new_identifier_bounds_are_utf8_bytes_without_normalization():
+    from core.schema import ObservationRecord, SupportTarget
+    import pytest
+    assert ObservationRecord("\u00e9" * 64, "M0-EAG-OBSERVATION-0.1").observation_id == "\u00e9" * 64
+    with pytest.raises(ValueError):
+        ObservationRecord("\u00e9" * 65, "M0-EAG-OBSERVATION-0.1")
+    assert SupportTarget(_eag_ref("Case", "CLAIM"), "PROP").subject_reference != _eag_ref("case", "CLAIM")
+    assert SupportTarget(_eag_ref("\u00e9", "CLAIM"), "PROP").subject_reference != _eag_ref("e\u0301", "CLAIM")
+
+
+def test_eag_reachable_observation_bindings_are_required():
+    from core.schema import EvidenceUse, ObservationRecord
+    artifacts = _eag_fixture(presence=True)
+    target = artifacts.assessments[0].target
+    parent = _eag_ref("EAG-ANCESTOR", "OBSERVATION")
+    child = replace(artifacts.observations[0], provenance_refs=(parent,))
+    ancestors = (
+        ObservationRecord("EAG-ANCESTOR", "M0-EAG-OBSERVATION-0.1"),
+        _eag_obs("EAG-ANCESTOR", target),  # Fully typed, wrong requested use.
+    )
+    for ancestor in ancestors:
+        result = run("EAG-REACHABLE-BINDING", replace(artifacts,
+            observations=(ancestor, child)))
+        assert result.verdict == "FAIL"
+        assert "UNKNOWN" in result.violations
+        assert _eag_row(result)["record_presence"] == "MATCH"
+        assert _eag_row(result)["use_disposition"] != "RECORD_DESCRIPTION_ONLY"
+
+
+def test_eag_bound_reachable_description_preserves_presence_match():
+    artifacts = _eag_fixture(presence=True, wrappers=2)
+    result = run("EAG-BOUND-REACHABLE", artifacts)
+    assert result.verdict == "PASS"
+    assert _eag_row(result)["record_presence"] == "MATCH"
+    assert _eag_row(result)["use_disposition"] == "RECORD_DESCRIPTION_ONLY"
+    assert _eag_row(result)["source_authentication"] == "UNKNOWN"
+
+
+def test_eag_absent_forbidden_ancestor_keeps_resolution_unknown():
+    artifacts = _eag_fixture(parent=_eag_ref("EAG-ABSENT", "AUDIT_RESULT"), presence=True)
+    result = run("EAG-ABSENT-FORBIDDEN", artifacts)
+    assert result.verdict == "FAIL"
+    assert "COMPOSITION_FORBIDDEN" in result.violations
+    assert "UNKNOWN" in result.violations
+    assert _eag_row(result)["ancestry"] == "UNKNOWN"
+    assert _eag_row(result)["record_presence"] == "MATCH"
+
+
+def test_eag_findings_parser_rejects_admission_disposition():
+    import json
+    import pytest
+    from core.audit_engine import parse_evidence_ancestry_findings
+    result = run("EAG-INVALID-DISPOSITION", _eag_fixture(presence=True))
+    doc = _eag_doc(result)
+    doc["assessments"][0]["use_disposition"] = "ADMITTED"
+    forged = (result.verdict_basis.split("\nEvidence ancestry findings: ", 1)[0]
+              + "\nEvidence ancestry findings: "
+              + json.dumps(doc, sort_keys=True, separators=(",", ":"), ensure_ascii=True, allow_nan=False)
+              + "\nM0-EAG-0.1-FINDINGS-END")
+    with pytest.raises(ValueError):
+        parse_evidence_ancestry_findings(forged)
+
+
+def _eag_canonical_candidate_ancestry_basis(candidate_ancestry):
+    import json
+    from core.audit_engine import EAG_FINDINGS_BEGIN, EAG_FINDINGS_END
+    result = run("EAG-CANDIDATE-STATE", AuditInput())
+    document = _eag_doc(result)
+    document["candidate_ancestry"] = candidate_ancestry
+    return (result.verdict_basis.split(EAG_FINDINGS_BEGIN, 1)[0]
+            + EAG_FINDINGS_BEGIN
+            + json.dumps(document, sort_keys=True, separators=(",", ":"),
+                         ensure_ascii=True, allow_nan=False)
+            + EAG_FINDINGS_END)
+
+
+@pytest.mark.parametrize("candidate_ancestry", [
+    pytest.param([], id="list"),
+    pytest.param({}, id="dictionary"),
+    pytest.param("SYNTHETIC_INVALID", id="unsupported-string"),
+])
+def test_eag_findings_parser_rejects_invalid_candidate_ancestry(candidate_ancestry):
+    from core.audit_engine import parse_evidence_ancestry_findings
+    basis = _eag_canonical_candidate_ancestry_basis(candidate_ancestry)
+    with pytest.raises(ValueError, match="^M0 ancestry candidate state invalid$") as error:
+        parse_evidence_ancestry_findings(basis)
+    assert type(error.value) is ValueError
+
+
+@pytest.mark.parametrize("candidate_ancestry", [
+    "UNKNOWN", "TRACEABLE_WITHIN_SUPPLIED_SNAPSHOT", "NOT_EVALUATED",
+])
+def test_eag_findings_parser_accepts_valid_candidate_ancestry(candidate_ancestry):
+    from core.audit_engine import parse_evidence_ancestry_findings
+    document = parse_evidence_ancestry_findings(
+        _eag_canonical_candidate_ancestry_basis(candidate_ancestry))
+    assert document["candidate_ancestry"] == candidate_ancestry
+    assert document["independent_admission_authority"] == "NONE"
+    assert document["claim_truth"] == document["entity_continuity"] == "UNKNOWN"

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from dataclasses import dataclass
 from typing import Iterable
 
@@ -13,6 +15,8 @@ from .schema import (
     CompositionSummary,
     CompositionSummaryRecord,
     Evidence,
+    EvidenceUse,
+    ObservationRecord,
     HistoricalState,
     HistoricalMutationCandidate,
     IndependenceStatus,
@@ -25,6 +29,80 @@ from .schema import (
     TemporalRelation,
     Timestamp,
 )
+
+
+
+EAG_FINDINGS_BEGIN = "\nEvidence ancestry findings: "
+EAG_FINDINGS_END = "\nM0-EAG-0.1-FINDINGS-END"
+
+
+def parse_evidence_ancestry_findings(basis: str) -> dict:
+    """Parse the engine-owned, canonical findings tail; this is no credential."""
+    if not isinstance(basis, str) or basis.count(EAG_FINDINGS_BEGIN) != 1:
+        raise ValueError("M0 ancestry findings framing missing or ambiguous")
+    _, encoded = basis.split(EAG_FINDINGS_BEGIN, 1)
+    if not encoded.endswith(EAG_FINDINGS_END):
+        raise ValueError("M0 ancestry findings end marker missing")
+    encoded = encoded[:-len(EAG_FINDINGS_END)]
+    if len((EAG_FINDINGS_BEGIN + encoded + EAG_FINDINGS_END).encode("utf-8")) > 65536:
+        raise ValueError("M0 ancestry findings exceed report limit")
+    try:
+        data = json.loads(encoded)
+        canonical = json.dumps(data, sort_keys=True, separators=(",", ":"),
+                               ensure_ascii=True, allow_nan=False)
+    except (ValueError, TypeError) as exc:
+        raise ValueError("M0 ancestry findings invalid JSON") from exc
+    if encoded != canonical or not isinstance(data, dict):
+        raise ValueError("M0 ancestry findings not canonical")
+    if (data.get("profile") != "M0-EAG-0.1"
+            or data.get("mandatory_guards") != ["M0-REF-GUARD-1.0", "M0-EAG-0.1"]
+            or data.get("independent_admission_authority") != "NONE"
+            or data.get("candidate_use") != "NOT_EVALUATED"
+            or data.get("claim_truth") != "UNKNOWN"
+            or data.get("entity_continuity") != "UNKNOWN"
+            or not isinstance(data.get("assessments"), list)
+            or type(data.get("report_complete")) is not bool):
+        raise ValueError("M0 ancestry findings profile invalid")
+    ancestry_states = {"UNKNOWN", "TRACEABLE_WITHIN_SUPPLIED_SNAPSHOT"}
+    candidate_ancestry = data.get("candidate_ancestry")
+    if (not isinstance(candidate_ancestry, str)
+            or candidate_ancestry not in ancestry_states | {"NOT_EVALUATED"}):
+        raise ValueError("M0 ancestry candidate state invalid")
+    expected_row_keys = {
+        "assessment_id", "target", "property_id", "requested_use", "ancestry",
+        "record_presence", "use_disposition", "source_authentication", "reasons",
+    }
+    def valid_identifier(value):
+        return value is None or _EvidenceAncestryGuard.report_id(value) is not None
+    for row in data["assessments"]:
+        if not isinstance(row, dict) or set(row) != expected_row_keys:
+            raise ValueError("M0 ancestry assessment fields invalid")
+        if (not valid_identifier(row["assessment_id"])
+                or not valid_identifier(row["property_id"])
+                or row["requested_use"] not in (None, "RECORD_DESCRIPTION", "INDEPENDENT_TARGET_SUPPORT")
+                or row["ancestry"] not in ("UNKNOWN", "TRACEABLE_WITHIN_SUPPLIED_SNAPSHOT")
+                or row["record_presence"] not in ("MATCH", "NOT_EVALUATED", "UNKNOWN")
+                or row["use_disposition"] not in ("NOT_EVALUATED", "RECORD_DESCRIPTION_ONLY", "KNOWN_INADMISSIBLE", "UNKNOWN")
+                or row["source_authentication"] != "UNKNOWN"
+                or not isinstance(row["reasons"], list)
+                or not all(isinstance(reason, str) for reason in row["reasons"])):
+            raise ValueError("M0 ancestry assessment state invalid")
+        target = row["target"]
+        if target is not None and (
+                not isinstance(target, dict)
+                or set(target) != {"reference_id", "reference_type"}
+                or target["reference_id"] is None or target["reference_type"] is None
+                or not valid_identifier(target["reference_id"])
+                or not valid_identifier(target["reference_type"])):
+            raise ValueError("M0 ancestry target invalid")
+        if row["record_presence"] == "MATCH" or row["use_disposition"] == "RECORD_DESCRIPTION_ONLY":
+            if (row["requested_use"] != "RECORD_DESCRIPTION"
+                    or row["property_id"] != "SUPPLIED_RECORD_PRESENT"
+                    or target is None or target["reference_type"] not in ("CLAIM", "OBSERVATION")):
+                raise ValueError("M0 ancestry presence binding invalid")
+    if "use_disposition" in data and data["use_disposition"] != "UNKNOWN":
+        raise ValueError("M0 ancestry fallback state invalid")
+    return data
 
 
 # Engine-owned allowlist: request declarations and edge authorizations are claims,
@@ -61,6 +139,7 @@ class AuditInput:
     ] = ()
     lineage_candidates: tuple[LineageCandidate, ...] = ()
     composition_requests: tuple[CompositionRequest, ...] = ()
+    observations: tuple[ObservationRecord, ...] = ()
 
     @property
     def artifacts_examined(self) -> tuple:
@@ -144,13 +223,34 @@ class AuditInput:
                 )
             )
 
+
+        # Canonical guard identities and endpoints supplement the legacy trace.
+        for claim in self.claims:
+            references.append(Reference(claim.claim_id, "CLAIM"))
+        for item in self.evidence:
+            references.append(Reference(item.evidence_id, "EVIDENCE"))
+        for assessment in self.assessments:
+            references.append(Reference(assessment.assessment_id, "ASSESSMENT"))
+            if assessment.target is not None:
+                references.append(assessment.target.subject_reference)
+        for observation in self.observations:
+            references.append(Reference(observation.observation_id, "OBSERVATION"))
+            references.extend(observation.provenance_refs)
+            if observation.target is not None:
+                references.append(observation.target.subject_reference)
+
         return tuple(references)
 
 
 class AuditEngine:
     INSPECTOR_ID = "ARIO_M0_DETERMINISTIC_AUDIT"
-    INSPECTOR_VERSION = "M0-1.1"
+    INSPECTOR_VERSION = "M0-1.2"
     ALWAYS_ON_FIREWALL_VERSION = "M0-REF-GUARD-1.0"
+    ALWAYS_ON_ANCESTRY_VERSION = "M0-EAG-0.1"
+    MAX_ANCESTRY_OBJECTS = 4096
+    MAX_ANCESTRY_EDGES = 16384
+    MAX_ANCESTRY_DEPTH = 64
+    MAX_ANCESTRY_REPORT_BYTES = 65536
 
     def audit(
         self,
@@ -174,6 +274,7 @@ class AuditEngine:
                 artifacts.retrieval_events,
                 artifacts.evidence,
                 artifacts.assessments,
+                artifacts.observations,
                 artifacts.historical_mutation_candidates,
                 artifacts.lineage_candidates,
                 artifacts.composition_requests,
@@ -258,13 +359,30 @@ class AuditEngine:
                 "completed without an observed violation."
             )
 
+
+        guard_violations, guard_report = _EvidenceAncestryGuard(artifacts, self).evaluate()
+        violations.extend(code for code in guard_violations if code not in violations)
+        appendix, report_overflow = _serialize_ancestry_report(
+            guard_report, violations, self.MAX_ANCESTRY_REPORT_BYTES)
+        if report_overflow and "UNKNOWN" not in violations:
+            violations.append("UNKNOWN")
+        if has_primary_artifacts:
+            verdict = "FAIL" if violations else "PASS"
+            verdict_basis = (
+                "One or more implemented M0 structural rules reported violations."
+                if violations else
+                "All implemented M0 structural rules completed without an observed violation."
+            )
+
         # Version-aware report: declared rule packs differ from engine-owned
         # nonoptional invariants; never present an unqualified structural PASS.
         verdict_basis = (
             f"{verdict_basis} Declared rule versions: {rule_versions!r}. "
             f"Engine-enforced reference firewall: {self.ALWAYS_ON_FIREWALL_VERSION}. "
+            f"Engine-enforced ancestry guard: {self.ALWAYS_ON_ANCESTRY_VERSION}. "
             "PASS, if any, is limited to implemented structural checks and "
             "does not establish truth, identity, or independent provenance."
+            f"{appendix}"
         )
 
         return AuditResult(
@@ -910,3 +1028,301 @@ class AuditEngine:
                     violations.append("EVIDENCE_INADMISSIBLE")
 
         return violations
+
+
+
+class _EvidenceAncestryGuard:
+    """Screen only supplied declarations; never authenticate independence."""
+
+    FORBIDDEN = frozenset({"AUDIT_RESULT", "COMPOSITION_REQUEST", "COMPOSITION_SUMMARY"})
+    CONTENT_KINDS = frozenset({"CLAIM", "OBSERVATION", "EVIDENCE", "ASSESSMENT"})
+
+    def __init__(self, artifacts: AuditInput, engine: AuditEngine) -> None:
+        self.artifacts = artifacts
+        self.engine = engine
+        self.index: dict[tuple[str, str], list] = {}
+        self.edges: dict[tuple[str, str], list[Reference]] = {}
+        self.cache: dict[tuple[str, str], dict] = {}
+        self.forbidden_ids: set[str] = set()
+        self.global_unknown = False
+        self.violation_codes: set[str] = set()
+        groups = (
+            ("CLAIM", "claim_id", artifacts.claims),
+            ("OBSERVATION", "observation_id", artifacts.observations),
+            ("EVIDENCE", "evidence_id", artifacts.evidence),
+            ("ASSESSMENT", "assessment_id", artifacts.assessments),
+            ("AUDIT_RESULT", "audit_id", artifacts.prior_audit_results),
+            ("COMPOSITION_REQUEST", "composition_id", artifacts.composition_requests),
+        )
+        # Participant bindings refer to results; they do not define more results.
+        summaries = tuple(s for r in artifacts.prior_audit_results
+                          for s in r.composition_summaries)
+        groups += (("COMPOSITION_SUMMARY", "composition_id", summaries),)
+        object_count = sum(len(items) for _, _, items in groups)
+        edge_count = (
+            sum(len(o.provenance_refs) for o in artifacts.observations)
+            + sum(len(e.observation_refs) + 1 for e in artifacts.evidence)
+            + sum(len(a.admissible_evidence_refs) for a in artifacts.assessments)
+            + len(artifacts.retrieval_events)
+        )
+        if (object_count > engine.MAX_ANCESTRY_OBJECTS
+                or edge_count > engine.MAX_ANCESTRY_EDGES):
+            self.global_unknown = True
+            self.violation_codes.add("UNKNOWN")
+            return
+        for kind, field, items in groups:
+            for item in items:
+                key = (kind, getattr(item, field))
+                self.index.setdefault(key, []).append(item)
+                if kind in self.FORBIDDEN:
+                    self.forbidden_ids.add(key[1])
+        for item in artifacts.observations:
+            self.edges.setdefault(("OBSERVATION", item.observation_id), []).extend(
+                item.provenance_refs)
+        for item in artifacts.evidence:
+            key = ("EVIDENCE", item.evidence_id)
+            self.edges.setdefault(key, []).extend(item.observation_refs)
+            reference = item.derivation_reference
+            if reference is not None and (
+                    reference.reference_type != "TRANSFORMATION"
+                    or reference.reference_id in self.forbidden_ids):
+                self.edges[key].append(reference)
+        for item in artifacts.assessments:
+            self.edges.setdefault(("ASSESSMENT", item.assessment_id), []).extend(
+                item.admissible_evidence_refs)
+        for event in artifacts.retrieval_events:
+            # Different typed keys with the same text ID are separate endpoints.
+            self.edges.setdefault(self.key(event.retrieved_reference), []).append(
+                event.source_reference)
+
+    @staticmethod
+    def key(reference: Reference) -> tuple[str, str]:
+        return (reference.reference_type, reference.reference_id)
+
+    @staticmethod
+    def report_id(value) -> str | None:
+        try:
+            if isinstance(value, str) and value.strip() and len(value.encode("utf-8")) <= 128:
+                return value
+        except UnicodeError:
+            pass
+        return None
+
+    def unique(self, key: tuple[str, str]):
+        matches = self.index.get(key, ())
+        return matches[0] if len(matches) == 1 else None
+
+    def facts(self, root: tuple[str, str]) -> dict:
+        """Memoize intrinsic graph facts, never a target-specific disposition."""
+        if root in self.cache:
+            return self.cache[root]
+        unknown = self.global_unknown
+        codes: set[str] = set()
+        reached: set[tuple[str, str]] = set()
+        active: set[tuple[str, str]] = set()
+        complete: set[tuple[str, str]] = set()
+        heights: dict[tuple[str, str], int] = {}
+        stack = [] if self.global_unknown else [(root, False)]
+        while stack:
+            key, leaving = stack.pop()
+            if leaving:
+                active.remove(key)
+                complete.add(key)
+                heights[key] = max((1 + heights.get(self.key(r), 0)
+                                   for r in self.edges.get(key, ())), default=0)
+                continue
+            # Evidence root-ID collision uses the existing Assessment UNKNOWN
+            # rule. Ancestor references retain the stricter result-ID firewall.
+            root_evidence = key == root and key[0] == "EVIDENCE" and key not in active
+            if key[0] in self.FORBIDDEN or (key[1] in self.forbidden_ids and not root_evidence):
+                codes.add("COMPOSITION_FORBIDDEN")
+                if self.unique(key) is None:
+                    unknown = True
+                continue
+            if key in active:
+                unknown = True
+                continue
+            if key in complete:
+                continue
+            obj = self.unique(key)
+            if key[0] not in self.CONTENT_KINDS or obj is None:
+                unknown = True
+                continue
+            reached.add(key)
+            if (key[0] == "OBSERVATION"
+                    and obj.record_version != "M0-EAG-OBSERVATION-0.1"):
+                unknown = True
+            active.add(key)
+            stack.append((key, True))
+            children = sorted(set(self.key(r) for r in self.edges.get(key, ())))
+            stack.extend((child, False) for child in reversed(children))
+        # Longest DAG path, not first-visit depth: a shortcut cannot hide depth.
+        # Cycles already make resolution UNKNOWN.
+        if heights.get(root, 0) > self.engine.MAX_ANCESTRY_DEPTH:
+            unknown = True
+        result = {"unknown": unknown, "codes": codes, "reached": reached}
+        self.cache[root] = result
+        return result
+
+    @staticmethod
+    def base_report() -> dict:
+        return {
+            "profile": "M0-EAG-0.1",
+            "mandatory_guards": ["M0-REF-GUARD-1.0", "M0-EAG-0.1"],
+            "independent_admission_authority": "NONE",
+            "candidate_use": "NOT_EVALUATED",
+            "candidate_ancestry": "NOT_EVALUATED",
+            "assessments": [], "report_complete": True,
+            "claim_truth": "UNKNOWN", "entity_continuity": "UNKNOWN",
+        }
+
+    def evaluate(self) -> tuple[list[str], dict]:
+        report = self.base_report()
+        if self.global_unknown:
+            report.update(candidate_ancestry="UNKNOWN", report_complete=False,
+                          guard_limit_exceeded=True, use_disposition="UNKNOWN")
+            return ["UNKNOWN"], report
+        roots = [("EVIDENCE", e.evidence_id) for e in self.artifacts.evidence]
+        roots += [("OBSERVATION", o.observation_id) for o in self.artifacts.observations]
+        candidate_unknown = False
+        for root in roots:
+            fact = self.facts(root)
+            candidate_unknown |= fact["unknown"]
+            self.violation_codes.update(fact["codes"])
+        source_owners: dict[tuple[str, str], set[str]] = {}
+        for item in self.artifacts.evidence:
+            if (item.independence_status != IndependenceStatus.INDEPENDENT
+                    or self.unique(("EVIDENCE", item.evidence_id)) is not item):
+                continue
+            for key in self.facts(("EVIDENCE", item.evidence_id))["reached"]:
+                if key != ("EVIDENCE", item.evidence_id):
+                    source_owners.setdefault(key, set()).add(item.evidence_id)
+        if any(len(owners) > 1 for owners in source_owners.values()):
+            self.violation_codes.add("EVIDENCE_INFLATION")
+        findings = []
+        for assessment in sorted(self.artifacts.assessments,
+                                 key=lambda a: (a.assessment_id, a.assessment_version)):
+            target = assessment.target
+            use = assessment.requested_use
+            reasons: set[str] = set()
+            unknown = False
+            codes: set[str] = set()
+            reached: set[tuple[str, str]] = set()
+            target_key = self.key(target.subject_reference) if target is not None else None
+            target_obj = self.unique(target_key) if target_key is not None else None
+            safe_id = self.report_id(assessment.assessment_id)
+            if safe_id is None or target is None or use is None:
+                unknown = True
+                reasons.add("MISSING_OR_UNREPORTABLE_TARGET_USE")
+            if target is not None and target_obj is None:
+                unknown = True
+                reasons.add("TARGET_UNRESOLVED")
+            if self.unique(("ASSESSMENT", assessment.assessment_id)) is None:
+                unknown = True
+                reasons.add("ASSESSMENT_ID_AMBIGUOUS")
+            ancestry_unknown = False
+            for reference in assessment.admissible_evidence_refs:
+                item = self.unique(self.key(reference))
+                if reference.reference_type != "EVIDENCE" or not isinstance(item, Evidence):
+                    unknown = True
+                    ancestry_unknown = True
+                    reasons.add("EVIDENCE_UNRESOLVED")
+                    # Preserve existing direct F11/F15 specialized diagnostics.
+                    continue
+                if reference.reference_id in self.forbidden_ids:
+                    unknown = True
+                    reasons.add("PROTECTED_RESULT_ID_COLLISION")
+                fact = self.facts(self.key(reference))
+                ancestry_unknown |= fact["unknown"]
+                codes.update(fact["codes"])
+                reached.update(fact["reached"])
+                for observation_ref in item.observation_refs:
+                    observation = self.unique(self.key(observation_ref))
+                    if (observation_ref.reference_type != "OBSERVATION"
+                            or not isinstance(observation, ObservationRecord)
+                            or observation.target != target
+                            or observation.declared_use != use):
+                        unknown = True
+                        reasons.add("OBSERVATION_BINDING_UNRESOLVED")
+            # Bind every relied-on reachable Observation, not only wrappers.
+            # Intrinsic cached graph facts remain independent of target/use.
+            for key in sorted(reached):
+                if key[0] == "OBSERVATION":
+                    observation = self.unique(key)
+                    if observation.target != target or observation.declared_use != use:
+                        unknown = True
+                        reasons.add("OBSERVATION_BINDING_UNRESOLVED")
+            unknown |= ancestry_unknown
+            if ancestry_unknown:
+                reasons.add("ANCESTRY_UNRESOLVED")
+            presence = "NOT_EVALUATED"
+            disposition = "UNKNOWN"
+            if use == EvidenceUse.RECORD_DESCRIPTION:
+                exact = (
+                    target is not None
+                    and target.property_id == "SUPPLIED_RECORD_PRESENT"
+                    and target.subject_reference.reference_type in {"CLAIM", "OBSERVATION"}
+                    and assessment.rule_version == "M0-EAG-RECORD-PRESENCE-0.1"
+                    and assessment.scope == "SUPPLIED_INPUT_RECORDS_ONLY"
+                )
+                if exact and target_obj is not None:
+                    presence = "MATCH"
+                else:
+                    unknown = True
+                    reasons.add("UNSUPPORTED_DESCRIPTION_BINDING")
+                if not unknown and not codes:
+                    disposition = "RECORD_DESCRIPTION_ONLY"
+            elif use == EvidenceUse.INDEPENDENT_TARGET_SUPPORT:
+                if target is None or target.subject_reference.reference_type != "CLAIM":
+                    unknown = True
+                    reasons.add("SUPPORT_TARGET_UNRESOLVED")
+                if (target_key in reached
+                        or ("ASSESSMENT", assessment.assessment_id) in reached):
+                    codes.add("EVIDENCE_INADMISSIBLE")
+                    disposition = "KNOWN_INADMISSIBLE"
+                    reasons.add("EXACT_SELF_CONFIRMATION")
+                else:
+                    unknown = True
+                    reasons.add("NO_INDEPENDENT_ADMISSION_AUTHORITY")
+            else:
+                unknown = True
+                reasons.add("USE_NOT_DECLARED")
+            if unknown:
+                codes.add("UNKNOWN")
+            if "COMPOSITION_FORBIDDEN" in codes:
+                disposition = "KNOWN_INADMISSIBLE"
+            self.violation_codes.update(codes)
+            findings.append({
+                "assessment_id": safe_id,
+                "target": ({"reference_id": target.subject_reference.reference_id,
+                            "reference_type": target.subject_reference.reference_type}
+                           if target is not None else None),
+                "property_id": target.property_id if target is not None else None,
+                "requested_use": use.value if use is not None else None,
+                "ancestry": "UNKNOWN" if ancestry_unknown else "TRACEABLE_WITHIN_SUPPLIED_SNAPSHOT",
+                "record_presence": presence,
+                "use_disposition": disposition,
+                "source_authentication": "UNKNOWN", "reasons": sorted(reasons),
+            })
+        report.update(
+            candidate_ancestry=("UNKNOWN" if candidate_unknown else
+                               "TRACEABLE_WITHIN_SUPPLIED_SNAPSHOT" if roots else "NOT_EVALUATED"),
+            assessments=findings)
+        return sorted(self.violation_codes), report
+
+
+def _serialize_ancestry_report(report: dict, violations: list[str],
+                               limit: int) -> tuple[str, bool]:
+    def encode(value):
+        return (EAG_FINDINGS_BEGIN
+                + json.dumps(value, sort_keys=True, separators=(",", ":"),
+                             ensure_ascii=True, allow_nan=False)
+                + EAG_FINDINGS_END)
+    appendix = encode(report)
+    if len(appendix.encode("utf-8")) <= limit:
+        return appendix, False
+    fallback = dict(report, assessments=[], report_complete=False,
+                    report_limit_exceeded=True, use_disposition="UNKNOWN",
+                    candidate_ancestry="UNKNOWN",
+                    retained_violation_codes=sorted(set(violations) | {"UNKNOWN"}))
+    return encode(fallback), True

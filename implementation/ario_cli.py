@@ -9,7 +9,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Union, get_args, get_origin, get_type_hints
 
-from core.audit_engine import AuditEngine, AuditInput
+from core.audit_engine import AuditEngine, AuditInput, parse_evidence_ancestry_findings
 from core.schema import Timestamp
 
 
@@ -153,6 +153,8 @@ def execute_request(payload):
         and AuditEngine.ALWAYS_ON_FIREWALL_VERSION not in result.verdict_basis
     ):
         raise ValueError("M0 security profile missing from verdict_basis")
+    if result.inspector_version == AuditEngine.INSPECTOR_VERSION:
+        parse_evidence_ancestry_findings(result.verdict_basis)
     return result_to_dict(result)
 
 

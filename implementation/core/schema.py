@@ -298,6 +298,57 @@ class RetrievalEvent:
             raise ValueError("fidelity_status must be non-empty")
 
 
+
+class EvidenceUse(str, Enum):
+    RECORD_DESCRIPTION = "RECORD_DESCRIPTION"
+    INDEPENDENT_TARGET_SUPPORT = "INDEPENDENT_TARGET_SUPPORT"
+
+
+def _check_eag_identifier(value: str, name: str) -> None:
+    if (not isinstance(value, str) or not value.strip()
+            or len(value.encode("utf-8")) > 128):
+        raise ValueError(f"{name} must be a non-empty string of at most 128 UTF-8 bytes")
+
+
+def _check_eag_reference(value: Reference) -> None:
+    if not isinstance(value, Reference):
+        raise ValueError("ancestry reference must be a Reference")
+    _check_eag_identifier(value.reference_id, "reference_id")
+    _check_eag_identifier(value.reference_type, "reference_type")
+
+
+@dataclass(frozen=True)
+class SupportTarget:
+    subject_reference: Reference
+    property_id: str
+
+    def __post_init__(self) -> None:
+        _check_eag_reference(self.subject_reference)
+        _check_eag_identifier(self.property_id, "property_id")
+
+
+@dataclass(frozen=True)
+class ObservationRecord:
+    """Supplied declaration only; neither a witness nor an admission."""
+    observation_id: str
+    record_version: str
+    target: SupportTarget | None = None
+    declared_use: EvidenceUse | None = None
+    provenance_refs: tuple[Reference, ...] = ()
+
+    def __post_init__(self) -> None:
+        _check_eag_identifier(self.observation_id, "observation_id")
+        _check_eag_identifier(self.record_version, "record_version")
+        if self.target is not None and not isinstance(self.target, SupportTarget):
+            raise ValueError("observation target must be a SupportTarget")
+        if self.declared_use is not None and not isinstance(self.declared_use, EvidenceUse):
+            raise ValueError("observation declared_use must be an EvidenceUse")
+        if not isinstance(self.provenance_refs, tuple):
+            raise ValueError("provenance_refs must be a tuple")
+        for reference in self.provenance_refs:
+            _check_eag_reference(reference)
+
+
 @dataclass(frozen=True)
 class Evidence:
     evidence_id: str
@@ -327,6 +378,8 @@ class Assessment:
     condition_evaluation: str
     assessment_basis: str
     scope: str
+    target: SupportTarget | None = None
+    requested_use: EvidenceUse | None = None
 
     def __post_init__(self) -> None:
         if not self.assessment_id or not self.assessment_id.strip():
@@ -353,6 +406,10 @@ class Assessment:
             raise ValueError("assessment_basis must be non-empty")
         if not self.scope or not self.scope.strip():
             raise ValueError("scope must be non-empty")
+        if self.target is not None and not isinstance(self.target, SupportTarget):
+            raise ValueError("assessment target must be a SupportTarget")
+        if self.requested_use is not None and not isinstance(self.requested_use, EvidenceUse):
+            raise ValueError("assessment requested_use must be an EvidenceUse")
 
 @dataclass(frozen=True)
 class AuditResult:
