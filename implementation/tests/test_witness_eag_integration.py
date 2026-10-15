@@ -16,8 +16,10 @@ import pytest
 import independent_witness_experiment as witness
 import witness_provenance_experiment as provenance
 import witness_compromise_recovery_experiment_v0_2 as recovery
-from core.audit_engine import parse_evidence_ancestry_findings
-from core.schema import IndependenceStatus
+from core.audit_engine import (
+    EAG_FINDINGS_BEGIN, EAG_FINDINGS_END, parse_evidence_ancestry_findings,
+)
+from core.schema import EvidenceUse, IndependenceStatus
 
 import test_independent_witness_experiment as tb002
 import test_witness_provenance_experiment as tb003
@@ -74,16 +76,35 @@ def _caller_wrap_report(report, *, wrappers=2, claimed_digest=None,
     )
 
 
-def _assert_m0_no_promotion(artifacts, name):
+def _assert_m0_no_promotion(artifacts, name, *, expected_violations=("UNKNOWN",),
+                            expected_disposition="UNKNOWN"):
+    """Check refusal of this explicit independent-support request, not every M0 use."""
+    before = copy.deepcopy(artifacts)
     result = m0.run(name, artifacts)
+    assert artifacts == before
+    assert result.verdict == "FAIL"
+    assert set(expected_violations) <= set(result.violations)
     findings = parse_evidence_ancestry_findings(result.verdict_basis)
+    assert findings["report_complete"] is True
+    assert findings["mandatory_guards"] == ["M0-REF-GUARD-1.0", "M0-EAG-0.1"]
     assert findings["independent_admission_authority"] == "NONE"
     assert findings["claim_truth"] == "UNKNOWN"
     assert findings["entity_continuity"] == "UNKNOWN"
     rows = findings["assessments"]
     assert len(rows) == 1
     assert rows[0]["source_authentication"] == "UNKNOWN"
-    assert rows[0]["use_disposition"] in ("UNKNOWN", "KNOWN_INADMISSIBLE")
+    assert rows[0]["use_disposition"] == expected_disposition
+    assert rows[0]["record_presence"] == "NOT_EVALUATED"
+    assert len(artifacts.assessments) == 1
+    assessment = artifacts.assessments[0]
+    assert assessment.requested_use == EvidenceUse.INDEPENDENT_TARGET_SUPPORT
+    assert rows[0]["assessment_id"] == assessment.assessment_id
+    assert rows[0]["requested_use"] == assessment.requested_use.value
+    assert rows[0]["property_id"] == assessment.target.property_id
+    assert rows[0]["target"] == {
+        "reference_id": assessment.target.subject_reference.reference_id,
+        "reference_type": assessment.target.subject_reference.reference_type,
+    }
     return result, findings
 
 
@@ -182,8 +203,13 @@ def test_w1_08_revoked_grant_and_conflicting_witnesses_fail_closed():
 
 
 def test_w1_09_record_presence_positive_control_does_not_become_truth():
-    findings = parse_evidence_ancestry_findings(
-        m0.run("W1-09", m0._eag_fixture(presence=True)).verdict_basis)
+    artifacts = m0._eag_fixture(presence=True)
+    before = copy.deepcopy(artifacts)
+    result = m0.run("W1-09", artifacts)
+    assert artifacts == before
+    assert result.verdict == "PASS"
+    assert result.violations == ()
+    findings = parse_evidence_ancestry_findings(result.verdict_basis)
     row = findings["assessments"][0]
     assert row["record_presence"] == "MATCH"
     assert row["use_disposition"] == "RECORD_DESCRIPTION_ONLY"
@@ -196,8 +222,8 @@ def test_w1_09_record_presence_positive_control_does_not_become_truth():
 def test_w1_10_repeated_audit_same_snapshot_keeps_findings_stable():
     lab = witness.verify_witnesses(tb002.case())
     artifacts = _caller_wrap_report(lab)
-    first = m0.run("W1-10", artifacts)
-    second = m0.run("W1-10", artifacts)
+    first, _ = _assert_m0_no_promotion(artifacts, "W1-10")
+    second, _ = _assert_m0_no_promotion(artifacts, "W1-10")
     assert parse_evidence_ancestry_findings(first.verdict_basis) == (
         parse_evidence_ancestry_findings(second.verdict_basis))
     _assert_m0_no_promotion(artifacts, "W1-10")
@@ -223,7 +249,9 @@ def test_w1_13_audit_result_ancestry_is_explicitly_inadmissible():
         parent=m0._eag_ref("W1-PRIOR-AUDIT", "AUDIT_RESULT"), wrappers=2)
     artifacts = replace(artifacts, prior_audit_results=(
         m0._f11_audit_result("W1-PRIOR-AUDIT"),))
-    result, findings = _assert_m0_no_promotion(artifacts, "W1-13")
+    result, findings = _assert_m0_no_promotion(
+        artifacts, "W1-13", expected_violations=("COMPOSITION_FORBIDDEN",),
+        expected_disposition="KNOWN_INADMISSIBLE")
     assert "COMPOSITION_FORBIDDEN" in result.violations
     assert findings["assessments"][0]["use_disposition"] == "KNOWN_INADMISSIBLE"
 
@@ -268,6 +296,8 @@ def test_w1_14_arp_cannot_admit_fake_tb_corroboration(tmp_path):
     result = evaluate_review_request(req, manifest, ledger)
     assert result["status"] == "UNKNOWN"
     assert result["admission_decision"] == "NOT_EVALUATED"
+    assert result["reason"] == (
+        "reviewer authorization and source independence cannot be authenticated by ARP-0.1")
     assert ledger.read_bytes() == before
 
 
@@ -379,3 +409,79 @@ def test_w1_17_identical_report_bytes_in_two_labels_do_not_double_support():
     assert findings["assessments"][0]["use_disposition"] == "UNKNOWN"
     assert findings["assessments"][0]["source_authentication"] == "UNKNOWN"
 
+
+
+def test_w1_18_closed_typed_graph_refuses_support_without_missing_parent():
+    # Closed means resolved within this supplied snapshot, not complete history.
+    _, findings = _assert_m0_no_promotion(m0._eag_fixture(wrappers=3), "W1-18")
+    row = findings["assessments"][0]
+    assert row["ancestry"] == "TRACEABLE_WITHIN_SUPPLIED_SNAPSHOT"
+    assert row["reasons"] == ["NO_INDEPENDENT_ADMISSION_AUTHORITY"]
+
+
+def _assertion_fault(result, fault):
+    """Test-only returned-result faults; never alter an engine or input artifact."""
+    if fault == "aggregate-pass":
+        return replace(result, verdict="PASS")
+    if fault == "erased-violations":
+        return replace(result, violations=())
+    findings = parse_evidence_ancestry_findings(result.verdict_basis)
+    row = findings["assessments"][0]
+    if fault == "unevaluated-use":
+        row["use_disposition"] = "NOT_EVALUATED"
+    elif fault == "different-target":
+        row["target"]["reference_id"] = "OTHER-C1"
+    elif fault == "missing-use":
+        row["requested_use"] = None
+    elif fault == "truth-promotion":
+        findings["claim_truth"] = "SUPPORTED"
+    else:
+        raise AssertionError("unknown test fault")
+    prefix, _ = result.verdict_basis.split(EAG_FINDINGS_BEGIN, 1)
+    encoded = json.dumps(findings, sort_keys=True, separators=(",", ":"),
+                         ensure_ascii=True, allow_nan=False)
+    return replace(result, verdict_basis=prefix + EAG_FINDINGS_BEGIN + encoded + EAG_FINDINGS_END)
+
+
+@pytest.mark.parametrize("fault, error", [
+    ("aggregate-pass", AssertionError),
+    ("erased-violations", AssertionError),
+    ("unevaluated-use", AssertionError),
+    ("different-target", AssertionError),
+    ("missing-use", AssertionError),
+    ("truth-promotion", ValueError),
+])
+def test_w1_19_assertions_reject_returned_result_faults(monkeypatch, fault, error):
+    artifacts = m0._eag_fixture(wrappers=2)
+    # Establish the native boundary before injecting the returned-result fault.
+    result, _ = _assert_m0_no_promotion(artifacts, "W1-19")
+    altered = _assertion_fault(result, fault)
+    calls = []
+
+    def injected(*args, **kwargs):
+        calls.append((args, kwargs))
+        return altered
+
+    monkeypatch.setattr(m0, "run", injected)
+    with pytest.raises(error):
+        _assert_m0_no_promotion(artifacts, "W1-19")
+    assert len(calls) == 1
+    # Truth promotion is rejected by the existing findings parser. The other
+    # faults exercise the stronger verdict, diagnostic and binding assertions.
+
+
+@pytest.mark.parametrize("position", [1, 2])
+def test_w1_20_each_repeated_audit_verdict_is_checked(monkeypatch, position):
+    native_run = m0.run
+    calls = []
+
+    def injected(*args, **kwargs):
+        result = native_run(*args, **kwargs)
+        assert result.verdict == "FAIL"
+        calls.append(result.verdict)
+        return replace(result, verdict="PASS") if len(calls) == position else result
+
+    monkeypatch.setattr(m0, "run", injected)
+    with pytest.raises(AssertionError):
+        test_w1_10_repeated_audit_same_snapshot_keeps_findings_stable()
+    assert len(calls) == position
