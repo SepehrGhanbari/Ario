@@ -64,7 +64,9 @@ def parse_evidence_ancestry_findings(basis: str) -> dict:
             or type(data.get("report_complete")) is not bool):
         raise ValueError("M0 ancestry findings profile invalid")
     ancestry_states = {"UNKNOWN", "TRACEABLE_WITHIN_SUPPLIED_SNAPSHOT"}
-    if data.get("candidate_ancestry") not in ancestry_states | {"NOT_EVALUATED"}:
+    candidate_ancestry = data.get("candidate_ancestry")
+    if (not isinstance(candidate_ancestry, str)
+            or candidate_ancestry not in ancestry_states | {"NOT_EVALUATED"}):
         raise ValueError("M0 ancestry candidate state invalid")
     expected_row_keys = {
         "assessment_id", "target", "property_id", "requested_use", "ancestry",

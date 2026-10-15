@@ -1,5 +1,7 @@
 from dataclasses import replace
 
+import pytest
+
 from core.audit_engine import AuditEngine, AuditInput
 from core.schema import (
     Evidence,
@@ -2958,3 +2960,41 @@ def test_eag_findings_parser_rejects_admission_disposition():
               + "\nM0-EAG-0.1-FINDINGS-END")
     with pytest.raises(ValueError):
         parse_evidence_ancestry_findings(forged)
+
+
+def _eag_canonical_candidate_ancestry_basis(candidate_ancestry):
+    import json
+    from core.audit_engine import EAG_FINDINGS_BEGIN, EAG_FINDINGS_END
+    result = run("EAG-CANDIDATE-STATE", AuditInput())
+    document = _eag_doc(result)
+    document["candidate_ancestry"] = candidate_ancestry
+    return (result.verdict_basis.split(EAG_FINDINGS_BEGIN, 1)[0]
+            + EAG_FINDINGS_BEGIN
+            + json.dumps(document, sort_keys=True, separators=(",", ":"),
+                         ensure_ascii=True, allow_nan=False)
+            + EAG_FINDINGS_END)
+
+
+@pytest.mark.parametrize("candidate_ancestry", [
+    pytest.param([], id="list"),
+    pytest.param({}, id="dictionary"),
+    pytest.param("SYNTHETIC_INVALID", id="unsupported-string"),
+])
+def test_eag_findings_parser_rejects_invalid_candidate_ancestry(candidate_ancestry):
+    from core.audit_engine import parse_evidence_ancestry_findings
+    basis = _eag_canonical_candidate_ancestry_basis(candidate_ancestry)
+    with pytest.raises(ValueError, match="^M0 ancestry candidate state invalid$") as error:
+        parse_evidence_ancestry_findings(basis)
+    assert type(error.value) is ValueError
+
+
+@pytest.mark.parametrize("candidate_ancestry", [
+    "UNKNOWN", "TRACEABLE_WITHIN_SUPPLIED_SNAPSHOT", "NOT_EVALUATED",
+])
+def test_eag_findings_parser_accepts_valid_candidate_ancestry(candidate_ancestry):
+    from core.audit_engine import parse_evidence_ancestry_findings
+    document = parse_evidence_ancestry_findings(
+        _eag_canonical_candidate_ancestry_basis(candidate_ancestry))
+    assert document["candidate_ancestry"] == candidate_ancestry
+    assert document["independent_admission_authority"] == "NONE"
+    assert document["claim_truth"] == document["entity_continuity"] == "UNKNOWN"
