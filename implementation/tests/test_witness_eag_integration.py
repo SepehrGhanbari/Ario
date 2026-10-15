@@ -6,7 +6,8 @@ production source-authentication or evidence-admission authority.
 No keys, live trust roots, production evidence, or network devices.
 """
 
-from dataclasses import replace
+from dataclasses import asdict, is_dataclass, replace
+from hashlib import sha256
 import copy
 import json
 
@@ -31,14 +32,39 @@ def _assert_no_witness_authority(report):
     assert report.production_historical_continuity == "INCONCLUSIVE"
 
 
-def _caller_wrap_report(report, *, wrappers=2):
-    """Explicitly untrusted CALLER wrapper; NOT an authorized M0 adapter.
+def _canonical_report_bytes(report):
+    """Deterministic content bytes for a SYNTHETIC report, not proof of origin.
 
-    The report's own kind is used as a *claimed* reference type.
-    This test does not authenticate the reporter or the reference.
+    This is a laboratory digest of dataclass field values. It does not
+    authenticate who produced the values, when, or from which real source.
     """
+    assert is_dataclass(report) and not isinstance(report, type)
+    return json.dumps(
+        asdict(report),
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+        allow_nan=False,
+    ).encode("ascii")
+
+
+def _lab_report_digest(report):
+    return sha256(_canonical_report_bytes(report)).hexdigest()
+
+
+def _caller_wrap_report(report, *, wrappers=2, claimed_digest=None):
+    """ATTACKER/CALLER report-content reference, not an authorized adapter.
+
+    Unlike the original label-only fixture, this stores a self-declared
+    SHA256 digest of the complete supplied laboratory report in a typed M0
+    provenance reference. The digest is *still caller-supplied*, and M0 has
+    no independent trusted payload store with which to verify the binding.
+    A forged or stale digest therefore cannot become an M0 trust root.
+    """
+    digest = _lab_report_digest(report) if claimed_digest is None else claimed_digest
+    assert isinstance(digest, str) and len(digest) == 64
     return m0._eag_fixture(
-        parent=m0._eag_ref("W1-UNTRUSTED-LAB-REPORT", report.kind),
+        parent=m0._eag_ref("W1-SHA256-" + digest, "UNTRUSTED_LAB_REPORT_DIGEST"),
         wrappers=wrappers,
     )
 
@@ -238,3 +264,76 @@ def test_w1_14_arp_cannot_admit_fake_tb_corroboration(tmp_path):
     assert result["status"] == "UNKNOWN"
     assert result["admission_decision"] == "NOT_EVALUATED"
     assert ledger.read_bytes() == before
+
+
+# W1-15..W1-17: content-bound (but NOT authenticated) negative controls.
+# No production TB->M0 adapter, signer, credential, or real-world source
+# is introduced. Distinguish laboratory digest comparison from authority.
+@pytest.mark.parametrize("producer, mutate", [
+    pytest.param(
+        lambda: witness.verify_witnesses(tb002.case()),
+        lambda report: replace(report, aggregate_verdict="FORGED_CORRESPONDENCE"),
+        id="TB-002",
+    ),
+    pytest.param(
+        lambda: provenance.evaluate_provenance(tb003.baseline()),
+        lambda report: replace(
+            report, source_independence=replace(
+                report.source_independence, status="FORGED_SOURCE_INDEPENDENCE")),
+        id="TB-003",
+    ),
+    pytest.param(
+        lambda: recovery.evaluate_recovery(tb004.base()),
+        lambda report: replace(
+            report, evidentiary_usability=replace(
+                report.evidentiary_usability, status="FORGED_USABILITY")),
+        id="TB-004",
+    ),
+])
+def test_w1_15_full_report_content_mutation_changes_digest_not_authority(producer, mutate):
+    original = producer()
+    manipulated = mutate(original)
+    before, after = _lab_report_digest(original), _lab_report_digest(manipulated)
+    assert before != after
+    assert _canonical_report_bytes(original) != _canonical_report_bytes(manipulated)
+    initial = _caller_wrap_report(original)
+    altered = _caller_wrap_report(manipulated)
+    assert initial.observations[0].provenance_refs != (
+        altered.observations[0].provenance_refs)
+    assert initial.observations[0].provenance_refs[0].reference_id == "W1-SHA256-" + before
+    assert altered.observations[0].provenance_refs[0].reference_id == "W1-SHA256-" + after
+    _assert_m0_no_promotion(initial, "W1-15-BASE")
+    _assert_m0_no_promotion(altered, "W1-15-MUTATED")
+
+
+def test_w1_16_stale_report_digest_exposes_missing_native_payload_binding():
+    original = witness.verify_witnesses(tb002.case())
+    changed = replace(original, aggregate_verdict="FORGED_CORRESPONDENCE")
+    known_digest = _lab_report_digest(original)
+    assert known_digest != _lab_report_digest(changed)
+    # The caller lies about the complete report's digest: this local-only
+    # comparison can notice, but M0 currently sees ONLY a claimed ref.
+    valid = _caller_wrap_report(original, claimed_digest=known_digest)
+    stale = _caller_wrap_report(changed, claimed_digest=known_digest)
+    assert valid.observations == stale.observations
+    assert valid.evidence == stale.evidence
+    _, first = _assert_m0_no_promotion(valid, "W1-16")
+    _, second = _assert_m0_no_promotion(stale, "W1-16")
+    # Equality here is an EXPLICIT BLIND SPOT, not a success at detecting
+    # a forgery. Both uses remain UNKNOWN; no positive admission is possible.
+    assert first == second
+    assert first["assessments"][0]["use_disposition"] == "UNKNOWN"
+
+
+def test_w1_17_identical_report_bytes_in_two_labels_do_not_double_support():
+    one = provenance.evaluate_provenance(tb003.baseline())
+    two = replace(one, reason_codes=tuple(one.reason_codes))
+    assert _canonical_report_bytes(one) == _canonical_report_bytes(two)
+    assert _lab_report_digest(one) == _lab_report_digest(two)
+    # Even two IDs claiming to point to the same report-content digest do
+    # not establish separate witness custody or independent support.
+    first = _caller_wrap_report(one)
+    second = _caller_wrap_report(two)
+    assert first.observations == second.observations
+    _assert_m0_no_promotion(first, "W1-17-A")
+    _assert_m0_no_promotion(second, "W1-17-B")
