@@ -10,6 +10,7 @@ This directory vendors the offline W2/W3 *mock verifier and pytest probes* revie
 - W3-F03 (two declared witness labels, distinct roots, same declared custodian): `UNKNOWN / SHARED_CUSTODIAN_NOT_INDEPENDENT`.
 - W3-F04 (reviewer is an exact source custodian): `REJECTED / REVIEWER_SOURCE_CONFLICT`.
 - W3-F05 (identical status label but different declared event types): `UNKNOWN / EVENT_TYPE_MISMATCH`.
+- W3-F06 (identical event type and status but distinct declared `event_id`s): `UNKNOWN / EVENT_INSTANCE_MISMATCH`; one-sided/malformed IDs also remain `UNKNOWN`. Equal IDs are only *declarations*, never authenticated identity of a historical event.
 - Diagnostic precedence: known shared ancestry is reported before repeated custodian, preserving earlier controls. In injected synthetic tests, a valid-looking mock outcome is **only** `LAB_REVIEWABLE_ONLY / MOCK_ONLY_NO_AUTHORITY`, always with `admission_decision=NOT_EVALUATED`, `claim_truth=UNKNOWN`, `source_authentication=NOT_ESTABLISHED_IN_PRODUCTION`.
 - The *real* Ario RAC preflight remains non-authorizing: `UNKNOWN` or `REJECTED`. There is no native TB→M0 evidence bridge or production admission implementation in this directory.
 - **No historical witness independence can be inferred from equal/different mock names.** The offline oracle is specified by the test itself; it is not externally authentic or independent. Matching `event` values describe event *types*, not necessarily one event instance.

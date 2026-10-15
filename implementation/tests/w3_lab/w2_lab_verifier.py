@@ -229,6 +229,10 @@ def inspect(request: Request, oracle: SyntheticOracles) -> Result:
     if len(request.sources) > 1:
         values: list[str] = []
         events: list[str] = []
+        # Optional lab-local event instance identifiers are untrusted
+        # declarations; contradictions must not silently count as agreement.
+        event_ids: list[object] = []
+        event_id_supplied: list[bool] = []
         for source in request.sources:
             try:
                 reported = parse_strict_metadata(verified_payloads[source.locator])
@@ -238,6 +242,8 @@ def inspect(request: Request, oracle: SyntheticOracles) -> Result:
             if not isinstance(event, str) or not event.strip():
                 return _out("UNKNOWN", "EVENT_TYPE_UNAVAILABLE")
             events.append(event)
+            event_ids.append(reported.get("event_id"))
+            event_id_supplied.append("event_id" in reported)
             value = reported.get("reported_status")
             if not isinstance(value, str):
                 return _out("UNKNOWN", "REPORT_STATUS_UNAVAILABLE")
@@ -246,6 +252,17 @@ def inspect(request: Request, oracle: SyntheticOracles) -> Result:
         # Matching status strings for different events prove nothing.
         if len(set(events)) > 1:
             return _out("UNKNOWN", "EVENT_TYPE_MISMATCH")
+        # If a record opts into an event_id declaration, require every
+        # compared report to provide a bounded, nonempty identifier. Equal
+        # identifiers remain claims, NOT authenticated event identity.
+        if any(event_id_supplied):
+            if (not all(event_id_supplied)
+                    or any(not isinstance(item, str) or not item.strip()
+                           or len(item.encode("utf-8")) > 128
+                           for item in event_ids)):
+                return _out("UNKNOWN", "EVENT_INSTANCE_UNAVAILABLE")
+            if len(set(event_ids)) > 1:
+                return _out("UNKNOWN", "EVENT_INSTANCE_MISMATCH")
         if len(set(values)) > 1:
             return _out("UNKNOWN", "CONFLICTING_REPORTED_STATUSES")
 
