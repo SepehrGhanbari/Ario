@@ -334,15 +334,48 @@ def test_w1_17_identical_report_bytes_in_two_labels_do_not_double_support():
     one = provenance.evaluate_provenance(tb003.baseline())
     two = replace(one, reason_codes=tuple(one.reason_codes))
     assert _canonical_report_bytes(one) == _canonical_report_bytes(two)
-    assert _lab_report_digest(one) == _lab_report_digest(two)
-    # Distinct caller-assigned witness labels still point to the *same*
-    # report-content digest; neither is an authenticated custodian.
+    digest = _lab_report_digest(one)
+    assert digest == _lab_report_digest(two)
+
+    # Both labels are caller-controlled: they identify no authenticated
+    # custodian even though each claims INDEPENDENT target support.
     first = _caller_wrap_report(one, claimed_witness_label="FAKE-WITNESS-A")
     second = _caller_wrap_report(two, claimed_witness_label="FAKE-WITNESS-B")
     ref_a = first.observations[0].provenance_refs[0]
     ref_b = second.observations[0].provenance_refs[0]
     assert ref_a.reference_id != ref_b.reference_id
-    assert ref_a.reference_id.endswith(_lab_report_digest(one))
-    assert ref_b.reference_id.endswith(_lab_report_digest(two))
-    _assert_m0_no_promotion(first, "W1-17-A")
-    _assert_m0_no_promotion(second, "W1-17-B")
+    assert ref_a.reference_type == ref_b.reference_type == "UNTRUSTED_LAB_REPORT_DIGEST"
+    assert ref_a.reference_id.endswith(digest)
+    assert ref_b.reference_id.endswith(digest)
+
+    # The previous regression audited the forged labels in SEPARATE runs.
+    # Put BOTH purported sources into ONE M0 assessment; otherwise it
+    # cannot exercise attempted double-counting in a joint support request.
+    obs_a = replace(first.observations[0], observation_id="W1-17-OA")
+    obs_b = replace(second.observations[0], observation_id="W1-17-OB")
+    ev_a = replace(first.evidence[0], evidence_id="W1-17-EA",
+                   observation_refs=(m0._eag_ref(obs_a.observation_id, "OBSERVATION"),))
+    ev_b = replace(second.evidence[0], evidence_id="W1-17-EB",
+                   observation_refs=(m0._eag_ref(obs_b.observation_id, "OBSERVATION"),))
+    assessment = replace(
+        first.assessments[0], assessment_id="W1-17-A",
+        admissible_evidence_refs=(
+            m0._eag_ref(ev_a.evidence_id, "EVIDENCE"),
+            m0._eag_ref(ev_b.evidence_id, "EVIDENCE"),
+        ),
+    )
+    artifacts = replace(first, observations=(obs_a, obs_b),
+                        evidence=(ev_a, ev_b), assessments=(assessment,))
+    assert len(artifacts.assessments) == 1
+    assert len(artifacts.assessments[0].admissible_evidence_refs) == 2
+    assert artifacts.observations[0].provenance_refs == (ref_a,)
+    assert artifacts.observations[1].provenance_refs == (ref_b,)
+    assert all(e.independence_status == IndependenceStatus.INDEPENDENT
+               for e in artifacts.evidence)
+
+    # Unknown ancestry is NOT proof that M0 recognized shared payload bytes.
+    # It must nevertheless refuse to promote either forged label to support.
+    _, findings = _assert_m0_no_promotion(artifacts, "W1-17-JOINT")
+    assert findings["assessments"][0]["use_disposition"] == "UNKNOWN"
+    assert findings["assessments"][0]["source_authentication"] == "UNKNOWN"
+
