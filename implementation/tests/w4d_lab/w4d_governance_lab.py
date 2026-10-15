@@ -17,6 +17,16 @@ MAX_TICK = 2**63 - 1
 MAX_BALLOTS = 32
 MAX_MEMBERS = 15
 MAX_HISTORY = 128
+MOTION_PROFILE = "W4D-LAB-0.2"  # fixture-only; not an adopted governance protocol
+MOTION_HASH_DOMAIN = b"ARIO-W4D-LAB-MOTION-0.2\x00"
+ALLOWED_LAB_STEPS = frozenset({
+    "HOLD", "REJECTED", "FROZEN_RECOMMENDED",
+    "LAB_FREEZE_RECOMMENDATION", "LAB_RECOVERY_REVIEW_RECOMMENDATION",
+    "LAB_PROCEDURAL_REVIEW_RECOMMENDATION",
+    "LAB_APPEAL_FOR_INDEPENDENT_SCREENING",
+    "LAB_MINIMIZED_REQUEST_FOR_SEPARATE_AUTHORIZATION",
+    "LAB_HISTORY_STRUCTURALLY_CONSISTENT",
+})
 
 THRESHOLDS = {
     "REVIEW_CANDIDATE": 3,  # proposed synthetic example out of five
@@ -51,7 +61,10 @@ class Finding:
     claim_truth: str = "UNKNOWN"
 
     def __post_init__(self) -> None:
-        if (self.status not in {"UNKNOWN", "REJECTED"}
+        if (type(self.status) is not str
+                or self.status not in {"UNKNOWN", "REJECTED"}
+                or type(self.lab_step) is not str
+                or self.lab_step not in ALLOWED_LAB_STEPS
                 or self.authentic_identity != "UNKNOWN"
                 or self.real_controller_independence != "UNKNOWN"
                 or self.reviewer_authorization != "UNKNOWN"
@@ -92,7 +105,38 @@ class Motion:
     proposer_control_group: str
     source_control_group: str
     candidate_scope: str
-    policy_version: str = "W4D-LAB-0.1"
+    audience: str
+    nonce: str
+    valid_from_tick: int
+    valid_until_tick: int
+    policy_version: str = MOTION_PROFILE
+
+
+def mock_motion_digest(m: Motion) -> str:
+    """Exact typed, domain-separated **mock** binding (NOT a signature).
+
+    The caller can fabricate every field and digest. Correct bytes alone cannot
+    authenticate an identity, authority, witnessed event or historical nonce.
+    """
+    if (type(m) is not Motion
+            or any(not _tok(x) for x in (
+                m.motion_id, m.proposer_control_group, m.source_control_group,
+                m.candidate_scope, m.audience, m.nonce))
+            or type(m.action) is not str or m.action not in THRESHOLDS
+            or m.policy_version != MOTION_PROFILE
+            or not _tick(m.epoch) or not _tick(m.valid_from_tick)
+            or not _tick(m.valid_until_tick)
+            or m.valid_from_tick > m.valid_until_tick):
+        raise ValueError("W4D_MOCK_MOTION_SHAPE")
+    # Fixed ordered JSON ARRAY with ASCII tokens. Exact integer values use
+    # versioned INT:decimal strings; JS Numbers cannot represent all uint63 ticks.
+    # 'digest' itself is excluded so the binding is non-self-referential.
+    fields = [m.policy_version, m.motion_id, m.action, m.candidate_scope,
+              f"INT:{m.epoch}", m.proposer_control_group, m.source_control_group,
+              m.audience, m.nonce, f"INT:{m.valid_from_tick}",
+              f"INT:{m.valid_until_tick}"]
+    material = json.dumps(fields, ensure_ascii=True, separators=(",", ":")).encode("ascii")
+    return hashlib.sha256(MOTION_HASH_DOMAIN + material).hexdigest()
 
 
 @dataclass(frozen=True)
@@ -137,9 +181,16 @@ def evaluate_council(f: object) -> Finding:
             or not _digest(m.digest) or not _tick(m.epoch)
             or not _tok(m.proposer_control_group)
             or not _tok(m.source_control_group)
-            or not _tok(m.candidate_scope)
-            or m.policy_version != "W4D-LAB-0.1"):
+            or not _tok(m.candidate_scope) or not _tok(m.audience)
+            or not _tok(m.nonce) or not _tick(m.valid_from_tick)
+            or not _tick(m.valid_until_tick)
+            or m.valid_from_tick > m.valid_until_tick
+            or m.policy_version != MOTION_PROFILE):
         return _reject("W4D_MOTION_SHAPE_OR_FORBIDDEN_ACTION")
+    if m.digest != mock_motion_digest(m):
+        return _hold("W4D_MOTION_DIGEST_NOT_BOUND")
+    if not m.valid_from_tick <= f.observed_tick <= m.valid_until_tick:
+        return _hold("W4D_MOTION_OUTSIDE_DECLARED_VALIDITY")
     by_id: dict[str, Steward] = {}
     for item in f.members:
         if (type(item) is not Steward or not _tok(item.steward_id)
@@ -152,6 +203,7 @@ def evaluate_council(f: object) -> Finding:
     seen_ballots: set[str] = set()
     seen_stewards: set[str] = set()
     yes_groups: set[str] = set()
+    all_voting_groups: set[str] = set()
     for b in f.votes:
         if (type(b) is not Vote or not _tok(b.ballot_id)
                 or not _tok(b.steward_id) or not _digest(b.motion_digest)
@@ -166,15 +218,17 @@ def evaluate_council(f: object) -> Finding:
             return _reject("W4D_UNENROLLED_VOTER")
         if b.motion_digest != m.digest or b.epoch != m.epoch:
             return _reject("W4D_VOTE_SCOPE_OR_EPOCH_REPLAY")
+        group = by_id[b.steward_id].declared_control_group
+        if b.choice == "SUPPORT" and group in {m.proposer_control_group, m.source_control_group}:
+            if m.action == "REVIEW_CANDIDATE":
+                return _hold("W4D_REVIEWER_PROPOSER_SOURCE_CONFLICT")
+            if m.action in {"UNFREEZE", "ROTATE_ROOT"}:
+                return _hold("W4D_RECOVERY_INTEREST_CONFLICT")
+        # Detect shared declared control EVEN across opposing ballots, in any order.
+        if group in all_voting_groups:
+            return _hold("W4D_SHARED_DECLARED_CONTROLLER")
+        all_voting_groups.add(group)
         if b.choice == "SUPPORT":
-            group = by_id[b.steward_id].declared_control_group
-            if group in {m.proposer_control_group, m.source_control_group}:
-                if m.action == "REVIEW_CANDIDATE":
-                    return _hold("W4D_REVIEWER_PROPOSER_SOURCE_CONFLICT")
-                if m.action in {"UNFREEZE", "ROTATE_ROOT"}:
-                    return _hold("W4D_RECOVERY_INTEREST_CONFLICT")
-            if group in yes_groups:
-                return _hold("W4D_SHARED_DECLARED_CONTROLLER")
             yes_groups.add(group)
     if f.fork_declared or f.partition_declared:
         return _hold("W4D_FORK_OR_PARTITION", "FROZEN_RECOMMENDED")
@@ -210,6 +264,7 @@ class AppealFixture:
     source_privacy_restricted: bool
     external_auth_claimed: bool
     previous_appeal_ids: tuple[str, ...] = ()
+    original_panel_complete_claimed: bool = False  # untrusted claim, explicit gate
 
 
 def evaluate_appeal(a: object) -> Finding:
@@ -222,6 +277,7 @@ def evaluate_appeal(a: object) -> Finding:
             or type(a.case_is_known_claimed) is not bool
             or type(a.source_privacy_restricted) is not bool
             or type(a.external_auth_claimed) is not bool
+            or type(a.original_panel_complete_claimed) is not bool
             or len(a.original_panel_groups) > MAX_MEMBERS
             or len(a.proposed_appeal_panel_groups) != 3
             or len(a.previous_appeal_ids) > MAX_HISTORY
@@ -235,6 +291,10 @@ def evaluate_appeal(a: object) -> Finding:
         return _hold("W4D_APPEAL_PANEL_SHARED_CONTROLLER")
     if set(a.proposed_appeal_panel_groups) & set(a.original_panel_groups):
         return _hold("W4D_APPEAL_REVIEWER_CONFLICT")
+    if (not a.original_panel_complete_claimed
+            or len(a.original_panel_groups) < 2
+            or len(set(a.original_panel_groups)) != len(a.original_panel_groups)):
+        return _hold("W4D_APPEAL_ORIGINAL_PANEL_UNRESOLVED")
     if not a.case_is_known_claimed:
         return _hold("W4D_APPEAL_ORIGINAL_CASE_UNRESOLVED")
     # These are merely supplied declarations, never real authentication or disclosure permission.

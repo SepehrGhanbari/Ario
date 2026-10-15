@@ -9,8 +9,11 @@ H = "b" * 64
 
 def council(action="REVIEW_CANDIDATE", n=3, **kwargs):
     members = tuple(lab.Steward(f"Steward{i}", f"Group{i}") for i in range(1, 6))
-    motion = lab.Motion("Motion1", action, D, 7, "Proposer", "Source", "ClaimX")
-    votes = tuple(lab.Vote(f"Ballot{i}", f"Steward{i}", D, 7, "SUPPORT") for i in range(1, n + 1))
+    draft = lab.Motion("Motion1", action, D, 7, "Proposer", "Source", "ClaimX",
+                       "ArioW4DLab", "OneTimeNonce1", 5, 15)
+    motion = replace(draft, digest=lab.mock_motion_digest(draft))
+    votes = tuple(lab.Vote(f"Ballot{i}", f"Steward{i}", motion.digest, 7, "SUPPORT")
+                  for i in range(1, n + 1))
     ctx = lab.CouncilFixture(members, votes, motion, 10, 7)
     return replace(ctx, **kwargs)
 
@@ -146,7 +149,8 @@ def test_mutated_council_fails_closed(mutant, expected):
 
 def appeal():
     return lab.AppealFixture("Appeal1", "Decision1", "AppellantP", "NEW_EVIDENCE",
-                             ("Group1", "Group2"), ("Group3", "Group4", "Group5"), True, True, True)
+                             ("Group1", "Group2"), ("Group3", "Group4", "Group5"), True, True, True,
+                             original_panel_complete_claimed=True)
 
 
 def test_appeal_intake_not_decision_reversal():

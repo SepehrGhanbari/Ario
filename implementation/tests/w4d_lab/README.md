@@ -38,3 +38,47 @@ python -m pytest -p no:cacheprovider -q tests/w4d_lab
 ```
 
 **Never** merge this mock into governance/trust/authorization code on the basis of tests passing. Issues #81 and #75 remain open. Preserve `OBSERVED ≠ AUTHENTICATED ≠ AUTHORIZED ≠ ADMITTED ≠ TRUE`.
+
+## Independent second-pass repair — W4D-F02/F03/F04/F05 (2026-10-15)
+
+The unchanged PR #87 head (`bf6df2664cc7875cb4f5ec6ea0455fb876cc3242`)
+passed its original 94 W4-D tests, but a *new* 13-instance negative suite
+reproduced 12 RED assertions (1 control passed). The following conservative
+**test-only** v0.2 changes add no runtime permissions:
+
+- **F02 motion/ballot binding:** `MOTION_PROFILE=W4D-LAB-0.2` (old 0.1 profile
+  is explicitly rejected). A motion digest is recomputed from the typed ordered
+  array `[profile, motion_id, action, candidate_scope, 'INT:'+epoch,
+  proposer_group, source_group, audience, nonce, 'INT:'+valid_from_tick,
+  'INT:'+valid_until_tick]`, encoded using ASCII compact JSON, with the fixed
+  domain-separated SHA-256 prefix `ARIO-W4D-LAB-MOTION-0.2` + a NUL byte.
+  `digest` is **excluded** from its own hash. Identifiers use the existing bounded
+  ASCII token grammar and ticks are bounded exact nonnegative ints. The
+  synthetic observed tick must lie within the declared validity window.
+  Every *ballot* must match that recomputed digest and declared epoch.
+  The tests now build typed fixtures explicitly; *no silent legacy upgrade*.
+- **F03 contradictory control:** one declared control group cannot cast more
+  than one ballot in one request, including mixed `SUPPORT`/`OPPOSE` in either order.
+- **F04 appeal completeness:** a claimed complete original panel is required
+  (at least two unique valid declared controller groups). Any missing/incomplete
+  original panel yields `UNKNOWN / W4D_APPEAL_ORIGINAL_PANEL_UNRESOLVED` and `HOLD`.
+  This is not proof of genuine panel completeness or independence.
+- **F05 result protection:** informational `lab_step` is strictly allow-listed;
+  forbidden positive authority words cannot be injected into a `Finding`.
+
+**CRUCIAL:** This uses a **recomputable unkeyed hash over caller-declared mock
+fields**, not a digital signature, trusted timestamp, independently authenticated
+nonce, durable replay registry, approval or evidence admission. The same caller
+can fabricate a motion and matching ballots; a `LAB_*_RECOMMENDATION` is only
+syntactic behavior inside the laboratory, and always has status `UNKNOWN` and
+admission `NOT_EVALUATED`. The proposed audience and validity values are only
+caller declarations. Do not couple this to M0/ARP/RAC or live governance.
+
+Independent replays before publishing: baseline **94 passed**, extra controls
+on unchanged source **12 failed / 1 passed**; new candidate **151 passed**
+(94 original + 13 second-pass + 44 additional binding and safety cases).
+Four mutation experiments (disabled binding, declared control check, original
+panel completeness, allow-listed lab step) produced expected RED. The two exact
+motion hash vectors (including a >2^53 integer tick) match between Python and
+Node.js. GitHub CI on the updated PR head must be independently checked before
+any merge consideration. Issues #81 and #75 remain OPEN.
