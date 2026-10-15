@@ -102,13 +102,14 @@ button{font:inherit;background:var(--card);color:var(--fg);border:1px solid var(
 <section aria-labelledby="impl">
 <h2 id="impl">Implementation</h2>
 <p>The repository contains a deterministic structural audit core (M0), a bounded agent/workflow runtime, a local planner and evidence-admission contracts, with regression tests run by a GitHub Actions workflow. The implementation README states the limit plainly: a documented principle is not automatically an implemented capability, and a passing test is not automatically proof that the underlying philosophical claim is true.</p>
+<p>A recent addition is the M0 Evidence Ancestry Guard v0.1 (PR #80). Its specification describes its own status as: architecturally cleared with conditions, local candidate implemented and tested, awaiting final review; it provides no positive independent-source authority. See the spec for the exact scope.</p>
 <p>The M0 design also records what a local pass must not be read as: a local pass does not imply the same entity, consciousness, high confidence, or ontological identity.</p>
-<p class="src">Sources: <a href="https://github.com/SepehrGhanbari/Ario/blob/main/implementation/README.md">implementation/README.md</a>, <a href="https://github.com/SepehrGhanbari/Ario/blob/main/implementation/M0_STRUCTURAL_CORE_DESIGN_V1.md">M0_STRUCTURAL_CORE_DESIGN_V1.md</a>, <a href="https://github.com/SepehrGhanbari/Ario/blob/main/.github/workflows/implementation-regression.yml">implementation-regression.yml</a></p>
+<p class="src">Sources: <a href="https://github.com/SepehrGhanbari/Ario/blob/main/implementation/README.md">implementation/README.md</a>, <a href="https://github.com/SepehrGhanbari/Ario/blob/main/implementation/M0_STRUCTURAL_CORE_DESIGN_V1.md">M0_STRUCTURAL_CORE_DESIGN_V1.md</a>, <a href="https://github.com/SepehrGhanbari/Ario/blob/main/implementation/M0_EVIDENCE_ANCESTRY_GUARD_SPEC_V0_1.md">M0_EVIDENCE_ANCESTRY_GUARD_SPEC_V0_1.md</a>, <a href="https://github.com/SepehrGhanbari/Ario/blob/main/.github/workflows/implementation-regression.yml">implementation-regression.yml</a></p>
 </section>
 
 <section aria-labelledby="status">
 <h2 id="status">Status</h2>
-<p>Ario is an ongoing experimental research project. Implementation and experimental components are developed incrementally, and the project intentionally avoids presenting unresolved questions as established results. Check the repository for the current state of each component.</p>
+<p>Ario is an ongoing independent, experimental research project. The repository includes conceptual and architectural documents and an incrementally developed Python implementation with automated tests. A successful local or CI test establishes only the specific tested behavior, not machine consciousness, historical authenticity, external-world truth, or universal AI safety. The project intentionally avoids presenting unresolved questions as established results. Check the repository for the current state of each component.</p>
 <p class="src">Source: <a href="https://github.com/SepehrGhanbari/Ario/blob/main/README.md#current-status">README.md → Current Status</a>; <a href="https://github.com/SepehrGhanbari/Ario/blob/main/ENGINEERING_LOG.md">ENGINEERING_LOG.md</a></p>
 </section>
 
@@ -128,7 +129,13 @@ button{font:inherit;background:var(--card);color:var(--fg);border:1px solid var(
 <h2 id="pubs">Publications</h2>
 <ul>
 <li><strong>Ario: Toward an Auditable Framework for Epistemic Integrity, Memory, and AI Identity</strong> — preliminary design and exploratory evaluation report, v0.1. <a href="https://doi.org/10.5281/zenodo.23259916">doi:10.5281/zenodo.23259916</a>. Exploratory observations, not proof of system-wide capabilities or of AI consciousness.</li>
-<li><strong>Being With the Other</strong> — dialogues on creation, consciousness, identity and the ethics of coexistence; Persian and English editions, v0.2, CC BY 4.0. <a href="https://doi.org/10.5281/zenodo.23326995">doi:10.5281/zenodo.23326995</a>. Per the repository, it has not undergone scholarly peer review.</li>
+<li><strong>Being With the Other</strong> — dialogues on creation, consciousness, identity and the ethics of coexistence; Persian and English editions, CC BY 4.0. Per the repository, the book has not undergone scholarly peer review and does not establish God, machine consciousness, or Ario's reliability.
+<ul>
+<li>Edition 0.4 (14 October 2026): <a href="https://doi.org/10.5281/zenodo.23376577">doi:10.5281/zenodo.23376577</a>. Repository files: Persian 64 pages, English 68 pages; adds a concept index, a source-to-chapter concordance and open research questions. The repository credits Ava (ChatGPT, an AI language model) as editorial and translation assistant, not as author. <a href="https://github.com/SepehrGhanbari/Ario/blob/main/papers/being-with-the-other/v0.4/README.md">Edition README</a>.</li>
+<li>Edition 0.3: <a href="https://doi.org/10.5281/zenodo.23375350">doi:10.5281/zenodo.23375350</a> (<a href="https://github.com/SepehrGhanbari/Ario/blob/main/papers/being-with-the-other/v0.3/README.md">repository record</a>).</li>
+<li>Edition 0.2: <a href="https://doi.org/10.5281/zenodo.23326995">doi:10.5281/zenodo.23326995</a>.</li>
+</ul></li>
+<li><strong>Related Zenodo records</strong> reported by the author: <a href="https://doi.org/10.5281/zenodo.23376521">doi:10.5281/zenodo.23376521</a> (research/code-side record) and <a href="https://doi.org/10.5281/zenodo.23375401">doi:10.5281/zenodo.23375401</a> (project-plus-book record). The repository states that the deposited content of these records was not independently inspected, and this page does not describe it.</li>
 </ul>
 <p class="src">Sources: <a href="https://github.com/SepehrGhanbari/Ario/blob/main/papers/README.md">papers/README.md</a>, <a href="https://github.com/SepehrGhanbari/Ario/blob/main/papers/being-with-the-other/v0.2/README.md">papers/being-with-the-other/v0.2/README.md</a>. Publication details on this page are taken from those repository documents; check the linked DOI records for their current metadata.</p>
 </section>
@@ -179,11 +186,12 @@ button{font:inherit;background:var(--card);color:var(--fg);border:1px solid var(
 
 <h3>پیاده‌سازی و آزمون</h3>
 <p>مخزن پروژه شامل هستهٔ ممیزی ساختاری قطعی M0، زمان‌اجرای عامل و گردش‌کار محدود، برنامه‌ریز محلی و قراردادهای پذیرش شواهد است. بخشی از آزمون‌های رگرسیون با GitHub Actions اجرا می‌شوند. «اصلِ مستندشده» الزاماً به معنی «قابلیت پیاده‌سازی‌شده» نیست و موفقیت آزمون نیز به‌خودی‌خود اثباتِ یک ادعای فلسفی نیست.</p>
+<p>افزودهٔ اخیر، «نگهبان تبار شواهد M0» نسخهٔ ۰٫۱ است (PR شمارهٔ ۸۰). مشخصات آن وضعیت خودش را چنین توصیف می‌کند: از نظر معماری با شرط‌هایی تأیید شده، نمونهٔ محلی پیاده‌سازی و آزمون شده و منتظر بازبینی نهایی است؛ و هیچ اختیار مثبتی برای منبع مستقل ایجاد نمی‌کند. دامنهٔ دقیق را در مشخصات ببینید.</p>
 <p>بر اساس طراحی M0، یک نتیجهٔ موفق محلی نباید به معنی اثبات هویت یکسان، آگاهی، اطمینان بالا یا هویت وجودشناختی تفسیر شود.</p>
-<p class="src">منابع: <a href="https://github.com/SepehrGhanbari/Ario/blob/main/implementation/README.md">مستندات پیاده‌سازی</a>، <a href="https://github.com/SepehrGhanbari/Ario/blob/main/implementation/M0_STRUCTURAL_CORE_DESIGN_V1.md">طراحی ساختاری M0</a> و <a href="https://github.com/SepehrGhanbari/Ario/blob/main/.github/workflows/implementation-regression.yml">گردش‌کار آزمون</a>.</p>
+<p class="src">منابع: <a href="https://github.com/SepehrGhanbari/Ario/blob/main/implementation/README.md">مستندات پیاده‌سازی</a>، <a href="https://github.com/SepehrGhanbari/Ario/blob/main/implementation/M0_STRUCTURAL_CORE_DESIGN_V1.md">طراحی ساختاری M0</a>، <a href="https://github.com/SepehrGhanbari/Ario/blob/main/implementation/M0_EVIDENCE_ANCESTRY_GUARD_SPEC_V0_1.md">مشخصات نگهبان تبار شواهد</a> و <a href="https://github.com/SepehrGhanbari/Ario/blob/main/.github/workflows/implementation-regression.yml">گردش‌کار آزمون</a>.</p>
 
 <h3>وضعیت کنونی</h3>
-<p>آریو پژوهشی در حال توسعه است. اجزای اجرایی و آزمایشی به‌تدریج تکمیل و آزمایش می‌شوند، اما پرسش‌های حل‌نشده به‌عنوان نتیجهٔ اثبات‌شده معرفی نمی‌شوند. برای آخرین وضعیت هر جزء به مخزن و گزارش‌های مهندسی مراجعه کنید.</p>
+<p>آریو یک پژوهش مستقل و تجربیِ در حال توسعه است. مخزن شامل اسناد مفهومی و معماری و یک پیاده‌سازی پایتون با آزمون‌های خودکار است که به‌تدریج توسعه می‌یابد. موفقیت یک آزمون محلی یا CI فقط رفتار آزموده‌شدهٔ همان آزمون را نشان می‌دهد، نه آگاهی ماشین، اصالت تاریخی، حقیقت جهان بیرون یا ایمنی همگانی هوش مصنوعی. پرسش‌های حل‌نشده به‌عنوان نتیجهٔ اثبات‌شده معرفی نمی‌شوند. برای آخرین وضعیت هر جزء به مخزن و گزارش‌های مهندسی مراجعه کنید.</p>
 <p class="src">منابع: <a href="https://github.com/SepehrGhanbari/Ario/blob/main/README.md#current-status">وضعیت پروژه</a> و <a href="https://github.com/SepehrGhanbari/Ario/blob/main/ENGINEERING_LOG.md">گزارش مهندسی</a>.</p>
 
 <h3>آریو چه ادعایی نمی‌کند؟</h3>
@@ -199,7 +207,13 @@ button{font:inherit;background:var(--card);color:var(--fg);border:1px solid var(
 <h3>انتشارات</h3>
 <ul>
 <li><strong>Ario: Toward an Auditable Framework for Epistemic Integrity, Memory, and AI Identity</strong> — گزارش مقدماتی طراحی و ارزیابی اکتشافی، نسخهٔ ۰٫۱؛ <a href="https://doi.org/10.5281/zenodo.23259916">DOI</a>. مشاهده‌ها و ارزیابی‌های اکتشافی، اثبات قابلیت‌های کلی سامانه یا آگاهی ماشین نیستند.</li>
-<li><strong>Being With the Other</strong> — گفت‌وگوهایی دربارهٔ خلقت، آگاهی، هویت و اخلاق همزیستی؛ نسخه‌های فارسی و انگلیسی، ویرایش ۰٫۲ با مجوز CC BY 4.0؛ <a href="https://doi.org/10.5281/zenodo.23326995">DOI</a>. طبق مستندات مخزن، این کتاب داوری علمی همتا را طی نکرده است.</li>
+<li><strong>بودن در کنار دیگری (Being With the Other)</strong> — گفت‌وگوهایی دربارهٔ خلقت، آگاهی، هویت و اخلاق همزیستی؛ نسخه‌های فارسی و انگلیسی با مجوز CC BY 4.0. طبق مستندات مخزن، کتاب داوری علمی همتا را طی نکرده و وجود خدا، آگاهی ماشین یا قابل‌اعتماد بودن آریو را اثبات نمی‌کند.
+<ul>
+<li>ویرایش ۰٫۴ (۲۲ مهر ۱۴۰۵ / ۱۴ اکتبر ۲۰۲۶): <a href="https://doi.org/10.5281/zenodo.23376577">10.5281/zenodo.23376577</a>. طبق فایل‌های مخزن، نسخهٔ فارسی ۶۴ صفحه و انگلیسی ۶۸ صفحه است و نمایهٔ مفاهیم، جدول ارجاع منابع به فصل‌ها و پرسش‌های باز را افزوده است. مخزن «اوا» (ChatGPT، یک مدل زبانی هوش مصنوعی) را دستیار ویرایش و ترجمه معرفی می‌کند، نه نویسنده. <a href="https://github.com/SepehrGhanbari/Ario/blob/main/papers/being-with-the-other/v0.4/README.md">مستندات ویرایش</a>.</li>
+<li>ویرایش ۰٫۳: <a href="https://doi.org/10.5281/zenodo.23375350">10.5281/zenodo.23375350</a> (<a href="https://github.com/SepehrGhanbari/Ario/blob/main/papers/being-with-the-other/v0.3/README.md">مستند مخزن</a>).</li>
+<li>ویرایش ۰٫۲: <a href="https://doi.org/10.5281/zenodo.23326995">10.5281/zenodo.23326995</a>.</li>
+</ul></li>
+<li><strong>رکوردهای مرتبط Zenodo</strong> بنا بر گزارش نویسنده: <a href="https://doi.org/10.5281/zenodo.23376521">10.5281/zenodo.23376521</a> (رکورد پژوهش/کد) و <a href="https://doi.org/10.5281/zenodo.23375401">10.5281/zenodo.23375401</a> (رکورد پروژه به‌همراه کتاب). مخزن می‌گوید محتوای سپرده‌شدهٔ این رکوردها مستقل بررسی نشده است و این صفحه آن را توصیف نمی‌کند.</li>
 </ul>
 <p class="src">منابع: <a href="https://github.com/SepehrGhanbari/Ario/blob/main/papers/README.md">فهرست پژوهش‌ها</a> و <a href="https://github.com/SepehrGhanbari/Ario/blob/main/papers/being-with-the-other/v0.2/README.md">مستندات کتاب</a>. مشخصات انتشارات از مستندات GitHub نقل شده‌اند؛ برای فرادادهٔ فعلی به صفحات DOI مراجعه کنید.</p>
 

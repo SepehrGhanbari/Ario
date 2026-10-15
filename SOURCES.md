@@ -43,3 +43,17 @@ It is a descriptive project identifier, not a statement of exclusive rights to â
 Preferred public URL: https://ario-research-independent.vercel.app/ ; GitHub Pages is a secondary mirror. Search engines choose the canonical URL independently.
 
 This metadata-only clarification does not change the underlying research, test outcomes, book manuscripts, or independently verify Zenodo records.
+
+## Update 2026-10-15 (website-only; gh-pages index.html and SOURCES.md)
+
+Sources read at `main` c4af4d4 (Merge PR #80), before this update; upstream gh-pages was at 895532f.
+
+| Added or changed | Source |
+| --- | --- |
+| Status wording (implementation with automated tests; test-scope limit) | README.md â†’ Current Status |
+| M0 Evidence Ancestry Guard v0.1, status as stated in its own spec | implementation/M0_EVIDENCE_ANCESTRY_GUARD_SPEC_V0_1.md (header) |
+| Book editions 0.4, 0.3, 0.2 with DOIs, page counts, credits, non-claims | papers/README.md; papers/being-with-the-other/v0.4/README.md; papers/being-with-the-other/v0.3/README.md |
+| Related records 23376521 and 23375401 | papers/README.md; papers/being-with-the-other/v0.4/README.md |
+
+Verification limits: Zenodo record pages were not accessible to this reviewer (HTTP 429), so DOIs, titles, versions and dates are repository-reported and not independently confirmed on Zenodo. The content of records 23376521 and 23375401 is deliberately not described, since the repository states it was not inspected. The Evidence Ancestry Guard is described only by the status line in its spec.
+Persian date for edition 0.4 (22 Mehr 1405) is a calendar conversion of the repository's 14 October 2026.
