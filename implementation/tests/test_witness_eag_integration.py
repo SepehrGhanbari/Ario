@@ -52,7 +52,8 @@ def _lab_report_digest(report):
     return sha256(_canonical_report_bytes(report)).hexdigest()
 
 
-def _caller_wrap_report(report, *, wrappers=2, claimed_digest=None):
+def _caller_wrap_report(report, *, wrappers=2, claimed_digest=None,
+                        claimed_witness_label=None):
     """ATTACKER/CALLER report-content reference, not an authorized adapter.
 
     Unlike the original label-only fixture, this stores a self-declared
@@ -63,8 +64,12 @@ def _caller_wrap_report(report, *, wrappers=2, claimed_digest=None):
     """
     digest = _lab_report_digest(report) if claimed_digest is None else claimed_digest
     assert isinstance(digest, str) and len(digest) == 64
+    # Two attacker-controlled witness names can point to one identical
+    # report payload. Neither the names nor the digest prove independence.
+    prefix = "W1-SHA256-" if claimed_witness_label is None else (
+        "W1-" + claimed_witness_label + "-SHA256-")
     return m0._eag_fixture(
-        parent=m0._eag_ref("W1-SHA256-" + digest, "UNTRUSTED_LAB_REPORT_DIGEST"),
+        parent=m0._eag_ref(prefix + digest, "UNTRUSTED_LAB_REPORT_DIGEST"),
         wrappers=wrappers,
     )
 
@@ -330,10 +335,14 @@ def test_w1_17_identical_report_bytes_in_two_labels_do_not_double_support():
     two = replace(one, reason_codes=tuple(one.reason_codes))
     assert _canonical_report_bytes(one) == _canonical_report_bytes(two)
     assert _lab_report_digest(one) == _lab_report_digest(two)
-    # Even two IDs claiming to point to the same report-content digest do
-    # not establish separate witness custody or independent support.
-    first = _caller_wrap_report(one)
-    second = _caller_wrap_report(two)
-    assert first.observations == second.observations
+    # Distinct caller-assigned witness labels still point to the *same*
+    # report-content digest; neither is an authenticated custodian.
+    first = _caller_wrap_report(one, claimed_witness_label="FAKE-WITNESS-A")
+    second = _caller_wrap_report(two, claimed_witness_label="FAKE-WITNESS-B")
+    ref_a = first.observations[0].provenance_refs[0]
+    ref_b = second.observations[0].provenance_refs[0]
+    assert ref_a.reference_id != ref_b.reference_id
+    assert ref_a.reference_id.endswith(_lab_report_digest(one))
+    assert ref_b.reference_id.endswith(_lab_report_digest(two))
     _assert_m0_no_promotion(first, "W1-17-A")
     _assert_m0_no_promotion(second, "W1-17-B")
