@@ -1,0 +1,202 @@
+{
+  "cases": [
+    {
+      "declared_snapshot_array": [
+        7,
+        "INJECTED-ROOT-A",
+        "SYNTHETIC-01",
+        100,
+        1000,
+        false,
+        "MOCK-GENESIS",
+        [
+          [
+            "sha256:21fe31dfa154a261626bf854046fd2271b7bed4b6abe45aa58877ef47f9721b9",
+            "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+            "WITNESS-0",
+            "SRC-0",
+            "HOLDER-0",
+            "CONTROLLER-0",
+            "GROUP-0",
+            "SYNTHETIC-01",
+            "OBSERVE_ONLY"
+          ],
+          [
+            "sha256:6a3803d5f059902a1c6dafbc9ba4729212f7caac08634cc3ae76b27529f03827",
+            "8139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b394",
+            "WITNESS-1",
+            "SRC-1",
+            "HOLDER-1",
+            "CONTROLLER-1",
+            "GROUP-1",
+            "SYNTHETIC-01",
+            "OBSERVE_ONLY"
+          ]
+        ],
+        []
+      ],
+      "name": "TWO_DISTINCT_DECLARATIONS",
+      "sha256_of_minimal_ascii_json": "ed7af9d3b59b9b59a470fa0fa45d6702c66cbcbd45929bb6b8c18f49c23c3549"
+    },
+    {
+      "declared_snapshot_array": [
+        7,
+        "INJECTED-ROOT-A",
+        "SYNTHETIC-01",
+        100,
+        1000,
+        true,
+        "MOCK-GENESIS",
+        [
+          [
+            "sha256:21fe31dfa154a261626bf854046fd2271b7bed4b6abe45aa58877ef47f9721b9",
+            "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+            "WITNESS-0",
+            "SRC-0",
+            "HOLDER-0",
+            "CONTROLLER-0",
+            "GROUP-0",
+            "SYNTHETIC-01",
+            "OBSERVE_ONLY"
+          ],
+          [
+            "sha256:6a3803d5f059902a1c6dafbc9ba4729212f7caac08634cc3ae76b27529f03827",
+            "8139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b394",
+            "WITNESS-1",
+            "SRC-1",
+            "HOLDER-1",
+            "CONTROLLER-1",
+            "GROUP-1",
+            "SYNTHETIC-01",
+            "OBSERVE_ONLY"
+          ]
+        ],
+        []
+      ],
+      "name": "FROZEN",
+      "sha256_of_minimal_ascii_json": "94602dfbe6c3a19397a85801bb74db3bb7773b59c8c055e7fe3f6ab495505d86"
+    },
+    {
+      "declared_snapshot_array": [
+        7,
+        "INJECTED-ROOT-A",
+        "SYNTHETIC-01",
+        100,
+        1000,
+        false,
+        "MOCK-GENESIS",
+        [
+          [
+            "sha256:21fe31dfa154a261626bf854046fd2271b7bed4b6abe45aa58877ef47f9721b9",
+            "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+            "WITNESS-0",
+            "SRC-0",
+            "HOLDER-0",
+            "CONTROLLER-0",
+            "GROUP-0",
+            "SYNTHETIC-01",
+            "OBSERVE_ONLY"
+          ],
+          [
+            "sha256:6a3803d5f059902a1c6dafbc9ba4729212f7caac08634cc3ae76b27529f03827",
+            "8139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b394",
+            "WITNESS-1",
+            "SRC-1",
+            "HOLDER-1",
+            "CONTROLLER-1",
+            "GROUP-1",
+            "SYNTHETIC-01",
+            "OBSERVE_ONLY"
+          ]
+        ],
+        [
+          [
+            "sha256:21fe31dfa154a261626bf854046fd2271b7bed4b6abe45aa58877ef47f9721b9",
+            110,
+            "COMPROMISED"
+          ]
+        ]
+      ],
+      "name": "REVOCATION_AT_110",
+      "sha256_of_minimal_ascii_json": "728e4c9e1b2a39c41c2817e861e23ce5be30c094fc3ed10acfd65f1ed9c84fe0"
+    },
+    {
+      "declared_snapshot_array": [
+        7,
+        "SELF_CLAIMED_NEW_ROOT",
+        "SYNTHETIC-01",
+        100,
+        1000,
+        false,
+        "MOCK-GENESIS",
+        [
+          [
+            "sha256:21fe31dfa154a261626bf854046fd2271b7bed4b6abe45aa58877ef47f9721b9",
+            "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+            "WITNESS-0",
+            "SRC-0",
+            "HOLDER-0",
+            "CONTROLLER-0",
+            "GROUP-0",
+            "SYNTHETIC-01",
+            "OBSERVE_ONLY"
+          ],
+          [
+            "sha256:6a3803d5f059902a1c6dafbc9ba4729212f7caac08634cc3ae76b27529f03827",
+            "8139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b394",
+            "WITNESS-1",
+            "SRC-1",
+            "HOLDER-1",
+            "CONTROLLER-1",
+            "GROUP-1",
+            "SYNTHETIC-01",
+            "OBSERVE_ONLY"
+          ]
+        ],
+        []
+      ],
+      "name": "DIVERGENT_NEW_ROOT",
+      "sha256_of_minimal_ascii_json": "d8a828c4d4a386de6f18f55d26b58d4b16ec141de7e720e0d4be175573255634"
+    },
+    {
+      "declared_snapshot_array": [
+        7,
+        "INJECTED-ROOT-A",
+        "SYNTHETIC-01",
+        100,
+        1000,
+        false,
+        "MOCK-GENESIS",
+        [
+          [
+            "sha256:6a3803d5f059902a1c6dafbc9ba4729212f7caac08634cc3ae76b27529f03827",
+            "8139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b394",
+            "WITNESS-1",
+            "SRC-1",
+            "HOLDER-1",
+            "CONTROLLER-1",
+            "GROUP-1",
+            "SYNTHETIC-01",
+            "OBSERVE_ONLY"
+          ],
+          [
+            "sha256:21fe31dfa154a261626bf854046fd2271b7bed4b6abe45aa58877ef47f9721b9",
+            "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+            "WITNESS-0",
+            "SRC-0",
+            "HOLDER-0",
+            "CONTROLLER-0",
+            "GROUP-0",
+            "SYNTHETIC-01",
+            "OBSERVE_ONLY"
+          ]
+        ],
+        []
+      ],
+      "name": "REORDERED_RECORDS",
+      "sha256_of_minimal_ascii_json": "0b2430ae61954fa8cb87f82a331a38866c90a0ca8f8272b38297aca162d44764"
+    }
+  ],
+  "version": "ARIO-W4C-REGISTRY-VIEW-SHAPE-TEST-ONLY-V0.1",
+  "warning": "A hash of an injected registry view is not an authenticated network root or quorum certificate."
+}

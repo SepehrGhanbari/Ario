@@ -22,5 +22,7 @@ jobs:
           python-version: "3.13"
       - name: Install test runner
         run: python -m pip install --upgrade pip pytest
+      - name: Install W4-C test-only cryptography dependency
+        run: python -m pip install cryptography==46.0.4
       - name: Run M0 and runtime regression suites
         run: python -m pytest -q tests
