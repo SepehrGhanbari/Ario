@@ -71,9 +71,13 @@ class Finding:
             or type(self.rule) is not str or not token(self.rule)
             or type(self.procedural_step) is not str
             or self.procedural_step not in {"HOLD", "LAB_PACKET_READY_FOR_EXTERNAL_REVIEW"}
-            or (self.identity, self.controller_independence, self.witness_independence,
-                self.review_authorization, self.admission, self.truth) !=
-               ("UNKNOWN", "UNKNOWN", "UNKNOWN", "UNKNOWN", "NOT_EVALUATED", "UNKNOWN")):
+            or any(type(value) is not str or value != required for value, required in (
+                (self.identity, "UNKNOWN"),
+                (self.controller_independence, "UNKNOWN"),
+                (self.witness_independence, "UNKNOWN"),
+                (self.review_authorization, "UNKNOWN"),
+                (self.admission, "NOT_EVALUATED"),
+                (self.truth, "UNKNOWN")))):
             raise ValueError("W4E_CANNOT_PROMOTE_AUTHORITY_OR_TRUTH")
 
 
@@ -150,6 +154,11 @@ def inspect(case: object) -> Finding:
     witness_ids = [w.witness_id for w in c.declared_witnesses]
     if len(set(witness_ids)) != len(witness_ids):
         return reject("W4E_DUPLICATE_WITNESS_ID")
+    # Equality is a declared label collision only; distinct labels do not prove
+    # different people. Deny an overly helpful packet-readiness recommendation.
+    if set(witness_ids) & (set(principals) | set(controllers) | set(issuers)
+                          | {c.proposer_id, c.reviewer_id}):
+        return unknown("W4E_DECLARED_WITNESS_ID_ROLE_OVERLAP")
     sources = [w.source_id for w in c.declared_witnesses]
     ancestors = [w.upstream_observation_id for w in c.declared_witnesses]
     if len(set(sources)) != len(sources):
