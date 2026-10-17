@@ -1,0 +1,5 @@
+# Research/test dependencies only. The M0 engine and demo use the standard library.
+# pytest version observed in main CI run 39020072817 (Python 3.13.16).
+pytest==9.1.1
+# Existing W4-C synthetic signature tests; matches implementation-regression.yml.
+cryptography==46.0.4
