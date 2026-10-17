@@ -56,7 +56,7 @@ def check_supplied_payload(
         return BindingResult("UNAVAILABLE", "BYTE_SUPPLIER_MISSING")
     try:
         payload = byte_supplier()
-    except (OSError, RuntimeError, ValueError, TypeError, LookupError):
+    except (OSError, RuntimeError, ValueError, TypeError, LookupError, EOFError, StopIteration):
         # Expected user-provided byte supplier/read/decoding failures are not
         # a digest mismatch and must not raise an unaudited success/failure.
         # Do not mask process signals (KeyboardInterrupt/SystemExit) or
