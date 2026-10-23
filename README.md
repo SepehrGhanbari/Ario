@@ -33,6 +33,8 @@ Instead, Ario explores an auditable framework in which observations, evidence, i
 
 **برای مخاطب تازه:** [راهنمای دو دقیقه‌ای آریو، فارسی و انگلیسی](./docs/ARIO_START_HERE_FA_EN_2026-10-23.md) — با مثال‌های ساده، پرسش‌های رایج و مرز ادعاهای پروژه.
 
+**Try the synthetic beta / آزمایشگاه تعاملیِ ساختگی:** [Ario Evidence Lab — six fictional FA/EN exercises](https://sepehrghanbari.github.io/Ario/ario-lab/). This public demonstration is not M0, a live evidence verifier or a truth authority. / این دمو پژوهش آزمایشگاهی واقعی یا مرجع تشخیص حقیقت نیست.
+
 **Questions, corrections, and skeptical feedback / پرسش، اصلاح و نقد مستقل:** [Public bilingual discussion #106](https://github.com/SepehrGhanbari/Ario/issues/106). You do not have to agree with Ario to participate. / برای نقد پروژه و معرفی نکات مبهم، نیازی به موافقت با آریو ندارید.
 
 ---

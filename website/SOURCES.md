@@ -77,3 +77,10 @@ This metadata-only clarification does not change the underlying research, test o
 - Created [bilingual public discussion #106](https://github.com/SepehrGhanbari/Ario/issues/106) for newcomers' questions, plain-language corrections and adversarial feedback.
 - Only two quick navigation links were added to the website and a short root README pointer. These are invitations to critique; they do **not** make replies automatically admissible evidence, nor authorize edits to the implementation.
 - No code, M0, security gates, signer, node network, historical book, CSS or JavaScript changed.
+
+## Synthetic public lab link — 2026-10-23
+
+- Official public beta mirror: [Ario Synthetic Evidence Lab](https://sepehrghanbari.github.io/Ario/ario-lab/); six fictional teaching exercises in Persian/English. The static GitHub Pages path was independently reachable after PR #108 and #109 merged into `gh-pages`.
+- Root README and bilingual primary-site source add navigation **links only**; existing scripts, styles, deployment CSP, security headers, runtime and hidden evidence remain unchanged.
+- Interactive GUI and browser accessibility have not passed independent production-browser acceptance; 66 local simulated logic assertions and source/hash checks passed. Do not represent this as Ario runtime, truth certification, authenticated evidence admission, or a scientific validation.
+- Any Vercel live-site deployment is a separate step and must be confirmed by production deployment/alias verification.
