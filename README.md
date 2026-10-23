@@ -27,6 +27,32 @@ Instead, Ario explores an auditable framework in which observations, evidence, i
 
 ---
 
+## Ario in everyday language — آریو به زبان ساده
+
+**In one sentence:** Ario researches how an AI can keep its statements accountable to their sources, distinguish independent evidence from repetitions of its own words, preserve corrections, and say *unknown* when the record cannot justify certainty.
+
+These **fictional, concrete examples illustrate the research goal**; they are not claims that Ario already operates a customer-service, news-verification, or personal-assistant product.
+
+1. **An online refund:** A chatbot says, “Your refund was approved.” Asked for proof, it cites only its own earlier answer. That earlier answer is not an independent payment or order record. A responsible audit would mark the claim **UNSUPPORTED** or **UNKNOWN** until relevant transaction evidence is checked.
+2. **One rumor copied ten times:** Ten posts repeat the same claim, but all trace back to one unverified post. Counting them as ten independent confirmations would inflate the evidence. The important question is **where each source originated**, not just how many repetitions exist.
+3. **A mistaken memory about permission:** An assistant insists, “You told me to publish this,” but the conversation only authorized preparing a draft. Correcting that statement should **retain the earlier mistake and its provenance**, rather than silently rewriting the conversation.
+
+**What exists today?** Ario includes architecture, a bounded Python audit/agent implementation, and tests for specified behaviors. These examples show **potential uses and desired epistemic safeguards**, not production integrations, universal correctness, or a demonstration of AI consciousness. See [Current Status](#current-status) and [implementation/](./implementation/) for narrower claims.
+
+### توضیح فارسی با مثال‌های عینی
+
+**در یک جمله:** آریو پژوهش می‌کند که هوش مصنوعی چگونه بتواند نشان دهد حرفش از کجا آمده، شاهد مستقل را از تکرار حرف خودش جدا کند، خطا و اصلاح را در تاریخچه نگه دارد و وقتی دلیل کافی ندارد، صریح بگوید «نمی‌دانم».
+
+این سه مثال **فرضی و برای روشن‌کردن هدف پژوهش** هستند؛ ادعای وجود یک محصول عملیاتی در حوزهٔ خرید، راستی‌آزمایی خبر یا دستیار شخصی نیستند.
+
+1. **بازپرداخت خرید اینترنتی:** ربات می‌گوید «پولت برگشته»، اما تنها مدرکش پاسخ قبلی خودش است، نه سوابق پرداخت یا سفارش. تکرار گفتهٔ ربات، سند مستقل نیست؛ تا بررسی مدرک معتبر، ادعا باید **UNSUPPORTED** یا **UNKNOWN** بماند.
+2. **شایعه‌ای که ده بار تکرار شده:** ده صفحه یک خبر را کپی کرده‌اند، ولی همگی به یک پست تأییدنشده می‌رسند. این ده شاهد مستقل نیست؛ باید **منشأ واقعی** هر ادعا را ردیابی کرد.
+3. **حافظهٔ اشتباه دربارهٔ اجازهٔ انتشار:** دستیار می‌گوید «تو اجازهٔ انتشار دادی»، درحالی‌که متن گفتگو فقط اجازهٔ آماده‌کردن پیش‌نویس را نشان می‌دهد. باید اشتباه اصلاح شود، **بدون پاک‌کردن گفتهٔ قدیمی و تاریخچهٔ اصلاح**.
+
+**مرز توانایی فعلی:** در مخزن آریو معماری پژوهشی، پیاده‌سازی محدود Python و آزمون‌های مشخص وجود دارد. این مثال‌ها کاربردهای بالقوه و اصول مطلوب‌اند، نه قابلیت عملیاتی اثبات‌شده یا دلیل آگاهی ماشین.
+
+---
+
 ## Core Idea
 
 Ario treats questions of AI identity as an epistemic and architectural problem.

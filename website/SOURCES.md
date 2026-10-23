@@ -51,3 +51,11 @@ This metadata-only clarification does not change the underlying research, test o
 - Zenodo record metadata and deposited file inventory were not independently accessible at this check. Treat the DOI attribution as author-reported until independently confirmed, and do not assume Zenodo bytes match GitHub.
 - This is not the book's numbered v0.4, nor the separate AI-readable research companion. The public website's publication references are bilingual and preserve those boundaries.
 - HTML-only link and publication-copy changes: no CSS, JavaScript, CSP, archived book text, runtime, cryptographic gates, or tests were modified.
+
+## Everyday-language research examples — 2026-10-23
+
+- Added an English and Persian explanation of why Ario matters ahead of technical status lists: online refund, repeated rumor, and mistaken publication permission.
+- All three are explicitly **fictional scenarios / مثال فرضی**, based on MEMORY ≠ TRUTH, CLAIM ≠ PROOF, REVISION ≠ ERASURE, and the requirement to track lineage and uncertainty.
+- These are **not** external-world case studies or demonstrated Ario product integrations. Actual implementation remains bounded by the repository's implementation contracts and tests.
+- Source for explanation: current README.md, “Ario in everyday language / آریو به زبان ساده”, plus existing Core Idea and Current Status.
+- This is a plain-language communications change only. It does not change the framework, add evidence, or modify historical documents.
