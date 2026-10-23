@@ -33,3 +33,9 @@ The paper is an initial research artifact and may be refined through explicit pr
 - **Earlier edition 0.2:** [10.5281/zenodo.23326995](https://doi.org/10.5281/zenodo.23326995).
 
 The two 2026-10-14 DOIs are distinct records. Their existence does not establish the completeness of the software implementation or prove the book's philosophical positions.
+
+## 4. Ario — AI-Readable Research & Reproducibility Companion (2026)
+
+- **Public record:** [10.5281/zenodo.23441596](https://doi.org/10.5281/zenodo.23441596).
+- **Scope (as described in Ario's public research site):** research-orientation material, bilingual guidance, historical v0.3 book material and an unreviewed preprint, with explicit limitations. This is a companion archive, **not** the book's edition 0.4 and **not** a substitute for examining the deposited files.
+- **Evidence boundary:** the existence of a DOI and an archive does not independently authenticate its sources, prove historical claims, establish peer review, or grant evidence-admission/trust authority. Check deposited contents, dates, and source lineage before citation or reuse.
