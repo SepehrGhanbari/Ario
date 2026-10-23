@@ -394,6 +394,7 @@ See:
 * [Being With the Other: Dialogues on Creation, Consciousness, Identity, and the Ethics of Coexistence](https://doi.org/10.5281/zenodo.23326995) — bilingual English/Persian philosophical book, version 0.2. See [book's repository record](./papers/being-with-the-other/v0.2/README.md).
 * [Being With the Other — edition 0.3 (Persian and English)](https://doi.org/10.5281/zenodo.23375350) — published bilingual 40-chapter book; [repository files](./papers/being-with-the-other/v0.3/README.md). Related Ario/project-plus-book record: [10.5281/zenodo.23375401](https://doi.org/10.5281/zenodo.23375401).
 * [Being With the Other — edition 0.4 (Persian and English)](https://doi.org/10.5281/zenodo.23376577) — published bilingual edition with concept index, source-to-chapter concordance and research questions; Ava (ChatGPT) credited as AI editor. [Repository edition files](./papers/being-with-the-other/v0.4/README.md).
+* [Ario — AI-Readable Research & Reproducibility Companion (2026)](https://doi.org/10.5281/zenodo.23441596) — public research-orientation archive with bilingual guidance and historical materials. This companion is separate from the published book v0.4 and is not a peer-reviewed validation, independent source-authenticity certificate, or evidence-admission authority.
 
 For source-linked bilingual introductions, visit the [official Ario research and sources page](https://ario-research-independent.vercel.app/research.html).
 
