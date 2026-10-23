@@ -43,3 +43,11 @@ It is a descriptive project identifier, not a statement of exclusive rights to â
 Preferred public URL: https://ario-research-independent.vercel.app/ ; GitHub Pages is a secondary mirror. Search engines choose the canonical URL independently.
 
 This metadata-only clarification does not change the underlying research, test outcomes, book manuscripts, or independently verify Zenodo records.
+
+## Documented book continuation DOI cross-reference (23 October 2026)
+
+- The author supplied `10.5281/zenodo.23600820` as the newly registered DOI for the independent Persian/English documented continuation (23 October 2026).
+- Reference target: `https://doi.org/10.5281/zenodo.23600820`; repository companion: [`papers/being-with-the-other/documented-continuation-2026-10-23/`](../papers/being-with-the-other/documented-continuation-2026-10-23/README.md).
+- Zenodo record metadata and deposited file inventory were not independently accessible at this check. Treat the DOI attribution as author-reported until independently confirmed, and do not assume Zenodo bytes match GitHub.
+- This is not the book's numbered v0.4, nor the separate AI-readable research companion. The public website's publication references are bilingual and preserve those boundaries.
+- HTML-only link and publication-copy changes: no CSS, JavaScript, CSP, archived book text, runtime, cryptographic gates, or tests were modified.

@@ -14,7 +14,7 @@ This directory preserves separate editions without rewriting earlier texts:
 
 **Privacy:** No identifiable details of the explicitly excluded dream, raw private chat exports, sensitive security instructions, or unnecessary third-party personal details are included.
 
-**Zenodo:** No new DOI or deposit for this edition is claimed. The previously supplied DOI `10.5281/zenodo.23326995` may relate to an earlier work and must not be reassigned without checking. Book-text reuse license has not been separately selected; do not infer MIT from the code repository.
+**Zenodo (owner announcement, 23 October 2026):** [10.5281/zenodo.23600820](https://doi.org/10.5281/zenodo.23600820) is identified by the author as the DOI of this independently documented continuation. Zenodo's landing metadata and deposited file hashes/inventory could not be independently fetched during this update; the repository text and Zenodo bytes must not be presumed identical without a later comparison. Earlier numbered editions, including v0.4 ([10.5281/zenodo.23376577](https://doi.org/10.5281/zenodo.23376577)), retain their distinct records. Check the specific deposit's rights statement before reuse; the repository's MIT license covers software, not automatically this book.
 
 **Historical source reference:** `817f9e4d66acddd4dd90e5eaaa03d0d86dd1576c`.
 
