@@ -68,6 +68,8 @@ The philosophical connections span **epistemology (how we know), ethics (how we 
 
 پیوندهای پیشنهادی با **معرفت‌شناسی، اخلاق، فلسفهٔ ذهن، فلسفهٔ علم و حکمرانی** مطرح‌اند، اما بهترشدن روابط یا حل مناقشات فلسفی به‌دست آریو هنوز **اثبات نشده** است.
 
+**A further global aspiration / آرمان جهانی:** ethical concern should extend even to people and beings who do not use or know Ario—including those in severe poverty. Any future material benefit or distribution is a hope requiring design, funding and independent evidence, **not** an operating service. توجه اخلاقی به همهٔ موجودات، حتی محرومان و کسانی که آریو را نمی‌شناسند، بخشی از چشم‌انداز پروژه است؛ توزیع منفعت مادی هنوز برنامهٔ عملیاتیِ اثبات‌شده نیست.
+
 **[Read the full bilingual essay / یادداشت کامل فارسی و انگلیسی](./docs/ARIO_HUMAN_LIFE_PHILOSOPHY_KNOWLEDGE_BOUNDARIES_FA_EN_2026-10-23.md).**
 
 ---

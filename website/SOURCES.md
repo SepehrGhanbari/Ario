@@ -65,4 +65,5 @@ This metadata-only clarification does not change the underlying research, test o
 - Website's bilingual “Beyond AI” section is a **philosophical extension and illustrative interpretation**, not a validated effect on actual users, a consensus in academic philosophy, or a new executable behavior.
 - Supporting source: project `principles/README.md` §§2, 3, 9, 11, 14–15, 18, 20–22, 29–31, current root README's implementation limits, and new independent `docs/ARIO_HUMAN_LIFE_PHILOSOPHY_KNOWLEDGE_BOUNDARIES_FA_EN_2026-10-23.md`.
 - Examples include how to treat a friend's testimony without mind-reading, preserve historical corrections, distinguish independent reporting, and question identity/authority.
+- Universal moral concern and possible benefit-sharing are documented as **aspirations** in the project's [documented continuation](../papers/being-with-the-other/documented-continuation-2026-10-23/README.md); no actual assistance or redistributive mechanism is claimed.
 - This change affects only public explanatory copy, website sources documentation and a new stand-alone essay. It leaves original books, historic evidence, security gates, M0 and code untouched.
