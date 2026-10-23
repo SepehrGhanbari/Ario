@@ -10,10 +10,10 @@
 
 | Language | PDF | HTML | Editable markdown |
 | --- | --- | --- | --- |
-| فارسی | `Ario_Independent_Continuation_FA_2026-10-23.pdf` | `Ario_Independent_Continuation_FA_2026-10-23.html` | `Ario_Independent_Continuation_FA_2026-10-23.md` |
-| English | `Ario_Independent_Continuation_EN_2026-10-23.pdf` | `Ario_Independent_Continuation_EN_2026-10-23.html` | `Ario_Independent_Continuation_EN_2026-10-23.md` |
+| فارسی | Available in the Zenodo-ready bundle, not this Git tree | `Ario_Independent_Continuation_FA_2026-10-23.html` | `Ario_Independent_Continuation_FA_2026-10-23.md` |
+| English | Available in the Zenodo-ready bundle, not this Git tree | `Ario_Independent_Continuation_EN_2026-10-23.html` | `Ario_Independent_Continuation_EN_2026-10-23.md` |
 
-The English narrative carries the same eleven chapters and five appendices. Its complete evidence register is supplied as a **separate, integral bilingual-source companion**: `Ario_Evidence_Public_EN_2026-10-23.md` and `.json`. The original Persian evidence register remains unchanged in `Ario_Evidence_Public_2026-10-23.json`.
+The standalone PDFs and accompanying metadata are packaged separately for Zenodo; they have **not** been uploaded to GitHub.\n\nThe English narrative carries the same eleven chapters and five appendices. Its complete evidence register is supplied as a **separate, integral bilingual-source companion**: `Ario_Evidence_Public_EN_2026-10-23.md` and `.json`. The original Persian evidence register remains unchanged in `Ario_Evidence_Public_2026-10-23.json`.
 
 ### Epistemic status
 
