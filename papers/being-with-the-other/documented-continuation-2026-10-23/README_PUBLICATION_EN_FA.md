@@ -1,5 +1,7 @@
 # Ario — Independent Documented Continuation / ادامهٔ مستقل و مستند آریو
 
+> **Publication update / به‌روزرسانی انتشار — 2026-10-23:** The author reports a newly registered DOI for this independent documented continuation: **[10.5281/zenodo.23600820](https://doi.org/10.5281/zenodo.23600820)**. نشانی DOI جدید به اعلام صاحب اثر ثبت شد؛ نسخهٔ مستقلِ کتاب با ویرایش‌های شماره‌دار پیشین یکی نیست. Zenodo's live record metadata and deposited bytes were not independently inspected during this update. Earlier `NOT_PUBLISHED` / `no DOI` statements below describe the *pre-deposit preparation snapshot*, not the updated status. / عبارت‌های «منتشر نشده» و «بدون DOI» در پایین، وضعیت تاریخیِ زمان آماده‌سازی را بازتاب می‌دهند.
+
 **Author / صاحب اثر:** Sepehr Ghanbari / سپهر قنبری  
 **AI editorial and English-translation assistance:** Ava (ChatGPT). Not an independent human witness.  
 **Edition date:** 2026-10-23  

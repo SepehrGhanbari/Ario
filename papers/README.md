@@ -29,6 +29,7 @@ The paper is an initial research artifact and may be refined through explicit pr
 ## 3. Being With the Other — philosophical book (separate book publication branch)
 
 - **Edition 0.4 (14 October 2026):** [10.5281/zenodo.23376577](https://doi.org/10.5281/zenodo.23376577) — [full bilingual edition in this repository](./being-with-the-other/v0.4/README.md).
+- **Independent documented continuation (23 October 2026):** [10.5281/zenodo.23600820](https://doi.org/10.5281/zenodo.23600820) — newly published DOI **reported by the author**, linked to the [11-chapter bilingual continuation and its public evidence/counterevidence registers](./being-with-the-other/documented-continuation-2026-10-23/README.md). The DOI landing page/deposited file inventory were not independently accessible during this metadata update; do not claim deposited-byte identity from this link alone. Distinct from numbered edition 0.4.
 - **Edition 0.3:** [10.5281/zenodo.23375350](https://doi.org/10.5281/zenodo.23375350) — [historical v0.3 record](./being-with-the-other/v0.3/README.md).
 - **Earlier edition 0.2:** [10.5281/zenodo.23326995](https://doi.org/10.5281/zenodo.23326995).
 
