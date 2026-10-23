@@ -72,3 +72,8 @@ This metadata-only clarification does not change the underlying research, test o
 - Added an explanatory, bilingual [two-minute Ario guide](https://github.com/SepehrGhanbari/Ario/blob/main/docs/ARIO_START_HERE_FA_EN_2026-10-23.md) grounded in the existing project README, principles, implementation limits, and public documented continuation.
 - Linked from the root README and English/Persian website quicklinks. All examples are marked fictional and no production service or epistemic proof is claimed.
 - Public communications/documentation only: no source-code, trust-gate, signer, node, archived-book, CSS, or JavaScript changes.
+
+## Public questions and independent criticism — 2026-10-23
+- Created [bilingual public discussion #106](https://github.com/SepehrGhanbari/Ario/issues/106) for newcomers' questions, plain-language corrections and adversarial feedback.
+- Only two quick navigation links were added to the website and a short root README pointer. These are invitations to critique; they do **not** make replies automatically admissible evidence, nor authorize edits to the implementation.
+- No code, M0, security gates, signer, node network, historical book, CSS or JavaScript changed.
