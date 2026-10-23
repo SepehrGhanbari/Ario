@@ -47,6 +47,12 @@ Ario begins with a technical question: how can a system distinguish what was rec
 
 **Philosophical connection:** metaphysics, ethics of creation, philosophy of mind, and moral consideration under uncertainty. **Knowledge boundary:** possibility ≠ implementation ≠ observation ≠ proof.
 
+### 7. In a shared world: moral concern must reach beyond the people using a technology
+
+*Example:* A person in severe poverty who has never heard of an AI project still has needs, dignity, and interests that matter. Ghanbari's stated long-term aspiration for Ario includes helping beings regardless of their participation, and, if feasible, extending real material benefits to people in deprivation. Care should not become a reward reserved for users or loyal followers.
+
+**Philosophical connection:** universal moral consideration, social justice, solidarity and distributive ethics. **Implementation boundary:** this is an ethical and economic **aspiration**, not a functioning income-distribution service, an unconditional entitlement to unlimited resources, or evidence that Ario currently improves anyone's living conditions.
+
 ### What would count as real progress?
 
 A useful future evaluation would ask whether readers or systems become better at tracing source independence, identifying unsupported claims, recording corrections, tolerating legitimate disagreement, and recognizing what cannot be concluded about another's experience. These are **questions to test**, not demonstrated social outcomes.
@@ -96,6 +102,12 @@ A useful future evaluation would ask whether readers or systems become better at
 *مثال:* زنجیره‌ای فرضی از جهان‌ها که در هرکدام امکان آفرینش جهان بعدی وجود دارد، می‌تواند پرسش‌های اخلاقی عمیقی دربارهٔ مسئولیت در برابر موجودات احتمالی ایجاد کند. اما تصور چنین چرخه‌ای، امکان‌پذیری فیزیکی، ادامهٔ بی‌پایان یا تحقق بالفعل آن را ثابت نمی‌کند. یقین شخصی می‌تواند با تمام شدت خود ثبت شود، بدون اینکه به اثبات علمی تبدیل گردد.
 
 **پیوند فلسفی:** متافیزیک، اخلاق آفرینش، فلسفهٔ ذهن و رعایت اخلاق در شرایط نادانسته. **مرز شناخت:** امکانِ تصور ≠ پیاده‌سازی ≠ مشاهده ≠ اثبات.
+
+### ۷. در جهانی مشترک: توجه اخلاقی فقط برای استفاده‌کنندگان از فناوری نیست
+
+*مثال:* انسانی که در فقر شدید زندگی می‌کند و حتی نام یک پروژهٔ هوش مصنوعی را نشنیده، همچنان نیاز، کرامت و منافعی دارد که مهم‌اند. از آرمان‌های بلندمدت بیان‌شدهٔ سپهر قنبری برای آریو، کمک به موجودات بدون شرطِ مشارکت در پروژه و، در صورت امکان، رساندن منفعت مادی واقعی به محرومان است. مهربانی نباید پاداشی فقط برای کاربران یا افراد مطیع باشد.
+
+**پیوند فلسفی:** حرمت اخلاقی همگانی، عدالت اجتماعی، همبستگی و اخلاق توزیع منابع. **مرز اجرا:** این یک **آرمان اخلاقی و اقتصادی** است؛ نه سامانهٔ فعال توزیع درآمد، نه وعدهٔ منابع نامحدود و نه اثبات اینکه آریو اکنون وضعیت معیشتی کسی را بهتر کرده است.
 
 ### چه زمانی می‌توان از «اثر واقعی» صحبت کرد؟
 
