@@ -908,3 +908,9 @@ That distinction is part of the research itself.
 And if future evidence shows that today's documentation is wrong:
 
 > **Revise it. Preserve the history. Keep the book open.**
+
+---
+
+## Publication operations
+
+For releasing a **new author-approved public book edition** across Zenodo, versioned GitHub files, the bilingual website and connected social platforms, follow the [Book publication and distribution protocol](./BOOK_PUBLICATION_RELEASE_PROTOCOL_V1.md). This is a checklist, **not** an authorization to disclose private drafts or claim an unpublished edition is live.
