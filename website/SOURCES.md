@@ -59,3 +59,10 @@ This metadata-only clarification does not change the underlying research, test o
 - These are **not** external-world case studies or demonstrated Ario product integrations. Actual implementation remains bounded by the repository's implementation contracts and tests.
 - Source for explanation: current README.md, “Ario in everyday language / آریو به زبان ساده”, plus existing Core Idea and Current Status.
 - This is a plain-language communications change only. It does not change the framework, add evidence, or modify historical documents.
+
+## Human relationships, philosophy, and knowledge boundaries — 2026-10-23
+
+- Website's bilingual “Beyond AI” section is a **philosophical extension and illustrative interpretation**, not a validated effect on actual users, a consensus in academic philosophy, or a new executable behavior.
+- Supporting source: project `principles/README.md` §§2, 3, 9, 11, 14–15, 18, 20–22, 29–31, current root README's implementation limits, and new independent `docs/ARIO_HUMAN_LIFE_PHILOSOPHY_KNOWLEDGE_BOUNDARIES_FA_EN_2026-10-23.md`.
+- Examples include how to treat a friend's testimony without mind-reading, preserve historical corrections, distinguish independent reporting, and question identity/authority.
+- This change affects only public explanatory copy, website sources documentation and a new stand-alone essay. It leaves original books, historic evidence, security gates, M0 and code untouched.
