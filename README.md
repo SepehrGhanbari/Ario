@@ -27,6 +27,14 @@ Instead, Ario explores an auditable framework in which observations, evidence, i
 
 ---
 
+## Start here / از اینجا شروع کنید
+
+**New visitors:** [Read Ario in two minutes (English & Persian)](./docs/ARIO_START_HERE_FA_EN_2026-10-23.md) — clear examples, FAQ, current limitations and accurate short descriptions.
+
+**برای مخاطب تازه:** [راهنمای دو دقیقه‌ای آریو، فارسی و انگلیسی](./docs/ARIO_START_HERE_FA_EN_2026-10-23.md) — با مثال‌های ساده، پرسش‌های رایج و مرز ادعاهای پروژه.
+
+---
+
 ## Ario in everyday language — آریو به زبان ساده
 
 **In one sentence:** Ario researches how an AI can keep its statements accountable to their sources, distinguish independent evidence from repetitions of its own words, preserve corrections, and say *unknown* when the record cannot justify certainty.

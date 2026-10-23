@@ -67,3 +67,8 @@ This metadata-only clarification does not change the underlying research, test o
 - Examples include how to treat a friend's testimony without mind-reading, preserve historical corrections, distinguish independent reporting, and question identity/authority.
 - Universal moral concern and possible benefit-sharing are documented as **aspirations** in the project's [documented continuation](../papers/being-with-the-other/documented-continuation-2026-10-23/README.md); no actual assistance or redistributive mechanism is claimed.
 - This change affects only public explanatory copy, website sources documentation and a new stand-alone essay. It leaves original books, historic evidence, security gates, M0 and code untouched.
+
+## Start-here public guide — 2026-10-23
+- Added an explanatory, bilingual [two-minute Ario guide](https://github.com/SepehrGhanbari/Ario/blob/main/docs/ARIO_START_HERE_FA_EN_2026-10-23.md) grounded in the existing project README, principles, implementation limits, and public documented continuation.
+- Linked from the root README and English/Persian website quicklinks. All examples are marked fictional and no production service or epistemic proof is claimed.
+- Public communications/documentation only: no source-code, trust-gate, signer, node, archived-book, CSS, or JavaScript changes.
