@@ -84,3 +84,9 @@ This metadata-only clarification does not change the underlying research, test o
 - Root README and bilingual primary-site source add navigation **links only**; existing scripts, styles, deployment CSP, security headers, runtime and hidden evidence remain unchanged.
 - Interactive GUI and browser accessibility have not passed independent production-browser acceptance; 66 local simulated logic assertions and source/hash checks passed. Do not represent this as Ario runtime, truth certification, authenticated evidence admission, or a scientific validation.
 - Any Vercel live-site deployment is a separate step and must be confirmed by production deployment/alias verification.
+
+## Direct link to upgraded synthetic Ario Lab 02 — 24 October 2026
+
+- [Public Ario Lab 02](https://sepehrghanbari.github.io/Ario/ario-lab-2/) includes twelve bilingual ready-made claim inputs, with explicit manual revision recording and fictional evidence only. Source deployed to GH Pages via PR #112; external content fetch confirmed live selector.
+- Added only navigation pointers on the canonical website and README; existing CSP, audit code, M0, signer, nodes, historic evidence and Lab 01 remain unchanged.
+- Full independent browser accessibility testing remains NOT_VERIFIED; no true evidence admission is claimed.
