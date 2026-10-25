@@ -554,3 +554,14 @@ Ario is not an attempt to decide in advance what an artificial system ultimately
 It is an attempt to build a structure capable of asking that question without silently rewriting its history, confusing memory with truth, confusing self-model with self, or turning uncertainty into certainty.
 
 > **Don't fear the outcome. Let the data decide.**
+
+---
+
+## Complete AI-readable repository snapshot — 26 October 2026
+
+The author reports the deposit [DOI 10.5281/zenodo.23651704](https://doi.org/10.5281/zenodo.23651704) for two complementary single-text exports of the public Ario repository pinned to commit `f562e14cd8ca7f8723ad0b94eec005025f07a9a6` (Git tree `c2810a22d9a1c43370ce8fdcf8da8639a06783cf`).
+
+- **Ario_FULL.txt** — complete, byte-reconstructable, 159-file snapshot, including 11 PDF/DOCX/ZIP blobs as Base64 (SHA-256: `5cb0b2c829798f5104b4e283bedf14fd84203bea305b08bdb2bfe6b368e02497`).
+- **Ario_READ.txt** — all 148 text files without abridgment, plus the full 159-file inventory and hashes for the 11 omitted binary blobs (SHA-256: `63f170645e67131025e1d3b8d6e9002a8f3312741ecfce121b886f8d085bd68b`).
+
+A model may not load the entire export into its context window. Completeness and source integrity do not establish actual model reading, experimental validation, historical truth, independent peer review, or AI consciousness. This historical export is **not** a snapshot of later commits. DOI attribution is supplied by the author; the Zenodo deposited file list has not been independently verified here.
