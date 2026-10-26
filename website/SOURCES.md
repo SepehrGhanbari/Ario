@@ -93,7 +93,8 @@ This metadata-only clarification does not change the underlying research, test o
 
 ## Ario complete AI-readable repository snapshot DOI — 26 October 2026
 
-- Author-reported new record: https://doi.org/10.5281/zenodo.23651704.
-- Export scope: 159 tracked files at commit `f562e14cd8ca7f8723ad0b94eec005025f07a9a6`, tree `c2810a22d9a1c43370ce8fdcf8da8639a06783cf`; 148 text and 11 binary blobs.
-- `Ario_FULL.txt` SHA-256 `5cb0b2c829798f5104b4e283bedf14fd84203bea305b08bdb2bfe6b368e02497`; `Ario_READ.txt` SHA-256 `63f170645e67131025e1d3b8d6e9002a8f3312741ecfce121b886f8d085bd68b`.
-- Direct Zenodo metadata and deposited file checksums were not independently verified at the time of this cross-reference. No source, test, M0, historical evidence, trust gate or prior DOI was modified.
+- The [public Zenodo record](https://doi.org/10.5281/zenodo.23651704) was independently read as v15 (dataset), with two downloadable files: `Ario-Full-Archive.txt` and `Ario-Read-Light-For-Models.txt`. File names and Zenodo-listed MD5 values were compared against the local original exports.
+- Export scope: 159 tracked file blobs at commit `f562e14cd8ca7f8723ad0b94eec005025f07a9a6`, tree `c2810a22d9a1c43370ce8fdcf8da8639a06783cf`; 148 text and 11 binary blobs.
+- Full edition SHA-256: `5cb0b2c829798f5104b4e283bedf14fd84203bea305b08bdb2bfe6b368e02497`; text edition SHA-256: `63f170645e67131025e1d3b8d6e9002a8f3312741ecfce121b886f8d085bd68b`.
+- The original GitHub text copy created at commit `8478b1bbcf67ef8d08afe5b8e552084a14d7aa6c` was **not byte-identical** to the published text edition due to line-ending/boundary normalization; this publication update replaces that blob with the SHA-matching version. The previous blob remains in immutable Git history.
+- These files are preserved historical snapshots, not independent evaluations of code, security, provenance authenticity, or source claim truth. No M0, signer, trust gate or other historical evidence was modified.
