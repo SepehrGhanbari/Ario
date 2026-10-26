@@ -90,3 +90,11 @@ This metadata-only clarification does not change the underlying research, test o
 - [Public Ario Lab 02](https://sepehrghanbari.github.io/Ario/ario-lab-2/) includes twelve bilingual ready-made claim inputs, with explicit manual revision recording and fictional evidence only. Source deployed to GH Pages via PR #112; external content fetch confirmed live selector.
 - Added only navigation pointers on the canonical website and README; existing CSP, audit code, M0, signer, nodes, historic evidence and Lab 01 remain unchanged.
 - Full independent browser accessibility testing remains NOT_VERIFIED; no true evidence admission is claimed.
+
+## Ario single-text source exports — Zenodo 2026-10-25
+
+- The [record 23651704](https://doi.org/10.5281/zenodo.23651704) was checked as published, version v15, with two downloadable files named `Ario-Full-Archive.txt` and `Ario-Read-Light-For-Models.txt`.
+- Fixed baseline commit: `f562e14cd8ca7f8723ad0b94eec005025f07a9a6`; tree: `c2810a22d9a1c43370ce8fdcf8da8639a06783cf`.
+- Complete edition: 159 blobs with 148 text files and 11 Base64-encoded binary files; SHA-256 `5cb0b2c829798f5104b4e283bedf14fd84203bea305b08bdb2bfe6b368e02497`.
+- Text edition: 148 byte-complete text files and names/hashes for 11 excluded binaries; SHA-256 `63f170645e67131025e1d3b8d6e9002a8f3312741ecfce121b886f8d085bd68b`.
+- These are pinned historical snapshots, not necessarily the newest GitHub `main` content after publication. They are not third-party audits, truth certificates, or evidence that any one model read all 148 texts.
