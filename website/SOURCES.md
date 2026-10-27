@@ -125,3 +125,9 @@ This metadata-only clarification does not change the underlying research, test o
 - The bilingual public navigation has two responsive columns: pinned AI-readable packages in usage-priority order (model TXT first, 159-file FULL archive second, distinct older research companion third), then philosophical books newest-first (23 Oct continuation, 14 Oct v0.4, 14 Oct v0.3, 12 Oct v0.2). The v0.3 and v0.4 same-day tie is resolved by edition number, not a claimed publication time.
 - Separate research/project records remain linked under a third heading instead of being characterized as books. All previous href destinations were preserved.
 - Change is limited to `website/index.html` markup and responsive CSS plus this source explanation; no modification of historical files, JS, Vercel config, book versions or cryptographic/runtime components.
+
+## CSP regression fix — 27 October 2026
+
+- After PR #121 added inline responsive CSS for the two-column model/book resource layout, the GitHub-generated Vercel production deployment omitted an update to the CSP style hash. Browsers correctly rejected the entire inline stylesheet and displayed unstyled HTML. This was a deployment integration regression, not a failure of CSS syntax.
+- Exact UTF-8 SHA-256 of the **new full** inline `<style>` content (excluding the tags): Base64 `AtJpnoZPHJUj30YuMtee94fR+LS8GCvV64jLZeqr/BM=`. The previously authorized homepage hash was `Kmfc+xHoM7p5by0Z1zlfQHRLUl6vqaWOAPLw7qdHCNs=`; this repair adds the new hash while preserving the previous permitted hashes and all existing script/style restrictions.
+- Only `website/vercel.json` CSP and this audit note changed. No `unsafe-inline`, general network allowlist, broad `style-src` expansion, HTML changes, archived data modifications, runtime or test changes.

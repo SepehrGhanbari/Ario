@@ -5,7 +5,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'; connect-src 'none'; font-src 'none'; img-src 'self' data:; style-src 'sha256-leo5Z/6xES1hmXVwHkGH1xhvUt556HHKxZUG5R1bd50=' 'sha256-Kmfc+xHoM7p5by0Z1zlfQHRLUl6vqaWOAPLw7qdHCNs='; script-src 'sha256-5AoPYI++1NuLhP+PM6MuKR/77UqnR2gSjgUTs+QBDeI=' 'sha256-r/7X0Krh+1dhZhmH0XAAa1HGiVgOk4miK+Ja6/t9Vos=' 'sha256-HWcYkpslwa0oNhpb8RvsbVmwEp0M+DajMdZQNnMVcFk=' 'sha256-a8z5EHswfvfvhhXqUjSghC4dBfVseP0sQS4jG7l0DaQ='; upgrade-insecure-requests"
+          "value": "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'; connect-src 'none'; font-src 'none'; img-src 'self' data:; style-src 'sha256-leo5Z/6xES1hmXVwHkGH1xhvUt556HHKxZUG5R1bd50=' 'sha256-Kmfc+xHoM7p5by0Z1zlfQHRLUl6vqaWOAPLw7qdHCNs=' 'sha256-AtJpnoZPHJUj30YuMtee94fR+LS8GCvV64jLZeqr/BM='; script-src 'sha256-5AoPYI++1NuLhP+PM6MuKR/77UqnR2gSjgUTs+QBDeI=' 'sha256-r/7X0Krh+1dhZhmH0XAAa1HGiVgOk4miK+Ja6/t9Vos=' 'sha256-HWcYkpslwa0oNhpb8RvsbVmwEp0M+DajMdZQNnMVcFk=' 'sha256-a8z5EHswfvfvhhXqUjSghC4dBfVseP0sQS4jG7l0DaQ='; upgrade-insecure-requests"
         },
         {
           "key": "X-Content-Type-Options",
