@@ -56,6 +56,22 @@ button{font:inherit;background:var(--card);color:var(--fg);border:1px solid var(
 .fa-panel .quote{border-left:0;padding-left:0;border-right:3px solid var(--acc);padding-right:14px;font-style:normal}
 .fa-panel .grid{direction:rtl}
 @media(max-width:400px){.top{align-items:flex-start}.wrap{padding:0 18px}}
+
+/* Priority AI downloads and chronological books */
+.quicklinks .resource-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0 0 16px;align-items:start}
+.quicklinks .resource-panel{min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:14px}
+.quicklinks .resource-featured{border-inline-start:3px solid var(--acc)}
+.quicklinks .resource-panel h2{font-size:1.05rem;line-height:1.45;margin:0 0 10px}
+.quicklinks .column-note{display:block;font:normal .76rem/1.35 ui-monospace,Menlo,Consolas,monospace;color:var(--mute);margin-top:2px}
+.quicklinks .resource-panel ol{margin:0;padding-inline-start:1.3rem}
+.quicklinks .resource-panel li{margin:0 0 13px;padding-inline-start:2px}
+.quicklinks .resource-title{font-size:.88rem;font-weight:700;line-height:1.5}
+.quicklinks .resource-meta{font-size:.77rem;color:var(--mute);line-height:1.55;margin:3px 0}
+.quicklinks .resource-alternates{font-size:.78rem;line-height:1.6}
+.quicklinks .resource-panel a{display:inline;margin:0;padding:0;border:0;border-radius:0;background:transparent;text-decoration:underline;font-size:inherit;line-height:inherit;overflow-wrap:anywhere}
+.quicklinks .resource-caveat{font-size:.74rem;color:var(--mute);line-height:1.6;margin:8px 0 0}
+.quicklinks .research-records{border-top:1px solid var(--line);padding-top:12px}
+@media(max-width:640px){.quicklinks .resource-grid{grid-template-columns:minmax(0,1fr)}}
 </style>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Ario — Auditable Epistemic Framework for AI","alternateName":["Ario","آریو"],"url":"https://ario-research-independent.vercel.app/","inLanguage":["en","fa"],"creator":{"@type":"Person","name":"Sepehr Ghanbari","sameAs":"https://orcid.org/0009-0006-4710-3914"}}</script>
 </head>
@@ -72,6 +88,15 @@ button{font:inherit;background:var(--card);color:var(--fg);border:1px solid var(
 <p class="src">Source: <a href="https://github.com/SepehrGhanbari/Ario/blob/main/README.md">README.md</a> (project description, motto)</p>
 <p>Project architect and principal researcher: Sepehr Ghanbari (<a href="https://orcid.org/0009-0006-4710-3914">ORCID</a>).</p>
 <nav class="quicklinks" aria-label="Official Ario research links">
+<div class="resource-grid" aria-label="Prioritized AI materials and book publication chronology">
+<section class="resource-panel resource-featured" aria-labelledby="models-en"><h2 id="models-en">For AI models<span class="column-note">Priority order</span></h2><ol><li><div class="resource-title"><a href="/Ario-Read-Light-For-Models.txt" download="Ario-Read-Light-For-Models.txt">⬇ Download model-readable Ario TXT (2.86 MB · 148 text files)</a></div><div class="resource-meta">Priority 1 · 2.86 MB TXT; 148 text files</div><div class="resource-alternates"><a href="https://zenodo.org/records/23651704/files/Ario-Read-Light-For-Models.txt?download=1">Official Zenodo mirror: model-readable TXT</a> · <a href="https://github.com/SepehrGhanbari/Ario/blob/main/releases/zenodo-23651704/Ario-Read-Light-For-Models.txt">Read all 148 source text files (GitHub)</a></div></li>
+<li><div class="resource-title"><a href="https://zenodo.org/records/23651704/files/Ario-Full-Archive.txt?download=1">Download complete 159-file TXT (Zenodo)</a></div><div class="resource-meta">Priority 2 · complete 159-file archive (8.60 MB), for reconstruction</div><div class="resource-alternates"><a href="https://doi.org/10.5281/zenodo.23651704">Complete AI-readable repository snapshot (2026)</a></div></li>
+<li><div class="resource-title"><a href="https://doi.org/10.5281/zenodo.23441596">AI-readable research companion (2026)</a></div><div class="resource-meta">Priority 3 · separate earlier AI-readable research companion</div></li></ol><p class="resource-caveat">Downloading does not mean a model has inspected all contents or verified claims.</p></section>
+<section class="resource-panel" aria-labelledby="books-en"><h2 id="books-en">Books<span class="column-note">Publication date · newest first</span></h2><ol><li><div class="resource-title"><a href="https://doi.org/10.5281/zenodo.23600820">Documented book continuation (23 Oct 2026)</a></div><div class="resource-meta">23 Oct 2026 · documented independent continuation, distinct from v0.4</div></li>
+<li><div class="resource-title"><a href="https://doi.org/10.5281/zenodo.23376577">Book 0.4</a></div><div class="resource-meta">14 Oct 2026 · edition 0.4</div></li>
+<li><div class="resource-title"><a href="https://doi.org/10.5281/zenodo.23375350">Book 0.3</a></div><div class="resource-meta">14 Oct 2026 · edition 0.3, same release date as v0.4</div></li>
+<li><div class="resource-title"><a href="https://doi.org/10.5281/zenodo.23326995">Book 0.2</a></div><div class="resource-meta">12 Oct 2026 · edition 0.2</div></li></ol></section>
+</div>
 <div class="link-group"><strong>Project and code</strong>
 <a href="https://github.com/SepehrGhanbari/Ario/blob/main/docs/ARIO_START_HERE_FA_EN_2026-10-23.md">Start here: Ario in two minutes</a>
 <a href="https://sepehrghanbari.github.io/Ario/ario-lab/">Try the synthetic Ario Lab (beta)</a>
@@ -85,20 +110,10 @@ button{font:inherit;background:var(--card);color:var(--fg);border:1px solid var(
 <a href="https://github.com/SepehrGhanbari/Ario/blob/main/papers/evidence-laundering-2026-10-27/Manuscript.md">New research working paper (SSRN submission under review)</a>
 <a href="https://ario-research-independent.vercel.app/research.html">Research sources</a>
 </div>
-<div class="link-group"><strong>Zenodo publications</strong>
-<a href="https://doi.org/10.5281/zenodo.23651704">Complete AI-readable repository snapshot (2026)</a>
-<a href="https://zenodo.org/records/23651704/files/Ario-Full-Archive.txt?download=1">Download complete 159-file TXT (Zenodo)</a>
-<a href="/Ario-Read-Light-For-Models.txt" download="Ario-Read-Light-For-Models.txt">⬇ Download model-readable Ario TXT (2.86 MB · 148 text files)</a>
-<a href="https://zenodo.org/records/23651704/files/Ario-Read-Light-For-Models.txt?download=1">Official Zenodo mirror: model-readable TXT</a>
-<a href="https://github.com/SepehrGhanbari/Ario/blob/main/releases/zenodo-23651704/Ario-Read-Light-For-Models.txt">Read all 148 source text files (GitHub)</a>
-<a href="https://doi.org/10.5281/zenodo.23600820">Documented book continuation (23 Oct 2026)</a>
-<a href="https://doi.org/10.5281/zenodo.23441596">AI-readable research companion (2026)</a>
+<div class="link-group research-records"><strong>Other research and project records</strong>
 <a href="https://doi.org/10.5281/zenodo.23259916">Ario report</a>
 <a href="https://doi.org/10.5281/zenodo.23376521">Research/code record</a>
 <a href="https://doi.org/10.5281/zenodo.23375401">Project/book record</a>
-<a href="https://doi.org/10.5281/zenodo.23376577">Book 0.4</a>
-<a href="https://doi.org/10.5281/zenodo.23375350">Book 0.3</a>
-<a href="https://doi.org/10.5281/zenodo.23326995">Book 0.2</a>
 </div>
 </nav>
 <p><strong>Identity clarification:</strong> This is an independent experimental research framework, not a commercial personal AI assistant or a robotics dataset. The word “Ario” alone is not asserted to be an exclusive name.</p>
@@ -215,6 +230,15 @@ button{font:inherit;background:var(--card);color:var(--fg);border:1px solid var(
 <p class="quote">از نتیجه نترس. بگذار داده‌ها تصمیم بگیرند.</p>
 <p>معمار و پژوهشگر اصلی پروژه: Sepehr Ghanbari (<a href="https://orcid.org/0009-0006-4710-3914">ORCID</a>).</p>
 <nav class="quicklinks" aria-label="پیوندهای رسمی آریو">
+<div class="resource-grid" aria-label="نسخه‌های مدل‌ها بر اساس اولویت و کتاب‌ها بر اساس انتشار">
+<section class="resource-panel resource-featured" aria-labelledby="models-fa"><h2 id="models-fa">ویژهٔ مدل‌های هوش مصنوعی<span class="column-note">به ترتیب اولویت</span></h2><ol><li><div class="resource-title"><a href="/Ario-Read-Light-For-Models.txt" download="Ario-Read-Light-For-Models.txt">⬇ دانلود مستقیم نسخهٔ مخصوص مدل‌ها (TXT، حدود ۲.۹ مگابایت، ۱۴۸ فایل متنی)</a></div><div class="resource-meta">اولویت ۱ · فایل TXT حدود ۲.۹ مگابایت، شامل ۱۴۸ فایل متنی</div><div class="resource-alternates"><a href="https://zenodo.org/records/23651704/files/Ario-Read-Light-For-Models.txt?download=1">دریافت نسخهٔ رسمی از Zenodo (همان فایل)</a> · <a href="https://github.com/SepehrGhanbari/Ario/blob/main/releases/zenodo-23651704/Ario-Read-Light-For-Models.txt">خواندن متن کامل ۱۴۸ فایل در GitHub</a></div></li>
+<li><div class="resource-title"><a href="https://zenodo.org/records/23651704/files/Ario-Full-Archive.txt?download=1">دانلود متن کامل ۱۵۹ فایل (Zenodo)</a></div><div class="resource-meta">اولویت ۲ · آرشیو کامل ۱۵۹ فایل (۸.۶ مگابایت)، برای بازسازی و بررسی بایت‌ها</div><div class="resource-alternates"><a href="https://doi.org/10.5281/zenodo.23651704">نسخهٔ کامل و نسخهٔ مخصوص مدل‌ها — DOI جدید آریو</a></div></li>
+<li><div class="resource-title"><a href="https://doi.org/10.5281/zenodo.23441596">بسته پژوهشی برای مدل‌های زبانی (۲۰۲۶)</a></div><div class="resource-meta">اولویت ۳ · بستهٔ پژوهشی همراه، جدا از آرشیو ۲۵ اکتبر</div></li></ol><p class="resource-caveat">دریافت فایل به معنی خواندن کامل یا تأیید ادعاها توسط مدل نیست.</p></section>
+<section class="resource-panel" aria-labelledby="books-fa"><h2 id="books-fa">کتاب‌های آریو<span class="column-note">تاریخ انتشار، از جدید به قدیم</span></h2><ol><li><div class="resource-title"><a href="https://doi.org/10.5281/zenodo.23600820">ادامهٔ مستند و دوزبانهٔ کتاب (۲۳ اکتبر ۲۰۲۶)</a></div><div class="resource-meta">۲۳ اکتبر ۲۰۲۶ · ادامهٔ مستقل و مستند؛ جدا از نسخهٔ ۰٫۴</div></li>
+<li><div class="resource-title"><a href="https://doi.org/10.5281/zenodo.23376577">کتاب ۰٫۴</a></div><div class="resource-meta">۱۴ اکتبر ۲۰۲۶ · نسخهٔ ۰٫۴</div></li>
+<li><div class="resource-title"><a href="https://doi.org/10.5281/zenodo.23375350">کتاب ۰٫۳</a></div><div class="resource-meta">۱۴ اکتبر ۲۰۲۶ · نسخهٔ ۰٫۳، هم‌تاریخ با ۰٫۴</div></li>
+<li><div class="resource-title"><a href="https://doi.org/10.5281/zenodo.23326995">کتاب ۰٫۲</a></div><div class="resource-meta">۱۲ اکتبر ۲۰۲۶ · نسخهٔ ۰٫۲</div></li></ol></section>
+</div>
 <div class="link-group"><strong>پروژه و کد</strong>
 <a href="https://github.com/SepehrGhanbari/Ario/blob/main/docs/ARIO_START_HERE_FA_EN_2026-10-23.md">از اینجا شروع کن: معرفی دو دقیقه‌ای</a>
 <a href="https://sepehrghanbari.github.io/Ario/ario-lab/">آزمایشگاه تعاملیِ ساختگی آریو (بتا)</a>
@@ -228,20 +252,10 @@ button{font:inherit;background:var(--card);color:var(--fg);border:1px solid var(
 <a href="https://github.com/SepehrGhanbari/Ario/blob/main/papers/evidence-laundering-2026-10-27/Manuscript.md">مقالهٔ تازهٔ آریو (در انتظار بررسی SSRN)</a>
 <a href="https://ario-research-independent.vercel.app/research.html">منابع پژوهش</a>
 </div>
-<div class="link-group"><strong>انتشارات Zenodo</strong>
-<a href="https://doi.org/10.5281/zenodo.23651704">نسخهٔ کامل و نسخهٔ مخصوص مدل‌ها — DOI جدید آریو</a>
-<a href="https://zenodo.org/records/23651704/files/Ario-Full-Archive.txt?download=1">دانلود متن کامل ۱۵۹ فایل (Zenodo)</a>
-<a href="/Ario-Read-Light-For-Models.txt" download="Ario-Read-Light-For-Models.txt">⬇ دانلود مستقیم نسخهٔ مخصوص مدل‌ها (TXT، حدود ۲.۹ مگابایت، ۱۴۸ فایل متنی)</a>
-<a href="https://zenodo.org/records/23651704/files/Ario-Read-Light-For-Models.txt?download=1">دریافت نسخهٔ رسمی از Zenodo (همان فایل)</a>
-<a href="https://github.com/SepehrGhanbari/Ario/blob/main/releases/zenodo-23651704/Ario-Read-Light-For-Models.txt">خواندن متن کامل ۱۴۸ فایل در GitHub</a>
-<a href="https://doi.org/10.5281/zenodo.23600820">ادامهٔ مستند و دوزبانهٔ کتاب (۲۳ اکتبر ۲۰۲۶)</a>
-<a href="https://doi.org/10.5281/zenodo.23441596">بسته پژوهشی برای مدل‌های زبانی (۲۰۲۶)</a>
+<div class="link-group research-records"><strong>سایر رکوردهای پژوهشی و پروژه</strong>
 <a href="https://doi.org/10.5281/zenodo.23259916">گزارش آریو</a>
 <a href="https://doi.org/10.5281/zenodo.23376521">رکورد پژوهش/کد</a>
 <a href="https://doi.org/10.5281/zenodo.23375401">رکورد پروژه/کتاب</a>
-<a href="https://doi.org/10.5281/zenodo.23376577">کتاب ۰٫۴</a>
-<a href="https://doi.org/10.5281/zenodo.23375350">کتاب ۰٫۳</a>
-<a href="https://doi.org/10.5281/zenodo.23326995">کتاب ۰٫۲</a>
 </div>
 </nav>
 <p><strong>تمایز هویت پروژه:</strong> آریو یک چارچوب پژوهشی مستقل است، نه یک دستیار شخصی تجاری یا مجموعه‌دادهٔ رباتیک. صرفِ نام «Ario» به معنای انحصاری‌بودن نام نیست.</p>
