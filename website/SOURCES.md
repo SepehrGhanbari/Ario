@@ -119,3 +119,9 @@ This metadata-only clarification does not change the underlying research, test o
 - Archive record: [Zenodo v15 DOI](https://doi.org/10.5281/zenodo.23651704), published filename `Ario-Read-Light-For-Models.txt`, **2,857,981 bytes**; SHA-256 `63f170645e67131025e1d3b8d6e9002a8f3312741ecfce121b886f8d085bd68b`; pinned commit `f562e14cd8ca7f8723ad0b94eec005025f07a9a6`.
 - This AI-readable text contains all 148 textual payloads in that fixed snapshot and an inventory of 11 binary files, not the full reconstructable binary payloads. **Files being available to a model is not evidence that it read them all, nor does it authenticate claims.** Large-file context limits remain.
 - Navigation gains explicit download links in English and Persian, with Zenodo mirror links. Related `research.html` also fixes duplicated `/Ario/Ario/` GitHub path references from the earlier reconstruction.
+
+## AI download priority and book chronology — 27 October 2026
+
+- The bilingual public navigation has two responsive columns: pinned AI-readable packages in usage-priority order (model TXT first, 159-file FULL archive second, distinct older research companion third), then philosophical books newest-first (23 Oct continuation, 14 Oct v0.4, 14 Oct v0.3, 12 Oct v0.2). The v0.3 and v0.4 same-day tie is resolved by edition number, not a claimed publication time.
+- Separate research/project records remain linked under a third heading instead of being characterized as books. All previous href destinations were preserved.
+- Change is limited to `website/index.html` markup and responsive CSS plus this source explanation; no modification of historical files, JS, Vercel config, book versions or cryptographic/runtime components.
