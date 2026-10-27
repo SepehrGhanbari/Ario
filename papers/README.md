@@ -40,3 +40,11 @@ The two 2026-10-14 DOIs are distinct records. Their existence does not establish
 - **Public record:** [10.5281/zenodo.23441596](https://doi.org/10.5281/zenodo.23441596).
 - **Scope (as described in Ario's public research site):** research-orientation material, bilingual guidance, historical v0.3 book material and an unreviewed preprint, with explicit limitations. This is a companion archive, **not** the book's edition 0.4 and **not** a substitute for examining the deposited files.
 - **Evidence boundary:** the existence of a DOI and an archive does not independently authenticate its sources, prove historical claims, establish peer review, or grant evidence-admission/trust authority. Check deposited contents, dates, and source lineage before citation or reuse.
+
+## 5. Evidence Laundering in Auditable AI Systems — working paper, 27 October 2026
+
+- **Author:** Sepehr Ghanbari (independent researcher).
+- **Manuscript:** [Complete working paper](./evidence-laundering-2026-10-27/Manuscript.md).
+- **SSRN:** [Abstract ID 7675778](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=7675778), submission received 27 October 2026; most recent observed status `PRELIMINARY_UPLOAD`. No confirmation of public availability, peer review or separate SSRN DOI.
+- **Related static source snapshot:** [Zenodo 10.5281/zenodo.23651704](https://doi.org/10.5281/zenodo.23651704). This is not the manuscript DOI.
+- **Boundaries:** local/synthetic test results do not establish authenticated source history, physical custody independence, live authorization or full production security.

@@ -98,3 +98,9 @@ This metadata-only clarification does not change the underlying research, test o
 - Full edition SHA-256: `5cb0b2c829798f5104b4e283bedf14fd84203bea305b08bdb2bfe6b368e02497`; text edition SHA-256: `63f170645e67131025e1d3b8d6e9002a8f3312741ecfce121b886f8d085bd68b`.
 - The original GitHub text copy created at commit `8478b1bbcf67ef8d08afe5b8e552084a14d7aa6c` was **not byte-identical** to the published text edition due to line-ending/boundary normalization; this publication update replaces that blob with the SHA-matching version. The previous blob remains in immutable Git history.
 - These files are preserved historical snapshots, not independent evaluations of code, security, provenance authenticity, or source claim truth. No M0, signer, trust gate or other historical evidence was modified.
+
+## SSRN working manuscript (27 October 2026)
+
+- The author's SSRN confirmation screenshot shows submission of *Evidence Laundering in Auditable AI Systems*, abstract ID `7675778`, 27 October 2026. My Papers showed `PRELIMINARY_UPLOAD`, not public approval, peer review, or issued SSRN DOI.
+- Full manuscript: [`papers/evidence-laundering-2026-10-27/Manuscript.md`](../papers/evidence-laundering-2026-10-27/Manuscript.md); working manuscript is linked in both language sections of the site.
+- Existing Zenodo FULL/READ releases remain fixed historical snapshots. The website link update leaves CSS, JS, CSP, scripts, source archives and runtime unchanged.

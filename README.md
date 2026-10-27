@@ -445,6 +445,9 @@ The project intentionally avoids presenting unresolved questions as established 
 
 ## Research Publications
 
+**New working manuscript:** [Evidence Laundering in Auditable AI Systems](./papers/evidence-laundering-2026-10-27/Manuscript.md), submitted 27 October 2026 to SSRN, abstract ID [7675778](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=7675778). SSRN submission is under preliminary review: no peer review, public SSRN publication or manuscript DOI is yet confirmed. Synthetic tests demonstrate bounded behavior, not historical authenticity or comprehensive safety.
+
+
 Ario's research publications are maintained separately from the software repository.
 
 See:
