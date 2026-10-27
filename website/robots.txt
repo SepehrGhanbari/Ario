@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://ario-research-independent.vercel.app/sitemap.xml

@@ -104,3 +104,11 @@ This metadata-only clarification does not change the underlying research, test o
 - The author's SSRN confirmation screenshot shows submission of *Evidence Laundering in Auditable AI Systems*, abstract ID `7675778`, 27 October 2026. My Papers showed `PRELIMINARY_UPLOAD`, not public approval, peer review, or issued SSRN DOI.
 - Full manuscript: [`papers/evidence-laundering-2026-10-27/Manuscript.md`](../papers/evidence-laundering-2026-10-27/Manuscript.md); working manuscript is linked in both language sections of the site.
 - Existing Zenodo FULL/READ releases remain fixed historical snapshots. The website link update leaves CSS, JS, CSP, scripts, source archives and runtime unchanged.
+
+## Vercel source consolidation — 2026-10-27
+
+- Consolidation inventory: the production deployment `dpl_DrzhLPgYEJ5gid2HMKu5io47RXh5` served 10 files, while `website/` in Git only contained three entries before this change.
+- The five short utility and site-verification files are imported from Vercel's deployment-file API as exact Base64 byte blobs.
+- `website/papers/evidence-laundering-2026-10-27/Manuscript.md` is a byte-identical tree reference to the archived public paper under `papers/`, not a separately revised manuscript.
+- `research.html` was **reconstructed** from current public repository sources rather than byte-copied. The Vercel deployment-file retrieval returned a truncated response for its body, and live content extraction did not provide a complete inspectable source. Preserve the previous deployment as the historical reference; do not claim exact-byte fidelity of this page.
+- The consolidated folder is intended as Vercel's `website` root; no changes to `vercel.json`, CSP, JavaScript, original Zenodo release bytes, or implementation code.
