@@ -112,3 +112,10 @@ This metadata-only clarification does not change the underlying research, test o
 - `website/papers/evidence-laundering-2026-10-27/Manuscript.md` is a byte-identical tree reference to the archived public paper under `papers/`, not a separately revised manuscript.
 - `research.html` was **reconstructed** from current public repository sources rather than byte-copied. The Vercel deployment-file retrieval returned a truncated response for its body, and live content extraction did not provide a complete inspectable source. Preserve the previous deployment as the historical reference; do not claim exact-byte fidelity of this page.
 - The consolidated folder is intended as Vercel's `website` root; no changes to `vercel.json`, CSP, JavaScript, original Zenodo release bytes, or implementation code.
+
+## Model-readable direct download on website — 2026-10-27
+
+- The file `website/Ario-Read-Light-For-Models.txt` is linked to **the same Git blob**, SHA-1 `9b0eb4daa25146fc74c31661db3c92e562777b34`, already present at `releases/zenodo-23651704/Ario-Read-Light-For-Models.txt` and `docs/ai-readable-snapshots/Ario_READ.txt`. This adds a website distribution path but does not create or modify a historical edition.
+- Archive record: [Zenodo v15 DOI](https://doi.org/10.5281/zenodo.23651704), published filename `Ario-Read-Light-For-Models.txt`, **2,857,981 bytes**; SHA-256 `63f170645e67131025e1d3b8d6e9002a8f3312741ecfce121b886f8d085bd68b`; pinned commit `f562e14cd8ca7f8723ad0b94eec005025f07a9a6`.
+- This AI-readable text contains all 148 textual payloads in that fixed snapshot and an inventory of 11 binary files, not the full reconstructable binary payloads. **Files being available to a model is not evidence that it read them all, nor does it authenticate claims.** Large-file context limits remain.
+- Navigation gains explicit download links in English and Persian, with Zenodo mirror links. Related `research.html` also fixes duplicated `/Ario/Ario/` GitHub path references from the earlier reconstruction.
