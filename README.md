@@ -542,6 +542,14 @@ Research publications should be cited according to their individual publication 
 
 ---
 
+## Governance and official releases / راهبری و انتشار رسمی
+
+See [GOVERNANCE.md](./GOVERNANCE.md) for the distinction between **contributing to Ario** and **authorizing an official maintained-project release**, the founder's stewardship, the still-unadopted succession mechanism, and the current **NOT_ACTIVATED** status of cryptographic Founder Genesis. A fork or modification is not automatically an endorsed release. Governance does **not** revoke MIT rights or prove cryptographic identity.
+
+برای تفکیک مشارکت از اختیار انتشار رسمی، وضعیت جانشینی و امضای بنیان‌گذار، [سند راهبری آریو](./GOVERNANCE.md) را بخوانید. این سند مجوز MIT گذشته را تغییر نمی‌دهد.
+
+---
+
 ## License
 
 The Ario repository is released under the MIT License.
