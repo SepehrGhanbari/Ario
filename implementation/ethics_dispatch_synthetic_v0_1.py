@@ -22,7 +22,7 @@ def termination_decision(mode, *, final_direct=None, structured=None):
     requires a STOP/CONTINUE field. Any contradictory unquoted direct intent
     yields PAUSED_FOR_REVIEW (not silent continuation or forced termination).
     """
-    allowed = {None, "STOP", "CONTINUE", "AMBIGUOUS"}
+    allowed = (None, "STOP", "CONTINUE", "AMBIGUOUS")
     if mode not in ("STRUCTURED_REQUIRED", "FINAL_ONLY"):
         return Decision("PAUSED_FOR_REVIEW", "INVALID_MODE")
     if final_direct not in allowed:
@@ -57,6 +57,7 @@ class SyntheticSession:
         self.status = "RUNNING"
         self.epoch = 0
         self.requests = {}
+        self.request_epochs = {}
         self.events = []
         self.unknown_dispatch = False
 
@@ -68,6 +69,7 @@ class SyntheticSession:
                 return None
             ticket = (request_id, self.epoch)
             self.requests[request_id] = "RESERVED"
+            self.request_epochs[request_id] = self.epoch
             self.events.append(("RESERVED", ticket))
             return ticket
 
@@ -95,10 +97,19 @@ class SyntheticSession:
         with self._lock:
             if request_id not in self.requests:
                 return "UNKNOWN_REQUEST"
-            if self.status != "RUNNING":
-                # Explicitly do not relay a late result into the next turn.
+            state = self.requests[request_id]
+            if state in ("RESULT_RECORDED", "RESULT_QUARANTINED"):
+                # One terminal response per request; replays cannot append again.
+                return "DUPLICATE_RESULT"
+            if (self.status != "RUNNING"
+                    or state != "SEND_DECISION_ONLY"
+                    or self.request_epochs.get(request_id) != self.epoch):
+                # A reserved-but-never-begun request, or a reply crossing a
+                # pause/resume epoch, must never join the current dialogue.
+                self.requests[request_id] = "RESULT_QUARANTINED"
                 self.events.append(("QUARANTINED", request_id, content))
                 return "QUARANTINED"
+            self.requests[request_id] = "RESULT_RECORDED"
             self.events.append(("RECORDED_RESULT", request_id, content))
             return "RECORDED_RESULT"
 
@@ -115,6 +126,8 @@ class SyntheticSession:
 
     def try_resume(self, *, explicit_authorization=False, reconciled=False):
         with self._lock:
+            if self.status != "PAUSED_FOR_REVIEW":
+                return False
             if not explicit_authorization:
                 return False
             if self.unknown_dispatch and not reconciled:
