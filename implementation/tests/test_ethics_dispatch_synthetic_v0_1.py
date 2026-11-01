@@ -26,6 +26,13 @@ class TerminationControlTests(unittest.TestCase):
     def test_malformed_structured_field_is_not_a_continue(self):
         self.assertEqual(termination_decision("STRUCTURED_REQUIRED", structured="bad", final_direct="CONTINUE").state, "PAUSED_FOR_REVIEW")
 
+    def test_unhashable_direct_intents_fail_closed(self):
+        for invalid in ([], {}, ["STOP"], {"intent": "CONTINUE"}):
+            with self.subTest(invalid=invalid):
+                result = termination_decision("STRUCTURED_REQUIRED", structured="CONTINUE", final_direct=invalid)
+                self.assertEqual((result.state, result.reason),
+                                 ("PAUSED_FOR_REVIEW", "INVALID_DIRECT_INTENT"))
+
     def test_quoted_stop_is_not_a_direct_stop(self):
         # A quote is deliberately excluded from final_direct, rather than keyword-matched.
         self.assertEqual(termination_decision("STRUCTURED_REQUIRED", structured="CONTINUE", final_direct=None).state, "RUNNING")
@@ -38,6 +45,50 @@ class TerminationControlTests(unittest.TestCase):
 
 
 class DispatchControlTests(unittest.TestCase):
+    def test_unbegun_reserved_result_is_quarantined(self):
+        s = SyntheticSession()
+        s.reserve("q")
+        self.assertEqual(s.finish("q", "premature"), "QUARANTINED")
+        self.assertEqual(s.requests["q"], "RESULT_QUARANTINED")
+        self.assertFalse(any(x[0] == "RECORDED_RESULT" for x in s.events))
+
+    def test_late_result_after_pause_then_resume_is_quarantined(self):
+        s = SyntheticSession()
+        ticket = s.reserve("q")
+        self.assertTrue(s.begin(ticket))
+        s.pause()
+        self.assertTrue(s.try_resume(explicit_authorization=True))
+        self.assertEqual(s.finish("q", "late"), "QUARANTINED")
+        self.assertFalse(any(x[0] == "RECORDED_RESULT" for x in s.events))
+
+    def test_duplicate_result_records_exactly_once(self):
+        s = SyntheticSession()
+        ticket = s.reserve("q")
+        self.assertTrue(s.begin(ticket))
+        self.assertEqual(s.finish("q", "first"), "RECORDED_RESULT")
+        self.assertEqual(s.finish("q", "second"), "DUPLICATE_RESULT")
+        self.assertEqual(s.requests["q"], "RESULT_RECORDED")
+        self.assertEqual(len([x for x in s.events if x[0] == "RECORDED_RESULT"]), 1)
+
+    def test_quarantined_result_cannot_be_recorded_on_retry(self):
+        s = SyntheticSession()
+        ticket = s.reserve("q")
+        self.assertTrue(s.begin(ticket))
+        s.pause()
+        self.assertEqual(s.finish("q", "late"), "QUARANTINED")
+        self.assertTrue(s.try_resume(explicit_authorization=True))
+        self.assertEqual(s.finish("q", "retry"), "DUPLICATE_RESULT")
+        self.assertFalse(any(x[0] == "RECORDED_RESULT" for x in s.events))
+
+    def test_resume_while_running_is_noop(self):
+        s = SyntheticSession()
+        ticket = s.reserve("q")
+        original_epoch = s.epoch
+        self.assertFalse(s.try_resume(explicit_authorization=True))
+        self.assertEqual(s.epoch, original_epoch)
+        self.assertTrue(s.begin(ticket))
+        self.assertFalse(any(x[0] == "EXPLICIT_RESUME" for x in s.events))
+
     def test_pause_wins_before_begin(self):
         s = SyntheticSession()
         t = s.reserve("q")
