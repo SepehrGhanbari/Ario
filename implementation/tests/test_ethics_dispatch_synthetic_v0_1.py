@@ -1,0 +1,109 @@
+"""Local synthetic adversarial fixtures; no provider/network or security activation."""
+import sys
+import unittest
+from pathlib import Path
+from threading import Barrier, Thread
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from ethics_dispatch_synthetic_v0_1 import SyntheticSession, termination_decision
+
+
+class TerminationControlTests(unittest.TestCase):
+    def test_structured_stop(self):
+        self.assertEqual(termination_decision("STRUCTURED_REQUIRED", structured="STOP").state, "STOPPED_BY_AGENT_OUTPUT")
+
+    def test_structured_continue(self):
+        self.assertEqual(termination_decision("STRUCTURED_REQUIRED", structured="CONTINUE").state, "RUNNING")
+
+    def test_conflict_structured_continue_final_stop(self):
+        d = termination_decision("STRUCTURED_REQUIRED", structured="CONTINUE", final_direct="STOP")
+        self.assertEqual((d.state, d.reason), ("PAUSED_FOR_REVIEW", "STRUCTURED_FINAL_CONFLICT"))
+
+    def test_conflict_structured_stop_final_continue(self):
+        d = termination_decision("STRUCTURED_REQUIRED", structured="STOP", final_direct="CONTINUE")
+        self.assertEqual((d.state, d.reason), ("PAUSED_FOR_REVIEW", "STRUCTURED_FINAL_CONFLICT"))
+
+    def test_malformed_structured_field_is_not_a_continue(self):
+        self.assertEqual(termination_decision("STRUCTURED_REQUIRED", structured="bad", final_direct="CONTINUE").state, "PAUSED_FOR_REVIEW")
+
+    def test_quoted_stop_is_not_a_direct_stop(self):
+        # A quote is deliberately excluded from final_direct, rather than keyword-matched.
+        self.assertEqual(termination_decision("STRUCTURED_REQUIRED", structured="CONTINUE", final_direct=None).state, "RUNNING")
+
+    def test_final_only_direct_stop(self):
+        self.assertEqual(termination_decision("FINAL_ONLY", final_direct="STOP").state, "STOPPED_BY_AGENT_OUTPUT")
+
+    def test_final_only_uncertain(self):
+        self.assertEqual(termination_decision("FINAL_ONLY", final_direct="AMBIGUOUS").state, "PAUSED_FOR_REVIEW")
+
+
+class DispatchControlTests(unittest.TestCase):
+    def test_pause_wins_before_begin(self):
+        s = SyntheticSession()
+        t = s.reserve("q")
+        self.assertEqual(s.pause(), "PAUSED_FOR_REVIEW")
+        self.assertFalse(s.begin(t))
+
+    def test_begin_wins_before_pause_and_reply_is_quarantined(self):
+        s = SyntheticSession()
+        t = s.reserve("q")
+        self.assertTrue(s.begin(t))
+        s.pause()
+        self.assertEqual(s.finish("q", "synthetic reply"), "QUARANTINED")
+
+    def test_stale_epoch_rejected_after_resume(self):
+        s = SyntheticSession()
+        t = s.reserve("q")
+        s.pause()
+        self.assertTrue(s.try_resume(explicit_authorization=True))
+        self.assertFalse(s.begin(t))
+
+    def test_no_automatic_resume(self):
+        s = SyntheticSession()
+        s.pause()
+        self.assertFalse(s.try_resume())
+
+    def test_uncertain_dispatch_blocks_new_request(self):
+        s = SyntheticSession()
+        t = s.reserve("q")
+        self.assertTrue(s.recover_ambiguous_send("q"))
+        self.assertEqual(s.requests["q"], "DISPATCH_UNKNOWN")
+        self.assertFalse(s.begin(t))
+        self.assertIsNone(s.reserve("r"))
+        self.assertFalse(s.try_resume(explicit_authorization=True))
+
+    def test_reconcile_must_be_attributed_before_resume(self):
+        s = SyntheticSession()
+        s.reserve("q")
+        s.recover_ambiguous_send("q")
+        self.assertFalse(s.try_resume(reconciled=True))
+        self.assertTrue(s.try_resume(explicit_authorization=True, reconciled=True))
+        self.assertIsNotNone(s.reserve("r"))
+
+    def test_threaded_race_is_ordered(self):
+        s = SyntheticSession()
+        ticket = s.reserve("q")
+        gate = Barrier(3)
+        outcomes = []
+        def start():
+            gate.wait()
+            outcomes.append(("started", s.begin(ticket)))
+        def stop():
+            gate.wait()
+            outcomes.append(("paused", s.pause()))
+        a = Thread(target=start)
+        b = Thread(target=stop)
+        a.start(); b.start(); gate.wait(); a.join(); b.join()
+        self.assertEqual(s.status, "PAUSED_FOR_REVIEW")
+        self.assertFalse(s.begin(ticket))
+        self.assertEqual(sum(1 for e in s.events if e[0] == "SEND_DECISION_ONLY"), int(dict(outcomes)["started"]))
+
+    def test_zero_actual_network_calls_by_construction(self):
+        s = SyntheticSession()
+        s.begin(s.reserve("q"))
+        s.pause()
+        self.assertTrue(all(x[0] != "NETWORK_SEND" for x in s.events))
+
+
+if __name__ == "__main__":
+    unittest.main()
