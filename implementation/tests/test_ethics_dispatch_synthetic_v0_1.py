@@ -49,8 +49,51 @@ class DispatchControlTests(unittest.TestCase):
         s = SyntheticSession()
         s.reserve("q")
         self.assertEqual(s.finish("q", "premature"), "QUARANTINED")
-        self.assertEqual(s.requests["q"], "RESULT_QUARANTINED")
+        self.assertEqual(s.requests["q"], "RESERVED")
+        self.assertEqual(s.result_states["q"], "RESULT_QUARANTINED")
         self.assertFalse(any(x[0] == "RECORDED_RESULT" for x in s.events))
+
+    def test_quarantined_reservation_recovers_unknown_dispatch(self):
+        s = SyntheticSession()
+        ticket = s.reserve("q")
+        self.assertEqual(s.finish("q", "premature"), "QUARANTINED")
+        self.assertFalse(s.begin(ticket))
+        self.assertTrue(s.recover_ambiguous_send("q"))
+        self.assertTrue(s.unknown_dispatch)
+        self.assertEqual(s.requests["q"], "DISPATCH_UNKNOWN")
+        self.assertEqual(s.result_states["q"], "RESULT_QUARANTINED")
+        self.assertIsNone(s.reserve("r"))
+        self.assertFalse(s.try_resume(explicit_authorization=True))
+
+    def test_quarantined_early_result_never_replayed_after_reconciliation(self):
+        s = SyntheticSession()
+        s.reserve("q")
+        self.assertEqual(s.finish("q", "premature"), "QUARANTINED")
+        self.assertTrue(s.recover_ambiguous_send("q"))
+        self.assertTrue(s.try_resume(explicit_authorization=True, reconciled=True))
+        self.assertEqual(s.finish("q", "old result"), "DUPLICATE_RESULT")
+        self.assertEqual(s.requests["q"], "DISPATCH_UNKNOWN")
+        self.assertFalse(any(event[0] == "RECORDED_RESULT" for event in s.events))
+
+    def test_quarantined_started_result_recovers_unknown_dispatch(self):
+        s = SyntheticSession()
+        ticket = s.reserve("q")
+        self.assertTrue(s.begin(ticket))
+        s.pause()
+        self.assertEqual(s.finish("q", "late"), "QUARANTINED")
+        self.assertEqual(s.requests["q"], "SEND_DECISION_ONLY")
+        self.assertTrue(s.recover_ambiguous_send("q"))
+        self.assertTrue(s.unknown_dispatch)
+        self.assertEqual(s.requests["q"], "DISPATCH_UNKNOWN")
+        self.assertIsNone(s.reserve("r"))
+
+    def test_recorded_result_is_not_misclassified_as_unknown_dispatch(self):
+        s = SyntheticSession()
+        ticket = s.reserve("q")
+        self.assertTrue(s.begin(ticket))
+        self.assertEqual(s.finish("q", "good"), "RECORDED_RESULT")
+        self.assertFalse(s.recover_ambiguous_send("q"))
+        self.assertFalse(s.unknown_dispatch)
 
     def test_late_result_after_pause_then_resume_is_quarantined(self):
         s = SyntheticSession()
@@ -67,7 +110,8 @@ class DispatchControlTests(unittest.TestCase):
         self.assertTrue(s.begin(ticket))
         self.assertEqual(s.finish("q", "first"), "RECORDED_RESULT")
         self.assertEqual(s.finish("q", "second"), "DUPLICATE_RESULT")
-        self.assertEqual(s.requests["q"], "RESULT_RECORDED")
+        self.assertEqual(s.requests["q"], "SEND_DECISION_ONLY")
+        self.assertEqual(s.result_states["q"], "RESULT_RECORDED")
         self.assertEqual(len([x for x in s.events if x[0] == "RECORDED_RESULT"]), 1)
 
     def test_quarantined_result_cannot_be_recorded_on_retry(self):
