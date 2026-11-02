@@ -58,6 +58,9 @@ class SyntheticSession:
         self.epoch = 0
         self.requests = {}
         self.request_epochs = {}
+        # Result terminality is separate from transport state. Quarantine must
+        # not erase RESERVED/SEND_DECISION_ONLY before ambiguity recovery.
+        self.result_states = {}
         self.events = []
         self.unknown_dispatch = False
 
@@ -79,7 +82,9 @@ class SyntheticSession:
         with self._lock:
             if self.status != "RUNNING" or self.unknown_dispatch:
                 return False
-            if epoch != self.epoch or self.requests.get(request_id) != "RESERVED":
+            if (epoch != self.epoch
+                    or self.requests.get(request_id) != "RESERVED"
+                    or request_id in self.result_states):
                 return False
             self.requests[request_id] = "SEND_DECISION_ONLY"
             self.events.append(("SEND_DECISION_ONLY", ticket))
@@ -97,19 +102,18 @@ class SyntheticSession:
         with self._lock:
             if request_id not in self.requests:
                 return "UNKNOWN_REQUEST"
-            state = self.requests[request_id]
-            if state in ("RESULT_RECORDED", "RESULT_QUARANTINED"):
+            if request_id in self.result_states:
                 # One terminal response per request; replays cannot append again.
                 return "DUPLICATE_RESULT"
+            state = self.requests[request_id]
             if (self.status != "RUNNING"
                     or state != "SEND_DECISION_ONLY"
                     or self.request_epochs.get(request_id) != self.epoch):
-                # A reserved-but-never-begun request, or a reply crossing a
-                # pause/resume epoch, must never join the current dialogue.
-                self.requests[request_id] = "RESULT_QUARANTINED"
+                # Preserve original dispatch state for later crash reconciliation.
+                self.result_states[request_id] = "RESULT_QUARANTINED"
                 self.events.append(("QUARANTINED", request_id, content))
                 return "QUARANTINED"
-            self.requests[request_id] = "RESULT_RECORDED"
+            self.result_states[request_id] = "RESULT_RECORDED"
             self.events.append(("RECORDED_RESULT", request_id, content))
             return "RECORDED_RESULT"
 
@@ -117,6 +121,8 @@ class SyntheticSession:
         with self._lock:
             if self.requests.get(request_id) not in ("RESERVED", "SEND_DECISION_ONLY"):
                 return False
+            if self.result_states.get(request_id) == "RESULT_RECORDED":
+                return False  # A recorded result is not an ambiguous dispatch.
             self.status = "PAUSED_FOR_REVIEW"
             self.epoch += 1
             self.unknown_dispatch = True
