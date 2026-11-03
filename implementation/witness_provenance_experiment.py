@@ -20,6 +20,9 @@ ORIGINS = frozenset((LAB, CANDIDATE, SELF, DERIVED, UNRESOLVED))
 KINDS = frozenset(("SOURCE", "CAPTURE", "ARTIFACT", "CUSTODIAN", "STORAGE_DOMAIN", "CONTROL_PRINCIPAL", "CONTROL_ROOT", "EXPERIMENT_CONTROLLER"))
 EDGES = frozenset(("DERIVED_FROM", "CAPTURED_FROM", "TRANSFERRED_TO", "STORED_AT", "HELD_BY", "CAN_WRITE", "CAN_DELETE", "ADMINISTERS", "SHARES_CONTROL_ROOT", "RESTORES_FROM"))
 MAX_NODES, MAX_EDGES, MAX_ARTIFACTS, MAX_DEPTH = 64, 128, 32, 16
+# Bound TOTAL recursive custody-walk states, not only each path's depth.
+# Exceeding this resource budget means UNKNOWN, not positive custody evidence.
+MAX_CUSTODY_WALK_VISITS = 4096
 MAX_INPUT_BYTES = 131072
 
 
@@ -192,7 +195,7 @@ def _validate(case: Any) -> str | None:
         return "INVALID_ARTIFACT_OR_COMPROMISE_REFERENCE"
     if any(n.kind == "CAPTURE" and (n.capture_custodian not in ns or ns[n.capture_custodian].kind != "CUSTODIAN") for n in g.nodes):
         return "INVALID_CAPTURE_CUSTODIAN"
-    if any(type(i) is not CompromiseInterval or i.node_id not in ns or
+    if any(type(i) is not CompromiseInterval or not _ascii(i.node_id) or i.node_id not in ns or
            not _int(i.start_sequence) or
            (i.end_sequence is not None and (not _int(i.end_sequence) or i.end_sequence < i.start_sequence))
            for i in case.compromise_intervals):
@@ -288,8 +291,8 @@ def _custody_for(artifact: str, ns: dict[str, Node], es: tuple[Edge, ...]) -> Fi
         return _unknown("UNSUPPORTED_CUSTODY_ORIGIN")
     first = ns[cap.target].capture_custodian
     dest = held.target
-    if first == dest:
-        return _f("LAB_CHAIN_PRESENT", "DIRECT_LAB_CUSTODY", cap.edge_id, held.edge_id)
+    # Include direct custody in the same bounded cycle check: a supported
+    # artifact-bound return path must not hide behind the holder shortcut.
     # Transfer sequence must be strictly ordered after capture.
     eligible = [e for e in es if e.kind == "TRANSFERRED_TO" and e.subject_artifact_ref == artifact and
                 e.origin == LAB and e.sequence is not None and e.sequence > ns[cap.target].capture_sequence]
@@ -298,24 +301,39 @@ def _custody_for(artifact: str, ns: dict[str, Node], es: tuple[Edge, ...]) -> Fi
         graph.setdefault(e.source, []).append(e)
     options: list[tuple[str, ...]] = []
     cyclic = False
+    exhausted = False
+    visits = 0
 
     def walk(at: str, prev: int, seen: frozenset[str], path: tuple[str, ...]) -> None:
-        nonlocal cyclic
+        nonlocal cyclic, exhausted, visits
+        if cyclic or exhausted:
+            return
+        if visits >= MAX_CUSTODY_WALK_VISITS:
+            exhausted = True
+            return
+        visits += 1
         if len(path) > MAX_DEPTH:
             cyclic = True
             return
         if at == dest:
             options.append(path)
-            return
+            # Continue checking strictly sequenced transfers after the holder:
+            # a later return to an earlier custodian invalidates the path.
         for edge in sorted(graph.get(at, []), key=lambda x: x.edge_id):
+            if cyclic or exhausted:
+                return
+            if edge.sequence <= prev:
+                continue
             if edge.target in seen:
                 cyclic = True
-            elif edge.sequence > prev:
+            else:
                 walk(edge.target, edge.sequence, seen | {edge.target}, path + (edge.edge_id,))
 
     walk(first, ns[cap.target].capture_sequence, frozenset((first,)), ())
-    if cyclic:
+    if cyclic or exhausted:
         return _unknown("CYCLIC_OR_OVERSIZED_CUSTODY_CHAIN")
+    if first == dest:
+        return _f("LAB_CHAIN_PRESENT", "DIRECT_LAB_CUSTODY", cap.edge_id, held.edge_id)
     if len(options) != 1:
         return _unknown("MISSING_OR_AMBIGUOUS_CUSTODY_TRANSFER")
     return _f("LAB_CHAIN_PRESENT", "LAB_TRANSFER_CHAIN_PRESENT", cap.edge_id, held.edge_id, *options[0])
@@ -426,7 +444,43 @@ def evaluate_provenance(case: ProvenanceCase) -> ProvenanceReport:
         for actor in common:
             paths.add(("CONTROL:" + actor,) + controller_traces[0][actor] + ("WITNESS_B",) + controller_traces[1][actor])
         control_paths = tuple(sorted(paths))
-        impacted = bool(compromised & (controllers[0] | controllers[1] | set(storage_nodes) | set(witnesses)))
+        # A relevant compromised custody actor cannot substantiate separate administration.
+        # Use only the custody edges established for the nominated witnesses; a
+        # disconnected custodian must not contaminate an otherwise separate result.
+        custody_nodes: set[str] = set()
+        edges_by_id = {e.edge_id: e for e in lab_edges}
+        for finding in custody:
+            if finding.status != "LAB_CHAIN_PRESENT":
+                continue
+            for edge_id in finding.support:
+                custody_edge = edges_by_id.get(edge_id)
+                if custody_edge is None:
+                    continue
+                if custody_edge.kind == "CAPTURED_FROM":
+                    custody_nodes.add(ns[custody_edge.target].capture_custodian)
+                elif custody_edge.kind == "HELD_BY":
+                    custody_nodes.add(custody_edge.target)
+                elif custody_edge.kind == "TRANSFERRED_TO":
+                    custody_nodes.update((custody_edge.source, custody_edge.target))
+        # Every reachable RESTORES_FROM input is a relevant storage exposure.
+        # A disconnected backup is not part of either witness's control audit.
+        restore_inputs = {storage_id for exposure in exposures for storage_id in exposure}
+        relevant_storage = set(storage_nodes) | restore_inputs
+        # STORAGE_DOMAIN object_identity denotes the declared same storage object.
+        # Compromise of any alias of a relevant storage object is relevant, even
+        # if the alias node has no explicit RESTORES_FROM or STORED_AT edge.
+        relevant_storage_identities = {
+            ns[storage_id].object_identity for storage_id in relevant_storage
+        }
+        compromised_storage_aliases = {
+            storage_id for storage_id in compromised
+            if ns[storage_id].kind == "STORAGE_DOMAIN" and
+            ns[storage_id].object_identity in relevant_storage_identities
+        }
+        impacted = bool(compromised & (
+            controllers[0] | controllers[1] | relevant_storage |
+            set(witnesses) | custody_nodes
+        ) or compromised_storage_aliases)
         if common:
             admin = _f("COMMON_CONTROL_DETECTED", "SHARED_MUTATION_CONTROLLER", *sorted(set(e for p in control_paths for e in p)))
         elif impacted:

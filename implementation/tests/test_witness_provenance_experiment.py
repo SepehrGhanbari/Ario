@@ -383,3 +383,301 @@ def test_extra_no_restoration_link_means_backup_not_write_path():
     es = c.graph.edges + (edge("backup-write", "backup-admin", "shared-backup", "CAN_WRITE"),)
     r = check(edit(c, nodes=ns, edges=es))
     assert r.administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
+
+
+# Issue #129 focused RED-first controls. Keep historical TP assertions unchanged.
+def test_issue129_compromised_relevant_custodians_fail_closed():
+    for custodian in ("origin-a", "origin-b", "holder-a", "holder-b"):
+        c = replace(
+            baseline(),
+            compromised_node_ids=(custodian,),
+        )
+        r = check(c)
+        assert r.administrative_separation.status == "COMPROMISED_BY_SCENARIO", custodian
+
+
+def test_issue129_post_capture_custodian_compromise_interval_fails_closed():
+    for custodian in ("origin-a", "holder-b"):
+        c = replace(
+            baseline(),
+            compromise_intervals=(p.CompromiseInterval(custodian, 5, None),),
+        )
+        r = check(c)
+        assert r.administrative_separation.status == "COMPROMISED_BY_SCENARIO", custodian
+
+
+def test_issue129_unrelated_custodian_compromise_does_not_taint_separation():
+    c = baseline()
+    unrelated = node("unrelated-custodian", "CUSTODIAN")
+    c = edit(
+        c,
+        nodes=c.graph.nodes + (unrelated,),
+        compromised_node_ids=("unrelated-custodian",),
+    )
+    r = check(c)
+    assert r.administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
+
+
+def test_issue129_invalid_compromise_interval_node_id_fails_typed():
+    for bad_id in ([], {}, ["origin-a"], {"id": "holder-a"}):
+        c = replace(
+            baseline(),
+            compromise_intervals=(p.CompromiseInterval(bad_id, 0, None),),
+        )
+        r = check(c)
+        assert r.reason_codes == ("INVALID_COMPROMISE_INTERVAL",)
+        assert r.administrative_separation.status == "UNKNOWN"
+
+
+def test_issue129_multihop_intermediate_custodian_compromise():
+    """Compromising only an established transfer-path intermediary blocks separation."""
+    c = baseline()
+    intermediate = node("intermediate-a", "CUSTODIAN")
+    # Retain the original capture and holder; only split the existing transfer.
+    outgoing = tuple(
+        replace(e, target="intermediate-a") if e.edge_id == "transfer-a" else e
+        for e in c.graph.edges
+    )
+    second_hop = edge(
+        "transfer-a-via-intermediate",
+        "intermediate-a", "holder-a", "TRANSFERRED_TO",
+        subject_artifact_ref="artifact-a", sequence=4,
+    )
+    multi = edit(c, nodes=c.graph.nodes + (intermediate,),
+                 edges=outgoing + (second_hop,))
+
+    clean = check(multi)
+    assert clean.per_witness_custody[0].status == "LAB_CHAIN_PRESENT"
+    assert clean.per_witness_custody[0].reason == "LAB_TRANSFER_CHAIN_PRESENT"
+    assert "transfer-a-via-intermediate" in clean.per_witness_custody[0].support
+    assert clean.administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
+
+    # The intermediate is not a capture origin or artifact holder.
+    for compromised in (
+        replace(multi, compromised_node_ids=("intermediate-a",)),
+        replace(multi, compromise_intervals=(
+            p.CompromiseInterval("intermediate-a", 5, None),
+        )),
+    ):
+        result = check(compromised)
+        assert result.per_witness_custody[0].status == "LAB_CHAIN_PRESENT"
+        assert result.administrative_separation.status == "COMPROMISED_BY_SCENARIO"
+
+
+def test_issue129_direct_custody_compromise_and_clean_reference():
+    """A capture custodian that is also the holder remains a relevant actor."""
+    c = replace_node(baseline(), "capture-a", capture_custodian="holder-a")
+    c = no_edge(c, "transfer-a")
+    clean = check(c)
+    assert clean.per_witness_custody[0].status == "LAB_CHAIN_PRESENT"
+    assert clean.per_witness_custody[0].reason == "DIRECT_LAB_CUSTODY"
+    assert clean.administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
+
+    compromised = replace(c, compromised_node_ids=("holder-a",))
+    report = check(compromised)
+    assert report.per_witness_custody[0].status == "LAB_CHAIN_PRESENT"
+    assert report.administrative_separation.status == "COMPROMISED_BY_SCENARIO"
+
+
+def test_issue129_unresolved_custody_stays_unknown_under_compromise():
+    """Missing transfer evidence cannot be upgraded to separate administration."""
+    c = no_edge(baseline(), "transfer-a")
+    for changed in (
+        c,
+        replace(c, compromised_node_ids=("origin-a",)),
+        replace(c, compromise_intervals=(p.CompromiseInterval("holder-a", 5, None),)),
+    ):
+        report = check(changed)
+        assert report.per_witness_custody[0].status == "UNKNOWN"
+        assert report.administrative_separation.status == "UNKNOWN"
+
+
+def test_issue129_supported_common_control_precedence_is_nonseparate():
+    """Supported shared control must remain a dependence finding."""
+    c = replace(baseline(shared_admin=True),
+                compromised_node_ids=("holder-a",))
+    report = check(c)
+    assert report.administrative_separation.status == "COMMON_CONTROL_DETECTED"
+    assert report.administrative_separation.reason == "SHARED_MUTATION_CONTROLLER"
+
+
+# Additional issue #129 adversarial controls. Proposed by CodeRabbit, RED first.
+def test_issue129_compromised_restorable_backup_blocks_admin_separation():
+    """A declared restore-input storage compromise cannot support separation."""
+    c = baseline()
+    c = edit(
+        c,
+        nodes=c.graph.nodes + (
+            node("backup-a", "STORAGE_DOMAIN", object_identity="BACKUP-A"),
+        ),
+        edges=c.graph.edges + (
+            edge("restore-a", "store-a", "backup-a", "RESTORES_FROM"),
+        ),
+    )
+    clean = check(c)
+    assert clean.administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
+
+    for changed in (
+        replace(c, compromised_node_ids=("backup-a",)),
+        replace(c, compromise_intervals=(
+            p.CompromiseInterval("backup-a", 5, None),
+        )),
+    ):
+        result = check(changed)
+        assert result.administrative_separation.status == "COMPROMISED_BY_SCENARIO"
+
+
+def test_issue129_disconnected_compromised_backup_does_not_taint_control():
+    """A storage object with no declared restore path is unrelated."""
+    c = baseline()
+    c = edit(
+        c,
+        nodes=c.graph.nodes + (
+            node("backup-a", "STORAGE_DOMAIN", object_identity="BACKUP-A"),
+        ),
+        compromised_node_ids=("backup-a",),
+    )
+    assert check(c).administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
+
+
+def test_issue129_transfer_cycle_after_holder_fails_closed():
+    """A supported same-artifact return edge must not be hidden by early exit."""
+    c = baseline()
+    c = edit(c, edges=c.graph.edges + (
+        edge("return-a", "holder-a", "origin-a", "TRANSFERRED_TO",
+             subject_artifact_ref="artifact-a", sequence=4),
+    ))
+    report = check(c)
+    assert report.per_witness_custody[0].status == "UNKNOWN"
+    assert report.per_witness_custody[0].reason == "CYCLIC_OR_OVERSIZED_CUSTODY_CHAIN"
+    assert report.administrative_separation.status == "UNKNOWN"
+    assert report.source_independence.status == "UNKNOWN"
+
+
+def test_issue129_direct_custody_loop_fails_closed_but_other_artifact_does_not():
+    """A holder-origin cycle is relevant only to the nominated artifact."""
+    c = replace_node(baseline(), "capture-a", capture_custodian="holder-a")
+    c = no_edge(c, "transfer-a")
+    departure = edge("depart-a", "holder-a", "origin-a", "TRANSFERRED_TO",
+                     subject_artifact_ref="artifact-a", sequence=3)
+    returned = edge("return-a", "origin-a", "holder-a", "TRANSFERRED_TO",
+                    subject_artifact_ref="artifact-a", sequence=4)
+    cycle = edit(c, edges=c.graph.edges + (departure, returned))
+    result = check(cycle)
+    assert result.per_witness_custody[0].status == "UNKNOWN"
+    assert result.per_witness_custody[0].reason == "CYCLIC_OR_OVERSIZED_CUSTODY_CHAIN"
+    assert result.administrative_separation.status == "UNKNOWN"
+    assert result.source_independence.status == "UNKNOWN"
+
+    other_artifact = edit(c, edges=c.graph.edges + (
+        replace(departure, subject_artifact_ref="artifact-b"),
+        replace(returned, subject_artifact_ref="artifact-b"),
+    ))
+    clean = check(other_artifact)
+    assert clean.per_witness_custody[0].reason == "DIRECT_LAB_CUSTODY"
+    assert clean.administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
+
+
+def test_issue129_bounded_total_custody_walk_on_layered_parallel_transfers():
+    """Even an acyclic bounded graph can contain exponentially many paths.
+
+    Direct custody at holder-a is clean absent a resource budget; 7 layers
+    with four parallel transfer edges each create 4**7 walks, despite
+    few nodes and edges. Budget exhaustion must conservatively return UNKNOWN.
+    """
+    c = replace_node(baseline(), "capture-a", capture_custodian="holder-a")
+    c = no_edge(c, "transfer-a")
+    nodes = list(c.graph.nodes)
+    edges = list(c.graph.edges)
+    previous = "holder-a"
+    for layer in range(7):
+        custodian = f"fanout-a-{layer}"
+        nodes.append(node(custodian, "CUSTODIAN"))
+        for lane in range(4):
+            edges.append(edge(
+                f"fanout-edge-{layer}-{lane}", previous, custodian, "TRANSFERRED_TO",
+                subject_artifact_ref="artifact-a", sequence=3 + layer,
+            ))
+        previous = custodian
+    case = edit(c, nodes=nodes, edges=edges)
+    assert len(case.graph.nodes) <= p.MAX_NODES
+    assert len(case.graph.edges) <= p.MAX_EDGES
+    result = check(case)
+    assert result.per_witness_custody[0].status == "UNKNOWN"
+    assert result.per_witness_custody[0].reason == "CYCLIC_OR_OVERSIZED_CUSTODY_CHAIN"
+    assert result.administrative_separation.status == "UNKNOWN"
+    assert result.source_independence.status == "UNKNOWN"
+
+
+def test_issue129_short_acyclic_parallel_transfers_preserve_clean_direct_custody():
+    """A small fanout alone does not invalidate direct custody."""
+    c = replace_node(baseline(), "capture-a", capture_custodian="holder-a")
+    c = no_edge(c, "transfer-a")
+    intermediate = node("short-fan-a", "CUSTODIAN")
+    c = edit(c, nodes=c.graph.nodes + (intermediate,),
+             edges=c.graph.edges + tuple(edge(
+                 f"short-fanout-{lane}", "holder-a", "short-fan-a",
+                 "TRANSFERRED_TO", subject_artifact_ref="artifact-a", sequence=3,
+             ) for lane in range(2)))
+    result = check(c)
+    assert result.per_witness_custody[0].status == "LAB_CHAIN_PRESENT"
+    assert result.per_witness_custody[0].reason == "DIRECT_LAB_CUSTODY"
+    assert result.administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
+
+
+def test_issue129_compromised_alias_of_reachable_restore_object_fails_closed():
+    """A LAB storage alias names the same restore-input object, not a fresh object."""
+    c = baseline()
+    c = edit(
+        c,
+        nodes=c.graph.nodes + (
+            node("restore-input-a", "STORAGE_DOMAIN", object_identity="RESTORE-OBJ-A"),
+            node("restore-alias-a", "STORAGE_DOMAIN", object_identity="RESTORE-OBJ-A"),
+        ),
+        edges=c.graph.edges + (
+            edge("restore-input-edge-a", "store-a", "restore-input-a", "RESTORES_FROM"),
+        ),
+    )
+    clean = check(c)
+    assert clean.administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
+
+    for compromised in (
+        replace(c, compromised_node_ids=("restore-alias-a",)),
+        replace(c, compromise_intervals=(
+            p.CompromiseInterval("restore-alias-a", 5, None),
+        )),
+    ):
+        report = check(compromised)
+        assert report.administrative_separation.status == "COMPROMISED_BY_SCENARIO"
+        assert report.administrative_separation.reason == "EXPLICIT_CONTROL_OR_STORAGE_COMPROMISE"
+
+
+def test_issue129_compromised_unrelated_storage_identity_remains_irrelevant():
+    """A differently identified, disconnected storage node is not a restore input."""
+    c = baseline()
+    c = edit(
+        c,
+        nodes=c.graph.nodes + (
+            node("restore-input-a", "STORAGE_DOMAIN", object_identity="RESTORE-OBJ-A"),
+            node("other-backup", "STORAGE_DOMAIN", object_identity="OTHER-BACKUP"),
+        ),
+        edges=c.graph.edges + (
+            edge("restore-input-edge-a", "store-a", "restore-input-a", "RESTORES_FROM"),
+        ),
+        compromised_node_ids=("other-backup",),
+    )
+    report = check(c)
+    assert report.administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
+
+
+def test_issue129_compromised_alias_of_direct_witness_store_fails_closed():
+    """Aliased storage of a nominated witness is still that storage object."""
+    c = baseline()
+    c = edit(c,
+             nodes=c.graph.nodes + (
+                 node("store-a-alias", "STORAGE_DOMAIN", object_identity="DISK-A"),
+             ),
+             compromised_node_ids=("store-a-alias",))
+    report = check(c)
+    assert report.administrative_separation.status == "COMPROMISED_BY_SCENARIO"
+    assert report.administrative_separation.reason == "EXPLICIT_CONTROL_OR_STORAGE_COMPROMISE"
