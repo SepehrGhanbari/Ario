@@ -20,6 +20,9 @@ ORIGINS = frozenset((LAB, CANDIDATE, SELF, DERIVED, UNRESOLVED))
 KINDS = frozenset(("SOURCE", "CAPTURE", "ARTIFACT", "CUSTODIAN", "STORAGE_DOMAIN", "CONTROL_PRINCIPAL", "CONTROL_ROOT", "EXPERIMENT_CONTROLLER"))
 EDGES = frozenset(("DERIVED_FROM", "CAPTURED_FROM", "TRANSFERRED_TO", "STORED_AT", "HELD_BY", "CAN_WRITE", "CAN_DELETE", "ADMINISTERS", "SHARES_CONTROL_ROOT", "RESTORES_FROM"))
 MAX_NODES, MAX_EDGES, MAX_ARTIFACTS, MAX_DEPTH = 64, 128, 32, 16
+# Bound TOTAL recursive custody-walk states, not only each path's depth.
+# Exceeding this resource budget means UNKNOWN, not positive custody evidence.
+MAX_CUSTODY_WALK_VISITS = 4096
 MAX_INPUT_BYTES = 131072
 
 
@@ -298,9 +301,17 @@ def _custody_for(artifact: str, ns: dict[str, Node], es: tuple[Edge, ...]) -> Fi
         graph.setdefault(e.source, []).append(e)
     options: list[tuple[str, ...]] = []
     cyclic = False
+    exhausted = False
+    visits = 0
 
     def walk(at: str, prev: int, seen: frozenset[str], path: tuple[str, ...]) -> None:
-        nonlocal cyclic
+        nonlocal cyclic, exhausted, visits
+        if cyclic or exhausted:
+            return
+        if visits >= MAX_CUSTODY_WALK_VISITS:
+            exhausted = True
+            return
+        visits += 1
         if len(path) > MAX_DEPTH:
             cyclic = True
             return
@@ -309,6 +320,8 @@ def _custody_for(artifact: str, ns: dict[str, Node], es: tuple[Edge, ...]) -> Fi
             # Continue checking strictly sequenced transfers after the holder:
             # a later return to an earlier custodian invalidates the path.
         for edge in sorted(graph.get(at, []), key=lambda x: x.edge_id):
+            if cyclic or exhausted:
+                return
             if edge.sequence <= prev:
                 continue
             if edge.target in seen:
@@ -317,7 +330,7 @@ def _custody_for(artifact: str, ns: dict[str, Node], es: tuple[Edge, ...]) -> Fi
                 walk(edge.target, edge.sequence, seen | {edge.target}, path + (edge.edge_id,))
 
     walk(first, ns[cap.target].capture_sequence, frozenset((first,)), ())
-    if cyclic:
+    if cyclic or exhausted:
         return _unknown("CYCLIC_OR_OVERSIZED_CUSTODY_CHAIN")
     if first == dest:
         return _f("LAB_CHAIN_PRESENT", "DIRECT_LAB_CUSTODY", cap.edge_id, held.edge_id)
