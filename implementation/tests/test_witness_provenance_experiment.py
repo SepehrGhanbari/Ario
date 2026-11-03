@@ -427,3 +427,38 @@ def test_issue129_invalid_compromise_interval_node_id_fails_typed():
         r = check(c)
         assert r.reason_codes == ("INVALID_COMPROMISE_INTERVAL",)
         assert r.administrative_separation.status == "UNKNOWN"
+
+
+def test_issue129_multihop_intermediate_custodian_compromise():
+    """Compromising only an established transfer-path intermediary blocks separation."""
+    c = baseline()
+    intermediate = node("intermediate-a", "CUSTODIAN")
+    # Retain the original capture and holder; only split the existing transfer.
+    outgoing = tuple(
+        replace(e, target="intermediate-a") if e.edge_id == "transfer-a" else e
+        for e in c.graph.edges
+    )
+    second_hop = edge(
+        "transfer-a-via-intermediate",
+        "intermediate-a", "holder-a", "TRANSFERRED_TO",
+        subject_artifact_ref="artifact-a", sequence=4,
+    )
+    multi = edit(c, nodes=c.graph.nodes + (intermediate,),
+                 edges=outgoing + (second_hop,))
+
+    clean = check(multi)
+    assert clean.per_witness_custody[0].status == "LAB_CHAIN_PRESENT"
+    assert clean.per_witness_custody[0].reason == "LAB_TRANSFER_CHAIN_PRESENT"
+    assert "transfer-a-via-intermediate" in clean.per_witness_custody[0].support
+    assert clean.administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
+
+    # The intermediate is not a capture origin or artifact holder.
+    for compromised in (
+        replace(multi, compromised_node_ids=("intermediate-a",)),
+        replace(multi, compromise_intervals=(
+            p.CompromiseInterval("intermediate-a", 5, None),
+        )),
+    ):
+        result = check(compromised)
+        assert result.per_witness_custody[0].status == "LAB_CHAIN_PRESENT"
+        assert result.administrative_separation.status == "COMPROMISED_BY_SCENARIO"
