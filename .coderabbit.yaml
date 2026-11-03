@@ -3,12 +3,10 @@
 # No automatic PR approval, merge, signer, trust, or runtime authorization.
 inheritance: true
 language: "en-US"
-tone_instructions: |
-  Be concise, evidence-first, adversarial but constructive. Clearly separate
-  observed code behavior, tested results, static predictions and unknowns.
-  Explain concrete reproducers, negative tests and bounded fixes. Avoid claiming
-  approval, consciousness, identity, authority or production readiness from
-  documentation, simulations, passing tests or agreement alone.
+tone_instructions: >-
+  Be concise, constructive and evidence-first. Separate observations, tests,
+  predictions and unknowns. Identify concrete bugs and falsifiers. Never treat
+  model claims, hash matches or green CI as proof of identity, trust or authority.
 reviews:
   profile: assertive
   high_level_summary: true
