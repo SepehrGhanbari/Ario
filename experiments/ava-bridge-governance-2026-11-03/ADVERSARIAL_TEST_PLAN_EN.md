@@ -62,7 +62,7 @@ All rows describe *proposed* relationships, not verified implementation coverage
 2. Can the "mission gap" check avoid a perverse incentive to collect identifiable poverty, disability or location data? Propose a privacy-preserving falsifier, not merely a positive impact proxy.
 3. What counterexample shows the proposed legitimacy/rights filter itself becoming an unaccountable veto? Which minimal appeal and timeout structure prevents abuse?
 4. How should simulated liability/remedy states avoid presenting a normatively disputed duty as legally settled?
-5. Which tests are redundant with #75/#81/#128/#129/#138; which reveal a genuinely new gap? What additional counterexample reveals a common semantic-error path missed by multiple independent tools?
+5. Which tests overlap #75/#81/#94/#128/#129/#138, and which require a new falsifier? What additional counterexample reveals a common semantic-error path missed by multiple independent tools?
 6. Would the system falsely look successful by returning UNKNOWN for every case? Propose thresholds that penalize both false confident claims and unhelpful refusals.
 7. Can the original sources remain private while the public derivative is auditable without implying independent authorship? Critique the provenance wording.
 
