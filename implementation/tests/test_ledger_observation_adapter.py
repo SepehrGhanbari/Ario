@@ -42,5 +42,19 @@ class LedgerObservationTests(unittest.TestCase):
                 self.assertEqual(observe_ledger(ledger)["status"], "UNKNOWN")
 
 
+    def test_unhashable_event_values_fail_closed_and_preserve_input(self):
+        with tempfile.TemporaryDirectory() as directory:
+            ledger = Path(directory) / "events.jsonl"
+            for raw in (b'{"event":[],"timestamp":"t"}\\n',
+                        b'{"event":{},"timestamp":"t"}\\n'):
+                with self.subTest(raw=raw):
+                    ledger.write_bytes(raw)
+                    result = observe_ledger(ledger)
+                    self.assertEqual(result["status"], "UNKNOWN")
+                    self.assertEqual(result["observations"], [])
+                    self.assertIn("invalid event envelope", result["error"])
+                    self.assertEqual(ledger.read_bytes(), raw)
+
+
 if __name__ == "__main__":
     unittest.main()
