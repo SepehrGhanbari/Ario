@@ -108,6 +108,14 @@ def validate_candidate(pr: dict, record: dict, files: list[dict],
         and review.get("commit_id") == head
     ]
     require(bool(matching), "NO_FRESH_INDEPENDENT_BOT_REVIEW_OF_HEAD")
+    # Do not mistake a COMMENTED review containing a new Major/Critical
+    # finding for a no-blocker decision. This is intentionally conservative;
+    # a later exact-head review without a blocker is needed.
+    latest = sorted(matching, key=lambda review: review.get("submitted_at") or "")[-1]
+    review_text = latest.get("body") or ""
+    require(not re.search(r"(?:\*\*|alt=[\"'])\s*(?:Major|Critical)\b",
+                          review_text, flags=re.IGNORECASE),
+            "INDEPENDENT_REVIEW_REPORTS_MAJOR_OR_CRITICAL")
     require(not any(review.get("state") == "CHANGES_REQUESTED" for review in reviews),
             "CHANGES_REQUESTED_REVIEW_PRESENT")
     require(len(threads) < MAX_ITEMS, "REVIEW_THREADS_NOT_EXHAUSTIVELY_CHECKED")
@@ -120,11 +128,15 @@ def validate_candidate(pr: dict, record: dict, files: list[dict],
                 "RED_RUN_NOT_FAILED_OR_UNVERIFIED")
         require(run.get("name") == "Implementation Regression",
                 "RED_NOT_IMPLEMENTATION_REGRESSION")
+        require(run.get("head_branch") == pr.get("head", {}).get("ref"),
+                "RED_RUN_FROM_OTHER_BRANCH")
     green = runs.get(record["green_run_id"])
     require(isinstance(green, dict) and green.get("conclusion") == "success",
             "GREEN_RUN_NOT_SUCCESSFUL_OR_UNVERIFIED")
     require(green.get("name") == "Implementation Regression"
             and green.get("head_sha") == head, "GREEN_NOT_CURRENT_HEAD")
+    require(green.get("head_branch") == pr.get("head", {}).get("ref"),
+            "GREEN_RUN_FROM_OTHER_BRANCH")
     return [
         "GATE_PASS: scope is ROUTINE_LAB, PR metadata bound to current HEAD",
         "GATE_PASS: declared RED/GREEN runs checked against GitHub Actions",
