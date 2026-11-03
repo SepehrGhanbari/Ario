@@ -60,7 +60,7 @@ class LedgerObservationTests(unittest.TestCase):
         """A valid bounded JSONL line must not escape as RecursionError."""
         with tempfile.TemporaryDirectory() as directory:
             ledger = Path(directory) / "events.jsonl"
-            deeply_nested = b"[" * 1500 + b"0" + b"]" * 1500
+            deeply_nested = b"[" * 12000 + b"0" + b"]" * 12000
             raw = b'{"event":' + deeply_nested + b',"timestamp":"t"}\n'
             self.assertLess(len(raw), MAX_LINE_BYTES)
             ledger.write_bytes(raw)
