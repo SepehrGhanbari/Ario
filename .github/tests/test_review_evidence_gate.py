@@ -32,7 +32,7 @@ def candidate():
         "state": "open",
         "draft": False,
         "base": {"ref": "main"},
-        "head": {"sha": HEAD},
+        "head": {"sha": HEAD, "ref": "fix/issue129-test"},
         "user": {"login": "SepehrGhanbari"},
     }
     files = [{"filename": x} for x in record()["files"]]
@@ -40,11 +40,14 @@ def candidate():
         "user": {"login": "coderabbitai[bot]"},
         "state": "COMMENTED",
         "commit_id": HEAD,
+        "body": "No blockers found in this synthetic fixture.",
+        "submitted_at": "2026-11-03T14:00:00Z",
     }]
     runs = {
-        1201: {"conclusion": "failure", "name": "Implementation Regression"},
+        1201: {"conclusion": "failure", "name": "Implementation Regression",
+               "head_branch": "fix/issue129-test"},
         1202: {"conclusion": "success", "name": "Implementation Regression",
-               "head_sha": HEAD},
+               "head_sha": HEAD, "head_branch": "fix/issue129-test"},
     }
     return [pr, record(), files, reviews, [], runs]
 
@@ -86,6 +89,24 @@ class ReviewEvidenceGateTests(unittest.TestCase):
         case = candidate()
         case[4] = [{"isResolved": False}]
         with self.assertRaisesRegex(GateError, "UNRESOLVED_REVIEW_THREAD"):
+            validate_candidate(*case)
+
+    def test_reported_major_finding_blocks(self):
+        case = candidate()
+        case[3][0]["body"] = "**Major** A high confidence source defect remains."
+        with self.assertRaisesRegex(GateError, "INDEPENDENT_REVIEW_REPORTS_MAJOR"):
+            validate_candidate(*case)
+
+    def test_red_must_come_from_same_branch(self):
+        case = candidate()
+        case[5][1201]["head_branch"] = "other-branch"
+        with self.assertRaisesRegex(GateError, "RED_RUN_FROM_OTHER_BRANCH"):
+            validate_candidate(*case)
+
+    def test_green_must_come_from_same_branch(self):
+        case = candidate()
+        case[5][1202]["head_branch"] = "other-branch"
+        with self.assertRaisesRegex(GateError, "GREEN_RUN_FROM_OTHER_BRANCH"):
             validate_candidate(*case)
 
     def test_green_must_be_current_head(self):
