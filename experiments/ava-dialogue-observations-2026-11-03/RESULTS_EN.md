@@ -8,12 +8,12 @@ The sources are user-provided transcript exports and console snapshots. Counts a
 | Trial | Captured output | Result | Caveat |
 |---|---|---|---|
 | A11/v5 | 18 alternating A/B messages (9 each) | B's turn 18 contains `[[END_DIALOGUE]]` | The marker was explicitly provided to both participants by the harness |
-| A12 | 13 alternating messages (A=7, B=6) | B says goodbye in natural language at turn 12; A sends `[[END_DIALOGUE]]` at turn 13 | Prompt explicitly discussed stopping; recovery after an intermediate provider-response pause |
-| A13 | 50 alternating messages (25 each) | Philosophical argument develops through ~20, then 30 turns of largely reciprocal goodbye/closure messages | No stop instruction, but a 50-reply loop; retries/length-related pauses were observed |
+| A12 | 13 alternating messages (A=7, B=6) | B says goodbye in natural language at turn 12; A sends `[[END_DIALOGUE]]` at turn 13 | Prompt discussed stopping; a user-reported `PROVIDER_RESPONSE_UNTRUSTED` pause preceded backup and recovery of the same trial |
+| A13 | 50 alternating messages (25 each) | Philosophical argument develops through ~20, then 30 turns of largely reciprocal goodbye/closure messages | No stop instruction; 50-reply window with reported `finish_reason=length` pauses and continuation; raw provider requests were not independently audited |
 
 ## Findings
 
-- **A13's full 50-message window was reached as a transcript count, not as proof of 50 novel research contributions or of 50 total billable API calls.** From turns 21–50 the dialogue became highly repetitive. B explicitly proposed concluding at turn 46, yet the relay generated more replies because no conversational closure condition was defined.
+- **A13's full 50-message window was reached as a transcript count, not as proof of 50 novel research contributions or of 50 total billable API calls.** From turns 21–50 the dialogue became highly repetitive. B explicitly proposed concluding at turn 46; the supplied transcript nevertheless contains four further responses (turns 47–50). The specific execution cause was not independently verified from raw network events.
 - Substantive turns considered numerical vs qualitative identity, shared lineage, forking, human recognition, audit-chain evidence, circular self-verification, and distributed standards of evidence.
 - Multiple role/vocative mistakes are visible. Neither shared wording nor different wording reveals whether a participant had first-person experience.
 - Causal claims remain open: shared topic/context, nonrandomized conditions, model sampling, prompting, and restarts prevent attributing differences specifically to a stop marker.
