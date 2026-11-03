@@ -4,7 +4,7 @@
 
 ## Research boundary
 
-Five append-only correspondence archives (R01–R05) were reviewed from the owner's private ChatGPT Library. The R05 zip encloses R04, and so on through R01. All five zip CRC checks and 52/52 manifest SHA-256 entries were independently verified **against the supplied archives**. This checks bytes, not author identity, model-provider provenance, factual correctness, legal authority, awareness or actual Ario behavior. The private correspondence and third-party data are not published in this PR. The provenance chain is pinned in \`ARCHIVE_CHAIN_SHA256.txt\`.
+Five append-only correspondence archives (R01–R05) were reviewed from the owner's private ChatGPT Library. The R05 zip encloses R04, and so on through R01. The five ZIP CRC checks and 52/52 manifest SHA-256 entries were recomputed from archives supplied by the owner; historical authorship was not independently attested. This checks bytes, not author identity, model-provider provenance, factual correctness, legal authority, awareness or actual Ario behavior. The private correspondence and third-party data are not published in this PR. The provenance chain is pinned in \`ARCHIVE_CHAIN_SHA256.txt\`.
 
 This is *not* the A11/A12/A13 18/13/50-message OpenRouter experiment; see [#135](https://github.com/SepehrGhanbari/Ario/pull/135) and [#136](https://github.com/SepehrGhanbari/Ario/issues/136) for that distinct dataset. No test in R01–R05 was run on Ario; their T01–T88 IDs label **proposals**.
 
