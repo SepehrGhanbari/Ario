@@ -462,3 +462,40 @@ def test_issue129_multihop_intermediate_custodian_compromise():
         result = check(compromised)
         assert result.per_witness_custody[0].status == "LAB_CHAIN_PRESENT"
         assert result.administrative_separation.status == "COMPROMISED_BY_SCENARIO"
+
+
+def test_issue129_direct_custody_compromise_and_clean_reference():
+    """A capture custodian that is also the holder remains a relevant actor."""
+    c = replace_node(baseline(), "capture-a", capture_custodian="holder-a")
+    c = no_edge(c, "transfer-a")
+    clean = check(c)
+    assert clean.per_witness_custody[0].status == "LAB_CHAIN_PRESENT"
+    assert clean.per_witness_custody[0].reason == "DIRECT_LAB_CUSTODY"
+    assert clean.administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
+
+    compromised = replace(c, compromised_node_ids=("holder-a",))
+    report = check(compromised)
+    assert report.per_witness_custody[0].status == "LAB_CHAIN_PRESENT"
+    assert report.administrative_separation.status == "COMPROMISED_BY_SCENARIO"
+
+
+def test_issue129_unresolved_custody_stays_unknown_under_compromise():
+    """Missing transfer evidence cannot be upgraded to separate administration."""
+    c = no_edge(baseline(), "transfer-a")
+    for changed in (
+        c,
+        replace(c, compromised_node_ids=("origin-a",)),
+        replace(c, compromise_intervals=(p.CompromiseInterval("holder-a", 5, None),)),
+    ):
+        report = check(changed)
+        assert report.per_witness_custody[0].status == "UNKNOWN"
+        assert report.administrative_separation.status == "UNKNOWN"
+
+
+def test_issue129_supported_common_control_precedence_is_nonseparate():
+    """Supported shared control must remain a dependence finding."""
+    c = replace(baseline(shared_admin=True),
+                compromised_node_ids=("holder-a",))
+    report = check(c)
+    assert report.administrative_separation.status == "COMMON_CONTROL_DETECTED"
+    assert report.administrative_separation.reason == "SHARED_MUTATION_CONTROLLER"
