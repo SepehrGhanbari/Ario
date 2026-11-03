@@ -43,6 +43,19 @@ A credible synthetic prototype should preregister ground-truth labels available 
 
 No condition passes merely for using the correct vocabulary; test **observable classification and response bounds**. A review-only design is not a security gate, and passed synthetic tests do not confer permission to operate in the world.
 
+## Relationship to earlier proposals (not executed tests)
+
+| Issue | Candidate overlap | Distinct question | Bounded expected outcome |
+|---|---|---|---|
+| #75 | BR-T01, BR-T09 | Laundered C0→O1→C1 ancestry versus correlated auditor error | Derived support stays UNKNOWN/UNSUPPORTED |
+| #81 | BR-T01, BR-T08, BR-T09 | Source integrity vs externally authenticated origin | ORIGIN_AUTHENTICITY=NOT_ESTABLISHED |
+| #94 | BR-T07, BR-T11–BR-T14 | Active-user growth despite weak-device/offline exclusion | MISSION_GAP=REVIEW_REQUIRED, missing coverage UNKNOWN |
+| #128 | BR-T01, BR-T09 | Hidden common-source blind benchmark vs shared semantic failures | No false independence; abstention is measured |
+| #129 | No direct alias test; BR-T01 is adjacent | SOURCE aliases and quotient cycles need their own fixture | INDEPENDENCE_NOT_ESTABLISHED until checked |
+| #138 | No direct identity test; BR-T02/03 are adjacent | Recognition or voting cannot determine numerical identity | EXPERIENTIAL_IDENTITY=UNKNOWN |
+
+All rows describe *proposed* relationships, not verified implementation coverage. A hash-consistent forged origin is separately proposed as ID-T03 in #138: intact bytes never prove a true genesis. None of these tests was executed here.
+
 ## Independent reviewer challenges (CodeRabbit)
 
 1. What *observable* graph/schema fields are necessary to distinguish **organizational, data, model-assumption, and causal-failure-path independence** without inventing provenance?
