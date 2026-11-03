@@ -1,0 +1,13 @@
+# Derived from owner-supplied R05 zip with recursively embedded R04...R01.
+# Each digest is for the ZIP bytes inspected, not evidence of author identity.
+# Zip CRC and all listed manifest entries verified against their own member bytes.
+# Archive contents are private Library resources; this is a public byte-identity index.
+# round  zip_bytes  archive_sha256  manifest_verified/manifest_count
+R05 184953 ea26e2596263133bc49fddf42f317b8027cd4971ef73912bcba1797f1ed917d4 9/9
+R04 159697 3bd426d3790dafe4e20f7b157e9d3471b31ff134a12b8fe1e5ea0e6117021867 9/9
+R03 136452 a7a61fff05186f8fc53400655e7ff89b11aebb62deac67e992a0216011c5b6b9 9/9
+R02 111624 75ff8099be3813b2ba7dc23defeb4f181b68b164e7fdfef34c3c9a9c5a8c2b68 8/8
+R01 88156 6d81ebf018873f1672a8d6bd8a230a3ccf2b9fc1f156ece70feedd77962bad2f 17/17
+# total validated member SHA-256 entries: 52; none excluded or mismatched.
+# All five archives were ZIP CRC readable in the inspected package.
+# These values do not prove correctness of the conversations, tests, or model identities.
