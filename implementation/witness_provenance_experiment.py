@@ -498,3 +498,58 @@ def evaluate_provenance(case: ProvenanceCase) -> ProvenanceReport:
 
     sources = []
     origin_support = []
+    failed_source_walk = False
+    for a in witnesses:
+        s, refs, failure = _source_set(a, ns, lab_edges)
+        sources.append(s)
+        origin_support.extend(refs)
+        failed_source_walk |= failure
+    shared = sources[0] & sources[1]
+    if not trusted_graph or any(ns[a].scope != case.scope for a in witnesses):
+        source = _unknown("UNTRUSTED_SOURCE_GRAPH_OR_SCOPE")
+    elif shared:
+        source = _f("COMMON_SOURCE_DETECTED", "SHARED_DECLARED_ORIGIN", *sorted(shared), *origin_support)
+    elif failed_source_walk:
+        source = _unknown("SOURCE_PATH_LIMIT_OR_MISSING_CAPTURE")
+    elif (not clean_lab_graph or not case.complete_source_surface or case.completeness_origin != LAB or
+          not all(sources) or any(c.status != "LAB_CHAIN_PRESENT" for c in custody)):
+        source = _unknown("SOURCE_SURFACE_INCOMPLETE_OR_UNSUPPORTED")
+    else:
+        source = _f("LAB_CONDITIONALLY_DISTINCT", "DISJOINT_LAB_SOURCE_SETS", *origin_support)
+
+    captures = []
+    capture_support = []
+    for a in witnesses:
+        matches = [e for e in lab_edges if e.kind == "CAPTURED_FROM" and e.source == a]
+        if len(matches) == 1:
+            captures.append(ns[matches[0].target].capture_sequence)
+            capture_support.append(matches[0].edge_id)
+        else:
+            captures.append(None)
+    compromised_at_capture = any(
+        witness in case.compromised_node_ids or
+        any(i.node_id == witness and i.start_sequence <= moment and
+            (i.end_sequence is None or moment <= i.end_sequence)
+            for i in case.compromise_intervals)
+        for witness, moment in zip(witnesses, captures) if moment is not None
+    )
+    if not trusted_graph or case.mutation_sequence is None or any(c is None for c in captures):
+        order = _unknown("NO_TRUSTED_LAB_SEQUENCE_ORDER")
+    elif any(c >= case.mutation_sequence for c in captures):
+        order = _f("NOT_BEFORE_MUTATION", "CAPTURE_NOT_STRICTLY_PRIOR", *capture_support)
+    elif compromised_at_capture:
+        order = _unknown("CAPTURE_ARTIFACT_COMPROMISED_BY_SCENARIO")
+    else:
+        order = _f("LAB_BEFORE_MUTATION", "CAPTURE_SEQUENCE_PRECEDES_MUTATION", *capture_support)
+
+    if case.controller_compromised:
+        admin = _unknown("CONTROLLER_COMPROMISED")
+        source = _unknown("CONTROLLER_COMPROMISED")
+        order = _unknown("CONTROLLER_COMPROMISED")
+        custody = (_unknown("CONTROLLER_COMPROMISED"),) * 2
+        storage = _unknown("CONTROLLER_COMPROMISED")
+    # Unsupported claims never become fixed control edges. Record exact IDs.
+    reason_codes = tuple(sorted(set([x.reason for x in (*custody, storage, admin, source, order)] +
+                                    ["UNSUPPORTED_CLAIM:" + u for u in unsupported] + conflicts)))
+    return ProvenanceReport(custody, storage, admin, source, order, control_paths,
+                            unsupported, tuple(sorted(conflicts)), tuple(sorted(set(assumptions))), reason_codes)
