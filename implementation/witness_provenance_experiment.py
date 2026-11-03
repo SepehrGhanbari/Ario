@@ -465,10 +465,22 @@ def evaluate_provenance(case: ProvenanceCase) -> ProvenanceReport:
         # Every reachable RESTORES_FROM input is a relevant storage exposure.
         # A disconnected backup is not part of either witness's control audit.
         restore_inputs = {storage_id for exposure in exposures for storage_id in exposure}
+        relevant_storage = set(storage_nodes) | restore_inputs
+        # STORAGE_DOMAIN object_identity denotes the declared same storage object.
+        # Compromise of any alias of a relevant storage object is relevant, even
+        # if the alias node has no explicit RESTORES_FROM or STORED_AT edge.
+        relevant_storage_identities = {
+            ns[storage_id].object_identity for storage_id in relevant_storage
+        }
+        compromised_storage_aliases = {
+            storage_id for storage_id in compromised
+            if ns[storage_id].kind == "STORAGE_DOMAIN" and
+            ns[storage_id].object_identity in relevant_storage_identities
+        }
         impacted = bool(compromised & (
-            controllers[0] | controllers[1] | set(storage_nodes) | restore_inputs |
+            controllers[0] | controllers[1] | relevant_storage |
             set(witnesses) | custody_nodes
-        ))
+        ) or compromised_storage_aliases)
         if common:
             admin = _f("COMMON_CONTROL_DETECTED", "SHARED_MUTATION_CONTROLLER", *sorted(set(e for p in control_paths for e in p)))
         elif impacted:
