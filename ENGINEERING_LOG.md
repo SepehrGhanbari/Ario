@@ -451,3 +451,11 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - Source and test code were copied at byte-identical Git blobs `4faf010d73219af63c254097e9c135da68d60078` and `ea80d8cebd17eb6f88bed469dd72a1ef10d6945a` from original PR #130.
 - Recovery references: `backup/issue129-pre-reconcile-main-20261103-125d013e`, `backup/issue129-pre-reconcile-pr130-20261103-22f3378`. Remote refs are not verified offline copies; no restore drill is claimed.
 - New combined-head CI and independent review are pending. Former successful PR-specific runs are not a combined-head validation. SOURCE quotient semantics remain unapproved (#129); no signer, trust, Genesis, production or evidence admission change is authorized.
+
+## 2026-11-03 — correction record: initial truncated source transfer was caught before final PR
+
+- During initial assembly of this **new candidate branch only**, a GitHub range read limited to 500 source lines omitted the remainder of the 556-line original evaluator. An attempted commit `c0bfc0fb2e3a2de9b89c8e6cfbb04be9094e871e` produced blob `4a340f3e10f174891c1ff2e845de2af5401d7987` instead of expected `4faf010d73219af63c254097e9c135da68d60078`. The explicit SHA mismatch stopped the operation; the defective intermediate tree was not merged.
+- Full-file GitHub readback (not line-range text) then restored the exact originally reviewed evaluator blob `4faf010d73219af63c254097e9c135da68d60078` in commit `00f0b4aec67a6a9d0c7e84aaa1adf22e5f30d6f0`; original test blob `ea80d8cebd17eb6f88bed469dd72a1ef10d6945a` was copied exactly in `b52cdbf90cc190b858e2a23785b398c21c46f84c`. Source versions from #130 and old main remain preserved.
+- Combined log predecessor retained both main and #130 append-only tails; blob `c100eceaf0e444c303f85b4e5e4820172ff0194f` was verified by GitHub readback.
+- **Actually executed combined-head CI prior to this log-only addition:** GitHub Actions run `41709620703`, hosted Ubuntu `python -m pytest -q tests`: **1127 passed, 98 subtests passed in 3.72 seconds**. This covers tests, not real-world provenance, identity, signature, trust or Genesis.
+- This note is append-only and creates a new review HEAD. New HEAD CI and independent CodeRabbit review remain required before merge; historical invalid intermediate commit remains visible and must not be passed off as a successful run.
