@@ -288,8 +288,8 @@ def _custody_for(artifact: str, ns: dict[str, Node], es: tuple[Edge, ...]) -> Fi
         return _unknown("UNSUPPORTED_CUSTODY_ORIGIN")
     first = ns[cap.target].capture_custodian
     dest = held.target
-    if first == dest:
-        return _f("LAB_CHAIN_PRESENT", "DIRECT_LAB_CUSTODY", cap.edge_id, held.edge_id)
+    # Include direct custody in the same bounded cycle check: a supported
+    # artifact-bound return path must not hide behind the holder shortcut.
     # Transfer sequence must be strictly ordered after capture.
     eligible = [e for e in es if e.kind == "TRANSFERRED_TO" and e.subject_artifact_ref == artifact and
                 e.origin == LAB and e.sequence is not None and e.sequence > ns[cap.target].capture_sequence]
@@ -306,16 +306,21 @@ def _custody_for(artifact: str, ns: dict[str, Node], es: tuple[Edge, ...]) -> Fi
             return
         if at == dest:
             options.append(path)
-            return
+            # Continue checking strictly sequenced transfers after the holder:
+            # a later return to an earlier custodian invalidates the path.
         for edge in sorted(graph.get(at, []), key=lambda x: x.edge_id):
+            if edge.sequence <= prev:
+                continue
             if edge.target in seen:
                 cyclic = True
-            elif edge.sequence > prev:
+            else:
                 walk(edge.target, edge.sequence, seen | {edge.target}, path + (edge.edge_id,))
 
     walk(first, ns[cap.target].capture_sequence, frozenset((first,)), ())
     if cyclic:
         return _unknown("CYCLIC_OR_OVERSIZED_CUSTODY_CHAIN")
+    if first == dest:
+        return _f("LAB_CHAIN_PRESENT", "DIRECT_LAB_CUSTODY", cap.edge_id, held.edge_id)
     if len(options) != 1:
         return _unknown("MISSING_OR_AMBIGUOUS_CUSTODY_TRANSFER")
     return _f("LAB_CHAIN_PRESENT", "LAB_TRANSFER_CHAIN_PRESENT", cap.edge_id, held.edge_id, *options[0])
@@ -444,8 +449,12 @@ def evaluate_provenance(case: ProvenanceCase) -> ProvenanceReport:
                     custody_nodes.add(custody_edge.target)
                 elif custody_edge.kind == "TRANSFERRED_TO":
                     custody_nodes.update((custody_edge.source, custody_edge.target))
+        # Every reachable RESTORES_FROM input is a relevant storage exposure.
+        # A disconnected backup is not part of either witness's control audit.
+        restore_inputs = {storage_id for exposure in exposures for storage_id in exposure}
         impacted = bool(compromised & (
-            controllers[0] | controllers[1] | set(storage_nodes) | set(witnesses) | custody_nodes
+            controllers[0] | controllers[1] | set(storage_nodes) | restore_inputs |
+            set(witnesses) | custody_nodes
         ))
         if common:
             admin = _f("COMMON_CONTROL_DETECTED", "SHARED_MUTATION_CONTROLLER", *sorted(set(e for p in control_paths for e in p)))
