@@ -192,7 +192,7 @@ def _validate(case: Any) -> str | None:
         return "INVALID_ARTIFACT_OR_COMPROMISE_REFERENCE"
     if any(n.kind == "CAPTURE" and (n.capture_custodian not in ns or ns[n.capture_custodian].kind != "CUSTODIAN") for n in g.nodes):
         return "INVALID_CAPTURE_CUSTODIAN"
-    if any(type(i) is not CompromiseInterval or i.node_id not in ns or
+    if any(type(i) is not CompromiseInterval or not _ascii(i.node_id) or i.node_id not in ns or
            not _int(i.start_sequence) or
            (i.end_sequence is not None and (not _int(i.end_sequence) or i.end_sequence < i.start_sequence))
            for i in case.compromise_intervals):
@@ -426,7 +426,27 @@ def evaluate_provenance(case: ProvenanceCase) -> ProvenanceReport:
         for actor in common:
             paths.add(("CONTROL:" + actor,) + controller_traces[0][actor] + ("WITNESS_B",) + controller_traces[1][actor])
         control_paths = tuple(sorted(paths))
-        impacted = bool(compromised & (controllers[0] | controllers[1] | set(storage_nodes) | set(witnesses)))
+        # A relevant compromised custody actor cannot substantiate separate administration.
+        # Use only the custody edges established for the nominated witnesses; a
+        # disconnected custodian must not contaminate an otherwise separate result.
+        custody_nodes: set[str] = set()
+        edges_by_id = {e.edge_id: e for e in lab_edges}
+        for finding in custody:
+            if finding.status != "LAB_CHAIN_PRESENT":
+                continue
+            for edge_id in finding.support:
+                custody_edge = edges_by_id.get(edge_id)
+                if custody_edge is None:
+                    continue
+                if custody_edge.kind == "CAPTURED_FROM":
+                    custody_nodes.add(ns[custody_edge.target].capture_custodian)
+                elif custody_edge.kind == "HELD_BY":
+                    custody_nodes.add(custody_edge.target)
+                elif custody_edge.kind == "TRANSFERRED_TO":
+                    custody_nodes.update((custody_edge.source, custody_edge.target))
+        impacted = bool(compromised & (
+            controllers[0] | controllers[1] | set(storage_nodes) | set(witnesses) | custody_nodes
+        ))
         if common:
             admin = _f("COMMON_CONTROL_DETECTED", "SHARED_MUTATION_CONTROLLER", *sorted(set(e for p in control_paths for e in p)))
         elif impacted:
