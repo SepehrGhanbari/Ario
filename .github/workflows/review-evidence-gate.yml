@@ -1,0 +1,52 @@
+name: Ario Review Evidence
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, edited, ready_for_review]
+  pull_request_review:
+    types: [submitted, dismissed]
+
+# Read-only API inspection. Do not use pull_request_target and do not execute
+# any code from the PR head as part of this evidence gate.
+permissions:
+  contents: read
+  pull-requests: read
+  actions: read
+
+jobs:
+  gate-unit-tests:
+    name: gate-unit-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Check out proposed code only for unprivileged unit tests
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Execute deterministic gate self-tests
+        run: python -m unittest discover -s .github/tests -p "test_review_evidence_gate.py" -v
+
+  review-evidence-gate:
+    name: review-evidence-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Checkout trusted main branch (never PR head)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Configure Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Check gate's own deterministic negative controls
+        run: python -m unittest discover -s .github/tests -p "test_review_evidence_gate.py" -v
+      - name: Verify current PR evidence through GitHub read-only APIs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python .github/scripts/review_evidence_gate.py
