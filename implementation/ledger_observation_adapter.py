@@ -48,9 +48,10 @@ def observe_ledger(path: str | Path) -> dict:
                 digest.update(raw_line)
                 try:
                     event = json.loads(raw_line.decode("utf-8"))
-                except (UnicodeDecodeError, json.JSONDecodeError):
+                except (UnicodeDecodeError, json.JSONDecodeError, RecursionError):
                     return unknown(f"line {line_number}: invalid UTF-8 or JSON")
                 if (not isinstance(event, dict)
+                        or not isinstance(event.get("event"), str)
                         or event.get("event") not in KNOWN_EVENTS
                         or not isinstance(event.get("timestamp"), str)
                         or not event["timestamp"].strip()):
