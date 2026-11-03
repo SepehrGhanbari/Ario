@@ -383,3 +383,47 @@ def test_extra_no_restoration_link_means_backup_not_write_path():
     es = c.graph.edges + (edge("backup-write", "backup-admin", "shared-backup", "CAN_WRITE"),)
     r = check(edit(c, nodes=ns, edges=es))
     assert r.administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
+
+
+# Issue #129 focused RED-first controls. Keep historical TP assertions unchanged.
+def test_issue129_compromised_relevant_custodians_fail_closed():
+    for custodian in ("origin-a", "origin-b", "holder-a", "holder-b"):
+        c = replace(
+            baseline(),
+            compromised_node_ids=(custodian,),
+        )
+        r = check(c)
+        assert r.administrative_separation.status == "COMPROMISED_BY_SCENARIO", custodian
+
+
+def test_issue129_post_capture_custodian_compromise_interval_fails_closed():
+    for custodian in ("origin-a", "holder-b"):
+        c = replace(
+            baseline(),
+            compromise_intervals=(p.CompromiseInterval(custodian, 5, None),),
+        )
+        r = check(c)
+        assert r.administrative_separation.status == "COMPROMISED_BY_SCENARIO", custodian
+
+
+def test_issue129_unrelated_custodian_compromise_does_not_taint_separation():
+    c = baseline()
+    unrelated = node("unrelated-custodian", "CUSTODIAN")
+    c = edit(
+        c,
+        nodes=c.graph.nodes + (unrelated,),
+        compromised_node_ids=("unrelated-custodian",),
+    )
+    r = check(c)
+    assert r.administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
+
+
+def test_issue129_invalid_compromise_interval_node_id_fails_typed():
+    for bad_id in ([], {}, ["origin-a"], {"id": "holder-a"}):
+        c = replace(
+            baseline(),
+            compromise_intervals=(p.CompromiseInterval(bad_id, 0, None),),
+        )
+        r = check(c)
+        assert r.reason_codes == ("INVALID_COMPROMISE_INTERVAL",)
+        assert r.administrative_separation.status == "UNKNOWN"
