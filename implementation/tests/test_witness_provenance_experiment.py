@@ -623,3 +623,48 @@ def test_issue129_short_acyclic_parallel_transfers_preserve_clean_direct_custody
     assert result.per_witness_custody[0].status == "LAB_CHAIN_PRESENT"
     assert result.per_witness_custody[0].reason == "DIRECT_LAB_CUSTODY"
     assert result.administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
+
+
+def test_issue129_compromised_alias_of_reachable_restore_object_fails_closed():
+    """A LAB storage alias names the same restore-input object, not a fresh object."""
+    c = baseline()
+    c = edit(
+        c,
+        nodes=c.graph.nodes + (
+            node("restore-input-a", "STORAGE_DOMAIN", object_identity="RESTORE-OBJ-A"),
+            node("restore-alias-a", "STORAGE_DOMAIN", object_identity="RESTORE-OBJ-A"),
+        ),
+        edges=c.graph.edges + (
+            edge("restore-input-edge-a", "store-a", "restore-input-a", "RESTORES_FROM"),
+        ),
+    )
+    clean = check(c)
+    assert clean.administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
+
+    for compromised in (
+        replace(c, compromised_node_ids=("restore-alias-a",)),
+        replace(c, compromise_intervals=(
+            p.CompromiseInterval("restore-alias-a", 5, None),
+        )),
+    ):
+        report = check(compromised)
+        assert report.administrative_separation.status == "COMPROMISED_BY_SCENARIO"
+        assert report.administrative_separation.reason == "EXPLICIT_CONTROL_OR_STORAGE_COMPROMISE"
+
+
+def test_issue129_compromised_unrelated_storage_identity_remains_irrelevant():
+    """A differently identified, disconnected storage node is not a restore input."""
+    c = baseline()
+    c = edit(
+        c,
+        nodes=c.graph.nodes + (
+            node("restore-input-a", "STORAGE_DOMAIN", object_identity="RESTORE-OBJ-A"),
+            node("other-backup", "STORAGE_DOMAIN", object_identity="OTHER-BACKUP"),
+        ),
+        edges=c.graph.edges + (
+            edge("restore-input-edge-a", "store-a", "restore-input-a", "RESTORES_FROM"),
+        ),
+        compromised_node_ids=("other-backup",),
+    )
+    report = check(c)
+    assert report.administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
