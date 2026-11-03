@@ -499,3 +499,80 @@ def test_issue129_supported_common_control_precedence_is_nonseparate():
     report = check(c)
     assert report.administrative_separation.status == "COMMON_CONTROL_DETECTED"
     assert report.administrative_separation.reason == "SHARED_MUTATION_CONTROLLER"
+
+
+# Additional issue #129 adversarial controls. Proposed by CodeRabbit, RED first.
+def test_issue129_compromised_restorable_backup_blocks_admin_separation():
+    """A declared restore-input storage compromise cannot support separation."""
+    c = baseline()
+    c = edit(
+        c,
+        nodes=c.graph.nodes + (
+            node("backup-a", "STORAGE_DOMAIN", object_identity="BACKUP-A"),
+        ),
+        edges=c.graph.edges + (
+            edge("restore-a", "store-a", "backup-a", "RESTORES_FROM"),
+        ),
+    )
+    clean = check(c)
+    assert clean.administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
+
+    for changed in (
+        replace(c, compromised_node_ids=("backup-a",)),
+        replace(c, compromise_intervals=(
+            p.CompromiseInterval("backup-a", 5, None),
+        )),
+    ):
+        result = check(changed)
+        assert result.administrative_separation.status == "COMPROMISED_BY_SCENARIO"
+
+
+def test_issue129_disconnected_compromised_backup_does_not_taint_control():
+    """A storage object with no declared restore path is unrelated."""
+    c = baseline()
+    c = edit(
+        c,
+        nodes=c.graph.nodes + (
+            node("backup-a", "STORAGE_DOMAIN", object_identity="BACKUP-A"),
+        ),
+        compromised_node_ids=("backup-a",),
+    )
+    assert check(c).administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
+
+
+def test_issue129_transfer_cycle_after_holder_fails_closed():
+    """A supported same-artifact return edge must not be hidden by early exit."""
+    c = baseline()
+    c = edit(c, edges=c.graph.edges + (
+        edge("return-a", "holder-a", "origin-a", "TRANSFERRED_TO",
+             subject_artifact_ref="artifact-a", sequence=4),
+    ))
+    report = check(c)
+    assert report.per_witness_custody[0].status == "UNKNOWN"
+    assert report.per_witness_custody[0].reason == "CYCLIC_OR_OVERSIZED_CUSTODY_CHAIN"
+    assert report.administrative_separation.status == "UNKNOWN"
+    assert report.source_independence.status == "UNKNOWN"
+
+
+def test_issue129_direct_custody_loop_fails_closed_but_other_artifact_does_not():
+    """A holder-origin cycle is relevant only to the nominated artifact."""
+    c = replace_node(baseline(), "capture-a", capture_custodian="holder-a")
+    c = no_edge(c, "transfer-a")
+    departure = edge("depart-a", "holder-a", "origin-a", "TRANSFERRED_TO",
+                     subject_artifact_ref="artifact-a", sequence=3)
+    returned = edge("return-a", "origin-a", "holder-a", "TRANSFERRED_TO",
+                    subject_artifact_ref="artifact-a", sequence=4)
+    cycle = edit(c, edges=c.graph.edges + (departure, returned))
+    result = check(cycle)
+    assert result.per_witness_custody[0].status == "UNKNOWN"
+    assert result.per_witness_custody[0].reason == "CYCLIC_OR_OVERSIZED_CUSTODY_CHAIN"
+    assert result.administrative_separation.status == "UNKNOWN"
+    assert result.source_independence.status == "UNKNOWN"
+
+    other_artifact = edit(c, edges=c.graph.edges + (
+        replace(departure, subject_artifact_ref="artifact-b"),
+        replace(returned, subject_artifact_ref="artifact-b"),
+    ))
+    clean = check(other_artifact)
+    assert clean.per_witness_custody[0].reason == "DIRECT_LAB_CUSTODY"
+    assert clean.administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
