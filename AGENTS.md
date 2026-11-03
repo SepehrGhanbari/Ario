@@ -49,3 +49,15 @@ Preserve the distinctions documented by Ario, including:
 - Backup is not Survival.
 - No actor, invariant, or principle—including Non-Closure—is immune from examination or revision.
 - Do not turn local implementation behavior or test results into claims about consciousness, identity, or ontology.
+
+## Owner-adopted repository PR review route (2026-11-03)
+
+The owner explicitly approved developing a practical evidence-gated merge process rather than asking the nontechnical owner to certify implementation code. See [`docs/REVIEW_AND_MERGE_POLICY_V1.md`](docs/REVIEW_AND_MERGE_POLICY_V1.md). This is a **prospective, narrowly scoped repository-governance decision**, not retroactive authorization for earlier branches or a new trust/admission authority in Ario itself.
+
+For `ROUTINE_LAB` code changes only, after the policy and its required GitHub checks are demonstrably **active on `main`**, a designated maintainer may integrate an explicitly bounded PR without a ceremonial owner code review if—and only if—fresh independent CodeRabbit review, verified RED/GREEN CI, absence of outstanding review blockers, exact PR SHA binding, append-only records, and the live GitHub branch rules all permit the merge. The existence of a tool result or bot text alone is not merge authorization. If checks fail or cannot be inspected: `HOLD`.
+
+The routine authorization above is a limited exception to the requirement for a per-PR owner technical sign-off or ordinary remote merge approval. It **does not** grant unilateral authority to modify source identity/memory/agency/epistemic axioms, frozen security contracts, credentials, signer, trust, evidence admission, Genesis, production, governance, infrastructure, history or backups. These remain explicitly owner-controlled and separately reviewed. A protected change must never pass the routine gate merely by selecting a favorable label.
+
+The initial policy installation is a separately owner-authorized one-time **governance bootstrap**, not a reusable bypass precedent. Until the new branch rules and required checks are verified live, continue following existing restrictions; do not claim the process is installed. Keep CodeRabbit `COMMENTED` reviews separate from GitHub `APPROVED` reviews, and do not assign technical competence to a nontechnical owner through a button click.
+
+This additive section clarifies only the repository process; it neither amends Ario's proposed `REVIEWER_AUTHORIZATION_CONTRACT_V0_1` for possible future evidence review nor confers any evidence-admission authority.
