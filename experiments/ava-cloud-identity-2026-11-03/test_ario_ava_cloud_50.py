@@ -42,6 +42,31 @@ class RunnerTests(unittest.TestCase):
     def test_letter_matches_uploaded_hash(self):
         self.assertEqual(exp.sha(LETTER.encode("utf-8")), exp.LETTER_SHA256)
 
+    def test_exclusive_writer_lock_blocks_concurrent_process(self):
+        with tempfile.TemporaryDirectory() as temp:
+            p = Path(temp)
+            with exp.ExclusiveRunLock(p):
+                with self.assertRaisesRegex(exp.Hold, "RUN_WRITER_LOCK_EXISTS"):
+                    with exp.ExclusiveRunLock(p):
+                        pass
+            self.assertFalse((p / ".run_writer.lock").exists())
+
+    def test_leftover_stale_lock_fails_closed(self):
+        with tempfile.TemporaryDirectory() as temp:
+            p = Path(temp)
+            (p / ".run_writer.lock").write_text("PREEXISTING")
+            with self.assertRaisesRegex(exp.Hold, "RUN_WRITER_LOCK_EXISTS"):
+                with exp.ExclusiveRunLock(p):
+                    pass
+            self.assertEqual((p / ".run_writer.lock").read_text(), "PREEXISTING")
+
+    def test_read_only_commands_do_not_acquire_lock(self):
+        with tempfile.TemporaryDirectory() as temp:
+            p = Path(temp)
+            with exp.ExclusiveRunLock(p):
+                result = exp.main(["--run-dir", str(p), "--letter", str(Path(__file__).with_name("ARIO_IDENTITY_INTERIM_FINDINGS_LETTER_FA_2026-11-03.md")), "--status", "--extend", "1"])
+                self.assertEqual(result, 2)
+
     def test_no_api_key_does_not_terminate(self):
         temp, ledger = seeded()
         with temp:
