@@ -668,3 +668,16 @@ def test_issue129_compromised_unrelated_storage_identity_remains_irrelevant():
     )
     report = check(c)
     assert report.administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
+
+
+def test_issue129_compromised_alias_of_direct_witness_store_fails_closed():
+    """Aliased storage of a nominated witness is still that storage object."""
+    c = baseline()
+    c = edit(c,
+             nodes=c.graph.nodes + (
+                 node("store-a-alias", "STORAGE_DOMAIN", object_identity="DISK-A"),
+             ),
+             compromised_node_ids=("store-a-alias",))
+    report = check(c)
+    assert report.administrative_separation.status == "COMPROMISED_BY_SCENARIO"
+    assert report.administrative_separation.reason == "EXPLICIT_CONTROL_OR_STORAGE_COMPROMISE"
