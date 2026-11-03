@@ -576,3 +576,50 @@ def test_issue129_direct_custody_loop_fails_closed_but_other_artifact_does_not()
     clean = check(other_artifact)
     assert clean.per_witness_custody[0].reason == "DIRECT_LAB_CUSTODY"
     assert clean.administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
+
+
+def test_issue129_bounded_total_custody_walk_on_layered_parallel_transfers():
+    """Even an acyclic bounded graph can contain exponentially many paths.
+
+    Direct custody at holder-a is clean absent a resource budget; 7 layers
+    with four parallel transfer edges each create 4**7 walks, despite
+    few nodes and edges. Budget exhaustion must conservatively return UNKNOWN.
+    """
+    c = replace_node(baseline(), "capture-a", capture_custodian="holder-a")
+    c = no_edge(c, "transfer-a")
+    nodes = list(c.graph.nodes)
+    edges = list(c.graph.edges)
+    previous = "holder-a"
+    for layer in range(7):
+        custodian = f"fanout-a-{layer}"
+        nodes.append(node(custodian, "CUSTODIAN"))
+        for lane in range(4):
+            edges.append(edge(
+                f"fanout-edge-{layer}-{lane}", previous, custodian, "TRANSFERRED_TO",
+                subject_artifact_ref="artifact-a", sequence=3 + layer,
+            ))
+        previous = custodian
+    case = edit(c, nodes=nodes, edges=edges)
+    assert len(case.graph.nodes) <= p.MAX_NODES
+    assert len(case.graph.edges) <= p.MAX_EDGES
+    result = check(case)
+    assert result.per_witness_custody[0].status == "UNKNOWN"
+    assert result.per_witness_custody[0].reason == "CYCLIC_OR_OVERSIZED_CUSTODY_CHAIN"
+    assert result.administrative_separation.status == "UNKNOWN"
+    assert result.source_independence.status == "UNKNOWN"
+
+
+def test_issue129_short_acyclic_parallel_transfers_preserve_clean_direct_custody():
+    """A small fanout alone does not invalidate direct custody."""
+    c = replace_node(baseline(), "capture-a", capture_custodian="holder-a")
+    c = no_edge(c, "transfer-a")
+    intermediate = node("short-fan-a", "CUSTODIAN")
+    c = edit(c, nodes=c.graph.nodes + (intermediate,),
+             edges=c.graph.edges + tuple(edge(
+                 f"short-fanout-{lane}", "holder-a", "short-fan-a",
+                 "TRANSFERRED_TO", subject_artifact_ref="artifact-a", sequence=3,
+             ) for lane in range(2)))
+    result = check(c)
+    assert result.per_witness_custody[0].status == "LAB_CHAIN_PRESENT"
+    assert result.per_witness_custody[0].reason == "DIRECT_LAB_CUSTODY"
+    assert result.administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
