@@ -1,0 +1,48 @@
+# CodeRabbit configuration for Ario.
+# Inherit existing central/UI settings rather than silently discard them.
+# No automatic PR approval, merge, signer, trust, or runtime authorization.
+inheritance: true
+language: "en-US"
+tone_instructions: >-
+  Be concise, constructive and evidence-first. Separate observations, tests,
+  predictions and unknowns. Identify concrete bugs and falsifiers. Never treat
+  model claims, hash matches or green CI as proof of identity, trust or authority.
+reviews:
+  profile: assertive
+  high_level_summary: true
+  poem: false
+  request_changes_workflow: false
+  auto_approvals:
+    enabled: false
+  auto_review:
+    enabled: true
+    drafts: true
+    auto_incremental_review: true
+    auto_pause_after_reviewed_commits: 0
+  path_instructions:
+    - path: "implementation/**"
+      instructions: |
+        Review invariants, exact failure boundaries, data provenance, nonclosure,
+        append-only history and regressions. Check UNKNOWN/fail-closed behavior
+        and the gap between unit-test coverage and real-world attestation.
+        Require counterexamples before endorsing new epistemic conclusions.
+        Never infer trust, signer or Genesis activation from a green CI run.
+    - path: ".github/**"
+      instructions: |
+        Review branch protection, workflow permissions, injection/TOCTOU,
+        bypasses, authority separation and merge checks adversarially.
+        Require fail-closed negative tests for each new guard. Do not suggest
+        disabling required review or weakening a governance gate merely to
+        unblock a pull request.
+    - path: "experiments/**"
+      instructions: |
+        Distinguish synthetic fixtures, user-provided transcripts, actual
+        executions and independent provider attestations. Preserve original
+        evidence and hashes; identify prompt/recovery confounds, missing
+        counterfactuals and nonexecuted tests. Never equate a self-model with
+        a subjective self or a hash match with a truthful origin.
+    - path: "**/test_*.py"
+      instructions: |
+        Check that each test's setup actually reaches its claimed branch,
+        including Windows newline/locking cases, malformed inputs, crash
+        windows, negative controls and the risk of trivial all-UNKNOWN passes.
