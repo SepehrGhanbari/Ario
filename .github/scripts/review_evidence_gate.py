@@ -198,7 +198,7 @@ def main() -> int:
         require(bool(event_path), "EVENT_NOT_AVAILABLE")
         with open(event_path, encoding="utf-8") as handle:
             event = json.load(handle)
-        number = event.get("number")
+        number = event.get("number") or (event.get("pull_request") or {}).get("number")
         require(type(number) is int and number > 0, "PR_NUMBER_UNKNOWN")
         base = "/repos/" + repo
         pr = api_request(f"{base}/pulls/{number}")
