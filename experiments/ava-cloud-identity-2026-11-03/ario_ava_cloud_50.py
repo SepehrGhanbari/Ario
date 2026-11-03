@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import secrets
 import json
 import os
 from pathlib import Path
@@ -57,6 +58,38 @@ def now() -> str:
 
 class Hold(Exception):
     """Fail closed without treating the experiment as finished."""
+
+
+class ExclusiveRunLock:
+    """Single-writer gate. A stale lock remains for explicit investigation."""
+    def __init__(self, folder: Path):
+        self.folder = folder
+        self.path = folder / ".run_writer.lock"
+        self.raw = None
+
+    def __enter__(self):
+        self.folder.mkdir(parents=True, exist_ok=True)
+        self.raw = canonical({"pid": os.getpid(), "started_utc": now(),
+                              "nonce": secrets.token_hex(16)}) + b"\n"
+        try:
+            fd = os.open(str(self.path), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        except FileExistsError as exc:
+            raise Hold("RUN_WRITER_LOCK_EXISTS_REVIEW_REQUIRED") from exc
+        try:
+            count = os.write(fd, self.raw)
+            if count != len(self.raw):
+                raise Hold("SHORT_WRITER_LOCK_RECORD")
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+        return self
+
+    def __exit__(self, _type, _value, _traceback):
+        if self.path.exists() and self.path.read_bytes() == self.raw:
+            self.path.unlink()
+        else:
+            raise Hold("WRITER_LOCK_MISSING_OR_MODIFIED_STOP")
+        return False
 
 
 class Ledger:
@@ -349,18 +382,31 @@ def main(argv=None) -> int:
     parser.add_argument("--max-calls", type=int)
     args = parser.parse_args(argv)
     try:
+        if (args.status or args.print_transcript) and (args.extend or args.new or args.import_legacy):
+            raise Hold("READ_ONLY_FLAGS_CONFLICT")
         raw = args.letter.read_bytes()
         if sha(raw) != LETTER_SHA256:
             raise Hold("LETTER_BYTE_HASH_MISMATCH")
         letter = raw.decode("utf-8")
-        ledger = Ledger(args.run_dir)
+        from contextlib import nullcontext
+        guard = nullcontext() if args.status or args.print_transcript else ExclusiveRunLock(args.run_dir)
+        with guard:
+            ledger = Ledger(args.run_dir)
+            return main_locked(args, ledger, letter)
+    except (Hold, OSError, UnicodeError, ValueError) as exc:
+        print("HOLD:", exc, file=sys.stderr)
+        return 2
+
+
+def main_locked(args, ledger: Ledger, letter: str) -> int:
+    try:
         if not ledger.events:
             if args.status or args.print_transcript:
                 raise Hold("NOT_INITIALIZED")
             if args.new == bool(args.import_legacy):
                 raise Hold("EXPLICIT_NEW_OR_LEGACY_IMPORT_REQUIRED")
             prior, fingerprint = ([], None) if args.new else import_legacy(args.import_legacy)
-            init_run(ledger, letter, sha(raw), prior, fingerprint, args.target)
+            init_run(ledger, letter, sha(letter.encode("utf-8")), prior, fingerprint, args.target)
         else:
             if args.new or args.import_legacy:
                 raise Hold("RUN_ALREADY_INITIALIZED_NO_REIMPORT")
