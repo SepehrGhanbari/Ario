@@ -45,8 +45,8 @@ class LedgerObservationTests(unittest.TestCase):
     def test_unhashable_event_values_fail_closed_and_preserve_input(self):
         with tempfile.TemporaryDirectory() as directory:
             ledger = Path(directory) / "events.jsonl"
-            for raw in (b'{"event":[],"timestamp":"t"}\\n',
-                        b'{"event":{},"timestamp":"t"}\\n'):
+            for raw in (b'{"event":[],"timestamp":"t"}\n',
+                        b'{"event":{},"timestamp":"t"}\n'):
                 with self.subTest(raw=raw):
                     ledger.write_bytes(raw)
                     result = observe_ledger(ledger)
