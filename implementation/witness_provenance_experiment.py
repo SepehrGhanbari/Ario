@@ -355,6 +355,58 @@ def _source_set(artifact: str, ns: dict[str, Node], es: tuple[Edge, ...]) -> tup
     return sources, tuple(sorted(used)), overflow
 
 
+
+def _post_holder_compromise_uncertain(
+    witnesses: tuple[str, ...], custody: tuple[Finding, ...],
+    ns: dict[str, Node], lab_edges: tuple[Edge, ...],
+    compromised: set[str],
+) -> bool:
+    """Conservative LAB-only latch: temporal relevance after HELD_BY is UNKNOWN.
+
+    This does NOT choose historical/current-holder semantics. Only a known
+    compromised custodian on a strictly later same-artifact post-holder chain
+    blocks a positive administrative independence claim. All other existing
+    result precedence, custody evidence, and benign transfers are unchanged.
+    """
+    if not compromised:
+        return False
+    edge_by_id = {e.edge_id: e for e in lab_edges}
+    for artifact, finding in zip(witnesses, custody):
+        if finding.status != "LAB_CHAIN_PRESENT":
+            continue
+        holders = [e for e in lab_edges if e.kind == "HELD_BY" and e.source == artifact]
+        captures = [e for e in lab_edges if e.kind == "CAPTURED_FROM" and e.source == artifact]
+        if len(holders) != 1 or len(captures) != 1:
+            continue
+        threshold = ns[captures[0].target].capture_sequence
+        for edge_id in finding.support:
+            chosen = edge_by_id.get(edge_id)
+            if chosen is not None and chosen.kind == "TRANSFERRED_TO" and chosen.sequence is not None:
+                threshold = max(threshold, chosen.sequence)
+        # Each permitted state corresponds to a real bounded graph edge.
+        # Unlike enumerating every path, (custodian, sequence) visits each
+        # edge destination/sequence pair at most once.
+        start = (holders[0].target, threshold)
+        pending = [start]
+        seen = {start}
+        while pending:
+            at, after = pending.pop()
+            for edge in lab_edges:
+                if (edge.kind != "TRANSFERRED_TO"
+                    or edge.subject_artifact_ref != artifact
+                    or edge.source != at
+                    or edge.sequence is None
+                    or edge.sequence <= after):
+                    continue
+                if edge.target in compromised:
+                    return True
+                state = (edge.target, edge.sequence)
+                if state not in seen:
+                    seen.add(state)
+                    pending.append(state)
+    return False
+
+
 def evaluate_provenance(case: ProvenanceCase) -> ProvenanceReport:
     """Bounded structural diagnostics; no real-world trust or provenance verification."""
     bad = _validate(case)
@@ -481,10 +533,14 @@ def evaluate_provenance(case: ProvenanceCase) -> ProvenanceReport:
             controllers[0] | controllers[1] | relevant_storage |
             set(witnesses) | custody_nodes
         ) or compromised_storage_aliases)
+        post_holder_uncertain = _post_holder_compromise_uncertain(
+            witnesses, custody, ns, lab_edges, compromised)
         if common:
             admin = _f("COMMON_CONTROL_DETECTED", "SHARED_MUTATION_CONTROLLER", *sorted(set(e for p in control_paths for e in p)))
         elif impacted:
             admin = _f("COMPROMISED_BY_SCENARIO", "EXPLICIT_CONTROL_OR_STORAGE_COMPROMISE", *sorted(compromised))
+        elif post_holder_uncertain:
+            admin = _unknown("POST_HOLDER_COMPROMISE_RELEVANCE_UNRESOLVED")
         elif exceeds or _reachable_cycle(lab_edges, tuple(ns), "ADMINISTERS") or _reachable_cycle(lab_edges, tuple(storage_nodes), "RESTORES_FROM"):
             admin = _unknown("CONTROL_GRAPH_CYCLE_OR_DEPTH_LIMIT")
         elif not clean_lab_graph or not case.complete_control_surface or case.completeness_origin != LAB:
