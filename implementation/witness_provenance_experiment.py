@@ -539,14 +539,15 @@ def evaluate_provenance(case: ProvenanceCase) -> ProvenanceReport:
             admin = _f("COMMON_CONTROL_DETECTED", "SHARED_MUTATION_CONTROLLER", *sorted(set(e for p in control_paths for e in p)))
         elif impacted:
             admin = _f("COMPROMISED_BY_SCENARIO", "EXPLICIT_CONTROL_OR_STORAGE_COMPROMISE", *sorted(compromised))
-        elif post_holder_uncertain:
-            admin = _unknown("POST_HOLDER_COMPROMISE_RELEVANCE_UNRESOLVED")
         elif exceeds or _reachable_cycle(lab_edges, tuple(ns), "ADMINISTERS") or _reachable_cycle(lab_edges, tuple(storage_nodes), "RESTORES_FROM"):
             admin = _unknown("CONTROL_GRAPH_CYCLE_OR_DEPTH_LIMIT")
         elif not clean_lab_graph or not case.complete_control_surface or case.completeness_origin != LAB:
             admin = _unknown("CONTROL_SURFACE_INCOMPLETE_OR_SELF_DECLARED")
         elif storage.status == "SAME_STORAGE_OBJECT":
             admin = _f("COMMON_CONTROL_DETECTED", "SHARED_STORAGE_OBJECT", *storage.support)
+        elif post_holder_uncertain:
+            # Unknown temporal relevance must never hide known shared storage.
+            admin = _unknown("POST_HOLDER_COMPROMISE_RELEVANCE_UNRESOLVED")
         elif any(c.status != "LAB_CHAIN_PRESENT" for c in custody):
             admin = _unknown("CUSTODY_CHAIN_NOT_ESTABLISHED")
         else:
