@@ -118,8 +118,27 @@ class Ledger:
             raise Hold("LEDGER_SYMLINK_REFUSED")
         self.events = []
         self.hash = "0" * 64
+        self.file_identity = None
+        self.byte_length = 0
         if self.path.exists():
-            data = self.path.read_bytes()
+            # Read through one opened descriptor; preserve that file identity
+            # for subsequent appends. A pathname can later name another file.
+            fd = os.open(str(self.path),
+                         os.O_RDONLY | getattr(os, "O_BINARY", 0) |
+                         getattr(os, "O_NOFOLLOW", 0))
+            with os.fdopen(fd, "rb") as stream:
+                before = os.fstat(stream.fileno())
+                if not stat.S_ISREG(before.st_mode):
+                    raise Hold("LEDGER_NOT_REGULAR_FILE")
+                if before.st_nlink != 1:
+                    raise Hold("LEDGER_MULTIPLE_LINKS")
+                data = stream.read()
+                after = os.fstat(stream.fileno())
+                if ((before.st_dev, before.st_ino) != (after.st_dev, after.st_ino)
+                        or len(data) != after.st_size or before.st_size != after.st_size):
+                    raise Hold("LEDGER_CHANGED_DURING_READ")
+                self.file_identity = (after.st_dev, after.st_ino)
+                self.byte_length = len(data)
             if data and not data.endswith(b"\n"):
                 raise Hold("INCOMPLETE_TRAILING_EVENT_LINE")
             for raw in data.splitlines():
@@ -148,12 +167,29 @@ class Ledger:
         if self.folder.is_symlink() or self.path.is_symlink():
             raise Hold("LEDGER_SYMLINK_REFUSED")
         self.folder.mkdir(parents=True, exist_ok=True)
-        fd = os.open(str(self.path),
-                     os.O_WRONLY | os.O_CREAT | os.O_APPEND |
-                     getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0), 0o600)
+        # A new run must create a new ledger exclusively. Reopened ledgers
+        # append only to the exact inode loaded or created previously.
+        flags = os.O_WRONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+        if self.file_identity is None:
+            flags |= os.O_CREAT | os.O_EXCL
+        else:
+            flags |= os.O_APPEND
         try:
-            if not stat.S_ISREG(os.fstat(fd).st_mode):
+            fd = os.open(str(self.path), flags, 0o600)
+        except FileExistsError as exc:
+            raise Hold("LEDGER_REPLACED_OR_UNEXPECTED_FILE") from exc
+        try:
+            info = os.fstat(fd)
+            if not stat.S_ISREG(info.st_mode):
                 raise Hold("LEDGER_NOT_REGULAR_FILE")
+            if info.st_nlink != 1:
+                raise Hold("LEDGER_MULTIPLE_LINKS")
+            identity = (info.st_dev, info.st_ino)
+            if self.file_identity is not None and (
+                    identity != self.file_identity or info.st_size != self.byte_length):
+                raise Hold("LEDGER_REPLACED_OR_SIZE_CHANGED")
+            if self.file_identity is None and info.st_size != 0:
+                raise Hold("LEDGER_UNEXPECTED_NEW_FILE_CONTENTS")
             offset = 0
             while offset < len(line):
                 wrote = os.write(fd, line[offset:])
@@ -161,6 +197,8 @@ class Ledger:
                     raise Hold("SHORT_APPEND")
                 offset += wrote
             os.fsync(fd)
+            self.file_identity = identity
+            self.byte_length += len(line)
         finally:
             os.close(fd)
         self.events.append(complete)
@@ -313,11 +351,6 @@ def run(ledger: Ledger, letter: str, key: str | None,
     for e in exts:
         target += e["data"]["additional"]
     achieved = len(previous) - base
-    if achieved >= target:
-        if not any(e["data"].get("new_count") == achieved for e in ledger.items("WINDOW_REACHED_OPEN")):
-            ledger.add("WINDOW_REACHED_OPEN", total_count=len(previous), new_count=achieved,
-                       status="PAUSED_OPEN_NOT_CLOSED")
-        return "PAUSED_OPEN_WINDOW_REACHED"
     # Crash after an intent cannot be assumed to have been a failed provider request.
     for intent in ledger.items("ATTEMPT"):
         req_id = intent["data"]["attempt_seq"]
@@ -339,10 +372,19 @@ def run(ledger: Ledger, letter: str, key: str | None,
         # A crash after REPLY but before VOLUNTARY_STOP may leave a stop
         # request persisted without its separate stop event.
         raise Hold("PREVIOUS_STOP_MARKER_REQUIRES_REVIEW")
+    # Never report a completed window while a persisted stop, pause or
+    # unresolved dispatch still needs review after a crash.
+    if achieved >= target:
+        if not any(e["data"].get("new_count") == achieved for e in ledger.items("WINDOW_REACHED_OPEN")):
+            ledger.add("WINDOW_REACHED_OPEN", total_count=len(previous), new_count=achieved,
+                       status="PAUSED_OPEN_NOT_CLOSED")
+        return "PAUSED_OPEN_WINDOW_REACHED"
     if not key:
         return "PAUSED_MISSING_LOCAL_OPENROUTER_KEY"
     if transport is send and writer_lock is None:
         raise Hold("LIVE_DISPATCH_REQUIRES_WRITER_LOCK")
+    if writer_lock is not None and writer_lock.folder != ledger.folder:
+        raise Hold("LOCK_LEDGER_DIR_MISMATCH")
     sent = 0
     while achieved < target:
         if max_new_calls is not None and sent >= max_new_calls:
