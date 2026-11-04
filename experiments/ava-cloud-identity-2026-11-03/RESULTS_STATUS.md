@@ -11,3 +11,12 @@
 - `MERGE`: HOLD until genuine model exchanges are captured, authorized privacy review and independent CodeRabbit research review are complete, and GitHub branch protection/CI requirements are met. #130/#132/#133 are separate engineering/governance efforts.
 
 Next input needed to actually produce the 50 real API messages: the original v0.5 session's complete exported transcript or state, and an authenticated OpenRouter API key in the **owner's own local environment**, never in ChatGPT or GitHub. When a run reaches its window, it pauses with `PAUSED_OPEN_NOT_CLOSED`, not `FINISHED`.
+
+## 2026-11-05 — corrective research status on separate draft PR #144 (append-only)
+
+- This section does **not** alter the 2026-11-03 historical 20-test claim or pretend that it covers the new candidate.
+- Original PR #134 source and original run status remain unchanged. The correction is separate, unmerged and review-only.
+- Initial RED preserved on draft #145 at `2821729c09c89ba54aa135668d57fc8fc4c256ac`; GitHub-hosted [run 41913976326](https://github.com/SepehrGhanbari/Ario/actions/runs/41913976326) failed, with a 25-method offline suite reporting three failures and two errors.
+- Initial GREEN verified at `c0dfd38f49be711dfb507836d89060edfcd0620a`; GitHub-hosted [run 41913944198](https://github.com/SepehrGhanbari/Ario/actions/runs/41913944198) reported 1109 passed and 96 subtests passed; all 25 offline runner cases ran.
+- After CodeRabbit identified ambiguous HTTP 429/500 automatic retries, a separate RED draft #148 and further conservative fixes were prepared. Final HTTP-control CI result will be documented separately; do not infer it from initial GREEN.
+- No real API dispatch, Windows-native filesystem test, verified provider retry/idempotency contract, or reviewed `REVIEW_ACK` continuation was established. Any ambiguous HTTP or response pause must remain HOLD until a separate safe recovery protocol is approved. `OWNER_SIGNER=HOLD`; `GENESIS/PRODUCTION=NO_GO`; `M0_ADMISSION=NOT_EVALUATED`.
