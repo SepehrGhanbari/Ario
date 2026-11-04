@@ -434,11 +434,17 @@ class RunnerTests(unittest.TestCase):
                     self.assertFalse(ledger.items("ATTEMPT"))
 
     def test_replaced_regular_ledger_rejected_before_append(self):
+        # Atomically replace the loaded inode with a distinct file, retaining
+        # identical bytes. unlink+recreate alone may recycle the inode on Linux.
+        import os
         temp, ledger = seeded(goal=1)
         with temp:
             original = ledger.path.read_bytes()
-            ledger.path.unlink()
-            ledger.path.write_bytes(original)
+            old_ino = ledger.path.stat().st_ino
+            swap = ledger.folder / "other-regular-ledger.jsonl"
+            swap.write_bytes(original)
+            self.assertNotEqual(old_ino, swap.stat().st_ino)
+            os.replace(swap, ledger.path)
             before = ledger.path.read_bytes()
             with self.assertRaisesRegex(exp.Hold, "LEDGER_REPLACED"):
                 ledger.add("SHOULD_NOT_WRITE", why="different inode")
