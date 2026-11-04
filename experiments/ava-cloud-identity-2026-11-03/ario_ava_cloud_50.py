@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import http.client
 import secrets
 import json
 import os
@@ -72,7 +73,7 @@ class ExclusiveRunLock:
         self.raw = canonical({"pid": os.getpid(), "started_utc": now(),
                               "nonce": secrets.token_hex(16)}) + b"\n"
         try:
-            fd = os.open(str(self.path), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+            fd = os.open(str(self.path), os.O_CREAT | os.O_EXCL | os.O_WRONLY | getattr(os, "O_BINARY", 0), 0o600)
         except FileExistsError as exc:
             raise Hold("RUN_WRITER_LOCK_EXISTS_REVIEW_REQUIRED") from exc
         try:
@@ -126,7 +127,7 @@ class Ledger:
         complete = {**item, "event_sha256": digest}
         line = canonical(complete) + b"\n"
         self.folder.mkdir(parents=True, exist_ok=True)
-        fd = os.open(str(self.path), os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+        fd = os.open(str(self.path), os.O_WRONLY | os.O_CREAT | os.O_APPEND | getattr(os, "O_BINARY", 0), 0o600)
         try:
             offset = 0
             while offset < len(line):
@@ -300,9 +301,18 @@ def run(ledger: Ledger, letter: str, key: str | None,
             raise Hold("DISPATCH_UNKNOWN_UNRESOLVED_ATTEMPT")
     if any(e["kind"] in ("VOLUNTARY_STOP", "PAUSED_LOOP") for e in ledger.events):
         raise Hold("PREVIOUS_STOP_OR_LOOP_REQUIRES_REVIEW")
-    if any(e["kind"] == "PAUSE" and e["data"].get("status") == "PAUSED_FOR_REVIEW"
-           for e in ledger.events):
+    if any(e["kind"] == "PAUSE" and (
+           e["data"].get("status") == "PAUSED_FOR_REVIEW" or
+           e["data"].get("reason") == "INVALID_PROVIDER_JSON"
+           ) for e in ledger.events):
+        # Older ledgers recorded INVALID_PROVIDER_JSON without a status.
+        # This legacy event is still ambiguous and must never auto-resume.
         raise Hold("PREVIOUS_UNRESOLVED_REVIEW_PAUSE")
+    if any(isinstance(e["data"].get("content"), str) and
+           explicit_stop(e["data"]["content"]) for e in ledger.items("REPLY")):
+        # A crash after REPLY but before VOLUNTARY_STOP may leave a stop
+        # request persisted without its separate stop event.
+        raise Hold("PREVIOUS_STOP_MARKER_REQUIRES_REVIEW")
     if not key:
         return "PAUSED_MISSING_LOCAL_OPENROUTER_KEY"
     sent = 0
@@ -328,12 +338,19 @@ def run(ledger: Ledger, letter: str, key: str | None,
             ledger.add("PAUSE", attempt_seq=attempt_seq, reason="HTTP_ERROR", http_code=status,
                        status="PAUSED_RATE_LIMIT" if status == 429 else "PAUSED_PROVIDER_ERROR")
             return "PAUSED_RATE_LIMIT" if status == 429 else "PAUSED_PROVIDER_ERROR"
+        except (json.JSONDecodeError, UnicodeDecodeError, http.client.IncompleteRead) as exc:
+            # The server may already have processed the request. Preserve
+            # the attempt and require review instead of silently retrying.
+            ledger.add("PAUSE", attempt_seq=attempt_seq, reason="INVALID_PROVIDER_BODY",
+                       error_class=type(exc).__name__, status="PAUSED_FOR_REVIEW")
+            return "PAUSED_INVALID_RESPONSE"
         except (TimeoutError, OSError, urllib.error.URLError) as exc:
             ledger.add("PAUSE", attempt_seq=attempt_seq, reason="NETWORK_DISPATCH_UNKNOWN",
                        error_class=type(exc).__name__, status="PAUSED_FOR_REVIEW")
             return "DISPATCH_UNKNOWN_NETWORK"
         if not isinstance(raw, dict):
-            ledger.add("PAUSE", attempt_seq=attempt_seq, reason="INVALID_PROVIDER_JSON")
+            ledger.add("PAUSE", attempt_seq=attempt_seq, reason="INVALID_PROVIDER_JSON",
+                       status="PAUSED_FOR_REVIEW")
             return "PAUSED_INVALID_RESPONSE"
         returned_model = raw.get("model")
         try:
