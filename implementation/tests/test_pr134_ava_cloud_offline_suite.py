@@ -6,6 +6,8 @@ provider dispatch. This is an isolated test of the research branch only.
 from __future__ import annotations
 
 import importlib.util
+import os
+from unittest.mock import patch
 from pathlib import Path
 import unittest
 
@@ -21,9 +23,14 @@ def test_pr134_exact_offline_suite():
     spec.loader.exec_module(module)
     suite = unittest.defaultTestLoader.loadTestsFromModule(module)
     result = unittest.TestResult()
-    suite.run(result)
+    # Prevent accidental urllib-based cloud dispatch during the offline suite.
+    # This is a scoped guard, not a general OS-level network sandbox.
+    with patch("urllib.request.urlopen", side_effect=AssertionError("OFFLINE_PROVIDER_DISPATCH_FORBIDDEN")):
+        with patch.dict(os.environ, {"OPENROUTER_API_KEY": ""}):
+            suite.run(result)
+    assert not result.skipped, f"Offline suite silently skipped: {result.skipped}"
     details = [f"{case}: {tb}" for case, tb in result.errors + result.failures]
-    assert result.testsRun >= 25, f"Expected >=25 offline tests, got {result.testsRun}"
+    assert result.testsRun >= 27, f"Expected >=27 offline tests, got {result.testsRun}"
     assert result.wasSuccessful(), (
         f"PR134_OFFLINE_SUITE_FAILED: {result.testsRun} tests, "
         f"{len(result.failures)} failures, {len(result.errors)} errors\n"
