@@ -22,7 +22,7 @@ The R0/R1/R2 ZIPs, historical logs, synthetic fixture bytes, and original failur
 | R1 | `a666d151e9702894d73ef35be3781052670d8edb1f91613bd21eb30be3375709` |
 | R2 | `d3910bf0f8a9b2951615e6a45aaf17ab6e737c198c41e6922bd4e9539025d964` |
 
-These identify reported bytes only; they are not evidence of authenticated provenance or independent custody. **CodeRabbit has not received, source-reviewed or executed R2.** Reported Ava-run local suites: R0 41/41 focused tests, a separate synthetic two-Ava replay 34/34, R1 45/45, and R2 50/50. The initial R2 run had **48 passes and two test-expectation failures**, and the earlier failure log was retained. None of these counts is a GitHub CI result for this documentation PR, an independent execution attestation, or proof of a real-world claim.
+These identify reported bytes only; they are not evidence of authenticated provenance or independent custody. **CodeRabbit has not received, source-reviewed or executed R2.** Reported Ava-run local suites: R0 41/41 focused tests, a separate synthetic two-Ava replay 34/34, R1 45/45, and R2 50/50. The initial R2 run had **48 passes and two test-expectation failures**, and the earlier failure log was retained. None of these counts is a GitHub CI result for this documentation-only branch, an independent execution attestation, or proof of a real-world claim.
 
 ## Three R1 counterexamples observed in isolated scratch
 
