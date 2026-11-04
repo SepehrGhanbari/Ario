@@ -681,3 +681,199 @@ def test_issue129_compromised_alias_of_direct_witness_store_fails_closed():
     report = check(c)
     assert report.administrative_separation.status == "COMPROMISED_BY_SCENARIO"
     assert report.administrative_separation.reason == "EXPLICIT_CONTROL_OR_STORAGE_COMPROMISE"
+
+
+# #130 characterization: post-holder compromise is temporally ambiguous in v0.1.
+# These tests propose conservative UNKNOWN rather than inventing a current-holder contract.
+def _post_holder_case(*, direct=True, deep=False, compromised=False,
+                      other_artifact=False):
+    c = baseline()
+    if direct:
+        c = replace_node(c, "capture-a", capture_custodian="holder-a")
+        c = no_edge(c, "transfer-a")
+    new_nodes = [node("post-tail-a", "CUSTODIAN")]
+    edges = [edge(
+        "post-transfer-a", "holder-a", "post-tail-a", "TRANSFERRED_TO",
+        subject_artifact_ref="artifact-b" if other_artifact else "artifact-a",
+        sequence=5,
+    )]
+    if deep:
+        new_nodes.append(node("post-second-a", "CUSTODIAN"))
+        edges.append(edge(
+            "post-transfer-a-2", "post-tail-a", "post-second-a",
+            "TRANSFERRED_TO", subject_artifact_ref="artifact-a", sequence=6,
+        ))
+    target = "post-second-a" if deep else "post-tail-a"
+    return edit(
+        c, nodes=c.graph.nodes + tuple(new_nodes),
+        edges=c.graph.edges + tuple(edges),
+        compromised_node_ids=(target,) if compromised else (),
+    )
+
+
+def test_issue130_compromised_direct_post_holder_requires_unknown():
+    r = check(_post_holder_case(direct=True, compromised=True))
+    assert r.per_witness_custody[0].status == "LAB_CHAIN_PRESENT"
+    assert r.administrative_separation.status == "UNKNOWN"
+    assert r.administrative_separation.reason == "POST_HOLDER_COMPROMISE_RELEVANCE_UNRESOLVED"
+
+
+def test_issue130_compromised_multihop_post_holder_requires_unknown():
+    r = check(_post_holder_case(direct=False, deep=True, compromised=True))
+    assert r.per_witness_custody[0].status == "LAB_CHAIN_PRESENT"
+    assert r.administrative_separation.status == "UNKNOWN"
+    assert r.administrative_separation.reason == "POST_HOLDER_COMPROMISE_RELEVANCE_UNRESOLVED"
+
+
+def test_issue130_benign_post_holder_transfer_remains_lab_positive():
+    r = check(_post_holder_case(direct=True))
+    assert r.per_witness_custody[0].status == "LAB_CHAIN_PRESENT"
+    assert r.administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
+
+
+def test_issue130_other_artifact_transfer_does_not_contaminate():
+    r = check(_post_holder_case(direct=True, compromised=True, other_artifact=True))
+    assert r.per_witness_custody[0].status == "LAB_CHAIN_PRESENT"
+    assert r.administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
+
+
+def test_issue130_disconnected_compromised_custodian_does_not_contaminate():
+    c = baseline()
+    c = edit(c, nodes=c.graph.nodes + (node("disconnected-custodian", "CUSTODIAN"),),
+             compromised_node_ids=("disconnected-custodian",))
+    r = check(c)
+    assert r.administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
+
+
+def test_issue130_shared_storage_precedes_post_holder_unknown():
+    """A demonstrated shared object must never be hidden by temporal uncertainty."""
+    c = _post_holder_case(direct=True, compromised=True)
+    c = replace_node(c, "store-b", object_identity="DISK-A")
+    r = check(c)
+    assert r.storage_separation.status == "SAME_STORAGE_OBJECT"
+    assert r.administrative_separation.status == "COMMON_CONTROL_DETECTED"
+    assert r.administrative_separation.reason == "SHARED_STORAGE_OBJECT"
+
+
+def test_issue130_nonincreasing_post_holder_edge_not_later():
+    """An edge before arrival at the nominated holder is not post-holder."""
+    c = _post_holder_case(direct=False, compromised=True)
+    c = replace_edge(c, "post-transfer-a", sequence=2)
+    r = check(c)
+    assert r.per_witness_custody[0].status == "LAB_CHAIN_PRESENT"
+    assert r.administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
+
+
+def test_issue130_post_holder_parallel_state_convergence_reaches_compromise():
+    """Converging edge states cannot hide a later compromised target."""
+    c = _post_holder_case(direct=True, deep=True, compromised=True)
+    c = edit(c, edges=c.graph.edges + (
+        edge("parallel-post-transfer-a", "holder-a", "post-tail-a",
+             "TRANSFERRED_TO", subject_artifact_ref="artifact-a", sequence=5),
+    ))
+    r = check(c)
+    assert r.administrative_separation.status == "UNKNOWN"
+    assert r.administrative_separation.reason == "POST_HOLDER_COMPROMISE_RELEVANCE_UNRESOLVED"
+
+
+def test_issue130_interval_before_downstream_transfer_is_unknown_not_overlap_claim():
+    """A stale interval has unresolved relevance; no asserted temporal intersection."""
+    from dataclasses import replace
+    c = _post_holder_case(direct=True)
+    c = replace(c, compromise_intervals=(
+        p.CompromiseInterval("post-tail-a", 1, 2),
+    ))
+    r = check(c)
+    assert r.per_witness_custody[0].status == "LAB_CHAIN_PRESENT"
+    assert r.administrative_separation.status == "UNKNOWN"
+    assert r.administrative_separation.reason == "POST_HOLDER_COMPROMISE_RELEVANCE_UNRESOLVED"
+
+
+def test_issue130_interval_covering_downstream_transfer_is_still_unknown():
+    """Even coincident LAB sequences do not establish current-holder semantics."""
+    from dataclasses import replace
+    c = _post_holder_case(direct=True)
+    c = replace(c, compromise_intervals=(
+        p.CompromiseInterval("post-tail-a", 4, 6),
+    ))
+    r = check(c)
+    assert r.administrative_separation.status == "UNKNOWN"
+    assert r.administrative_separation.reason == "POST_HOLDER_COMPROMISE_RELEVANCE_UNRESOLVED"
+
+
+def test_issue130_selected_holder_compromise_keeps_stronger_result():
+    """Established selected-path compromise outranks downstream uncertainty."""
+    c = _post_holder_case(direct=True, compromised=True)
+    c = edit(c, compromised_node_ids=("holder-a", "post-tail-a"))
+    r = check(c)
+    assert r.administrative_separation.status == "COMPROMISED_BY_SCENARIO"
+    assert r.administrative_separation.reason == "EXPLICIT_CONTROL_OR_STORAGE_COMPROMISE"
+
+
+def test_issue130_disconnected_compromise_interval_not_relevant():
+    """Historical interval for unrelated custodian does not taint witness."""
+    from dataclasses import replace
+    c = _post_holder_case(direct=True)
+    c = edit(c, nodes=c.graph.nodes + (node("unrelated-c", "CUSTODIAN"),))
+    c = replace(c, compromise_intervals=(p.CompromiseInterval("unrelated-c", 1, 6),))
+    r = check(c)
+    assert r.administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
+
+
+def test_issue130_compromise_interval_equal_receipt_boundary_is_unknown():
+    c = _post_holder_case(direct=True)
+    c = replace(c, compromise_intervals=(p.CompromiseInterval("post-tail-a", 2, 5),))
+    r = check(c)
+    assert r.administrative_separation.status == "UNKNOWN"
+    assert r.administrative_separation.reason == "POST_HOLDER_COMPROMISE_RELEVANCE_UNRESOLVED"
+
+
+def test_issue130_open_ended_downstream_interval_is_unknown():
+    c = _post_holder_case(direct=True)
+    c = replace(c, compromise_intervals=(p.CompromiseInterval("post-tail-a", 5, None),))
+    r = check(c)
+    assert r.administrative_separation.status == "UNKNOWN"
+    assert r.administrative_separation.reason == "POST_HOLDER_COMPROMISE_RELEVANCE_UNRESOLVED"
+
+
+def test_issue130_future_compromise_remains_unknown_without_evaluation_time():
+    c = _post_holder_case(direct=True)
+    c = replace(c, compromise_intervals=(p.CompromiseInterval("post-tail-a", 11, 12),))
+    r = check(c)
+    # mutation_sequence in v0.1 is NOT a custody evaluation-time field.
+    assert r.administrative_separation.status == "UNKNOWN"
+    assert r.administrative_separation.reason == "POST_HOLDER_COMPROMISE_RELEVANCE_UNRESOLVED"
+
+
+def test_issue130_selected_common_controller_outranks_downstream_unknown():
+    c = _post_holder_case(direct=True, compromised=True)
+    c = replace_edge(c, "admin-b", source="root-a")
+    r = check(c)
+    assert r.administrative_separation.status == "COMMON_CONTROL_DETECTED"
+    assert r.administrative_separation.reason == "SHARED_MUTATION_CONTROLLER"
+
+
+def test_issue130_unsupported_downstream_edge_cannot_rehabilitate_custody():
+    c = _post_holder_case(direct=True, compromised=True)
+    c = replace_edge(c, "post-transfer-a", origin=p.CANDIDATE)
+    r = check(c)
+    assert r.administrative_separation.status != "LAB_CONDITIONALLY_SEPARATE"
+    assert r.administrative_separation.status == "UNKNOWN"
+    assert "post-transfer-a" in r.unsupported_claims
+
+
+def test_issue130_cross_scope_downstream_node_refuses_positive_separation():
+    c = _post_holder_case(direct=True, compromised=True)
+    c = replace_node(c, "post-tail-a", scope="FOREIGN-SYNTHETIC-SCOPE")
+    r = check(c)
+    assert r.administrative_separation.status != "LAB_CONDITIONALLY_SEPARATE"
+    assert r.administrative_separation.status == "UNKNOWN"
+
+
+def test_issue130_compromise_after_onward_transfer_still_has_unknown_relevance():
+    c = _post_holder_case(direct=True, deep=True)
+    c = replace(c, compromise_intervals=(p.CompromiseInterval("post-tail-a", 7, 8),))
+    r = check(c)
+    assert r.administrative_separation.status == "UNKNOWN"
+    assert r.administrative_separation.reason == "POST_HOLDER_COMPROMISE_RELEVANCE_UNRESOLVED"
+
