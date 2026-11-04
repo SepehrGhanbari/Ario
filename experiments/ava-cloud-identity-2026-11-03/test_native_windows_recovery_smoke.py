@@ -19,6 +19,13 @@ import ario_ava_cloud_50 as exp
 
 @unittest.skipUnless(os.name == "nt", "Only a native Windows run has evidentiary value here")
 class WindowsNativeScratchTests(unittest.TestCase):
+    def test_letter_exact_checkout_bytes_no_silent_crlf_change(self):
+        source = Path(__file__).with_name(
+            "ARIO_IDENTITY_INTERIM_FINDINGS_LETTER_FA_2026-11-03.md")
+        raw = source.read_bytes()
+        self.assertEqual(exp.sha(raw), exp.LETTER_SHA256,
+                         "Letter checkout bytes differ; inspect Windows line ending conversion")
+
     def test_lock_exact_binary_bytes_and_cleanup(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp)
