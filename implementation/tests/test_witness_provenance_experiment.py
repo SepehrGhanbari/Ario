@@ -743,3 +743,34 @@ def test_issue130_disconnected_compromised_custodian_does_not_contaminate():
              compromised_node_ids=("disconnected-custodian",))
     r = check(c)
     assert r.administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
+
+
+def test_issue130_shared_storage_precedes_post_holder_unknown():
+    """A demonstrated shared object must never be hidden by temporal uncertainty."""
+    c = _post_holder_case(direct=True, compromised=True)
+    c = replace_node(c, "store-b", object_identity="DISK-A")
+    r = check(c)
+    assert r.storage_separation.status == "SAME_STORAGE_OBJECT"
+    assert r.administrative_separation.status == "COMMON_CONTROL_DETECTED"
+    assert r.administrative_separation.reason == "SHARED_STORAGE_OBJECT"
+
+
+def test_issue130_nonincreasing_post_holder_edge_not_later():
+    """An edge before arrival at the nominated holder is not post-holder."""
+    c = _post_holder_case(direct=False, compromised=True)
+    c = replace_edge(c, "post-transfer-a", sequence=2)
+    r = check(c)
+    assert r.per_witness_custody[0].status == "LAB_CHAIN_PRESENT"
+    assert r.administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
+
+
+def test_issue130_post_holder_parallel_state_convergence_reaches_compromise():
+    """Converging edge states cannot hide a later compromised target."""
+    c = _post_holder_case(direct=True, deep=True, compromised=True)
+    c = edit(c, edges=c.graph.edges + (
+        edge("parallel-post-transfer-a", "holder-a", "post-tail-a",
+             "TRANSFERRED_TO", subject_artifact_ref="artifact-a", sequence=5),
+    ))
+    r = check(c)
+    assert r.administrative_separation.status == "UNKNOWN"
+    assert r.administrative_separation.reason == "POST_HOLDER_COMPROMISE_RELEVANCE_UNRESOLVED"
