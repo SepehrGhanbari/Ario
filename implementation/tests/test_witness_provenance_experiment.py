@@ -774,3 +774,47 @@ def test_issue130_post_holder_parallel_state_convergence_reaches_compromise():
     r = check(c)
     assert r.administrative_separation.status == "UNKNOWN"
     assert r.administrative_separation.reason == "POST_HOLDER_COMPROMISE_RELEVANCE_UNRESOLVED"
+
+
+def test_issue130_interval_before_downstream_transfer_is_unknown_not_overlap_claim():
+    """A stale interval has unresolved relevance; no asserted temporal intersection."""
+    from dataclasses import replace
+    c = _post_holder_case(direct=True)
+    c = replace(c, compromise_intervals=(
+        p.CompromiseInterval("post-tail-a", 1, 2),
+    ))
+    r = check(c)
+    assert r.per_witness_custody[0].status == "LAB_CHAIN_PRESENT"
+    assert r.administrative_separation.status == "UNKNOWN"
+    assert r.administrative_separation.reason == "POST_HOLDER_COMPROMISE_RELEVANCE_UNRESOLVED"
+
+
+def test_issue130_interval_covering_downstream_transfer_is_still_unknown():
+    """Even coincident LAB sequences do not establish current-holder semantics."""
+    from dataclasses import replace
+    c = _post_holder_case(direct=True)
+    c = replace(c, compromise_intervals=(
+        p.CompromiseInterval("post-tail-a", 4, 6),
+    ))
+    r = check(c)
+    assert r.administrative_separation.status == "UNKNOWN"
+    assert r.administrative_separation.reason == "POST_HOLDER_COMPROMISE_RELEVANCE_UNRESOLVED"
+
+
+def test_issue130_selected_holder_compromise_keeps_stronger_result():
+    """Established selected-path compromise outranks downstream uncertainty."""
+    c = _post_holder_case(direct=True, compromised=True)
+    c = edit(c, compromised_node_ids=("holder-a", "post-tail-a"))
+    r = check(c)
+    assert r.administrative_separation.status == "COMPROMISED_BY_SCENARIO"
+    assert r.administrative_separation.reason == "EXPLICIT_CONTROL_OR_STORAGE_COMPROMISE"
+
+
+def test_issue130_disconnected_compromise_interval_not_relevant():
+    """Historical interval for unrelated custodian does not taint witness."""
+    from dataclasses import replace
+    c = _post_holder_case(direct=True)
+    c = edit(c, nodes=c.graph.nodes + (node("unrelated-c", "CUSTODIAN"),))
+    c = replace(c, compromise_intervals=(p.CompromiseInterval("unrelated-c", 1, 6),))
+    r = check(c)
+    assert r.administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
