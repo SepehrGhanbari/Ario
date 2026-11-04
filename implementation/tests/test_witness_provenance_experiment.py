@@ -681,3 +681,65 @@ def test_issue129_compromised_alias_of_direct_witness_store_fails_closed():
     report = check(c)
     assert report.administrative_separation.status == "COMPROMISED_BY_SCENARIO"
     assert report.administrative_separation.reason == "EXPLICIT_CONTROL_OR_STORAGE_COMPROMISE"
+
+
+# #130 characterization: post-holder compromise is temporally ambiguous in v0.1.
+# These tests propose conservative UNKNOWN rather than inventing a current-holder contract.
+def _post_holder_case(*, direct=True, deep=False, compromised=False,
+                      other_artifact=False):
+    c = baseline()
+    if direct:
+        c = replace_node(c, "capture-a", capture_custodian="holder-a")
+        c = no_edge(c, "transfer-a")
+    new_nodes = [node("post-tail-a", "CUSTODIAN")]
+    edges = [edge(
+        "post-transfer-a", "holder-a", "post-tail-a", "TRANSFERRED_TO",
+        subject_artifact_ref="artifact-b" if other_artifact else "artifact-a",
+        sequence=5,
+    )]
+    if deep:
+        new_nodes.append(node("post-second-a", "CUSTODIAN"))
+        edges.append(edge(
+            "post-transfer-a-2", "post-tail-a", "post-second-a",
+            "TRANSFERRED_TO", subject_artifact_ref="artifact-a", sequence=6,
+        ))
+    target = "post-second-a" if deep else "post-tail-a"
+    return edit(
+        c, nodes=c.graph.nodes + tuple(new_nodes),
+        edges=c.graph.edges + tuple(edges),
+        compromised_node_ids=(target,) if compromised else (),
+    )
+
+
+def test_issue130_compromised_direct_post_holder_requires_unknown():
+    r = check(_post_holder_case(direct=True, compromised=True))
+    assert r.per_witness_custody[0].status == "LAB_CHAIN_PRESENT"
+    assert r.administrative_separation.status == "UNKNOWN"
+    assert r.administrative_separation.reason == "POST_HOLDER_COMPROMISE_RELEVANCE_UNRESOLVED"
+
+
+def test_issue130_compromised_multihop_post_holder_requires_unknown():
+    r = check(_post_holder_case(direct=False, deep=True, compromised=True))
+    assert r.per_witness_custody[0].status == "LAB_CHAIN_PRESENT"
+    assert r.administrative_separation.status == "UNKNOWN"
+    assert r.administrative_separation.reason == "POST_HOLDER_COMPROMISE_RELEVANCE_UNRESOLVED"
+
+
+def test_issue130_benign_post_holder_transfer_remains_lab_positive():
+    r = check(_post_holder_case(direct=True))
+    assert r.per_witness_custody[0].status == "LAB_CHAIN_PRESENT"
+    assert r.administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
+
+
+def test_issue130_other_artifact_transfer_does_not_contaminate():
+    r = check(_post_holder_case(direct=True, compromised=True, other_artifact=True))
+    assert r.per_witness_custody[0].status == "LAB_CHAIN_PRESENT"
+    assert r.administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
+
+
+def test_issue130_disconnected_compromised_custodian_does_not_contaminate():
+    c = baseline()
+    c = edit(c, nodes=c.graph.nodes + (node("disconnected-custodian", "CUSTODIAN"),),
+             compromised_node_ids=("disconnected-custodian",))
+    r = check(c)
+    assert r.administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
