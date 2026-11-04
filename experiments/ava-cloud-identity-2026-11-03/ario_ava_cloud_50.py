@@ -71,7 +71,7 @@ class ExclusiveRunLock:
         self.identity = None
 
     def assert_owned(self):
-        if self.raw is None or self.identity is None or self.path.is_symlink():
+        if self.raw is None or self.identity is None or self.folder.is_symlink() or self.path.is_symlink():
             raise Hold("WRITER_LOCK_OWNERSHIP_UNVERIFIED")
         try:
             info = self.path.stat()
@@ -82,7 +82,11 @@ class ExclusiveRunLock:
             raise Hold("WRITER_LOCK_MISSING_OR_MODIFIED_STOP") from exc
 
     def __enter__(self):
+        if self.folder.is_symlink():
+            raise Hold("RUN_FOLDER_SYMLINK_REFUSED")
         self.folder.mkdir(parents=True, exist_ok=True)
+        if self.folder.is_symlink():
+            raise Hold("RUN_FOLDER_SYMLINK_REFUSED")
         self.raw = canonical({"pid": os.getpid(), "started_utc": now(),
                               "nonce": secrets.token_hex(16)}) + b"\n"
         try:
