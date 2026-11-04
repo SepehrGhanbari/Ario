@@ -303,7 +303,7 @@ def run(ledger: Ledger, letter: str, key: str | None,
         raise Hold("PREVIOUS_STOP_OR_LOOP_REQUIRES_REVIEW")
     if any(e["kind"] == "PAUSE" and (
            e["data"].get("status") == "PAUSED_FOR_REVIEW" or
-           e["data"].get("reason") == "INVALID_PROVIDER_JSON"
+           e["data"].get("reason") in ("INVALID_PROVIDER_JSON", "HTTP_ERROR")
            ) for e in ledger.events):
         # Older ledgers recorded INVALID_PROVIDER_JSON without a status.
         # This legacy event is still ambiguous and must never auto-resume.
@@ -335,8 +335,11 @@ def run(ledger: Ledger, letter: str, key: str | None,
             raw = transport(payload, key)
         except urllib.error.HTTPError as exc:
             status = int(exc.code)
+            # Even HTTP 429/500 cannot prove the provider did not
+            # complete/bill a request. Require explicit reviewed
+            # reconciliation before ever retrying this logical turn.
             ledger.add("PAUSE", attempt_seq=attempt_seq, reason="HTTP_ERROR", http_code=status,
-                       status="PAUSED_RATE_LIMIT" if status == 429 else "PAUSED_PROVIDER_ERROR")
+                       status="PAUSED_FOR_REVIEW")
             return "PAUSED_RATE_LIMIT" if status == 429 else "PAUSED_PROVIDER_ERROR"
         except (json.JSONDecodeError, UnicodeDecodeError, http.client.IncompleteRead) as exc:
             # The server may already have processed the request. Preserve
