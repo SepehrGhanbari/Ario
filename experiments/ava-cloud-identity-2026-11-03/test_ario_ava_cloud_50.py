@@ -312,5 +312,74 @@ class RunnerTests(unittest.TestCase):
 
 
 
+    def test_provider_transport_refuses_without_owned_writer_lock(self):
+        temp, ledger = seeded(goal=1)
+        with temp:
+            with self.assertRaisesRegex(exp.Hold, "LIVE_DISPATCH_REQUIRES_WRITER_LOCK"):
+                exp.run(ledger, LETTER, "synthetic-no-call", transport=exp.send)
+            self.assertFalse(ledger.items("ATTEMPT"))
+
+    def test_lock_disappears_during_first_reply_no_second_dispatch(self):
+        temp, ledger = seeded(goal=2)
+        with temp:
+            lock = exp.ExclusiveRunLock(ledger.folder)
+            calls = []
+            def tamper_transport(_request, _secret):
+                calls.append(1)
+                lock.path.write_bytes(b"interfering actor")
+                return {"model": exp.MODEL, "id": "tamper",
+                        "choices": [{"message": {"content": "one"}, "finish_reason": "stop"}]}
+            with self.assertRaisesRegex(exp.Hold, "WRITER_LOCK_"):
+                with lock:
+                    exp.run(ledger, LETTER, "local-not-logged",
+                            tamper_transport, writer_lock=lock)
+            self.assertEqual(len(calls), 1)
+            self.assertFalse(ledger.items("REPLY"))
+
+    def test_clean_owned_lock_allows_fake_transport(self):
+        temp, ledger = seeded(goal=1)
+        with temp:
+            with exp.ExclusiveRunLock(ledger.folder) as lock:
+                self.assertEqual(exp.run(ledger, LETTER, "local-not-logged",
+                                         Fake(), writer_lock=lock),
+                                 "PAUSED_OPEN_WINDOW_REACHED")
+            self.assertEqual(len(ledger.items("REPLY")), 1)
+            self.assertFalse(lock.path.exists())
+
+    def test_ledger_symlink_is_refused_without_touching_target(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp)
+            folder = p / "run"
+            folder.mkdir()
+            outside = p / "other.jsonl"
+            outside.write_bytes(b"ORIGINAL\n")
+            link = folder / "events.jsonl"
+            try:
+                link.symlink_to(outside)
+            except (OSError, NotImplementedError) as e:
+                self.skipTest(f"symlinks unavailable: {type(e).__name__}")
+            with self.assertRaisesRegex(exp.Hold, "LEDGER_SYMLINK"):
+                exp.Ledger(folder)
+            self.assertEqual(outside.read_bytes(), b"ORIGINAL\n")
+
+    def test_symlink_replacement_before_append_is_refused(self):
+        temp, ledger = seeded(goal=1)
+        with temp:
+            outside = ledger.folder.parent / (ledger.folder.name + "_external.txt")
+            outside.write_bytes(b"SAFE\n")
+            try:
+                ledger.path.unlink()
+                ledger.path.symlink_to(outside)
+            except (OSError, NotImplementedError) as e:
+                self.skipTest(f"symlinks unavailable: {type(e).__name__}")
+            try:
+                with self.assertRaisesRegex(exp.Hold, "LEDGER_SYMLINK"):
+                    ledger.add("NEVER", example="external")
+                self.assertEqual(outside.read_bytes(), b"SAFE\n")
+            finally:
+                outside.unlink(missing_ok=True)
+
+
+
 if __name__ == "__main__":
     unittest.main()
