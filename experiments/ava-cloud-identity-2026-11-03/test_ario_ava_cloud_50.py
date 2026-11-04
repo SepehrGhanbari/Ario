@@ -205,5 +205,77 @@ class RunnerTests(unittest.TestCase):
             self.assertFalse(ledger.items("WINDOW_REACHED_OPEN"))
 
 
+    def test_invalid_provider_shape_requires_review_before_retry(self):
+        temp, ledger = seeded(goal=2)
+        with temp:
+            calls = []
+            def invalid(_payload, _key):
+                calls.append("request")
+                return []
+            self.assertEqual(exp.run(ledger, LETTER, "local-not-logged", invalid),
+                             "PAUSED_INVALID_RESPONSE")
+            self.assertEqual(len(calls), 1)
+            pause = ledger.items("PAUSE")[-1]
+            self.assertEqual(pause["data"]["status"], "PAUSED_FOR_REVIEW")
+            fresh = exp.Ledger(ledger.folder)
+            retry = Fake()
+            with self.assertRaisesRegex(exp.Hold, "REVIEW"):
+                exp.run(fresh, LETTER, "local-not-logged", retry)
+            self.assertFalse(retry.calls)
+
+    def test_legacy_invalid_shape_pause_also_blocks_resume(self):
+        temp, ledger = seeded(goal=2)
+        with temp:
+            ledger.add("ATTEMPT", attempt_seq=1, speaker="A", expected_turn=1)
+            ledger.add("PAUSE", attempt_seq=1, reason="INVALID_PROVIDER_JSON")
+            retry = Fake()
+            with self.assertRaisesRegex(exp.Hold, "REVIEW"):
+                exp.run(exp.Ledger(ledger.folder), LETTER, "local-not-logged", retry)
+            self.assertFalse(retry.calls)
+
+    def test_failed_provider_body_decode_records_review_pause(self):
+        temp, ledger = seeded(goal=2)
+        with temp:
+            def broken(_payload, _key):
+                raise json.JSONDecodeError("not JSON", "<html>", 0)
+            self.assertEqual(exp.run(ledger, LETTER, "local-not-logged", broken),
+                             "PAUSED_INVALID_RESPONSE")
+            self.assertEqual(ledger.items("PAUSE")[-1]["data"]["status"],
+                             "PAUSED_FOR_REVIEW")
+            self.assertFalse(ledger.items("REPLY"))
+
+    def test_crash_after_stop_reply_must_not_dispatch_again(self):
+        temp, ledger = seeded(goal=2)
+        with temp:
+            ledger.add("ATTEMPT", attempt_seq=1, speaker="A", expected_turn=1)
+            ledger.add("REPLY", attempt_seq=1, speaker="A", turn=1,
+                       content="[[END_DIALOGUE]]")
+            retry = Fake()
+            with self.assertRaisesRegex(exp.Hold, "STOP.*REVIEW"):
+                exp.run(exp.Ledger(ledger.folder), LETTER, "local-not-logged", retry)
+            self.assertFalse(retry.calls)
+
+    def test_windows_binary_file_flags_are_explicit(self):
+        from unittest.mock import patch
+        import os
+        original = os.open
+        marker = 1 << 27
+        flags_seen = []
+        def fake_open(path, flags, mode=0o777, *, dir_fd=None):
+            if str(path).endswith((".run_writer.lock", "events.jsonl")):
+                flags_seen.append((str(path), flags))
+            if dir_fd is not None:
+                return original(path, flags & ~marker, mode, dir_fd=dir_fd)
+            return original(path, flags & ~marker, mode)
+        with tempfile.TemporaryDirectory() as temp:
+            p = Path(temp)
+            with patch.object(exp.os, "O_BINARY", marker, create=True):
+                with patch.object(exp.os, "open", side_effect=fake_open):
+                    with exp.ExclusiveRunLock(p):
+                        exp.Ledger(p).add("PROBE", evidence="synthetic")
+        names = {Path(path).name for path, flags in flags_seen if flags & marker}
+        self.assertEqual(names, {".run_writer.lock", "events.jsonl"})
+
+
 if __name__ == "__main__":
     unittest.main()
