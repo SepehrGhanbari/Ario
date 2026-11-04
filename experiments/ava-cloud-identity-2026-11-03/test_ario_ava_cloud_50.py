@@ -397,5 +397,69 @@ class RunnerTests(unittest.TestCase):
             self.assertFalse((outside / ".run_writer.lock").exists())
 
 
+    def test_last_reply_stop_crash_does_not_claim_open_window(self):
+        temp, ledger = seeded(goal=1)
+        with temp:
+            ledger.add("ATTEMPT", attempt_seq=1, speaker="A", expected_turn=1)
+            ledger.add("REPLY", attempt_seq=1, speaker="A", turn=1,
+                       content="[[END_DIALOGUE]]")
+            old_count = len(ledger.events)
+            with self.assertRaisesRegex(exp.Hold, "PREVIOUS_STOP_MARKER_REQUIRES_REVIEW"):
+                exp.run(ledger, LETTER, "local-not-logged", Fake())
+            self.assertEqual(len(ledger.events), old_count)
+            self.assertFalse(ledger.items("WINDOW_REACHED_OPEN"))
+
+    def test_completed_window_still_honors_ambiguous_pause(self):
+        temp, ledger = seeded(goal=1)
+        with temp:
+            ledger.add("ATTEMPT", attempt_seq=1, speaker="A", expected_turn=1)
+            ledger.add("REPLY", attempt_seq=1, speaker="A", turn=1, content="Normal")
+            ledger.add("PAUSE", attempt_seq=2, reason="HTTP_ERROR", status="PAUSED_FOR_REVIEW")
+            old_count = len(ledger.events)
+            with self.assertRaisesRegex(exp.Hold, "PREVIOUS_UNRESOLVED_REVIEW_PAUSE"):
+                exp.run(ledger, LETTER, "local-not-logged", Fake())
+            self.assertEqual(len(ledger.events), old_count)
+            self.assertFalse(ledger.items("WINDOW_REACHED_OPEN"))
+
+    def test_lock_cannot_protect_another_ledger_folder(self):
+        temp, ledger = seeded(goal=1)
+        with temp:
+            with tempfile.TemporaryDirectory() as other:
+                with exp.ExclusiveRunLock(Path(other)) as unrelated_lock:
+                    calls = Fake()
+                    with self.assertRaisesRegex(exp.Hold, "LOCK_LEDGER_DIR_MISMATCH"):
+                        exp.run(ledger, LETTER, "local-not-logged",
+                                calls, writer_lock=unrelated_lock)
+                    self.assertFalse(calls.calls)
+                    self.assertFalse(ledger.items("ATTEMPT"))
+
+    def test_replaced_regular_ledger_rejected_before_append(self):
+        temp, ledger = seeded(goal=1)
+        with temp:
+            original = ledger.path.read_bytes()
+            ledger.path.unlink()
+            ledger.path.write_bytes(original)
+            before = ledger.path.read_bytes()
+            with self.assertRaisesRegex(exp.Hold, "LEDGER_REPLACED"):
+                ledger.add("SHOULD_NOT_WRITE", why="different inode")
+            self.assertEqual(ledger.path.read_bytes(), before)
+            self.assertFalse(ledger.items("SHOULD_NOT_WRITE"))
+
+    def test_hardlinked_ledger_rejected_before_append(self):
+        import os
+        temp, ledger = seeded(goal=1)
+        with temp:
+            external = ledger.folder / "other-link.jsonl"
+            try:
+                os.link(ledger.path, external)
+            except (OSError, NotImplementedError) as exc:
+                self.skipTest("hardlink unavailable: " + type(exc).__name__)
+            before = ledger.path.read_bytes()
+            with self.assertRaisesRegex(exp.Hold, "LEDGER_MULTIPLE_LINKS"):
+                ledger.add("SHOULD_NOT_WRITE", why="hardlink alias")
+            self.assertEqual(ledger.path.read_bytes(), before)
+
+
+
 if __name__ == "__main__":
     unittest.main()
