@@ -818,3 +818,62 @@ def test_issue130_disconnected_compromise_interval_not_relevant():
     c = replace(c, compromise_intervals=(p.CompromiseInterval("unrelated-c", 1, 6),))
     r = check(c)
     assert r.administrative_separation.status == "LAB_CONDITIONALLY_SEPARATE"
+
+
+def test_issue130_compromise_interval_equal_receipt_boundary_is_unknown():
+    c = _post_holder_case(direct=True)
+    c = replace(c, compromise_intervals=(p.CompromiseInterval("post-tail-a", 2, 5),))
+    r = check(c)
+    assert r.administrative_separation.status == "UNKNOWN"
+    assert r.administrative_separation.reason == "POST_HOLDER_COMPROMISE_RELEVANCE_UNRESOLVED"
+
+
+def test_issue130_open_ended_downstream_interval_is_unknown():
+    c = _post_holder_case(direct=True)
+    c = replace(c, compromise_intervals=(p.CompromiseInterval("post-tail-a", 5, None),))
+    r = check(c)
+    assert r.administrative_separation.status == "UNKNOWN"
+    assert r.administrative_separation.reason == "POST_HOLDER_COMPROMISE_RELEVANCE_UNRESOLVED"
+
+
+def test_issue130_future_compromise_remains_unknown_without_evaluation_time():
+    c = _post_holder_case(direct=True)
+    c = replace(c, compromise_intervals=(p.CompromiseInterval("post-tail-a", 11, 12),))
+    r = check(c)
+    # mutation_sequence in v0.1 is NOT a custody evaluation-time field.
+    assert r.administrative_separation.status == "UNKNOWN"
+    assert r.administrative_separation.reason == "POST_HOLDER_COMPROMISE_RELEVANCE_UNRESOLVED"
+
+
+def test_issue130_selected_common_controller_outranks_downstream_unknown():
+    c = _post_holder_case(direct=True, compromised=True)
+    c = replace_edge(c, "admin-b", source="root-a")
+    r = check(c)
+    assert r.administrative_separation.status == "COMMON_CONTROL_DETECTED"
+    assert r.administrative_separation.reason == "SHARED_MUTATION_CONTROLLER"
+
+
+def test_issue130_unsupported_downstream_edge_cannot_rehabilitate_custody():
+    c = _post_holder_case(direct=True, compromised=True)
+    c = replace_edge(c, "post-transfer-a", origin=p.CANDIDATE)
+    r = check(c)
+    assert r.administrative_separation.status != "LAB_CONDITIONALLY_SEPARATE"
+    assert r.administrative_separation.status == "UNKNOWN"
+    assert "post-transfer-a" in r.unsupported_claims
+
+
+def test_issue130_cross_scope_downstream_node_refuses_positive_separation():
+    c = _post_holder_case(direct=True, compromised=True)
+    c = replace_node(c, "post-tail-a", scope="FOREIGN-SYNTHETIC-SCOPE")
+    r = check(c)
+    assert r.administrative_separation.status != "LAB_CONDITIONALLY_SEPARATE"
+    assert r.administrative_separation.status == "UNKNOWN"
+
+
+def test_issue130_compromise_after_onward_transfer_still_has_unknown_relevance():
+    c = _post_holder_case(direct=True, deep=True)
+    c = replace(c, compromise_intervals=(p.CompromiseInterval("post-tail-a", 7, 8),))
+    r = check(c)
+    assert r.administrative_separation.status == "UNKNOWN"
+    assert r.administrative_separation.reason == "POST_HOLDER_COMPROMISE_RELEVANCE_UNRESOLVED"
+
