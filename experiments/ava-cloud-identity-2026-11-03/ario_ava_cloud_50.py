@@ -12,6 +12,7 @@ import hashlib
 import http.client
 import secrets
 import json
+import stat
 import os
 from pathlib import Path
 import re
@@ -67,6 +68,18 @@ class ExclusiveRunLock:
         self.folder = folder
         self.path = folder / ".run_writer.lock"
         self.raw = None
+        self.identity = None
+
+    def assert_owned(self):
+        if self.raw is None or self.identity is None or self.path.is_symlink():
+            raise Hold("WRITER_LOCK_OWNERSHIP_UNVERIFIED")
+        try:
+            info = self.path.stat()
+            if ((info.st_dev, info.st_ino) != self.identity
+                    or self.path.read_bytes() != self.raw):
+                raise Hold("WRITER_LOCK_MISSING_OR_MODIFIED_STOP")
+        except (FileNotFoundError, PermissionError, IsADirectoryError) as exc:
+            raise Hold("WRITER_LOCK_MISSING_OR_MODIFIED_STOP") from exc
 
     def __enter__(self):
         self.folder.mkdir(parents=True, exist_ok=True)
@@ -81,15 +94,15 @@ class ExclusiveRunLock:
             if count != len(self.raw):
                 raise Hold("SHORT_WRITER_LOCK_RECORD")
             os.fsync(fd)
+            info = os.fstat(fd)
+            self.identity = (info.st_dev, info.st_ino)
         finally:
             os.close(fd)
         return self
 
     def __exit__(self, _type, _value, _traceback):
-        if self.path.exists() and self.path.read_bytes() == self.raw:
-            self.path.unlink()
-        else:
-            raise Hold("WRITER_LOCK_MISSING_OR_MODIFIED_STOP")
+        self.assert_owned()
+        self.path.unlink()
         return False
 
 
@@ -97,6 +110,8 @@ class Ledger:
     def __init__(self, folder: Path):
         self.folder = folder
         self.path = folder / "events.jsonl"
+        if folder.is_symlink() or self.path.is_symlink():
+            raise Hold("LEDGER_SYMLINK_REFUSED")
         self.events = []
         self.hash = "0" * 64
         if self.path.exists():
@@ -126,9 +141,15 @@ class Ledger:
         digest = sha(canonical(item))
         complete = {**item, "event_sha256": digest}
         line = canonical(complete) + b"\n"
+        if self.folder.is_symlink() or self.path.is_symlink():
+            raise Hold("LEDGER_SYMLINK_REFUSED")
         self.folder.mkdir(parents=True, exist_ok=True)
-        fd = os.open(str(self.path), os.O_WRONLY | os.O_CREAT | os.O_APPEND | getattr(os, "O_BINARY", 0), 0o600)
+        fd = os.open(str(self.path),
+                     os.O_WRONLY | os.O_CREAT | os.O_APPEND |
+                     getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0), 0o600)
         try:
+            if not stat.S_ISREG(os.fstat(fd).st_mode):
+                raise Hold("LEDGER_NOT_REGULAR_FILE")
             offset = 0
             while offset < len(line):
                 wrote = os.write(fd, line[offset:])
@@ -277,7 +298,8 @@ def init_run(ledger: Ledger, letter: str, letter_sha: str, prior: list[dict],
 
 
 def run(ledger: Ledger, letter: str, key: str | None,
-        transport=send, max_new_calls: int | None = None) -> str:
+        transport=send, max_new_calls: int | None = None,
+        writer_lock: ExclusiveRunLock | None = None) -> str:
     init, previous = current(ledger)
     if init.get("protocol") != PROTOCOL or init.get("model") != MODEL or sha(letter.encode("utf-8")) != init.get("letter_sha256"):
         raise Hold("SEED_OR_PROTOCOL_CHANGED")
@@ -315,10 +337,14 @@ def run(ledger: Ledger, letter: str, key: str | None,
         raise Hold("PREVIOUS_STOP_MARKER_REQUIRES_REVIEW")
     if not key:
         return "PAUSED_MISSING_LOCAL_OPENROUTER_KEY"
+    if transport is send and writer_lock is None:
+        raise Hold("LIVE_DISPATCH_REQUIRES_WRITER_LOCK")
     sent = 0
     while achieved < target:
         if max_new_calls is not None and sent >= max_new_calls:
             return "PAUSED_CALL_BUDGET_REMAINING"
+        if writer_lock is not None:
+            writer_lock.assert_owned()
         who = "A" if len(previous) % 2 == 0 else "B"
         messages = make_messages(who, previous, letter)
         if sum(len(m["content"]) for m in messages) > 750_000:
@@ -332,8 +358,14 @@ def run(ledger: Ledger, letter: str, key: str | None,
                              model=MODEL, context_char_count=sum(map(lambda x: len(x["content"]), messages)))
         attempt_seq = attempt["data"]["attempt_seq"]
         try:
+            if writer_lock is not None:
+                writer_lock.assert_owned()
             raw = transport(payload, key)
+            if writer_lock is not None:
+                writer_lock.assert_owned()
         except urllib.error.HTTPError as exc:
+            if writer_lock is not None:
+                writer_lock.assert_owned()
             status = int(exc.code)
             # Even HTTP 429/500 cannot prove the provider did not
             # complete/bill a request. Require explicit reviewed
@@ -342,12 +374,16 @@ def run(ledger: Ledger, letter: str, key: str | None,
                        status="PAUSED_FOR_REVIEW")
             return "PAUSED_RATE_LIMIT" if status == 429 else "PAUSED_PROVIDER_ERROR"
         except (json.JSONDecodeError, UnicodeDecodeError, http.client.IncompleteRead) as exc:
+            if writer_lock is not None:
+                writer_lock.assert_owned()
             # The server may already have processed the request. Preserve
             # the attempt and require review instead of silently retrying.
             ledger.add("PAUSE", attempt_seq=attempt_seq, reason="INVALID_PROVIDER_BODY",
                        error_class=type(exc).__name__, status="PAUSED_FOR_REVIEW")
             return "PAUSED_INVALID_RESPONSE"
         except (TimeoutError, OSError, urllib.error.URLError) as exc:
+            if writer_lock is not None:
+                writer_lock.assert_owned()
             ledger.add("PAUSE", attempt_seq=attempt_seq, reason="NETWORK_DISPATCH_UNKNOWN",
                        error_class=type(exc).__name__, status="PAUSED_FOR_REVIEW")
             return "DISPATCH_UNKNOWN_NETWORK"
@@ -410,15 +446,15 @@ def main(argv=None) -> int:
         letter = raw.decode("utf-8")
         from contextlib import nullcontext
         guard = nullcontext() if args.status or args.print_transcript else ExclusiveRunLock(args.run_dir)
-        with guard:
+        with guard as owned_lock:
             ledger = Ledger(args.run_dir)
-            return main_locked(args, ledger, letter)
+            return main_locked(args, ledger, letter, writer_lock=owned_lock)
     except (Hold, OSError, UnicodeError, ValueError) as exc:
         print("HOLD:", exc, file=sys.stderr)
         return 2
 
 
-def main_locked(args, ledger: Ledger, letter: str) -> int:
+def main_locked(args, ledger: Ledger, letter: str, writer_lock=None) -> int:
     try:
         if not ledger.events:
             if args.status or args.print_transcript:
@@ -452,7 +488,7 @@ def main_locked(args, ledger: Ledger, letter: str) -> int:
                               "event_hash": ledger.hash}, ensure_ascii=False))
             return 0
         result = run(ledger, letter, os.environ.get("OPENROUTER_API_KEY"),
-                     max_new_calls=args.max_calls)
+                     max_new_calls=args.max_calls, writer_lock=writer_lock)
         print(result, "completed_messages=", len(current(ledger)[1]) - init["baseline_count"],
               "last_event_hash=", ledger.hash)
         return 0 if result.startswith("PAUSED_") else 2
