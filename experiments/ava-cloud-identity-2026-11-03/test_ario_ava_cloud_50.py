@@ -381,5 +381,21 @@ class RunnerTests(unittest.TestCase):
 
 
 
+    def test_symlink_run_folder_must_not_create_external_lock(self):
+        with tempfile.TemporaryDirectory() as temp:
+            top = Path(temp)
+            outside = top / "outside"
+            outside.mkdir()
+            link = top / "run-link"
+            try:
+                link.symlink_to(outside, target_is_directory=True)
+            except (OSError, NotImplementedError) as exc:
+                self.skipTest(f"directory symlinks unsupported: {type(exc).__name__}")
+            with self.assertRaisesRegex(exp.Hold, "RUN_FOLDER_SYMLINK_REFUSED"):
+                with exp.ExclusiveRunLock(link):
+                    pass
+            self.assertFalse((outside / ".run_writer.lock").exists())
+
+
 if __name__ == "__main__":
     unittest.main()
