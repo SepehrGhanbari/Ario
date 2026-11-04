@@ -94,17 +94,22 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(len(exp.current(ledger2)[1]), 50)
             self.assertEqual(exp.run(ledger2, LETTER, "local-not-logged", Fake()), "PAUSED_OPEN_WINDOW_REACHED")
 
-    def test_quota_pauses_and_resumes_without_rewriting_messages(self):
+    def test_quota_429_requires_review_and_preserves_existing_messages(self):
         temp, ledger = seeded(goal=3)
         with temp:
             fake = Fake(fail_at=2)
             self.assertEqual(exp.run(ledger, LETTER, "local-not-logged", fake), "PAUSED_RATE_LIMIT")
             self.assertEqual(len(ledger.items("REPLY")), 1)
             old_hash = ledger.items("REPLY")[0]["event_sha256"]
+            self.assertEqual(ledger.items("PAUSE")[-1]["data"]["status"],
+                             "PAUSED_FOR_REVIEW")
             new = exp.Ledger(ledger.folder)
-            self.assertEqual(exp.run(new, LETTER, "local-not-logged", Fake()), "PAUSED_OPEN_WINDOW_REACHED")
-            self.assertEqual(len(new.items("REPLY")), 3)
+            retry = Fake()
+            with self.assertRaisesRegex(exp.Hold, "REVIEW"):
+                exp.run(new, LETTER, "local-not-logged", retry)
+            self.assertEqual(len(new.items("REPLY")), 1)
             self.assertEqual(old_hash, new.items("REPLY")[0]["event_sha256"])
+            self.assertFalse(retry.calls)
 
     def test_explicit_stop_pauses_without_chasing_target(self):
         temp, ledger = seeded()
@@ -275,6 +280,36 @@ class RunnerTests(unittest.TestCase):
                         exp.Ledger(p).add("PROBE", evidence="synthetic")
         names = {Path(path).name for path, flags in flags_seen if flags & marker}
         self.assertEqual(names, {".run_writer.lock", "events.jsonl"})
+
+
+    def test_http_500_requires_review_before_retry(self):
+        temp, ledger = seeded(goal=2)
+        with temp:
+            def failed(_payload, _key):
+                raise HTTPError(exp.ENDPOINT, 500, "ambiguous gateway failure", {}, None)
+            self.assertEqual(exp.run(ledger, LETTER, "local-not-logged", failed),
+                             "PAUSED_PROVIDER_ERROR")
+            self.assertEqual(ledger.items("PAUSE")[-1]["data"]["status"],
+                             "PAUSED_FOR_REVIEW")
+            retry = Fake()
+            with self.assertRaisesRegex(exp.Hold, "REVIEW"):
+                exp.run(exp.Ledger(ledger.folder), LETTER, "local-not-logged", retry)
+            self.assertFalse(retry.calls)
+
+    def test_old_http_error_pauses_do_not_auto_resume(self):
+        for previous_status in ("PAUSED_RATE_LIMIT", "PAUSED_PROVIDER_ERROR"):
+            with self.subTest(previous_status=previous_status):
+                temp, ledger = seeded(goal=2)
+                with temp:
+                    ledger.add("ATTEMPT", attempt_seq=1, speaker="A", expected_turn=1)
+                    ledger.add("PAUSE", attempt_seq=1, reason="HTTP_ERROR",
+                               http_code=429 if previous_status == "PAUSED_RATE_LIMIT" else 500,
+                               status=previous_status)
+                    retry = Fake()
+                    with self.assertRaisesRegex(exp.Hold, "REVIEW"):
+                        exp.run(exp.Ledger(ledger.folder), LETTER, "local-not-logged", retry)
+                    self.assertFalse(retry.calls)
+
 
 
 if __name__ == "__main__":
