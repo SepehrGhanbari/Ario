@@ -254,6 +254,23 @@ def fetch_log_bytes(repo: str, commit_sha: str) -> bytes:
     return payload
 
 
+def regular_modes_at_commit(repo: str, commit_sha: str) -> dict[str, str]:
+    """Fetch canonical tree modes, refusing truncated or ambiguous metadata."""
+    require(isinstance(commit_sha, str) and SHA_RE.fullmatch(commit_sha),
+            "TREE_COMMIT_SHA_UNKNOWN")
+    c = api_request(f"/repos/{repo}/git/commits/{commit_sha}")
+    tree_sha = (c.get("tree") or {}).get("sha") if isinstance(c, dict) else None
+    require(isinstance(tree_sha, str) and SHA_RE.fullmatch(tree_sha),
+            "TREE_SHA_UNKNOWN")
+    tree = api_request(f"/repos/{repo}/git/trees/{tree_sha}?recursive=1")
+    require(isinstance(tree, dict) and tree.get("truncated") is False and
+            isinstance(tree.get("tree"), list) and len(tree["tree"]) < 10000,
+            "TREE_TRUNCATED_OR_OVERSIZED")
+    return {x["path"]: x["mode"] for x in tree["tree"]
+            if isinstance(x, dict) and x.get("type") == "blob"
+            and isinstance(x.get("path"), str) and isinstance(x.get("mode"), str)}
+
+
 def main() -> int:
     try:
         repo = os.environ.get("GITHUB_REPOSITORY", "")
@@ -276,11 +293,52 @@ def main() -> int:
         head_sha = pr.get("head", {}).get("sha", "")
         validate_log_append_only(fetch_log_bytes(repo, base_sha),
                                  fetch_log_bytes(repo, head_sha))
-        run_ids = set(record["red_run_ids"] + [record["green_run_id"]])
-        runs = {run_id: api_request(f"{base}/actions/runs/{run_id}")
-                for run_id in run_ids}
-        require(all((run.get("repository") or {}).get("full_name") == repo
-                    for run in runs.values()), "CROSS_REPOSITORY_CI_RUN")
+        base_modes = regular_modes_at_commit(repo, base_sha)
+        head_modes = regular_modes_at_commit(repo, head_sha)
+        require(all(base_modes.get(x.get("filename")) == "100644" and
+                    head_modes.get(x.get("filename")) == "100644" for x in files),
+                "NONREGULAR_OR_UNKNOWN_FILE_MODE")
+        expected_flow = api_request(f"{base}/actions/workflows/implementation-regression.yml")
+        require(isinstance(expected_flow, dict) and
+                type(expected_flow.get("id")) is int and
+                expected_flow.get("path") == ".github/workflows/implementation-regression.yml",
+                "REGRESSION_WORKFLOW_IDENTITY_UNKNOWN")
+        runs = {}
+        for run_id in set(record["red_run_ids"] + [record["green_run_id"]]):
+            run = api_request(f"{base}/actions/runs/{run_id}")
+            require(isinstance(run, dict) and
+                    run.get("workflow_id") == expected_flow["id"] and
+                    run.get("path") == expected_flow["path"],
+                    "UNEXPECTED_WORKFLOW_PRODUCER")
+            job_data = api_request(f"{base}/actions/runs/{run_id}/jobs?per_page=100")
+            require(isinstance(job_data, dict) and
+                    isinstance(job_data.get("jobs"), list) and
+                    type(job_data.get("total_count")) is int and
+                    0 < job_data["total_count"] < MAX_ITEMS and
+                    len(job_data["jobs"]) == job_data["total_count"],
+                    "INCOMPLETE_JOB_EVIDENCE")
+            outcome = "failure" if run_id in record["red_run_ids"] else "success"
+            require(any(
+                job.get("name") == "m0-regression" and
+                job.get("conclusion") == outcome and
+                any(step.get("name") == "Run M0 and runtime regression suites" and
+                    step.get("conclusion") == outcome for step in
+                    (job.get("steps") or []))
+                for job in job_data["jobs"]),
+                "REGRESSION_STEP_NOT_EXECUTED_AS_CLAIMED")
+            require((run.get("repository") or {}).get("full_name") == repo,
+                    "CROSS_REPOSITORY_CI_RUN")
+            if run_id in record["red_run_ids"]:
+                red_sha = run.get("head_sha")
+                require(isinstance(red_sha, str) and SHA_RE.fullmatch(red_sha)
+                        and red_sha != head_sha, "RED_NOT_PRIOR_HEAD")
+                comparison = api_request(f"{base}/compare/{red_sha}...{head_sha}")
+                require(isinstance(comparison, dict) and
+                        comparison.get("status") == "ahead" and
+                        (comparison.get("merge_base_commit") or {}).get("sha") == red_sha,
+                        "RED_NOT_VERIFIED_ANCESTOR")
+            run["jobs"] = job_data["jobs"]
+            runs[run_id] = run
         findings = validate_candidate(pr, record, files, reviews, threads, runs)
         latest = api_request(f"{base}/pulls/{number}")
         require(latest.get("state") == pr.get("state") and
