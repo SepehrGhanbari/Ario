@@ -211,5 +211,56 @@ class GateP0NegativeFixtures(unittest.TestCase):
         with self.assertRaises(GateError):
             validate_candidate(*case)
 
+
+
+# Independent offline API-collector controls. No GitHub network or credentials.
+class GateP0CollectorTests(unittest.TestCase):
+    def test_log_readback_verifies_exact_git_blob(self):
+        import base64
+        import hashlib
+        from unittest.mock import patch
+        import review_evidence_gate as g
+        payload = b"history preserved\n"
+        gitsha = hashlib.sha1(
+            b"blob " + str(len(payload)).encode("ascii") + b"\0" + payload).hexdigest()
+        response = {"type": "file", "encoding": "base64",
+                    "size": len(payload), "sha": gitsha,
+                    "content": base64.b64encode(payload).decode("ascii") + "\n"}
+        with patch.object(g, "api_request", return_value=response) as api:
+            self.assertEqual(g.fetch_log_bytes("SepehrGhanbari/Ario", "a" * 40),
+                             payload)
+        self.assertEqual(api.call_count, 1)
+
+    def test_log_readback_rejects_wrong_content_at_same_size(self):
+        import base64
+        import hashlib
+        from unittest.mock import patch
+        import review_evidence_gate as g
+        original = b"original\n"
+        tampered = b"changed!\n"
+        digest = hashlib.sha1(
+            b"blob " + str(len(original)).encode("ascii") + b"\0" + original).hexdigest()
+        response = {"type": "file", "encoding": "base64", "sha": digest,
+                    "size": len(tampered),
+                    "content": base64.b64encode(tampered).decode("ascii")}
+        with patch.object(g, "api_request", return_value=response):
+            with self.assertRaisesRegex(GateError, "LOG_BLOB_IDENTITY_MISMATCH"):
+                g.fetch_log_bytes("SepehrGhanbari/Ario", "a" * 40)
+
+    def test_git_tree_truncation_refuses_mode_evidence(self):
+        from unittest.mock import patch
+        import review_evidence_gate as g
+        commit = {"tree": {"sha": "b" * 40}}
+        incomplete = {"truncated": True, "tree": []}
+        with patch.object(g, "api_request", side_effect=[commit, incomplete]):
+            with self.assertRaisesRegex(GateError, "TREE_TRUNCATED_OR_OVERSIZED"):
+                g.regular_modes_at_commit("SepehrGhanbari/Ario", "a" * 40)
+
+    def test_no_prefix_change_even_after_new_append(self):
+        import review_evidence_gate as g
+        g.validate_log_append_only(b"original\n", b"original\nnew\n")
+        with self.assertRaisesRegex(GateError, "LOG_HISTORICAL_PREFIX_CHANGED"):
+            g.validate_log_append_only(b"original\n", b"altered!\nnew\n")
+
 if __name__ == "__main__":
     unittest.main()
