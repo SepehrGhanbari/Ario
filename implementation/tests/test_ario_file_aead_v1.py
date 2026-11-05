@@ -163,5 +163,58 @@ class ArioFileAeadResearchTests(unittest.TestCase):
                 lib.LocalIntegrityBaseline.capture(link)
 
 
+    def test_nested_untrusted_json_must_fail_as_refuse_not_recursionerror(self):
+        box, _ = self.seal()
+        hostile_receipt = (b"[" * 1500) + b"0" + (b"]" * 1500)
+        with self.assertRaisesRegex(lib.Refuse, "MALFORMED_ENVELOPE_OR_RECEIPT"):
+            self.open(box, hostile_receipt)
+
+    def test_symlink_unavailable_should_skip_not_error(self):
+        from unittest.mock import patch
+        with patch.object(Path, "symlink_to", side_effect=OSError("symlink privilege absent")):
+            with self.assertRaises(unittest.SkipTest):
+                self.test_symlink_alias_refused()
+
+    def test_baseline_uses_only_bounded_size_reads(self):
+        from unittest.mock import patch
+        class ReadGuard:
+            def __init__(self, base):
+                self.base = base
+            def __enter__(self):
+                self.base.__enter__()
+                return self
+            def __exit__(self, *args):
+                return self.base.__exit__(*args)
+            def read(self, size=-1):
+                if type(size) is not int or size <= 0:
+                    raise AssertionError("UNBOUNDED_FILE_READ")
+                return self.base.read(size)
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp) / "events.jsonl"
+            payload = (b"synthetic-long-archive:" + b"x" * 2700000)
+            p.write_bytes(payload)
+            old_fdopen = os.fdopen
+            def guarded_fdopen(fd, mode, *args, **kwargs):
+                return ReadGuard(old_fdopen(fd, mode, *args, **kwargs))
+            with patch.object(lib.os, "fdopen", side_effect=guarded_fdopen):
+                base = lib.LocalIntegrityBaseline.capture(p)
+            self.assertEqual(base.byte_count, len(payload))
+            self.assertEqual(base.content_sha256, lib.sha256(payload))
+
+    def test_visible_metadata_is_not_confidential(self):
+        box, receipt = self.seal(path="private/sensitive-research.jsonl",
+                                 kind="conversation-history")
+        self.assertIn(b"private/sensitive-research.jsonl", box)
+        self.assertIn(b"conversation-history", receipt)
+        self.assertNotIn(b"PRIVATE DEMO", box)
+
+    def test_old_valid_generation_remains_acceptable_without_external_pin(self):
+        box1, receipt1 = self.seal(data=b"old", path="history.jsonl", generation=1)
+        box2, receipt2 = self.seal(data=b"new", path="history.jsonl", generation=2)
+        self.assertEqual(self.open(box2, receipt2, path="history.jsonl", generation=2), b"new")
+        # This is a *limit* demonstration: choosing the old generation admits rollback.
+        self.assertEqual(self.open(box1, receipt1, path="history.jsonl", generation=1), b"old")
+
+
 if __name__ == "__main__":
     unittest.main()
