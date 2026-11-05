@@ -272,14 +272,25 @@ def main() -> int:
         files = fetch_limited(f"{base}/pulls/{number}/files")
         reviews = fetch_limited(f"{base}/pulls/{number}/reviews")
         threads = graphql_threads(owner, name, number)
+        base_sha = pr.get("base", {}).get("sha", "")
+        head_sha = pr.get("head", {}).get("sha", "")
+        validate_log_append_only(fetch_log_bytes(repo, base_sha),
+                                 fetch_log_bytes(repo, head_sha))
         run_ids = set(record["red_run_ids"] + [record["green_run_id"]])
         runs = {run_id: api_request(f"{base}/actions/runs/{run_id}")
                 for run_id in run_ids}
         require(all((run.get("repository") or {}).get("full_name") == repo
                     for run in runs.values()), "CROSS_REPOSITORY_CI_RUN")
-        for finding in validate_candidate(pr, record, files, reviews, threads, runs):
+        findings = validate_candidate(pr, record, files, reviews, threads, runs)
+        latest = api_request(f"{base}/pulls/{number}")
+        require(latest.get("state") == pr.get("state") and
+                latest.get("draft") == pr.get("draft") and
+                latest.get("base", {}).get("sha") == base_sha and
+                latest.get("head", {}).get("sha") == head_sha,
+                "PR_STATE_OR_BASE_CHANGED_DURING_AUDIT")
+        for finding in findings:
             print(finding)
-        print("GATE_RESULT=PASS_PROCESS_EVIDENCE_ONLY")
+        print("GATE_RESULT=PASS_PROCESS_EVIDENCE_ONLY_NO_MERGE_AUTHORITY")
         return 0
     except (GateError, OSError, TypeError, RecursionError) as exc:
         code = str(exc) if isinstance(exc, GateError) else type(exc).__name__
