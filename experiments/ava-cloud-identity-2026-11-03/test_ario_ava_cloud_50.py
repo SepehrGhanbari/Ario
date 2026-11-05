@@ -531,8 +531,8 @@ class RunnerTests(unittest.TestCase):
             with patch.object(exp.os, "write", side_effect=race_write):
                 ledger.add("SCRATCH_RACE", synthetic=True)
             self.assertEqual(injected, [True])
-            self.assertEqual(ledger.path.stat().st_size,
-                             len(original) + len(ledger.path.read_bytes()) - len(original))
+            self.assertGreater(ledger.path.stat().st_size, len(original))
+            self.assertEqual(ledger.path.read_bytes()[at:at + 1], replacement)
             # There is NO claim of prevention: damage is only detected on reload.
             with self.assertRaisesRegex(exp.Hold, "EVENT_CHAIN_MISMATCH"):
                 exp.Ledger(ledger.folder)
