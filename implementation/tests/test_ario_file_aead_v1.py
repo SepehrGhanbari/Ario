@@ -165,7 +165,7 @@ class ArioFileAeadResearchTests(unittest.TestCase):
 
     def test_nested_untrusted_json_must_fail_as_refuse_not_recursionerror(self):
         box, _ = self.seal()
-        hostile_receipt = (b"[" * 1500) + b"0" + (b"]" * 1500)
+        hostile_receipt = (b"[" * 20000) + b"0" + (b"]" * 20000)
         with self.assertRaisesRegex(lib.Refuse, "MALFORMED_ENVELOPE_OR_RECEIPT"):
             self.open(box, hostile_receipt)
 
