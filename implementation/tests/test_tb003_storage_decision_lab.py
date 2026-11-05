@@ -44,5 +44,48 @@ class TB003StorageOverlayTests(unittest.TestCase):
         self.assertEqual(r.proposed_inference, "BLOCK_SEPARATION_UNKNOWN")
 
 
+    def test_actual_v01_evaluator_retains_shared_storage_with_incomplete_control(self):
+        # Load the repository's frozen LAB fixtures, not a fabricated result.
+        import importlib.util
+        from dataclasses import replace
+        from pathlib import Path
+        path = Path(__file__).with_name("test_witness_provenance_experiment.py")
+        spec = importlib.util.spec_from_file_location("_tb003_existing_lab_fixtures", path)
+        self.assertIsNotNone(spec)
+        self.assertIsNotNone(spec.loader)
+        fixtures = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(fixtures)
+        case = fixtures.replace_node(fixtures.baseline(), "store-b",
+                                     object_identity="DISK-A")
+        case = replace(case, complete_control_surface=False)
+        original = fixtures.check(case)
+        self.assertEqual(original.storage_separation.status, "SAME_STORAGE_OBJECT")
+        self.assertEqual(original.administrative_separation.status, "UNKNOWN")
+        decision = inspect_separation(
+            administrative_status=original.administrative_separation.status,
+            storage_status=original.storage_separation.status)
+        self.assertEqual(decision.proposed_inference,
+                         "BLOCK_SEPARATION_KNOWN_SHARED_STORAGE")
+        self.assertEqual(original.production_custody_authenticity, "NOT_ESTABLISHED")
+
+    def test_actual_v01_evaluator_complete_storage_alias_control(self):
+        import importlib.util
+        from pathlib import Path
+        path = Path(__file__).with_name("test_witness_provenance_experiment.py")
+        spec = importlib.util.spec_from_file_location("_tb003_existing_control_fixture", path)
+        fixtures = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(fixtures)
+        case = fixtures.replace_node(fixtures.baseline(), "store-b",
+                                     object_identity="DISK-A")
+        result = fixtures.check(case)
+        self.assertEqual(result.storage_separation.status, "SAME_STORAGE_OBJECT")
+        self.assertEqual(result.administrative_separation.status, "COMMON_CONTROL_DETECTED")
+        decision = inspect_separation(
+            administrative_status=result.administrative_separation.status,
+            storage_status=result.storage_separation.status)
+        self.assertEqual(decision.proposed_inference,
+                         "BLOCK_SEPARATION_KNOWN_SHARED_STORAGE")
+
+
 if __name__ == "__main__":
     unittest.main()
