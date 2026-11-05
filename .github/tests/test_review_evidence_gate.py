@@ -103,6 +103,19 @@ class ReviewEvidenceGateTests(unittest.TestCase):
         with self.assertRaisesRegex(GateError, "INDEPENDENT_REVIEW_REPORTS_MAJOR"):
             validate_candidate(*case)
 
+    def test_edited_older_exact_head_major_is_not_hidden_by_newer_clean_review(self):
+        case = candidate()
+        older = dict(case[3][0])
+        older["body"] = "**Major** This remains a security blocker."
+        older["submitted_at"] = "2026-11-03T13:00:00Z"
+        newer = dict(case[3][0])
+        newer["body"] = "No blocker in this later comment."
+        newer["submitted_at"] = "2026-11-03T15:00:00Z"
+        case[3] = [older, newer]
+        with self.assertRaisesRegex(GateError, "INDEPENDENT_REVIEW_REPORTS_MAJOR"):
+            validate_candidate(*case)
+
+
     def test_red_must_come_from_same_branch(self):
         case = candidate()
         case[5][1201]["head_branch"] = "other-branch"

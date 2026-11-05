@@ -126,14 +126,14 @@ def validate_candidate(pr: dict, record: dict, files: list[dict],
         and review.get("commit_id") == head
     ]
     require(bool(matching), "NO_FRESH_INDEPENDENT_BOT_REVIEW_OF_HEAD")
-    # Do not mistake a COMMENTED review containing a new Major/Critical
-    # finding for a no-blocker decision. This is intentionally conservative;
-    # a later exact-head review without a blocker is needed.
-    latest = sorted(matching, key=lambda review: review.get("submitted_at") or "")[-1]
-    review_text = latest.get("body") or ""
-    require(not re.search(r"(?:\*\*|alt=[\"'])\s*(?:Major|Critical)\b",
-                          review_text, flags=re.IGNORECASE),
-            "INDEPENDENT_REVIEW_REPORTS_MAJOR_OR_CRITICAL")
+    # A review body can be edited without changing submitted_at. Checking
+    # only the newest review permits an edited older Major to be overlooked.
+    # Fail closed while ANY exact-head independent review contains a blocker.
+    for review in matching:
+        review_text = review.get("body") or ""
+        require(not re.search(r"(?:\*\*|alt=[\"'])\s*(?:Major|Critical)\b",
+                              review_text, flags=re.IGNORECASE),
+                "INDEPENDENT_REVIEW_REPORTS_MAJOR_OR_CRITICAL")
     require(not any(review.get("state") == "CHANGES_REQUESTED" for review in reviews),
             "CHANGES_REQUESTED_REVIEW_PRESENT")
     require(len(threads) < MAX_ITEMS, "REVIEW_THREADS_NOT_EXHAUSTIVELY_CHECKED")

@@ -388,3 +388,10 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - Initial source/test repair `0a7c5e7574e3bf0fc6c9db8706f3fd2e2d8a1860`; Actions `42049580534`: gate-unit-tests SUCCESS, trusted-main job FAILURE; Implementation Regression `42049580531` SUCCESS. This is bounded synthetic coverage only; candidate does not have an installed trusted App, independently verified append-only Git log collector, or merge-time atomic freshness.
 - The policy text now preserves existing Code Owner and reviewing protections; it no longer proposes replacing approvals with optional regression checks. This record does not authorize governance adoption. Earlier log bytes are an exact prefix; all prior RED and limitations remain retained.
 - `OWNER_SIGNER=HOLD`; `GENESIS/PRODUCTION=NO_GO`; `M0_ADMISSION=NOT_EVALUATED`.
+
+## 2026-11-05 — CodeRabbit #151 exact-head Major correction (append only)
+
+- CodeRabbit [review discussion r4482200531](https://github.com/SepehrGhanbari/Ario/pull/151#discussion_r4482200531) identified that a prior exact-head review edited to contain a Major finding can be obscured by a later clean review because `submitted_at` does not change on edits.
+- The candidate now checks **every** matching independent exact-head review for Major/Critical, rather than only the latest submission. A synthetic negative regression test includes an older blocking review plus a newer clean review. No older log bytes were changed.
+- This is fail-closed process evidence only. Full mutable review freshness at merge time and producer/App authorization remain **NOT_ESTABLISHED**. The exact-head hosted CI and independent re-review are separate verification obligations.
+- `OWNER_SIGNER=HOLD`; `GENESIS/PRODUCTION=NO_GO`; `M0_ADMISSION=NOT_EVALUATED`.
