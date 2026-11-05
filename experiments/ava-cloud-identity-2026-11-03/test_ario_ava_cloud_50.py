@@ -467,5 +467,44 @@ class RunnerTests(unittest.TestCase):
 
 
 
+    def test_ledger_same_size_mutation_rejected_before_append(self):
+        temp, ledger = seeded(goal=2)
+        with temp:
+            original = ledger.path.read_bytes()
+            altered = bytearray(original)
+            marker = b'"timestamp_utc":"'
+            pos = altered.index(marker) + len(marker)
+            altered[pos] = ord("8") if altered[pos] != ord("8") else ord("9")
+            ledger.path.write_bytes(altered)
+            self.assertEqual(len(altered), len(original))
+            self.assertEqual(ledger.path.stat().st_ino, ledger.file_identity[1])
+            with self.assertRaisesRegex(exp.Hold, "LEDGER_CONTENT_MUTATED"):
+                ledger.add("SHOULD_NOT_APPEND", why="same-size external edit")
+            self.assertEqual(ledger.path.read_bytes(), bytes(altered))
+
+    def test_ledger_same_size_mutation_prevents_fake_dispatch(self):
+        temp, ledger = seeded(goal=2)
+        with temp:
+            raw = bytearray(ledger.path.read_bytes())
+            marker = b'"timestamp_utc":"'
+            pos = raw.index(marker) + len(marker)
+            raw[pos] = ord("8") if raw[pos] != ord("8") else ord("9")
+            ledger.path.write_bytes(raw)
+            fake = Fake()
+            with self.assertRaisesRegex(exp.Hold, "LEDGER_CONTENT_MUTATED"):
+                exp.run(ledger, LETTER, "local-not-logged", fake)
+            self.assertFalse(fake.calls)
+            self.assertEqual(ledger.path.read_bytes(), bytes(raw))
+
+    def test_ledger_untampered_appends_refresh_cached_digest(self):
+        temp, ledger = seeded(goal=2)
+        with temp:
+            ledger.add("SCRATCH_ONE", evidence="test")
+            ledger.add("SCRATCH_TWO", evidence="test")
+            readback = exp.Ledger(ledger.folder)
+            self.assertEqual(readback.hash, ledger.hash)
+            self.assertEqual(len(readback.events), len(ledger.events))
+
+
 if __name__ == "__main__":
     unittest.main()
