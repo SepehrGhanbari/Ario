@@ -65,7 +65,7 @@ class ArioFileAeadResearchTests(unittest.TestCase):
         with self.assertRaisesRegex(lib.Refuse, "EXTERNAL_RECEIPT_MISMATCH"):
             self.open(box, receipt, generation=2)
 
-    def test_resealing_same_file_has_fresh_salt_and_nonce(self):
+    def test_two_random_seals_happen_to_differ_not_a_nonce_reuse_proof(self):
         a, _ = self.seal()
         b, _ = self.seal()
         x = json.loads(a)["header"]
@@ -78,7 +78,7 @@ class ArioFileAeadResearchTests(unittest.TestCase):
             lib.open_file(box, receipt, "labs/conversation.jsonl", "conversation-history",
                           1, self.content_key, os.urandom(32))
 
-    def test_three_independent_files_and_collection_commitment(self):
+    def test_three_named_files_commitment_not_independent_storage(self):
         files = [
             ("a.jsonl", b"one", "conversation-history"),
             ("b.md", b"PUBLIC", "public-document"),
