@@ -176,9 +176,12 @@ def validate_candidate(pr: dict, record: dict, files: list[dict],
         commit = comment.get("commit_id")
         require(isinstance(commit, str) and SHA_RE.fullmatch(commit) and
                 isinstance(comment.get("body"), str), "INLINE_COMMENT_EVIDENCE_UNKNOWN")
-        if commit == head and independent_bot(comment.get("user") or {}, author_id):
-            require(not reports_blocker(comment["body"]),
-                    "INDEPENDENT_INLINE_REVIEW_REPORTS_MAJOR_OR_CRITICAL")
+        if independent_bot(comment.get("user") or {}, author_id) and reports_blocker(comment["body"]):
+            # A stale commit and a resolved thread do not prove remediation.
+            # No independently attributable disposition contract exists yet.
+            if commit != head:
+                raise GateError("STALE_BLOCKING_INLINE_COMMENT_UNDISPOSED")
+            raise GateError("INDEPENDENT_INLINE_REVIEW_REPORTS_MAJOR_OR_CRITICAL")
     require(not any(review.get("state") == "CHANGES_REQUESTED" for review in reviews),
             "CHANGES_REQUESTED_REVIEW_PRESENT")
     require(len(threads) < MAX_ITEMS, "REVIEW_THREADS_NOT_EXHAUSTIVELY_CHECKED")
@@ -371,9 +374,20 @@ def validate_execution(repo: str, pr: dict, run: dict, jobs: list[dict],
 
 
 def pr_binding(pr: dict) -> dict:
-    """Only decision-critical PR fields; SHAs alone omit mutable metadata."""
-    return {key: pr.get(key) for key in
-            ("number", "state", "draft", "body", "user", "head", "base")}
+    """Compare stable decision-critical values, not volatile repository stats."""
+    def branch_identity(branch: object) -> dict:
+        ref = branch if isinstance(branch, dict) else {}
+        repo = ref.get("repo") if isinstance(ref.get("repo"), dict) else {}
+        return {"ref": ref.get("ref"), "sha": ref.get("sha"),
+                "repo": {"id": repo.get("id"), "full_name": repo.get("full_name")}}
+
+    user = pr.get("user") if isinstance(pr.get("user"), dict) else {}
+    return {"number": pr.get("number"), "state": pr.get("state"),
+            "draft": pr.get("draft"), "body": pr.get("body"),
+            "user": {"id": user.get("id"), "login": user.get("login"),
+                     "type": user.get("type")},
+            "head": branch_identity(pr.get("head")),
+            "base": branch_identity(pr.get("base"))}
 
 
 def regular_modes_at_commit(repo: str, commit_sha: str) -> dict[str, str]:
@@ -405,6 +419,22 @@ def main() -> int:
             event = json.load(handle)
         number = event.get("number") or (event.get("pull_request") or {}).get("number")
         require(type(number) is int and number > 0, "PR_NUMBER_UNKNOWN")
+        # A deleted inline comment can disappear before the FIRST API read.
+        # A deletion-triggered run must therefore HOLD from its own event,
+        # regardless of the later (possibly matching) API snapshots.
+        if event.get("action") == "deleted":
+            require(os.environ.get("GITHUB_EVENT_NAME") == "pull_request_review_comment",
+                    "DELETION_EVENT_SOURCE_UNVERIFIED")
+            evt_repo = event.get("repository")
+            evt_pr = event.get("pull_request")
+            require(isinstance(evt_repo, dict) and
+                    evt_repo.get("full_name") == repo and
+                    type(evt_repo.get("id")) is int and evt_repo["id"] > 0 and
+                    isinstance(evt_pr, dict) and
+                    type(evt_pr.get("number")) is int and
+                    evt_pr["number"] == number,
+                    "DELETION_EVENT_IDENTITY_UNVERIFIED")
+            raise GateError("INLINE_REVIEW_COMMENT_DELETED_EVENT")
         base = "/repos/" + repo
         pr = api_request(f"{base}/pulls/{number}")
         record = parse_record(pr.get("body") or "")
