@@ -665,5 +665,34 @@ class GateReviewIdentityShapeTests(unittest.TestCase):
         self.assertTrue(validate_candidate(*candidate()))
 
 
+class GateExecutionBoundaryTests(unittest.TestCase):
+    def test_green_checkout_on_older_base_is_not_current_base_evidence(self):
+        h = MutableEvidenceHarness()
+        h.checkout_commits["e" * 40]["parents"][0]["sha"] = "f" * 40
+        self.assertEqual(h.run(), 1, h.stdout.getvalue())
+        self.assertIn("GATE_RESULT=HOLD", h.stderr.getvalue())
+
+    def test_raw_log_redirect_does_not_forward_github_bearer(self):
+        import review_evidence_gate as g
+        from urllib.request import HTTPRedirectHandler
+
+        def download(request, **kwargs):
+            self.assertEqual(request.get_header("Authorization"), "Bearer fixture-token")
+            redirected = HTTPRedirectHandler().redirect_request(
+                request, None, 302, "Found", {}, "https://logs.example.invalid/signed")
+            self.assertIsNone(redirected.get_header("Authorization"))
+            return io.BytesIO(b"downloaded job log")
+
+        with patch.dict(os.environ, {"GITHUB_TOKEN": "fixture-token"}), \
+                patch.object(g, "urlopen", side_effect=download):
+            self.assertEqual(g.api_request("/repos/example/repo/actions/jobs/1/logs", raw=True),
+                             "downloaded job log")
+
+    def test_crlf_job_logs_preserve_real_execution_control(self):
+        h = MutableEvidenceHarness()
+        h.job_logs = {job: text.replace("\n", "\r\n") for job, text in h.job_logs.items()}
+        self.assertEqual(h.run(), 0, h.stderr.getvalue())
+
+
 if __name__ == "__main__":
     unittest.main()

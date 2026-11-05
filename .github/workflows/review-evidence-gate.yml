@@ -5,10 +5,13 @@ on:
     types: [opened, reopened, synchronize, edited, ready_for_review]
   pull_request_review:
     types: [submitted, dismissed, edited]
+  pull_request_review_comment:
+    types: [created, edited, deleted]
 
 # Research candidate only: this workflow is NOT an independently App-bound
-# required check, nor a PR-scoped merge authorization. Thread reopen events
-# require a separately reviewed App/webhook and native protection.
+# required check, nor a PR-scoped merge authorization. An in-process refresh
+# of mutable PR/review/comment evidence is NOT merge-atomic. Thread reopen
+# events require a separately authorized App/webhook and native protection.
 # Read-only API inspection. Do not use pull_request_target and do not execute
 # any code from the PR head as part of the trusted-main evidence check.
 permissions:

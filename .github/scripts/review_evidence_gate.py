@@ -9,6 +9,7 @@ from __future__ import annotations
 import base64
 import binascii
 import hashlib
+import html
 import json
 import os
 import re
@@ -17,7 +18,11 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 MARKER = "ARIO_REVIEW_EVIDENCE_V1"
-BOT_NAMES = frozenset({"coderabbitai", "coderabbitai[bot]"})
+# Verified via GitHub REST /users/coderabbitai%5Bbot%5D on 2026-11-05.
+# ID, login AND account type are required together, never alternatives.
+BOT_USER_ID = 136622811
+BOT_LOGIN = "coderabbitai[bot]"
+WORKFLOW_PATH = ".github/workflows/implementation-regression.yml"
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 MAX_ITEMS = 100
 
@@ -95,9 +100,43 @@ def validate_log_append_only(original: bytes, proposed: bytes) -> None:
             "LOG_HISTORICAL_PREFIX_CHANGED")
 
 
+def independent_bot(user: dict, author_id: int) -> bool:
+    return (type(user.get("id")) is int and user["id"] == BOT_USER_ID
+            and user.get("login") == BOT_LOGIN and user.get("type") == "Bot"
+            and user["id"] != author_id)
+
+
+def reports_blocker(body: str) -> bool:
+    # CodeRabbit can put <picture> artwork inside a bold severity label.
+    visible = re.sub(r"<[^>]*>", "", html.unescape(body))
+    return bool(re.search(r"(?:\*\*|alt=[\"'])\s*(?:Major|Critical)\b",
+                          body + "\n" + visible, flags=re.IGNORECASE))
+
+
+def validate_run_binding(pr: dict, run: dict) -> None:
+    require(run.get("event") == "pull_request" and run.get("status") == "completed",
+            "RUN_NOT_COMPLETED_PR_EVENT")
+    number = pr.get("number")
+    head_repo = (pr.get("head", {}).get("repo") or {}).get("id")
+    base_repo = (pr.get("base", {}).get("repo") or {}).get("id")
+    require(type(number) is int and type(head_repo) is int and
+            type(base_repo) is int and head_repo > 0 and base_repo > 0,
+            "PR_REPOSITORY_IDENTITY_UNKNOWN")
+    associations = run.get("pull_requests")
+    require(isinstance(associations, list) and any(
+        p.get("number") == number and
+        p.get("head", {}).get("ref") == pr.get("head", {}).get("ref") and
+        (p.get("head", {}).get("repo") or {}).get("id") == head_repo and
+        p.get("base", {}).get("ref") == "main" and
+        (p.get("base", {}).get("repo") or {}).get("id") == base_repo
+        for p in associations), "RUN_NOT_ASSOCIATED_WITH_INTENDED_PR")
+    # The association's head.sha is live PR metadata, not the historical
+    # run revision. The run's head_sha and checkout parents bind that instead.
+
+
 def validate_candidate(pr: dict, record: dict, files: list[dict],
                        reviews: list[dict], threads: list[dict],
-                       runs: dict[int, dict]) -> list[str]:
+                       runs: dict[int, dict], comments: list[dict] | None = None) -> list[str]:
     """Evaluate already-fetched public repository metadata deterministically."""
     require(pr.get("state") == "open" and not pr.get("draft"),
             "PR_NOT_OPEN_AND_READY")
@@ -117,11 +156,11 @@ def validate_candidate(pr: dict, record: dict, files: list[dict],
                 "previous_filename" not in f for f in files),
             "RENAME_DELETE_OR_UNKNOWN_FILE_OPERATION")
 
-    author = (pr.get("user") or {}).get("login", "").lower()
+    author_id = (pr.get("user") or {}).get("id")
+    require(type(author_id) is int and author_id > 0, "PR_AUTHOR_IDENTITY_UNKNOWN")
     matching = [
         review for review in reviews
-        if (review.get("user") or {}).get("login", "").lower() in BOT_NAMES
-        and (review.get("user") or {}).get("login", "").lower() != author
+        if independent_bot(review.get("user") or {}, author_id)
         and review.get("state") in ("COMMENTED", "APPROVED")
         and review.get("commit_id") == head
     ]
@@ -131,9 +170,15 @@ def validate_candidate(pr: dict, record: dict, files: list[dict],
     # Fail closed while ANY exact-head independent review contains a blocker.
     for review in matching:
         review_text = review.get("body") or ""
-        require(not re.search(r"(?:\*\*|alt=[\"'])\s*(?:Major|Critical)\b",
-                              review_text, flags=re.IGNORECASE),
+        require(isinstance(review_text, str) and not reports_blocker(review_text),
                 "INDEPENDENT_REVIEW_REPORTS_MAJOR_OR_CRITICAL")
+    for comment in comments or []:
+        commit = comment.get("commit_id")
+        require(isinstance(commit, str) and SHA_RE.fullmatch(commit) and
+                isinstance(comment.get("body"), str), "INLINE_COMMENT_EVIDENCE_UNKNOWN")
+        if commit == head and independent_bot(comment.get("user") or {}, author_id):
+            require(not reports_blocker(comment["body"]),
+                    "INDEPENDENT_INLINE_REVIEW_REPORTS_MAJOR_OR_CRITICAL")
     require(not any(review.get("state") == "CHANGES_REQUESTED" for review in reviews),
             "CHANGES_REQUESTED_REVIEW_PRESENT")
     require(len(threads) < MAX_ITEMS, "REVIEW_THREADS_NOT_EXHAUSTIVELY_CHECKED")
@@ -144,6 +189,7 @@ def validate_candidate(pr: dict, record: dict, files: list[dict],
         run = runs.get(red_id)
         require(isinstance(run, dict) and run.get("conclusion") == "failure",
                 "RED_RUN_NOT_FAILED_OR_UNVERIFIED")
+        validate_run_binding(pr, run)
         require(run.get("name") == "Implementation Regression",
                 "RED_NOT_IMPLEMENTATION_REGRESSION")
         require(run.get("head_branch") == pr.get("head", {}).get("ref"),
@@ -158,6 +204,7 @@ def validate_candidate(pr: dict, record: dict, files: list[dict],
     green = runs.get(record["green_run_id"])
     require(isinstance(green, dict) and green.get("conclusion") == "success",
             "GREEN_RUN_NOT_SUCCESSFUL_OR_UNVERIFIED")
+    validate_run_binding(pr, green)
     require(green.get("name") == "Implementation Regression"
             and green.get("head_sha") == head, "GREEN_NOT_CURRENT_HEAD")
     require(green.get("head_branch") == pr.get("head", {}).get("ref"),
@@ -178,16 +225,18 @@ def validate_candidate(pr: dict, record: dict, files: list[dict],
         "GATE_PASS: fresh distinct CodeRabbit review and no unresolved threads found",
         "GATE_LIMIT: recorded review is COMMENTED, not a GitHub APPROVED review",
         "GATE_LIMIT: machine checks cannot verify that RED failure proves a specific defect",
+        "GATE_LIMIT: workflow/checkout/log observations do not independently attest test execution",
+        "GATE_LIMIT: in-process evidence recheck is NOT_MERGE_ATOMIC; later changes remain possible",
     ]
 
 
-def api_request(path: str, *, method: str = "GET", payload: dict | None = None) -> object:
+def api_request(path: str, *, method: str = "GET", payload: dict | None = None,
+                raw: bool = False) -> object:
     token = os.environ.get("GITHUB_TOKEN", "")
     require(bool(token), "GITHUB_TOKEN_MISSING")
     endpoint = "https://api.github.com" + path
     headers = {
         "Accept": "application/vnd.github+json",
-        "Authorization": "Bearer " + token,
         "X-GitHub-Api-Version": "2022-11-28",
         "User-Agent": "ario-review-evidence-gate-v1",
     }
@@ -195,9 +244,16 @@ def api_request(path: str, *, method: str = "GET", payload: dict | None = None) 
     if payload is not None:
         data = json.dumps(payload).encode("utf-8")
         headers["Content-Type"] = "application/json"
+    request = Request(endpoint, headers=headers, method=method, data=data)
+    # Job logs redirect to signed storage URLs. Authenticate the GitHub request
+    # without forwarding its bearer header to the redirected download host.
+    request.add_unredirected_header("Authorization", "Bearer " + token)
     try:
-        with urlopen(Request(endpoint, headers=headers, method=method, data=data),
-                     timeout=15) as response:
+        with urlopen(request, timeout=15) as response:
+            if raw:
+                data = response.read(5_000_001)
+                require(len(data) <= 5_000_000, "JOB_LOG_OVERSIZED")
+                return data.decode("utf-8")
             return json.load(response)
     except (HTTPError, URLError, TimeoutError, ValueError) as exc:
         raise GateError("GITHUB_API_UNAVAILABLE_OR_INVALID_RESPONSE") from exc
@@ -208,7 +264,7 @@ def graphql_threads(owner: str, name: str, number: int) -> list[dict]:
       repository(owner:$owner,name:$name) {
         pullRequest(number:$number) {
           reviewThreads(first:100) {
-            nodes { isResolved }
+            nodes { id isResolved isOutdated }
             pageInfo { hasNextPage }
           }
         }
@@ -235,23 +291,89 @@ def fetch_limited(path: str) -> list[dict]:
     return data
 
 
-def fetch_log_bytes(repo: str, commit_sha: str) -> bytes:
+def fetch_verified_file_bytes(repo: str, commit_sha: str, path: str,
+                              label: str = "WORKFLOW") -> bytes:
     """Read commit-addressed bytes; reject missing/oversized/unverified Git blobs."""
     require(isinstance(commit_sha, str) and SHA_RE.fullmatch(commit_sha),
             "COMMIT_SHA_INVALID")
-    info = api_request(f"/repos/{repo}/contents/ENGINEERING_LOG.md?ref={commit_sha}")
+    info = api_request(f"/repos/{repo}/contents/{path}?ref={commit_sha}")
     require(isinstance(info, dict) and info.get("type") == "file" and
             info.get("encoding") == "base64" and type(info.get("size")) is int and
-            0 < info["size"] <= 2_000_000, "LOG_CONTENT_UNVERIFIED")
+            0 < info["size"] <= 2_000_000, label + "_CONTENT_UNVERIFIED")
     try:
         payload = base64.b64decode(info["content"].replace("\n", ""), validate=True)
     except (KeyError, AttributeError, binascii.Error, ValueError) as exc:
-        raise GateError("LOG_CONTENT_MALFORMED") from exc
-    require(len(payload) == info["size"], "LOG_SIZE_MISMATCH")
+        raise GateError(label + "_CONTENT_MALFORMED") from exc
+    require(len(payload) == info["size"], label + "_SIZE_MISMATCH")
     calc = hashlib.sha1(b"blob " + str(len(payload)).encode("ascii")
                         + b"\0" + payload).hexdigest()
-    require(calc == info.get("sha"), "LOG_BLOB_IDENTITY_MISMATCH")
+    require(calc == info.get("sha"), label + "_BLOB_IDENTITY_MISMATCH")
     return payload
+
+
+def fetch_log_bytes(repo: str, commit_sha: str) -> bytes:
+    return fetch_verified_file_bytes(repo, commit_sha, "ENGINEERING_LOG.md", "LOG")
+
+
+def validate_execution(repo: str, pr: dict, run: dict, jobs: list[dict],
+                       outcome: str, trusted_workflow: bytes) -> None:
+    """Constrain observed source/checkout/test execution, not semantic truth.
+
+    Logs are GitHub observations, not independent producer attestation. Unknown
+    or noncanonical execution stays HOLD; no candidate code is executed here.
+    """
+    require(fetch_verified_file_bytes(repo, run["head_sha"], WORKFLOW_PATH) ==
+            trusted_workflow, "RUN_WORKFLOW_SOURCE_CHANGED")
+    regression_jobs = [job for job in jobs if job.get("name") == "m0-regression"]
+    require(len(regression_jobs) == 1, "REGRESSION_JOB_AMBIGUOUS")
+    job = regression_jobs[0]
+    require(type(job.get("id")) is int and job["id"] > 0 and
+            job.get("status") == "completed" and job.get("run_id") == run.get("id") and
+            job.get("run_attempt") == run.get("run_attempt") and
+            job.get("head_sha") == run.get("head_sha"), "JOB_RUN_ATTEMPT_MISMATCH")
+    logs = api_request(f"/repos/{repo}/actions/jobs/{job['id']}/logs", raw=True)
+    require(isinstance(logs, str) and 0 < len(logs) <= 5_000_000, "JOB_LOG_UNKNOWN")
+    logs = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", logs.replace("\r\n", "\n"))
+    logs = re.sub(r"(?m)^\d{4}-\d\d-\d\dT[0-9:.]+Z ", "", logs)
+    segments = logs.split("##[group]Run python -m pytest -q tests\n")
+    require(len(segments) == 2, "PYTEST_COMMAND_NOT_OBSERVED")
+    checkout = re.findall(r"(?m)^\[command\]\S*git log -1 --format=%H\n([0-9a-f]{40})$",
+                          segments[0])
+    require(len(checkout) == 1, "CHECKOUT_REVISION_UNKNOWN")
+    commit = api_request(f"/repos/{repo}/git/commits/{checkout[0]}")
+    parents = commit.get("parents") if isinstance(commit, dict) else None
+    require(isinstance(parents, list) and len(parents) == 2 and
+            commit.get("sha") == checkout[0] and
+            parents[1].get("sha") == run["head_sha"], "CHECKOUT_NOT_RUN_HEAD_MERGE")
+    executed_base = parents[0].get("sha")
+    base_sha = pr.get("base", {}).get("sha")
+    require(isinstance(executed_base, str) and SHA_RE.fullmatch(executed_base),
+            "CHECKOUT_BASE_UNKNOWN")
+    if outcome == "success":
+        require(executed_base == base_sha, "GREEN_CHECKOUT_NOT_CURRENT_BASE")
+    if executed_base != base_sha:
+        comparison = api_request(f"/repos/{repo}/compare/{executed_base}...{base_sha}")
+        require(isinstance(comparison, dict) and comparison.get("status") == "ahead" and
+                (comparison.get("merge_base_commit") or {}).get("sha") == executed_base,
+                "CHECKOUT_BASE_NOT_VERIFIED_ANCESTOR")
+    require(fetch_verified_file_bytes(repo, checkout[0], WORKFLOW_PATH) == trusted_workflow,
+            "EXECUTED_WORKFLOW_SOURCE_CHANGED")
+    summaries = [line for line in segments[1].splitlines()
+                 if re.search(r"\bin \d+(?:\.\d+)?s\b", line) and
+                 re.search(r"\b\d+ (?:passed|failed|errors?)\b", line)]
+    require(len(summaries) == 1, "PYTEST_EXECUTION_SUMMARY_UNKNOWN")
+    counts = {kind.rstrip("s"): int(count) for count, kind in
+              re.findall(r"\b(\d+) (passed|failed|errors?)\b", summaries[0])}
+    require(counts.get("error", 0) == 0 and
+            (counts.get("failed", 0) > 0 if outcome == "failure" else
+             counts.get("passed", 0) > 0 and counts.get("failed", 0) == 0),
+            "NONZERO_TEST_EXECUTION_NOT_VERIFIED")
+
+
+def pr_binding(pr: dict) -> dict:
+    """Only decision-critical PR fields; SHAs alone omit mutable metadata."""
+    return {key: pr.get(key) for key in
+            ("number", "state", "draft", "body", "user", "head", "base")}
 
 
 def regular_modes_at_commit(repo: str, commit_sha: str) -> dict[str, str]:
@@ -289,6 +411,7 @@ def main() -> int:
         files = fetch_limited(f"{base}/pulls/{number}/files")
         reviews = fetch_limited(f"{base}/pulls/{number}/reviews")
         threads = graphql_threads(owner, name, number)
+        comments = fetch_limited(f"{base}/pulls/{number}/comments")
         base_sha = pr.get("base", {}).get("sha", "")
         head_sha = pr.get("head", {}).get("sha", "")
         validate_log_append_only(fetch_log_bytes(repo, base_sha),
@@ -301,16 +424,24 @@ def main() -> int:
         expected_flow = api_request(f"{base}/actions/workflows/implementation-regression.yml")
         require(isinstance(expected_flow, dict) and
                 type(expected_flow.get("id")) is int and
-                expected_flow.get("path") == ".github/workflows/implementation-regression.yml",
+                expected_flow.get("path") == WORKFLOW_PATH,
                 "REGRESSION_WORKFLOW_IDENTITY_UNKNOWN")
+        trusted_workflow = fetch_verified_file_bytes(repo, base_sha, WORKFLOW_PATH)
         runs = {}
-        for run_id in set(record["red_run_ids"] + [record["green_run_id"]]):
+        run_snapshots = {}
+        for run_id in record["red_run_ids"] + [record["green_run_id"]]:
             run = api_request(f"{base}/actions/runs/{run_id}")
             require(isinstance(run, dict) and
                     run.get("workflow_id") == expected_flow["id"] and
                     run.get("path") == expected_flow["path"],
                     "UNEXPECTED_WORKFLOW_PRODUCER")
-            job_data = api_request(f"{base}/actions/runs/{run_id}/jobs?per_page=100")
+            validate_run_binding(pr, run)
+            attempt = run.get("run_attempt")
+            require(run.get("id") == run_id and type(attempt) is int and attempt > 0,
+                    "RUN_ATTEMPT_UNKNOWN")
+            run_snapshots[run_id] = dict(run)
+            job_data = api_request(
+                f"{base}/actions/runs/{run_id}/attempts/{attempt}/jobs?per_page=100")
             require(isinstance(job_data, dict) and
                     isinstance(job_data.get("jobs"), list) and
                     type(job_data.get("total_count")) is int and
@@ -337,15 +468,28 @@ def main() -> int:
                         comparison.get("status") == "ahead" and
                         (comparison.get("merge_base_commit") or {}).get("sha") == red_sha,
                         "RED_NOT_VERIFIED_ANCESTOR")
+            validate_execution(repo, pr, run, job_data["jobs"], outcome, trusted_workflow)
             run["jobs"] = job_data["jobs"]
             runs[run_id] = run
-        findings = validate_candidate(pr, record, files, reviews, threads, runs)
+        validate_candidate(pr, record, files, reviews, threads, runs, comments)
+        # Re-fetch mutable evidence at the decision boundary. Equality invalidates
+        # deletions and edits as well as newly observed blockers. This narrows the
+        # audit window; the separate API reads and eventual merge are NOT atomic.
         latest = api_request(f"{base}/pulls/{number}")
-        require(latest.get("state") == pr.get("state") and
-                latest.get("draft") == pr.get("draft") and
-                latest.get("base", {}).get("sha") == base_sha and
-                latest.get("head", {}).get("sha") == head_sha,
-                "PR_STATE_OR_BASE_CHANGED_DURING_AUDIT")
+        latest_record = parse_record(latest.get("body") or "")
+        latest_reviews = fetch_limited(f"{base}/pulls/{number}/reviews")
+        latest_threads = graphql_threads(owner, name, number)
+        latest_comments = fetch_limited(f"{base}/pulls/{number}/comments")
+        require(pr_binding(latest) == pr_binding(pr) and latest_record == record and
+                latest_reviews == reviews and latest_threads == threads and
+                latest_comments == comments, "MUTABLE_PR_EVIDENCE_CHANGED_DURING_AUDIT")
+        for run_id, snapshot in run_snapshots.items():
+            require(api_request(f"{base}/actions/runs/{run_id}") == snapshot,
+                    "RUN_CHANGED_DURING_AUDIT")
+        findings = validate_candidate(latest, latest_record, files, latest_reviews,
+                                      latest_threads, runs, latest_comments)
+        require(pr_binding(api_request(f"{base}/pulls/{number}")) == pr_binding(latest),
+                "PR_CHANGED_DURING_BOUNDARY_RECHECK")
         for finding in findings:
             print(finding)
         print("GATE_RESULT=PASS_PROCESS_EVIDENCE_ONLY_NO_MERGE_AUTHORITY")
