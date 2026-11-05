@@ -6,6 +6,9 @@ provenance or authorization to activate an Ario runtime.
 """
 from __future__ import annotations
 
+import base64
+import binascii
+import hashlib
 import json
 import os
 import re
@@ -230,6 +233,25 @@ def fetch_limited(path: str) -> list[dict]:
     require(isinstance(data, list) and len(data) < MAX_ITEMS,
             "PAGINATION_LIMIT_EXCEEDED")
     return data
+
+
+def fetch_log_bytes(repo: str, commit_sha: str) -> bytes:
+    """Read commit-addressed bytes; reject missing/oversized/unverified Git blobs."""
+    require(isinstance(commit_sha, str) and SHA_RE.fullmatch(commit_sha),
+            "COMMIT_SHA_INVALID")
+    info = api_request(f"/repos/{repo}/contents/ENGINEERING_LOG.md?ref={commit_sha}")
+    require(isinstance(info, dict) and info.get("type") == "file" and
+            info.get("encoding") == "base64" and type(info.get("size")) is int and
+            0 < info["size"] <= 2_000_000, "LOG_CONTENT_UNVERIFIED")
+    try:
+        payload = base64.b64decode(info["content"].replace("\n", ""), validate=True)
+    except (KeyError, AttributeError, binascii.Error, ValueError) as exc:
+        raise GateError("LOG_CONTENT_MALFORMED") from exc
+    require(len(payload) == info["size"], "LOG_SIZE_MISMATCH")
+    calc = hashlib.sha1(b"blob " + str(len(payload)).encode("ascii")
+                        + b"\0" + payload).hexdigest()
+    require(calc == info.get("sha"), "LOG_BLOB_IDENTITY_MISMATCH")
+    return payload
 
 
 def main() -> int:
