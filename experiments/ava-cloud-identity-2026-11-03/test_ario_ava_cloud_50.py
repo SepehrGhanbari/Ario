@@ -506,5 +506,61 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(len(readback.events), len(ledger.events))
 
 
+    def test_documented_hostile_writer_race_after_hash_before_append(self):
+        """Observe the unfixed gap: a malicious co-writer can race the append."""
+        import os
+        from unittest.mock import patch
+        temp, ledger = seeded(goal=2)
+        with temp:
+            original = ledger.path.read_bytes()
+            needle = b'"timestamp_utc":"'
+            at = original.index(needle) + len(needle)
+            replacement = b"9" if original[at:at + 1] != b"9" else b"8"
+            old_write = os.write
+            injected = []
+            def race_write(fd, chunk):
+                if not injected:
+                    injected.append(True)
+                    # Another actor modifies the same inode and size after
+                    # the runner has completed the digest comparison.
+                    with ledger.path.open("r+b") as competing:
+                        competing.seek(at)
+                        competing.write(replacement)
+                        competing.flush()
+                return old_write(fd, chunk)
+            with patch.object(exp.os, "write", side_effect=race_write):
+                ledger.add("SCRATCH_RACE", synthetic=True)
+            self.assertEqual(injected, [True])
+            self.assertEqual(ledger.path.stat().st_size,
+                             len(original) + len(ledger.path.read_bytes()) - len(original))
+            # There is NO claim of prevention: damage is only detected on reload.
+            with self.assertRaisesRegex(exp.Hold, "EVENT_CHAIN_MISMATCH"):
+                exp.Ledger(ledger.folder)
+
+    def test_partial_record_write_strands_ledger_without_silent_repair(self):
+        """Observe intended fail-closed availability failure, without repairing bytes."""
+        import os
+        from unittest.mock import patch
+        temp, ledger = seeded(goal=2)
+        with temp:
+            before = ledger.path.read_bytes()
+            original_write = os.write
+            invoked = []
+            def fail_after_first_short_write(fd, chunk):
+                if not invoked:
+                    invoked.append(True)
+                    return original_write(fd, chunk[:7])
+                raise OSError("synthetic disk write failure")
+            with patch.object(exp.os, "write", side_effect=fail_after_first_short_write):
+                with self.assertRaisesRegex(OSError, "synthetic disk write failure"):
+                    ledger.add("SCRATCH_PARTIAL", synthetic=True)
+            damaged = ledger.path.read_bytes()
+            self.assertTrue(damaged.startswith(before))
+            self.assertNotEqual(damaged, before)
+            with self.assertRaisesRegex(exp.Hold, "INCOMPLETE_TRAILING_EVENT_LINE"):
+                exp.Ledger(ledger.folder)
+            self.assertEqual(ledger.path.read_bytes(), damaged)
+
+
 if __name__ == "__main__":
     unittest.main()
