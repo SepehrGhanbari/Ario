@@ -18,7 +18,7 @@ This is a **new additive review record**, not a replacement for the private even
 5. README: corrected *original English model outputs* to *transcript derivative* and added this corrigendum reference.
 6. `SHA256SUMS.txt`: recomputed for the four revised presentation files. Its old version remains in the initial Git commit.
 
-**Crucial invariant:** all 65 TURN bodies and all 3 BALLOT bodies remain byte-for-byte identical to the previously published English derivative and identical to the previously published Persian translation. The new revision changes only non-model-text headings, prefatory notes, research inference wording, README metadata, and checksums. The earlier version is retained in Git history.
+**Crucial invariant:** all 65 TURN bodies and all 3 BALLOT bodies in the English derivative remain byte-for-byte identical to the preceding English derivative, while the corresponding translated bodies remain unchanged from the preceding Persian translation. This does not claim byte identity between English and Persian. The new revision changes only non-model-text headings, prefatory notes, research inference wording, README metadata, and checksums. The earlier version is retained in Git history.
 
 ## Previous original Git blob SHAs
 
@@ -35,3 +35,7 @@ The A14 terminal record is `CLOSED_UNANIMOUS` **as a status computed by the sequ
 A future **preregistered research-only** A15 protocol should compare sequential ballots with simultaneous blinded ballots; balance role order; include a no-history control; measure exact and near-text repetition; record the actual stop predicate and configured cap; and avoid any real trust/signer/Genesis activation. Provider attestation remains UNKNOWN unless independently demonstrated. These A15 ideas are proposals, not results.
 
 No published claim is amended retrospectively without retaining the original version. No merges, secrets, signer operations or trust activation are authorized by this record.
+
+## Follow-up editorial clarification — review round 2
+
+The follow-up CodeRabbit review also flagged that poetic format changes and recorded exit must be described as observed text, not independently proven subjective choice. The published review now distinguishes the initial A exit request from three later B/C/D ballots, marks the effect of PAUSE/RESUME on accepted-turn context **UNKNOWN**, uses observational language for the poem transition and recorded ending, and preserves all TURN and BALLOT bodies. No additional provider authenticity, autonomy or production conclusion follows from these wording changes.
