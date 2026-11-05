@@ -155,5 +155,55 @@ class ReviewEvidenceGateTests(unittest.TestCase):
                     parse_record(body)
 
 
+
+
+# P0 RED specifications: these MUST fail on the original PR #133 baseline.
+# Each assertion uses synthetic values only; GitHub API/installation not tested.
+class GateP0NegativeFixtures(unittest.TestCase):
+    def test_unknown_implementation_source_defaults_to_protected(self):
+        self.assertTrue(protected_path("implementation/new_unreviewed_power.py"))
+
+    def test_relative_git_path_is_not_normalized_into_routine(self):
+        self.assertTrue(protected_path("implementation/../unreviewed.py"))
+
+    def test_rename_from_protected_old_path_is_rejected(self):
+        case = candidate()
+        target = "implementation/tests/test_witness_provenance_experiment.py"
+        case[1]["files"][0] = target
+        case[2][0] = {"filename": target, "status": "renamed",
+                      "previous_filename": "implementation/owner_signer.py"}
+        with self.assertRaises(GateError):
+            validate_candidate(*case)
+
+    def test_unknown_change_operation_is_rejected(self):
+        case = candidate()
+        case[2][0]["status"] = "copied"
+        with self.assertRaises(GateError):
+            validate_candidate(*case)
+
+    def test_log_historical_prefix_mutation_is_refused(self):
+        from review_evidence_gate import validate_log_append_only
+        with self.assertRaises(GateError):
+            validate_log_append_only(b"historical truth\n", b"historical lie\nnew entry\n")
+
+    def test_red_run_at_green_head_is_not_prefixed_regression(self):
+        case = candidate()
+        case[5][1201]["head_sha"] = HEAD
+        with self.assertRaises(GateError):
+            validate_candidate(*case)
+
+    def test_red_run_fork_with_matching_branch_name_is_rejected(self):
+        case = candidate()
+        case[5][1201]["head_repository"] = {"full_name": "unrelated/Ario"}
+        with self.assertRaises(GateError):
+            validate_candidate(*case)
+
+    def test_green_missing_regression_job_is_not_evidence(self):
+        case = candidate()
+        case[5][1202]["jobs"] = [{"name": "unrelated-smoke",
+                                   "conclusion": "success"}]
+        with self.assertRaises(GateError):
+            validate_candidate(*case)
+
 if __name__ == "__main__":
     unittest.main()
