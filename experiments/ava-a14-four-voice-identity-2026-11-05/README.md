@@ -13,7 +13,9 @@ The project owner authorized publication of the derived *research dialogue* in t
 
 ## Contents
 
-- `A14_FULL_TRANSCRIPT_ORIGINAL_EN.md` — original English model outputs, 65 turns and three exit ballots.
+**Publication revision note:** See `A14_PUBLICATION_CORRIGENDUM_2026-11-05.md` for exact wording corrections, original Git blob identities and proof limits. This revision does not change any model TURN or BALLOT body.
+
+- `A14_FULL_TRANSCRIPT_ORIGINAL_EN.md` — English **transcript derivative** of reported model outputs, 65 accepted turns and three sequential exit ballots; the private raw event ledger is not published.
 - `A14_FULL_TRANSLATION_FA.md` — full Persian translation, preserving turn order and labeling ballots.
 - `A14_RESEARCH_REVIEW_FA.md` — critical review, observed patterns, caveats and proposed controls.
 - `SHA256SUMS.txt` — SHA-256 of public derivatives.
