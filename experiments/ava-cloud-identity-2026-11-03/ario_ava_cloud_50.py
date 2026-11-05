@@ -120,6 +120,9 @@ class Ledger:
         self.hash = "0" * 64
         self.file_identity = None
         self.byte_length = 0
+        # SHA256 state tracks the exact validated, append-only bytes, never
+        # a public checksum purported to come from an untrusted file.
+        self._content_digest = hashlib.sha256()
         if self.path.exists():
             # Read through one opened descriptor; preserve that file identity
             # for subsequent appends. A pathname can later name another file.
@@ -157,6 +160,7 @@ class Ledger:
                     self.hash = digest
                 except (ValueError, TypeError, KeyError) as exc:
                     raise Hold("INVALID_OR_INCOMPLETE_EVENT_LOG") from exc
+            self._content_digest.update(data)
 
     def add(self, kind: str, **data: object) -> dict:
         item = {"seq": len(self.events) + 1, "previous_sha256": self.hash,
@@ -169,7 +173,9 @@ class Ledger:
         self.folder.mkdir(parents=True, exist_ok=True)
         # A new run must create a new ledger exclusively. Reopened ledgers
         # append only to the exact inode loaded or created previously.
-        flags = os.O_WRONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+        # We need to read back through this opened descriptor before appending.
+        # O_APPEND remains mandatory; O_RDWR is fail-closed if read access is denied.
+        flags = os.O_RDWR | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
         if self.file_identity is None:
             flags |= os.O_CREAT | os.O_EXCL
         else:
@@ -190,6 +196,25 @@ class Ledger:
                 raise Hold("LEDGER_REPLACED_OR_SIZE_CHANGED")
             if self.file_identity is None and info.st_size != 0:
                 raise Hold("LEDGER_UNEXPECTED_NEW_FILE_CONTENTS")
+            # Detect same-inode, same-size byte changes, which inode/size
+            # checks alone cannot reveal. A trustworthy local directory is
+            # still needed to exclude mutation between this check and write.
+            os.lseek(fd, 0, os.SEEK_SET)
+            reread_digest = hashlib.sha256()
+            remaining = info.st_size
+            while remaining:
+                block = os.read(fd, min(1024 * 1024, remaining))
+                if not block:
+                    raise Hold("LEDGER_CHANGED_DURING_REVALIDATION")
+                reread_digest.update(block)
+                remaining -= len(block)
+            after_read = os.fstat(fd)
+            if ((after_read.st_dev, after_read.st_ino) != identity or
+                    after_read.st_size != info.st_size or
+                    after_read.st_nlink != 1):
+                raise Hold("LEDGER_CHANGED_DURING_REVALIDATION")
+            if not hmac.compare_digest(reread_digest.digest(), self._content_digest.digest()):
+                raise Hold("LEDGER_CONTENT_MUTATED")
             offset = 0
             while offset < len(line):
                 wrote = os.write(fd, line[offset:])
@@ -199,6 +224,7 @@ class Ledger:
             os.fsync(fd)
             self.file_identity = identity
             self.byte_length += len(line)
+            self._content_digest.update(line)
         finally:
             os.close(fd)
         self.events.append(complete)
