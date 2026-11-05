@@ -40,12 +40,12 @@ For `main` under the active `Protect main` ruleset:
 
 1. **Keep** pull requests mandatory, prevent force pushes, restrict deletions, and preserve commit history.
 2. **Require passing named status checks** `m0-regression` and `review-evidence-gate`, where available and verified. Prefer strict up-to-date branch checks and GitHub Actions as expected source.
-3. Set routine pull-request approving-review count to **zero** and turn off mandatory Code Owner approval **only after the alternate required checks are active**. Retain `.github/CODEOWNERS` as attribution/notification, not a signature of verified code competence.
+3. **Retain** the mandatory approving review and Code Owner review. A new status check alone is not a substitute for the currently effective native rules. The sole-owner Code Owner configuration causes a bootstrap approval deadlock for an author-owned PR; it requires a separately authorized, rules-compliant protected-change route, not silent self-approval or removal of existing protections.
 4. Do **not** configure a broad bypass of CI, allow direct pushes to protected `main`, or remove branch protection.
 5. Do **not** conflate a GitHub deployment preview, a green test run, or CodeRabbit's “Full review finished” notification with an authorized technical verdict.
 6. If an administrator bypass remains possible, its mere existence is a residual governance risk; every use requires distinct explicit approval and append-only audit, and is forbidden for ordinary code changes.
 
-Because the current ruleset has zero required status checks and one mandatory approval, rollout must be **staged**: (a) build/test the new policy checker on a proposed governance PR; (b) atomically replace the approval requirement with at least the existing mandatory regression status before bootstrap merge; (c) merge the reviewed governance change under the explicitly authorized one-time transition; (d) make `review-evidence-gate` a required check after verifying it exists on `main`; (e) verify a deliberately incomplete routine PR remains blocked. Until all steps succeed, report `ENFORCEMENT_PARTIAL`, not `ENFORCED`.
+Because the active ruleset has no required status checks, and requires one approval plus sole-owner Code Owner review, **bootstrap remains blocked**. Safe sequence: (a) test candidate code in a separate draft PR without touching protected `main`; (b) separately authorize a trusted external GitHub App, pinned evaluator/policy, deployment and credential custody; (c) publish App-bound checks in observation mode while retaining the native reviewer requirements; (d) establish a rules-compliant, explicitly authorized protected-change route without assuming owner self-approval; (e) add the App's required check additively only after passing independent producer, same-SHA cross-PR and stale-review negative controls; (f) read back effective rules and prove a malformed PR remains blocked. GitHub check status at a commit SHA is not an atomic snapshot of mutable PR review state. Until verified, `ENFORCEMENT=NOT_INSTALLED/HOLD`.
 
 ## 5. Merge decision and stop rules
 
@@ -66,3 +66,7 @@ This policy changes repository-level code review, not the future authorization p
 ## 7. Honest implementation status
 
 The presence of this file or a workflow in an **open PR** does not mean GitHub has adopted the rules. Record the actual ruleset state, required checks, open reviews and test runs on each status report. Never say “merged,” “enforced,” or “independently approved” until verified.
+
+## 8. P0 candidate clarification — 2026-11-05
+
+This change is a protected-governance **research proposal**, not adopted policy or a live installation. Its process checker is not an independent semantic security review, a GitHub APPROVED review, or a trusted GitHub App. An allowlisted source path can still contain an authority-changing edit; `UNKNOWN` means `HOLD`. Candidate CI can be green while the trusted-main bootstrap job correctly fails because the checker is absent from main. Never disable existing Code Owner review to make candidate CI green. No automatic merge or signer/trust/Genesis/production authorization arises from this document.
