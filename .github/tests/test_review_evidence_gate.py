@@ -32,10 +32,11 @@ def candidate():
         "state": "open",
         "draft": False,
         "base": {"ref": "main"},
-        "head": {"sha": HEAD, "ref": "fix/issue129-test"},
+        "head": {"sha": HEAD, "ref": "fix/issue129-test",
+                 "repo": {"full_name": "SepehrGhanbari/Ario"}},
         "user": {"login": "SepehrGhanbari"},
     }
-    files = [{"filename": x} for x in record()["files"]]
+    files = [{"filename": x, "status": "modified"} for x in record()["files"]]
     reviews = [{
         "user": {"login": "coderabbitai[bot]"},
         "state": "COMMENTED",
@@ -45,9 +46,14 @@ def candidate():
     }]
     runs = {
         1201: {"conclusion": "failure", "name": "Implementation Regression",
-               "head_branch": "fix/issue129-test"},
+               "head_branch": "fix/issue129-test", "head_sha": "b" * 40,
+               "head_repository": {"full_name": "SepehrGhanbari/Ario"}},
         1202: {"conclusion": "success", "name": "Implementation Regression",
-               "head_sha": HEAD, "head_branch": "fix/issue129-test"},
+               "head_sha": HEAD, "head_branch": "fix/issue129-test",
+               "head_repository": {"full_name": "SepehrGhanbari/Ario"},
+               "jobs": [{"name": "m0-regression", "conclusion": "success",
+                         "steps": [{"name": "Run M0 and runtime regression suites",
+                                    "conclusion": "success"}]}]},
     }
     return [pr, record(), files, reviews, [], runs]
 

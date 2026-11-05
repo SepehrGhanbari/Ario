@@ -66,18 +66,30 @@ def parse_record(body: str) -> dict:
     return data
 
 
+# This tiny allowlist does NOT establish semantic source-change authorization.
+ROUTINE_PATHS = frozenset({
+    "implementation/witness_provenance_experiment.py",
+    "implementation/tests/test_witness_provenance_experiment.py",
+})
+
+
 def protected_path(path: str) -> bool:
-    if path == "ENGINEERING_LOG.md":
-        return False
-    if not path.startswith("implementation/"):
+    """Default-deny noncanonical or unknown Git paths."""
+    if not isinstance(path, str) or not path or len(path) > 256:
         return True
-    lower = path.lower()
-    protected_markers = (
-        "owner_signer", "genesis", "trust_anchor", "authorization",
-        "admission", "memory_engine", "continuity", "self_model",
-        "identity_contract", "governance", "secret", "credential",
-    )
-    return any(token in lower for token in protected_markers)
+    if ("\\" in path or "\x00" in path or path.startswith("/")
+            or any(p in ("", ".", "..") for p in path.split("/"))):
+        return True
+    return path != "ENGINEERING_LOG.md" and path not in ROUTINE_PATHS
+
+
+def validate_log_append_only(original: bytes, proposed: bytes) -> None:
+    require(type(original) is bytes and type(proposed) is bytes,
+            "LOG_BYTES_NOT_VERIFIED")
+    require(len(original) > 0 and len(proposed) > len(original),
+            "LOG_NOT_APPENDED")
+    require(original.endswith(b"\n") and proposed.startswith(original),
+            "LOG_HISTORICAL_PREFIX_CHANGED")
 
 
 def validate_candidate(pr: dict, record: dict, files: list[dict],
@@ -98,6 +110,9 @@ def validate_candidate(pr: dict, record: dict, files: list[dict],
     require("ENGINEERING_LOG.md" in actual, "APPEND_ONLY_LOG_MISSING")
     require(not any(protected_path(p) for p in actual),
             "PROTECTED_GOVERNANCE_OR_AUTHORITY_PATH")
+    require(all(f.get("status") == "modified" and
+                "previous_filename" not in f for f in files),
+            "RENAME_DELETE_OR_UNKNOWN_FILE_OPERATION")
 
     author = (pr.get("user") or {}).get("login", "").lower()
     matching = [
@@ -130,6 +145,13 @@ def validate_candidate(pr: dict, record: dict, files: list[dict],
                 "RED_NOT_IMPLEMENTATION_REGRESSION")
         require(run.get("head_branch") == pr.get("head", {}).get("ref"),
                 "RED_RUN_FROM_OTHER_BRANCH")
+        require(isinstance(run.get("head_sha"), str) and
+                SHA_RE.fullmatch(run["head_sha"]) and
+                run["head_sha"] != head, "RED_IS_NOT_PRIOR_COMMIT")
+        require((run.get("head_repository") or {}).get("full_name") ==
+                (pr.get("head", {}).get("repo") or {}).get("full_name") and
+                bool((pr.get("head", {}).get("repo") or {}).get("full_name")),
+                "RED_RUN_FROM_UNRELATED_HEAD_REPOSITORY")
     green = runs.get(record["green_run_id"])
     require(isinstance(green, dict) and green.get("conclusion") == "success",
             "GREEN_RUN_NOT_SUCCESSFUL_OR_UNVERIFIED")
@@ -137,6 +159,16 @@ def validate_candidate(pr: dict, record: dict, files: list[dict],
             and green.get("head_sha") == head, "GREEN_NOT_CURRENT_HEAD")
     require(green.get("head_branch") == pr.get("head", {}).get("ref"),
             "GREEN_RUN_FROM_OTHER_BRANCH")
+    require((green.get("head_repository") or {}).get("full_name") ==
+            (pr.get("head", {}).get("repo") or {}).get("full_name") and
+            bool((pr.get("head", {}).get("repo") or {}).get("full_name")),
+            "GREEN_WRONG_HEAD_REPOSITORY")
+    jobs = green.get("jobs")
+    require(isinstance(jobs, list) and any(
+        job.get("name") == "m0-regression" and job.get("conclusion") == "success" and
+        any(step.get("name") == "Run M0 and runtime regression suites" and
+            step.get("conclusion") == "success" for step in (job.get("steps") or []))
+        for job in jobs), "GREEN_REQUIRED_REGRESSION_JOB_NOT_VERIFIED")
     return [
         "GATE_PASS: scope is ROUTINE_LAB, PR metadata bound to current HEAD",
         "GATE_PASS: declared RED/GREEN runs checked against GitHub Actions",
