@@ -397,9 +397,12 @@ class MutableEvidenceHarness:
                     "path": ".github/workflows/implementation-regression.yml"}
         raise AssertionError("Unexpected API request: " + path)
 
-    def run(self, action="edited"):
+    def run(self, action="edited", event_fields=None):
         g = self.g
-        event = {"action": action, "pull_request": {"number": 151}}
+        event = {"action": action, "pull_request": {"number": 151},
+                 "repository": {"id": 55, "full_name": "SepehrGhanbari/Ario"}}
+        if event_fields:
+            event.update(copy.deepcopy(event_fields))
         with patch.dict(os.environ, {
                 "GITHUB_REPOSITORY": "SepehrGhanbari/Ario", "GITHUB_EVENT_PATH": "in-memory-event",
                 "GITHUB_EVENT_NAME": "pull_request_review_comment"}), \
@@ -504,6 +507,59 @@ class GateMutableEvidenceTests(unittest.TestCase):
             '<img src="major-light.svg" alt=""></picture> Major** A reproducible blocker.'
         )
         self.assert_hold(h)
+
+    def test_deleted_major_before_first_read_fails_closed(self):
+        h = MutableEvidenceHarness()
+        # The webhook reports the deletion; BOTH REST snapshots already omit C.
+        event_data = {"comment": {"id": 900, "body": "**Major** former blocker",
+                                  "commit_id": HEAD}}
+        self.assertEqual(h.run("deleted", event_fields=event_data), 1,
+                         h.stdout.getvalue())
+        self.assertIn("INLINE_REVIEW_COMMENT_DELETED_EVENT",
+                      h.stderr.getvalue())
+        self.assertNotIn("GATE_RESULT=PASS", h.stdout.getvalue())
+
+    def test_deleted_innocuous_before_first_read_still_fails_closed(self):
+        h = MutableEvidenceHarness()
+        event_data = {"comment": {"id": 901, "body": "Nonblocking note",
+                                  "commit_id": HEAD}}
+        self.assertEqual(h.run("deleted", event_fields=event_data), 1,
+                         h.stdout.getvalue())
+        self.assertIn("INLINE_REVIEW_COMMENT_DELETED_EVENT",
+                      h.stderr.getvalue())
+        self.assertNotIn("GATE_RESULT=PASS", h.stdout.getvalue())
+
+    def test_stale_major_edited_before_first_read_with_resolved_thread_holds(self):
+        h = MutableEvidenceHarness()
+        old_sha = "b" * 40
+        h.comments = [inline_comment(
+            id=900, body="**Major** Earlier defect remains undisposed.",
+            commit_id=old_sha, original_commit_id=old_sha,
+            pull_request_review_id=700)]
+        # Model explicit thread-to-inline-comment linkage, resolved before read.
+        h.threads = [{"id": "thread-900", "isResolved": True, "isOutdated": True,
+                      "comments": {"nodes": [{"databaseId": 900}]}}]
+        self.assertEqual(h.run("edited"), 1, h.stdout.getvalue())
+        self.assertIn("STALE_BLOCKING_INLINE_COMMENT_UNDISPOSED",
+                      h.stderr.getvalue())
+        self.assertNotIn("GATE_RESULT=PASS", h.stdout.getvalue())
+
+    def test_irrelevant_star_count_change_does_not_invalidate_evidence(self):
+        h = MutableEvidenceHarness()
+        h.pr["head"]["repo"]["stargazers_count"] = 10
+        h.later_pr = copy.deepcopy(h.pr)
+        h.later_pr["head"]["repo"]["stargazers_count"] = 11
+        self.assertEqual(h.run(), 0, h.stderr.getvalue())
+        self.assertIn("GATE_RESULT=PASS_PROCESS_EVIDENCE_ONLY",
+                      h.stdout.getvalue())
+
+    def test_changed_head_repository_id_remains_a_blocker(self):
+        h = MutableEvidenceHarness()
+        h.later_pr = copy.deepcopy(h.pr)
+        h.later_pr["head"]["repo"]["id"] = 999
+        self.assertEqual(h.run(), 1, h.stdout.getvalue())
+        self.assertIn("MUTABLE_PR_EVIDENCE_CHANGED_DURING_AUDIT",
+                      h.stderr.getvalue())
 
     def test_workflow_rechecks_inline_comment_created_edited_deleted(self):
         import re
