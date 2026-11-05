@@ -159,7 +159,10 @@ def open_file(envelope: bytes, receipt: bytes, expected_path: str,
         raise
     except InvalidTag as exc:
         raise Refuse("AEAD_AUTHENTICATION_FAILED") from exc
-    except (ValueError, TypeError, KeyError, AttributeError, UnicodeError, OverflowError) as exc:
+    except (ValueError, TypeError, KeyError, AttributeError, UnicodeError,
+            OverflowError, RecursionError) as exc:
+        # Deeply nested untrusted JSON is a refused input, not an
+        # uncaught parser exception or a reason to continue.
         raise Refuse("MALFORMED_ENVELOPE_OR_RECEIPT") from exc
 
 
@@ -199,6 +202,7 @@ class LocalIntegrityBaseline:
 
     @classmethod
     def capture(cls, path: Path) -> "LocalIntegrityBaseline":
+        """Hash a local regular file in bounded chunks; NOT an external anchor."""
         p = Path(path)
         if p.is_symlink():
             raise Refuse("LEDGER_SYMLINK")
@@ -208,18 +212,26 @@ class LocalIntegrityBaseline:
             before = os.fstat(fd)
             if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1:
                 raise Refuse("LEDGER_NOT_PRIVATE_REGULAR_FILE")
+            digest = hashlib.sha256()
+            total = 0
             with os.fdopen(os.dup(fd), "rb") as stream:
-                contents = stream.read()
+                while True:
+                    chunk = stream.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    digest.update(chunk)
+                    total += len(chunk)
             after = os.fstat(fd)
             if ((before.st_dev, before.st_ino, before.st_size) !=
                     (after.st_dev, after.st_ino, after.st_size)
-                    or len(contents) != after.st_size):
+                    or total != after.st_size):
                 raise Refuse("LEDGER_CHANGED_DURING_READ")
-            return cls(after.st_dev, after.st_ino, len(contents), sha256(contents))
+            return cls(after.st_dev, after.st_ino, total, digest.hexdigest())
         finally:
             os.close(fd)
 
     def verify_before_append(self, path: Path) -> None:
+        """Recheck bounded local drift; excludes neither races nor rollback."""
         other = type(self).capture(path)
         if (self.device, self.inode) != (other.device, other.inode):
             raise Refuse("LEDGER_REPLACED")
