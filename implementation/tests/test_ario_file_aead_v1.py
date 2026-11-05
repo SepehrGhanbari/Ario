@@ -158,7 +158,10 @@ class ArioFileAeadResearchTests(unittest.TestCase):
             real = Path(tmp) / "real"
             real.write_bytes(b"ok\n")
             link = Path(tmp) / "link"
-            link.symlink_to(real)
+            try:
+                link.symlink_to(real)
+            except (OSError, NotImplementedError) as exc:
+                self.skipTest("symlink creation unavailable: " + type(exc).__name__)
             with self.assertRaisesRegex(lib.Refuse, "LEDGER_SYMLINK"):
                 lib.LocalIntegrityBaseline.capture(link)
 
