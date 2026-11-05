@@ -416,3 +416,10 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - Proposed GREEN correction: event-specific deletion HOLD with repository+PR identity check; stale serious CodeRabbit inline finding returns UNKNOWN/HOLD pending a separately authorized disposition contract; PR binding excludes volatile repository statistics while preserving head/base SHA/ref/repo identity, author identity, body/state/draft/number.
 - A durable cross-rerun deletion latch, authentic webhook identity outside the trusted Actions environment, exact PR-atomic merge authorization, and independent CI execution attestation remain NOT_ESTABLISHED; static CodeRabbit review and these synthetic tests do not install an external trusted check.
 - This log is append-only and does not claim a GREEN outcome before the exact new candidate HEAD CI is observed. Owner signer HOLD; Genesis/production NO_GO; M0 admission NOT_EVALUATED.
+
+## 2026-11-05 — PR #151 CodeRabbit comment-trigger delivery limitation (append-only)
+
+- At exact candidate HEAD `956bd3da8b29be942f710524ef6abd31e1fbf6ad`, CodeRabbit [review r4484635550](https://github.com/SepehrGhanbari/Ario/pull/151#discussion_r4484635550) identified an overstatement: subscribing to `pull_request_review_comment` does not guarantee a rerun when comment changes originate from workflows authenticated with `GITHUB_TOKEN`.
+- GitHub's published `GITHUB_TOKEN` and event-trigger documentation confirms that events caused by this token normally do not create workflow runs, aside from documented exceptions. The candidate policy now expressly states this limitation, the missing-event/cross-rerun durable-HOLD gap, and the need for independently authorized App/webhook + native merge checks.
+- This commit changes **documentation only** plus this appended historical log entry; no workflow event, privilege, gate source/test, main, CODEOWNERS or ruleset changes. Last observed 72/72 green and 1,108 + 96 regression results apply to **the preceding HEAD** and must not be automatically claimed for this new documentation HEAD.
+- Owner signer HOLD; Genesis/production NO_GO; M0 admission NOT_EVALUATED.
