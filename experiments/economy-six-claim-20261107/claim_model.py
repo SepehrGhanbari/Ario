@@ -102,6 +102,15 @@ def evaluate(observation: ReceiptObservation, fixture: ScenarioAssumptions | Non
     if (type(observation.signed_receipts) is not int
             or not 0 <= observation.signed_receipts <= len(observation.slot_ids)):
         raise ValueError("inconsistent receipt count")
+    # Slot IDs are exact, nonempty, hashable strings. The evaluator does not
+    # inherit the projector's stricter ASCII-only namespace fixture.
+    for slot_id in observation.slot_ids:
+        if not isinstance(slot_id, str) or not slot_id:
+            raise ValueError("invalid slot id")
+        try:
+            hash(slot_id)
+        except TypeError as exc:
+            raise ValueError("invalid slot id") from exc
     if len(observation.slot_ids) != len(set(observation.slot_ids)):
         # Duplicate slots cannot be silently counted as independently useful work.
         raise ValueError("duplicate slot ids")
