@@ -1,6 +1,8 @@
 """Explicit adversarial two-world fixtures; no devices, API or money involved."""
 import unittest
-from claim_model import ReceiptObservation, ScenarioAssumptions, HiddenScenario, project_reported_receipts, Verdict, CLAIMS, evaluate, local_pilot_admission
+from claim_model import (ReceiptObservation, ScenarioAssumptions, HiddenScenario,
+    project_reported_receipts, MockRouteAttempt, mock_support_route,
+    compare_mock_opportunity, Verdict, CLAIMS, evaluate, local_pilot_admission)
 
 
 class EpistemicEconomyTests(unittest.TestCase):
@@ -141,6 +143,53 @@ class EpistemicEconomyTests(unittest.TestCase):
         self.assertEqual(local_pilot_admission(opted_in=True, has_enforceable_stop=True,
             sensor_fresh=True, within_heat_battery_data_budget=True),
             'TOY_ELIGIBLE_NOT_AUTHORIZED_TO_RUN')
+
+    def test_privacy_refusal_cannot_change_mock_support_route_or_queue(self):
+        yes = MockRouteAttempt(route_available=True, queue_rank=3, telemetry_opt_in=True)
+        no = MockRouteAttempt(route_available=True, queue_rank=3, telemetry_opt_in=False)
+        unknown = MockRouteAttempt(route_available=True, queue_rank=3, telemetry_opt_in=None)
+        for attempt in (no, unknown):
+            self.assertEqual(mock_support_route(yes), mock_support_route(attempt))
+        self.assertEqual(mock_support_route(no), (Verdict.FIXTURE_CONDITIONAL, 3))
+
+    def test_telemetry_refusal_does_not_convert_delivery_unknown_into_zero(self):
+        no = ScenarioAssumptions(assume_consent=False)
+        self.assertEqual(evaluate(self.observed, no)['DELIVERED_USABLE_SUPPORT'], Verdict.UNKNOWN)
+
+    def test_unavailable_or_unknown_route_does_not_fake_offer_success(self):
+        self.assertEqual(mock_support_route(MockRouteAttempt(False, 3, False)),
+                         (Verdict.REFUTED, None))
+        self.assertEqual(mock_support_route(MockRouteAttempt(None, 3, False)),
+                         (Verdict.UNKNOWN, None))
+
+    def test_weak_device_loses_opportunity_with_constant_total_service(self):
+        self.assertEqual(compare_mock_opportunity(
+            baseline_weak_completions=1, candidate_weak_completions=0,
+            baseline_total_completions=10, candidate_total_completions=10), Verdict.REFUTED)
+
+    def test_weak_device_preserves_one_completion_but_net_benefit_unknown(self):
+        self.assertEqual(compare_mock_opportunity(
+            baseline_weak_completions=1, candidate_weak_completions=1,
+            baseline_total_completions=10, candidate_total_completions=10),
+            Verdict.FIXTURE_CONDITIONAL)
+        self.assertEqual(evaluate(self.observed)['NET_WEAK_DEVICE_BENEFIT'], Verdict.UNKNOWN)
+
+    def test_falling_total_demand_or_missing_baseline_keeps_opportunity_unknown(self):
+        self.assertEqual(compare_mock_opportunity(
+            baseline_weak_completions=1, candidate_weak_completions=0,
+            baseline_total_completions=10, candidate_total_completions=9), Verdict.UNKNOWN)
+        self.assertEqual(compare_mock_opportunity(
+            baseline_weak_completions=None, candidate_weak_completions=1,
+            baseline_total_completions=10, candidate_total_completions=10), Verdict.UNKNOWN)
+
+    def test_invalid_mock_counts_are_refused_not_counted_as_people(self):
+        for count in (-1, True, 5):
+            with self.subTest(count=count):
+                with self.assertRaises(ValueError):
+                    compare_mock_opportunity(baseline_weak_completions=count,
+                                             candidate_weak_completions=1,
+                                             baseline_total_completions=4,
+                                             candidate_total_completions=4)
 
     def test_invalid_cost_and_benefit_values_refused(self):
         for field in ('assume_participant_valued_benefit', 'assume_total_device_cost'):
