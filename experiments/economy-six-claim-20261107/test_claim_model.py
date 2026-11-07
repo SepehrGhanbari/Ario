@@ -268,6 +268,28 @@ class EpistemicEconomyTests(unittest.TestCase):
             baseline_total_completions=10, candidate_total_completions=10),
             CompletionCountDelta.UNKNOWN)
 
+    def test_all_four_completion_fields_reject_bad_types_with_missing_peer(self):
+        good = dict(baseline_weak_completions=1,
+                    candidate_weak_completions=1,
+                    baseline_total_completions=4,
+                    candidate_total_completions=4)
+        field_names = tuple(good)
+        for field in field_names:
+            for malformed in (-1, True, False, 1.5, float('nan'), '2'):
+                with self.subTest(field=field, malformed=malformed, other_missing=False):
+                    values = good.copy()
+                    values[field] = malformed
+                    with self.assertRaises(ValueError):
+                        classify_mock_completion_delta(**values)
+                with self.subTest(field=field, malformed=malformed, other_missing=True):
+                    values = good.copy()
+                    values[field] = malformed
+                    # A distinct absent field must never excuse malformed input.
+                    other = next(name for name in field_names if name != field)
+                    values[other] = None
+                    with self.assertRaises(ValueError):
+                        classify_mock_completion_delta(**values)
+
     def test_invalid_cost_and_benefit_values_refused(self):
         for field in ('assume_participant_valued_benefit', 'assume_total_device_cost'):
             for value in (-1, float('nan'), float('inf')):
