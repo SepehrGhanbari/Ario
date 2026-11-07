@@ -614,5 +614,35 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(ledger.path.read_bytes(), completed)
 
 
+    def test_hash_valid_malformed_event_fields_hold_before_transport(self):
+        # An attacker can make internally hash-consistent JSON while omitting
+        # fields required by current(), Ledger.items() and later dispatch.
+        objects = (
+            ("missing_kind", {"data": {}}),
+            ("empty_kind", {"kind": "", "data": {}}),
+            ("boolean_kind", {"kind": True, "data": {}}),
+            ("scalar_data", {"kind": "INIT", "data": 1}),
+            ("missing_data", {"kind": "INIT"}),
+        )
+        for name, additions in objects:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as temp:
+                folder = Path(temp)
+                event = {"seq": 1, "previous_sha256": "0" * 64,
+                         "timestamp_utc": "2026-11-07T00:00:00Z", **additions}
+                canonical = json.dumps(event, ensure_ascii=False, sort_keys=True,
+                                       separators=(",", ":")).encode("utf-8")
+                event["event_sha256"] = hashlib.sha256(canonical).hexdigest()
+                raw = json.dumps(event, ensure_ascii=False, sort_keys=True,
+                                 separators=(",", ":")).encode("utf-8") + b"\n"
+                path = folder / "events.jsonl"
+                path.write_bytes(raw)
+                fake = Fake()
+                with self.assertRaisesRegex(exp.Hold, "INVALID_OR_INCOMPLETE_EVENT_LOG"):
+                    ledger = exp.Ledger(folder)
+                    exp.run(ledger, LETTER, "local-not-logged", fake)
+                self.assertEqual(path.read_bytes(), raw)
+                self.assertFalse(fake.calls)
+
+
 if __name__ == "__main__":
     unittest.main()
