@@ -57,6 +57,10 @@ class EpistemicEconomyTests(unittest.TestCase):
             project_reported_receipts(HiddenScenario('x', False, slot_count=1001))
         with self.assertRaises(ValueError):
             project_reported_receipts(HiddenScenario('x', False, namespace='نام'))
+        with self.assertRaises(ValueError):
+            project_reported_receipts(HiddenScenario('x', False, namespace=''))
+        with self.assertRaises(ValueError):
+            project_reported_receipts(HiddenScenario('x', False, slot_count=-1))
 
     def test_different_40_ids_do_not_establish_40_useful_outcomes(self):
         self.assertEqual(len(set(self.observed.slot_ids)), 40)
@@ -70,6 +74,11 @@ class EpistemicEconomyTests(unittest.TestCase):
                                   assume_delivery_observed=True)
         self.assertEqual(evaluate(self.observed, fixture)['DELIVERED_USABLE_SUPPORT'], Verdict.UNKNOWN)
 
+    def test_explicitly_nonindependent_observer_stays_unknown(self):
+        f = ScenarioAssumptions(assume_consent=True, assume_observer_independent=False,
+                                assume_delivery_observed=True)
+        self.assertEqual(evaluate(self.observed, f)['DELIVERED_USABLE_SUPPORT'], Verdict.UNKNOWN)
+
     def test_delivery_positive_is_only_conditional_on_synthetic_external_evidence(self):
         fixture = ScenarioAssumptions(assume_consent=True, assume_observer_independent=True,
                                   assume_delivery_observed=True)
@@ -82,6 +91,14 @@ class EpistemicEconomyTests(unittest.TestCase):
     def test_refusal_to_be_observed_is_not_fraud(self):
         f = ScenarioAssumptions(assume_consent=False, assume_delivery_observed=None)
         self.assertEqual(evaluate(self.observed, f)['DELIVERED_USABLE_SUPPORT'], Verdict.UNKNOWN)
+
+    def test_no_observation_consent_stays_unknown_for_both_delivery_reports(self):
+        for delivered in (False, True):
+            with self.subTest(delivered=delivered):
+                f = ScenarioAssumptions(assume_consent=False,
+                                        assume_observer_independent=True,
+                                        assume_delivery_observed=delivered)
+                self.assertEqual(evaluate(self.observed, f)['DELIVERED_USABLE_SUPPORT'], Verdict.UNKNOWN)
 
     def test_fabricated_demand_can_refute_without_punishing_worker(self):
         f = ScenarioAssumptions(assume_origin_independent=False)
@@ -126,6 +143,15 @@ class EpistemicEconomyTests(unittest.TestCase):
     def test_illogical_receipt_count_refused(self):
         with self.assertRaises(ValueError):
             evaluate(ReceiptObservation(('a',), signed_receipts=2))
+
+    def test_malformed_signed_receipt_counts_fail_closed(self):
+        for count in (-1, True, False, 1.5, float('nan'), float('inf'), '1', None):
+            with self.subTest(count=count):
+                with self.assertRaises(ValueError):
+                    evaluate(ReceiptObservation(('slot-0',), signed_receipts=count))
+        for count in (0, 1):
+            self.assertEqual(evaluate(ReceiptObservation(('slot-0',), signed_receipts=count))
+                             ['REQUEST_INDEPENDENT'], Verdict.UNKNOWN)
 
     def test_missing_sensor_or_stop_refuses_device_pilot(self):
         for kw in [
@@ -190,6 +216,16 @@ class EpistemicEconomyTests(unittest.TestCase):
                                              candidate_weak_completions=1,
                                              baseline_total_completions=4,
                                              candidate_total_completions=4)
+
+    def test_non_numeric_or_boolean_cost_and_benefit_values_refused(self):
+        for field in ('assume_participant_valued_benefit', 'assume_total_device_cost'):
+            for value in (True, False, '2', [], 2j):
+                with self.subTest(field=field, value=value):
+                    kwargs = {'assume_participant_valued_benefit': 2,
+                              'assume_total_device_cost': 1}
+                    kwargs[field] = value
+                    with self.assertRaises(ValueError):
+                        evaluate(self.observed, ScenarioAssumptions(**kwargs))
 
     def test_invalid_cost_and_benefit_values_refused(self):
         for field in ('assume_participant_valued_benefit', 'assume_total_device_cost'):
