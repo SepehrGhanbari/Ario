@@ -110,14 +110,14 @@ class ReviewEvidenceGateTests(unittest.TestCase):
             parse_record("<!-- ARIO_REVIEW_EVIDENCE_V1\r\r\n" + payload + "\n-->")
 
     def test_valid_record_plus_corrupt_second_marker_is_rejected(self):
-        valid = "<!-- ARIO_REVIEW_EVIDENCE_V1\\n" + json.dumps(record()) + "\\n-->"
-        invalid = ("<!-- ARIO_REVIEW_EVIDENCE_V1\\r\\r\\n" +
-                   "{}\\n-->")
+        valid = "<!-- ARIO_REVIEW_EVIDENCE_V1\n" + json.dumps(record()) + "\n-->"
+        invalid = ("<!-- ARIO_REVIEW_EVIDENCE_V1\r\r\n" +
+                   "{}\n-->")
         with self.assertRaisesRegex(GateError, "REVIEW_RECORD_ABSENT_OR_AMBIGUOUS"):
-            parse_record(valid + "\\n" + invalid)
+            parse_record(valid + "\n" + invalid)
         # A malformed trailing opener without a closing delimiter also blocks.
         with self.assertRaisesRegex(GateError, "REVIEW_RECORD_ABSENT_OR_AMBIGUOUS"):
-            parse_record(valid + "\\n<!-- ARIO_REVIEW_EVIDENCE_V1")
+            parse_record(valid + "\n<!-- ARIO_REVIEW_EVIDENCE_V1")
 
     def test_missing_or_duplicate_record_is_rejected(self):
         for body in ("", "ordinary PR description",
