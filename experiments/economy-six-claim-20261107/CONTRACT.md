@@ -21,6 +21,14 @@ From this directory: `python -m unittest -v test_claim_model`. Standard-library-
 
 ## Limits and proposed falsifiers
 
-This model **does not prove independence**. It trusts the fields of `ExternalFixture` under stated assumptions; a colluding observer can falsely fill them. A future negative control should supply a valid-looking independent attestation from a common-controlled observer; real-world verdict must stay `UNKNOWN`. The model does not assess requester beneficial ownership, offline delivery, welfare by unobserved populations, safe device containment or economic viability. Missing data are not zero. Pending independent review before any promotion beyond this lab.
+This model **does not prove independence**. It trusts the fields of `ScenarioAssumptions` under stated assumptions; a colluding observer can falsely fill them. A future negative control should supply a valid-looking independent attestation from a common-controlled observer; real-world verdict must stay `UNKNOWN`. The model does not assess requester beneficial ownership, offline delivery, welfare by unobserved populations, safe device containment or economic viability. Missing data are not zero. Pending independent review before any promotion beyond this lab.
 
 **OWNER_SIGNER=HOLD · GENESIS/PRODUCTION=NO_GO · M0_ADMISSION=NOT_EVALUATED.**
+
+## Added bounded contracts from CodeRabbit #94 (2026-11-07)
+
+- **Optional telemetry must not govern route access.** `mock_support_route` ignores `telemetry_opt_in` entirely. A route offer and queue rank are not evidence that a person actually received aid. A refusal of observation never implies fraud, zero welfare, or grounds to deny aid.
+- **Baseline-relative opportunity is not net device benefit.** `compare_mock_opportunity` can refute preservation of a weak device's completed tasks if aggregate service stays unchanged and the device loses a completion. If the baseline is unavailable or total service falls, it returns `UNKNOWN`; a non-loss remains only `FIXTURE_CONDITIONAL`, not a fairness guarantee. Detailed participant energy costs not shared must leave `NET_WEAK_DEVICE_BENEFIT=UNKNOWN`.
+- These are pure synthetic comparators, **not** a route operator or a scheduler; no private personal data, money, enrollment, hardware or network requests are used. The independently consented pilot remains unapproved.
+
+Follow-up review: https://github.com/SepehrGhanbari/Ario/issues/94#issuecomment-6704471710 .
