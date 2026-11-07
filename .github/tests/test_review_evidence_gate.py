@@ -199,6 +199,34 @@ class ReviewEvidenceGateTests(unittest.TestCase):
                 with self.assertRaises(GateError):
                     parse_record(body)
 
+    def test_bool_version_is_not_integer_schema_revision(self):
+        payload = json.dumps(record()).replace('"version": 1', '"version": true')
+        self.assertIn('"version": true', payload)
+        with self.assertRaisesRegex(GateError, "NOT_ELIGIBLE_FOR_ROUTINE_GATE"):
+            parse_record("<!-- ARIO_REVIEW_EVIDENCE_V1\n" + payload + "\n-->")
+        self.assertEqual(parse_record(
+            "<!-- ARIO_REVIEW_EVIDENCE_V1\n" + json.dumps(record()) + "\n-->"), record())
+
+    def test_explicit_severity_major_and_critical_block_without_reviewer_upgrade(self):
+        for label in ("**Severity: Major** — serious issue",
+                      "**Severity: Critical** - serious issue",
+                      "**Major** serious issue",
+                      "**Critical** serious issue"):
+            case = candidate()
+            self.assertTrue(validate_candidate(*case, comments=[]))
+            case[3][0]["body"] = label
+            with self.subTest(label=label):
+                with self.assertRaisesRegex(
+                    GateError, "INDEPENDENT_REVIEW_REPORTS_MAJOR_OR_CRITICAL"
+                ):
+                    validate_candidate(*case, comments=[])
+        for label in ("**Severity: Minor** no blocker",
+                      "**Severity: Trivial** cosmetic suggestion"):
+            case = candidate()
+            case[3][0]["body"] = label
+            with self.subTest(nonblock=label):
+                self.assertTrue(validate_candidate(*case, comments=[]))
+
     def test_wrong_sha_rejected(self):
         case = candidate()
         case[1]["reviewed_head_sha"] = "b" * 40

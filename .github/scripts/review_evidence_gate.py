@@ -69,7 +69,8 @@ def parse_record(body: str) -> dict:
         "risk_disposition", "limitations",
     }
     require(set(data) == required, "REVIEW_RECORD_SCHEMA_MISMATCH")
-    require(data["version"] == 1 and data["scope"] == "ROUTINE_LAB",
+    require(type(data["version"]) is int and data["version"] == 1
+            and data["scope"] == "ROUTINE_LAB",
             "NOT_ELIGIBLE_FOR_ROUTINE_GATE")
     require(isinstance(data["reviewed_head_sha"], str) and
             bool(SHA_RE.fullmatch(data["reviewed_head_sha"])), "INVALID_REVIEWED_SHA")
@@ -126,7 +127,7 @@ def independent_bot(user: dict, author_id: int) -> bool:
 def reports_blocker(body: str) -> bool:
     # CodeRabbit can put <picture> artwork inside a bold severity label.
     visible = re.sub(r"<[^>]*>", "", html.unescape(body))
-    return bool(re.search(r"(?:\*\*|alt=[\"'])\s*(?:Major|Critical)\b",
+    return bool(re.search(r"(?:\*\*|alt=[\"'])\s*(?:Severity:\s*)?(?:Major|Critical)\b",
                           body + "\n" + visible, flags=re.IGNORECASE))
 
 
