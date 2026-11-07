@@ -76,7 +76,7 @@ class EpistemicEconomyTests(unittest.TestCase):
                     HiddenScenario("independent", True, slot_count=count))
                 self.assertEqual(observation.signed_receipts, count)
                 self.assertEqual(len(observation.slot_ids), count)
-                self.assertIn("OUTPUT_CORRECT", evaluate(observation))
+                self.assertEqual(evaluate(observation)["OUTPUT_CORRECT"], Verdict.MOCK_CORRECT)
 
     def test_projection_refuses_nonstring_namespaces(self):
         for namespace in (None, True, 1, b"slot", [], {}):
