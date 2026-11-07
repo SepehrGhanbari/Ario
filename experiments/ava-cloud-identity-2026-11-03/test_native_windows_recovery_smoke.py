@@ -79,6 +79,47 @@ class WindowsNativeScratchTests(unittest.TestCase):
             )
             self.assertEqual(proc.returncode, 40, proc.stderr)
 
+    def test_cli_rejects_crlf_letter_before_creating_run_state(self):
+        source = Path(__file__).with_name(
+            "ARIO_IDENTITY_INTERIM_FINDINGS_LETTER_FA_2026-11-03.md")
+        lf_bytes = source.read_bytes()
+        self.assertEqual(exp.sha(lf_bytes), exp.LETTER_SHA256)
+        self.assertNotIn(b"\r\n", lf_bytes)
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            converted = folder / "letter-crlf.md"
+            converted.write_bytes(lf_bytes.replace(b"\n", b"\r\n"))
+            self.assertNotEqual(exp.sha(converted.read_bytes()), exp.LETTER_SHA256)
+            rejected_run = folder / "rejected-run"
+            base = [sys.executable, str(Path(exp.__file__)),
+                    "--letter", str(converted),
+                    "--run-dir", str(rejected_run),
+                    "--new", "--target", "1", "--max-calls", "0"]
+            env = {**os.environ, "OPENROUTER_API_KEY": ""}
+            bad = subprocess.run(base, cwd=str(Path(__file__).parent), env=env,
+                                 capture_output=True, text=True, timeout=15,
+                                 check=False)
+            self.assertEqual(bad.returncode, 2, bad.stderr)
+            self.assertIn("LETTER_BYTE_HASH_MISMATCH", bad.stderr)
+            self.assertFalse(rejected_run.exists(),
+                             "Byte mismatch must fail before lock or ledger creation")
+            self.assertEqual(converted.read_bytes(),
+                             lf_bytes.replace(b"\n", b"\r\n"))
+
+            # LF positive control: blank key never dispatches to a real provider.
+            good_run = folder / "good-run"
+            good_cmd = [sys.executable, str(Path(exp.__file__)),
+                        "--letter", str(source), "--run-dir", str(good_run),
+                        "--new", "--target", "1", "--max-calls", "0"]
+            good = subprocess.run(good_cmd, cwd=str(Path(__file__).parent),
+                                  env=env, capture_output=True, text=True,
+                                  timeout=15, check=False)
+            self.assertEqual(good.returncode, 0, good.stderr)
+            self.assertIn("PAUSED_MISSING_LOCAL_OPENROUTER_KEY", good.stdout)
+            ledger = exp.Ledger(good_run)
+            self.assertEqual(len(ledger.items("INIT")), 1)
+            self.assertFalse(ledger.items("ATTEMPT"))
+
     def test_stale_lock_is_preserved_and_refused(self):
         with tempfile.TemporaryDirectory() as tmp:
             folder = Path(tmp)
