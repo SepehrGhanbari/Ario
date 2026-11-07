@@ -124,6 +124,9 @@ class Ledger:
         # SHA256 state tracks the exact validated, append-only bytes, never
         # a public checksum purported to come from an untrusted file.
         self._content_digest = hashlib.sha256()
+        # Fail-closed reuse guard: a failed/ambiguous append must be
+        # investigated with a fresh Ledger, never retried on this instance.
+        self._uncertain_append = False
         if self.path.exists():
             # Read through one opened descriptor; preserve that file identity
             # for subsequent appends. A pathname can later name another file.
@@ -170,6 +173,8 @@ class Ledger:
             self._content_digest.update(data)
 
     def add(self, kind: str, **data: object) -> dict:
+        if self._uncertain_append:
+            raise Hold("UNCERTAIN_APPEND_REQUIRES_RELOAD")
         item = {"seq": len(self.events) + 1, "previous_sha256": self.hash,
                 "timestamp_utc": now(), "kind": kind, "data": data}
         digest = sha(canonical(item))
@@ -232,8 +237,18 @@ class Ledger:
             self.file_identity = identity
             self.byte_length += len(line)
             self._content_digest.update(line)
+        except BaseException:
+            # Writing may have partially or fully modified the file.
+            self._uncertain_append = True
+            raise
         finally:
-            os.close(fd)
+            try:
+                os.close(fd)
+            except BaseException:
+                # Even a successful fsync can precede a failed close. The
+                # persisted ATTEMPT may exist; keep it and block reuse.
+                self._uncertain_append = True
+                raise
         self.events.append(complete)
         self.hash = digest
         return complete
@@ -375,6 +390,8 @@ def init_run(ledger: Ledger, letter: str, letter_sha: str, prior: list[dict],
 def run(ledger: Ledger, letter: str, key: str | None,
         transport=send, max_new_calls: int | None = None,
         writer_lock: ExclusiveRunLock | None = None) -> str:
+    if ledger._uncertain_append:
+        raise Hold("UNCERTAIN_APPEND_REQUIRES_RELOAD")
     init, previous = current(ledger)
     if init.get("protocol") != PROTOCOL or init.get("model") != MODEL or sha(letter.encode("utf-8")) != init.get("letter_sha256"):
         raise Hold("SEED_OR_PROTOCOL_CHANGED")
