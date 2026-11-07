@@ -20,3 +20,11 @@ Next input needed to actually produce the 50 real API messages: the original v0.
 - Initial GREEN verified at `c0dfd38f49be711dfb507836d89060edfcd0620a`; GitHub-hosted [run 41913944198](https://github.com/SepehrGhanbari/Ario/actions/runs/41913944198) reported 1109 passed and 96 subtests passed; all 25 offline runner cases ran.
 - After CodeRabbit identified ambiguous HTTP 429/500 automatic retries, a separate RED draft #148 and further conservative fixes were prepared. Final HTTP-control CI result will be documented separately; do not infer it from initial GREEN.
 - No real API dispatch, Windows-native filesystem test, verified provider retry/idempotency contract, or reviewed `REVIEW_ACK` continuation was established. Any ambiguous HTTP or response pause must remain HOLD until a separate safe recovery protocol is approved. `OWNER_SIGNER=HOLD`; `GENESIS/PRODUCTION=NO_GO`; `M0_ADMISSION=NOT_EVALUATED`.
+
+## 2026-11-07 — native Windows scratch execution update (non-destructive research append)
+
+- Previous 2026-11-03/05 NOT_EXECUTED statements are historical and not silently overwritten. The *independent hosted Windows* branch test has now run.
+- RED preserved: [GitHub Actions 42371222325](https://github.com/SepehrGhanbari/Ario/actions/runs/42371222325) on `7cd0d00407a43be18f1e4e1e7ac8768f5409feb2`, Windows Python 3.13 scratch tests **5 passed, 1 failed**: checkout letter bytes did not match original SHA256 (LF→CRLF behavior). The lock, native subprocess, JSONL and fake-dispatch controls passed.
+- Exact-file fix: [commit 6f7120ec](https://github.com/SepehrGhanbari/Ario/commit/6f7120ec5499c8979005c9c96ce892a6170fb3e1) adds narrow `text eol=lf` attribute; no change to historical letter content.
+- GREEN preserved: [GitHub Actions 42371435519](https://github.com/SepehrGhanbari/Ario/actions/runs/42371435519), same Windows-native six scratch methods, `Ran 6 tests ... OK`; [Implementation Regression 42371435527](https://github.com/SepehrGhanbari/Ario/actions/runs/42371435527) SUCCESS.
+- Scope remains local/synthetic: no user key, live provider traffic, Windows hostile-filesystem security, crash-power-loss durability, independent authority, privacy or consent coverage, safe resumption after ambiguous dispatch, payout, or deployment. **`PR144=DRAFT_HOLD`, `PR134=HOLD` and `GENESIS/PRODUCTION=NO_GO`**.
