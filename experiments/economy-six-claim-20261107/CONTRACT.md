@@ -46,3 +46,8 @@ Peer-review provenance: CodeRabbit [demand-vs-completion critique](https://githu
 ### Corrigendum v0.2.1 — partial-pair consistency
 
 Additional fail-closed detail after peer review: validate each present weak/total completion pair before returning `UNKNOWN` for other missing fields. Thus missing baseline weak count does not excuse an impossible candidate pair (weak 5, total 4), and vice versa. This is a **synthetic schema** requirement only; it does not establish comparable periods, active device eligibility or independent demand. Parent research commit: `d905dd675876bc20eed04bbb6d5ce9539e9c7fee`. No prior test or evidence record is erased.
+
+
+### Corrigendum v0.2.2 — strict evaluator slot IDs (2026-11-07; candidate only)
+
+Following CodeRabbit's scoped suggestion in PR #152 issuecomment-6709694151, the local candidate explicitly validates every observation slot ID **before** duplicate detection. Each ID must be a nonempty hashable string (including Unicode and hashable `str` subclasses); malformed IDs cause `ValueError("invalid slot id")`, not accidental acceptance or leaked `TypeError`. Exact string equality remains unchanged; no trimming or Unicode normalization is performed. An empty slot tuple with zero signed receipts is valid. This evaluator contract intentionally does **not** import the projector's ASCII namespace constraint. No real identity, device service, fairness, payment or authority is established. RED and GREEN must be independently reported; branch-protection approval remains separate and HOLD/NO_GO remain unchanged.
