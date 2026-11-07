@@ -39,3 +39,7 @@ No published claim is amended retrospectively without retaining the original ver
 ## Follow-up editorial clarification — review round 2
 
 The follow-up CodeRabbit review also flagged that poetic format changes and recorded exit must be described as observed text, not independently proven subjective choice. The published review now distinguishes the initial A exit request from three later B/C/D ballots, marks the effect of PAUSE/RESUME on accepted-turn context **UNKNOWN**, uses observational language for the poem transition and recorded ending, and preserves all TURN and BALLOT bodies. No additional provider authenticity, autonomy or production conclusion follows from these wording changes.
+
+## Additive clarification — custody location (2026-11-07)
+
+The literal path `/Ario/Resources/A14_FOUR_AVA_IDENTITY_2026-11-05/` is a **ChatGPT Library logical folder path**. It is not a separate custody system or a second independently authenticated copy. The private `events.jsonl` hash and byte length above are the recorded attributes of the owner-supplied snapshot; the published derivatives, this addendum and the public Git repository do not prove present Library file inventory, provider authenticity, or independent physical custody. Public model-response and ballot text, historical claims, original Git blob references and raw private archive are not rewritten by this clarification. No signer, trust activation, identity conclusion, or merge is authorized by this research-only editorial fix.

@@ -25,6 +25,7 @@ The project owner authorized publication of the derived *research dialogue* in t
 
 Private source: `events.jsonl`, 197,738 bytes, SHA-256: `aa4e945a2225db81b1f8de3d04e319c188ba9537ab1e89b5aac38763e08306f2`.
 Private archive path: `/Ario/Resources/A14_FOUR_AVA_IDENTITY_2026-11-05/`.
+**Custody-location clarification:** `/Ario/Resources/A14_FOUR_AVA_IDENTITY_2026-11-05/` denotes a logical folder **inside ChatGPT Library**, not a second independent custodian or off-platform storage location. This public repository does not itself contain the private raw ledger and does not reauthenticate its current Library inventory; the byte/hash statements above describe the referenced owner-provided snapshot only.
 Final local event tip: `6c89f5c68b72b83c549fac9aae71592d9c4592c0ec01f05bf0e095a10bfa4307`.
 
 **Limitations:** Checksums establish integrity of the supplied local snapshot only. Four sequential votes are not statistically independent and do not establish agent autonomy, personhood, feelings or consciousness. No changes to trust, signer, Genesis, production policy, or identity authority are authorized by this archival entry.
