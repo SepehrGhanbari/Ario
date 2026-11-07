@@ -172,6 +172,15 @@ class ReviewEvidenceGateTests(unittest.TestCase):
         self.assertEqual(parse_record(
             "<!-- ARIO_REVIEW_EVIDENCE_V1\n" + payload + "\n-->"), record())
 
+    def test_second_marker_with_newline_after_comment_opener_is_ambiguous(self):
+        valid = "<!-- ARIO_REVIEW_EVIDENCE_V1\n" + json.dumps(record()) + "\n-->"
+        for whitespace in ("\n", "\r\n", "\v", "\t", " "):
+            with self.subTest(whitespace=repr(whitespace)):
+                malformed = "<!--" + whitespace + "ARIO_REVIEW_EVIDENCE_V1\n{}\n-->"
+                with self.assertRaisesRegex(GateError, "REVIEW_RECORD_ABSENT_OR_AMBIGUOUS"):
+                    parse_record(valid + "\n" + malformed)
+        self.assertEqual(parse_record(valid), record())
+
     def test_missing_or_duplicate_record_is_rejected(self):
         for body in ("", "ordinary PR description",
                      "<!-- ARIO_REVIEW_EVIDENCE_V1\n{}\n-->"):

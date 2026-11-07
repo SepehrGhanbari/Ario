@@ -51,8 +51,9 @@ def parse_record(body: str) -> dict:
     # Reject every marker-like opener, including malformed or incomplete
     # duplicates; counting only full regex matches would hide a corrupt
     # second block after one otherwise valid record.
-    # Treat ANY V1-prefixed opener as ambiguous, even _BROKEN or V1x.
-    starts = re.findall(r"<!--[ \t]*" + re.escape(MARKER), body)
+    # Treat ANY V1-prefixed opener as ambiguous, including newline after <!--.
+    # This deliberately fails closed on quoted/comment-like false positives.
+    starts = re.findall(r"<!--\s*" + re.escape(MARKER), body)
     require(len(starts) == 1, "REVIEW_RECORD_ABSENT_OR_AMBIGUOUS")
     pattern = r"<!--[ \t]*" + MARKER + r"[ \t]*\r?\n(.*?)\r?\n-->"
     blocks = re.findall(pattern, body, flags=re.DOTALL)
