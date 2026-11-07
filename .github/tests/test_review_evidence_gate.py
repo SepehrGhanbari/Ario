@@ -149,6 +149,29 @@ class ReviewEvidenceGateTests(unittest.TestCase):
         # A single properly framed record still parses.
         self.assertEqual(parse_record(valid), record())
 
+    def test_nested_duplicate_keys_and_invalid_json_escapes(self):
+        payload = json.dumps(record())
+        risk = '"risk_disposition": "NO_KNOWN_BLOCKERS"'
+        self.assertIn(risk, payload)
+        vectors = (
+            (payload.replace("{", '{"extra": {"x": 1, "x": 1}, ', 1),
+             "DUPLICATE_REVIEW_RECORD_FIELD"),
+            (payload.replace(risk,
+                             risk + ', ' + r'"risk_dispositio\u006e": "NO_KNOWN_BLOCKERS"'),
+             "DUPLICATE_REVIEW_RECORD_FIELD"),
+            (payload.replace(risk, r'"risk_disposition": "\q"'),
+             "MALFORMED_REVIEW_RECORD"),
+            (payload.replace(risk, r'"risk_disposition": "\u00G0"'),
+             "MALFORMED_REVIEW_RECORD"),
+        )
+        for candidate_payload, reason in vectors:
+            with self.subTest(reason=reason, payload=candidate_payload[:100]):
+                body = "<!-- ARIO_REVIEW_EVIDENCE_V1\n" + candidate_payload + "\n-->"
+                with self.assertRaisesRegex(GateError, reason):
+                    parse_record(body)
+        self.assertEqual(parse_record(
+            "<!-- ARIO_REVIEW_EVIDENCE_V1\n" + payload + "\n-->"), record())
+
     def test_missing_or_duplicate_record_is_rejected(self):
         for body in ("", "ordinary PR description",
                      "<!-- ARIO_REVIEW_EVIDENCE_V1\n{}\n-->"):
