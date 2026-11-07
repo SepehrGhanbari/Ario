@@ -156,11 +156,13 @@ class RunnerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             source = Path(tmp) / "old.jsonl"
             raw = '{"speaker":"Ava-A","turn":1,"content":"Hello"}\n{"speaker":"Ava-B","turn":2,"content":"Hi"}\n'
-            source.write_text(raw, encoding="utf-8")
+            # Byte-exact fixture: Path.write_text translates newlines on
+            # Windows and invalidates the expectation before import starts.
+            source.write_bytes(raw.encode("utf-8"))
             messages, h = exp.import_legacy(source)
-            self.assertEqual(h, exp.sha(raw.encode()))
+            self.assertEqual(h, exp.sha(raw.encode("utf-8")))
             self.assertEqual(len(messages), 2)
-            self.assertEqual(source.read_text(encoding="utf-8"), raw)
+            self.assertEqual(source.read_bytes(), raw.encode("utf-8"))
 
     def test_corrupt_chain_is_not_silently_repaired(self):
         temp, ledger = seeded()
@@ -264,14 +266,19 @@ class RunnerTests(unittest.TestCase):
         from unittest.mock import patch
         import os
         original = os.open
+        original_binary = getattr(os, "O_BINARY", 0)
         marker = 1 << 27
         flags_seen = []
         def fake_open(path, flags, mode=0o777, *, dir_fd=None):
             if str(path).endswith((".run_writer.lock", "events.jsonl")):
                 flags_seen.append((str(path), flags))
+            # On real Windows, removing the synthetic marker must restore
+            # the actual CRT binary bit; text-mode translation would falsify
+            # the lock/ledger bytes and make the fixture itself invalid.
+            effective = (flags & ~marker) | (original_binary if flags & marker else 0)
             if dir_fd is not None:
-                return original(path, flags & ~marker, mode, dir_fd=dir_fd)
-            return original(path, flags & ~marker, mode)
+                return original(path, effective, mode, dir_fd=dir_fd)
+            return original(path, effective, mode)
         with tempfile.TemporaryDirectory() as temp:
             p = Path(temp)
             with patch.object(exp.os, "O_BINARY", marker, create=True):
