@@ -94,6 +94,21 @@ class ReviewEvidenceGateTests(unittest.TestCase):
         self.assertEqual(parsed, record())
         self.assertTrue(validate_candidate(*candidate()))
 
+    def test_browser_crlf_record_parses_without_relaxing_schema(self):
+        payload = json.dumps(record())
+        browser_body = ("About\r\n<!-- ARIO_REVIEW_EVIDENCE_V1\r\n"
+                        + payload + "\r\n-->")
+        self.assertEqual(parse_record(browser_body), record())
+        # Mixed line endings from legitimate editor transport are also safe.
+        mixed = "<!-- ARIO_REVIEW_EVIDENCE_V1\r\n" + payload + "\n-->"
+        self.assertEqual(parse_record(mixed), record())
+        # A second marker in a different line-ending style cannot be hidden.
+        with self.assertRaisesRegex(GateError, "REVIEW_RECORD_ABSENT_OR_AMBIGUOUS"):
+            parse_record(browser_body + "\n" + mixed)
+        # Corrupt delimiter bytes must not become an accepted record.
+        with self.assertRaisesRegex(GateError, "REVIEW_RECORD_ABSENT_OR_AMBIGUOUS"):
+            parse_record("<!-- ARIO_REVIEW_EVIDENCE_V1\r\r\n" + payload + "\n-->")
+
     def test_missing_or_duplicate_record_is_rejected(self):
         for body in ("", "ordinary PR description",
                      "<!-- ARIO_REVIEW_EVIDENCE_V1\n{}\n-->"):

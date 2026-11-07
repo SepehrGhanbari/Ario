@@ -38,7 +38,7 @@ def require(condition: bool, code: str) -> None:
 
 def parse_record(body: str) -> dict:
     require(isinstance(body, str), "MISSING_PR_BODY")
-    pattern = r"<!--[ \t]*" + MARKER + r"[ \t]*\n(.*?)\n-->"
+    pattern = r"<!--[ \t]*" + MARKER + r"[ \t]*\r?\n(.*?)\r?\n-->"
     blocks = re.findall(pattern, body, flags=re.DOTALL)
     require(len(blocks) == 1, "REVIEW_RECORD_ABSENT_OR_AMBIGUOUS")
     try:
