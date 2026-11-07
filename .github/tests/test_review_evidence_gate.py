@@ -138,6 +138,17 @@ class ReviewEvidenceGateTests(unittest.TestCase):
         # Standard canonical record must retain the old accepted behavior.
         self.assertEqual(parse_record("<!-- ARIO_REVIEW_EVIDENCE_V1\n" + payload + "\n-->"), record())
 
+    def test_prefixed_malformed_second_marker_is_rejected(self):
+        valid = "<!-- ARIO_REVIEW_EVIDENCE_V1\n" + json.dumps(record()) + "\n-->"
+        for suffix in ("_BROKEN", "x", "2"):
+            for ending in ("\n{}\n-->", ""):
+                with self.subTest(suffix=suffix, ending=ending):
+                    malformed = "<!-- ARIO_REVIEW_EVIDENCE_V1" + suffix + ending
+                    with self.assertRaisesRegex(GateError, "REVIEW_RECORD_ABSENT_OR_AMBIGUOUS"):
+                        parse_record(valid + "\n" + malformed)
+        # A single properly framed record still parses.
+        self.assertEqual(parse_record(valid), record())
+
     def test_missing_or_duplicate_record_is_rejected(self):
         for body in ("", "ordinary PR description",
                      "<!-- ARIO_REVIEW_EVIDENCE_V1\n{}\n-->"):
