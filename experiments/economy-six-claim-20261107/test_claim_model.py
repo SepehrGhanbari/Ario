@@ -252,6 +252,22 @@ class EpistemicEconomyTests(unittest.TestCase):
                 baseline_total_completions=4,
                 candidate_total_completions=4)
 
+    def test_partial_pairs_reject_impossible_weak_counts_before_unknown(self):
+        invalid_pairs = (
+            dict(baseline_weak_completions=None, candidate_weak_completions=5,
+                 baseline_total_completions=10, candidate_total_completions=4),
+            dict(baseline_weak_completions=5, candidate_weak_completions=None,
+                 baseline_total_completions=4, candidate_total_completions=10),
+        )
+        for kw in invalid_pairs:
+            with self.subTest(kw=kw):
+                with self.assertRaisesRegex(ValueError, 'exceed total'):
+                    classify_mock_completion_delta(**kw)
+        self.assertEqual(classify_mock_completion_delta(
+            baseline_weak_completions=None, candidate_weak_completions=1,
+            baseline_total_completions=10, candidate_total_completions=10),
+            CompletionCountDelta.UNKNOWN)
+
     def test_invalid_cost_and_benefit_values_refused(self):
         for field in ('assume_participant_valued_benefit', 'assume_total_device_cost'):
             for value in (-1, float('nan'), float('inf')):

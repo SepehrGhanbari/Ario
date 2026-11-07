@@ -176,11 +176,13 @@ def classify_mock_completion_delta(*, baseline_weak_completions: int | None,
     # Invalid present inputs are rejected even if another input is missing.
     if any(x is not None and (type(x) is not int or x < 0) for x in numbers):
         raise ValueError("invalid synthetic completion count")
+    b, c, bt, ct = numbers
+    # Check every available weak/total pair even if other fields are missing.
+    if ((b is not None and bt is not None and b > bt)
+            or (c is not None and ct is not None and c > ct)):
+        raise ValueError("weak-device completions exceed total")
     if any(x is None for x in numbers):
         return CompletionCountDelta.UNKNOWN
-    b, c, bt, ct = numbers
-    if b > bt or c > ct:
-        raise ValueError("weak-device completions exceed total")
     if c < b and ct < bt:
         return CompletionCountDelta.BOTH_DROP
     if c < b:
