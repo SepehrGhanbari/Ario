@@ -155,6 +155,22 @@ class EpistemicEconomyTests(unittest.TestCase):
         f = ScenarioAssumptions(assume_participant_valued_benefit=6, assume_total_device_cost=4)
         self.assertEqual(evaluate(self.observed, f)['NET_WEAK_DEVICE_BENEFIT'], Verdict.FIXTURE_CONDITIONAL)
 
+    def test_present_invalid_cost_or_benefit_rejected_even_when_peer_missing(self):
+        for value in (-1, True, False, float("nan"), float("inf"),
+                      "-1", [], {}):
+            for field in ("assume_participant_valued_benefit",
+                          "assume_total_device_cost"):
+                with self.subTest(value=repr(value), field=field):
+                    fixture = ScenarioAssumptions(**{field: value})
+                    with self.assertRaisesRegex(ValueError, "invalid mock cost/benefit"):
+                        evaluate(self.observed, fixture)
+        # Missing values without a malformed present field remain UNKNOWN.
+        for fixture in (ScenarioAssumptions(),
+                        ScenarioAssumptions(assume_total_device_cost=0),
+                        ScenarioAssumptions(assume_participant_valued_benefit=0)):
+            self.assertEqual(evaluate(self.observed, fixture)["NET_WEAK_DEVICE_BENEFIT"],
+                             Verdict.UNKNOWN)
+
     def test_missing_cost_is_unknown(self):
         f = ScenarioAssumptions(assume_participant_valued_benefit=4)
         self.assertEqual(evaluate(self.observed, f)['NET_WEAK_DEVICE_BENEFIT'], Verdict.UNKNOWN)

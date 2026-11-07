@@ -131,10 +131,13 @@ def evaluate(observation: ReceiptObservation, fixture: ScenarioAssumptions | Non
     elif fixture.assume_voluntary_control is True:
         out["BENEFICIARY_CONTROL"] = Verdict.FIXTURE_CONDITIONAL
     b, c = fixture.assume_participant_valued_benefit, fixture.assume_total_device_cost
-    if b is not None and c is not None:
-        if (type(b) not in (int, float) or type(c) not in (int, float)
-                or not (0 <= b < float('inf') and 0 <= c < float('inf'))):
+    # A missing counterpart permits UNKNOWN, never silently accepts a present
+    # malformed value. bool, NaN, infinities and negative costs are invalid.
+    for value in (b, c):
+        if value is not None and (type(value) not in (int, float)
+                                  or not (0 <= value < float('inf'))):
             raise ValueError("invalid mock cost/benefit value")
+    if b is not None and c is not None:
         out["NET_WEAK_DEVICE_BENEFIT"] = Verdict.FIXTURE_CONDITIONAL if b > c else Verdict.REFUTED
     return out
 
