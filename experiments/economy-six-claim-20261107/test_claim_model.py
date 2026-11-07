@@ -175,6 +175,36 @@ class EpistemicEconomyTests(unittest.TestCase):
         f = ScenarioAssumptions(assume_participant_valued_benefit=4)
         self.assertEqual(evaluate(self.observed, f)['NET_WEAK_DEVICE_BENEFIT'], Verdict.UNKNOWN)
 
+    def test_slot_id_contract_rejects_malformed_ids_before_uniqueness(self):
+        # A slot is a nonempty string, not an integer, null or unhashable list.
+        for ids in (("",), (123,), (None,), (["slot"],), (True,)):
+            with self.subTest(ids=repr(ids)):
+                with self.assertRaisesRegex(ValueError, "invalid slot id"):
+                    evaluate(ReceiptObservation(ids, signed_receipts=1))
+
+    def test_slot_id_contract_rejects_unhashable_string_subclass(self):
+        class UnhashableString(str):
+            __hash__ = None
+        with self.assertRaisesRegex(ValueError, "invalid slot id"):
+            evaluate(ReceiptObservation((UnhashableString("slot"),), signed_receipts=1))
+
+    def test_slot_id_contract_accepts_unicode_without_ascii_projection(self):
+        class HashableString(str):
+            pass
+        ids = ("شناسه-۱", "slot-é", HashableString("slot-三"), " a ")
+        verdict = evaluate(ReceiptObservation(ids, signed_receipts=4))
+        self.assertEqual(verdict["REQUEST_INDEPENDENT"], Verdict.UNKNOWN)
+        # No hidden trimming, ASCII restriction or Unicode normalization.
+        self.assertEqual(len(ids), 4)
+
+    def test_slot_id_contract_preserves_exact_duplicate_detection(self):
+        with self.assertRaisesRegex(ValueError, "duplicate slot ids"):
+            evaluate(ReceiptObservation(("شناسه-۱", "شناسه-۱"), signed_receipts=2))
+        self.assertEqual(
+            evaluate(ReceiptObservation((), signed_receipts=0))["REQUEST_INDEPENDENT"],
+            Verdict.UNKNOWN,
+        )
+
     def test_duplicate_ids_are_refused_not_double_counted(self):
         with self.assertRaisesRegex(ValueError, 'duplicate'):
             evaluate(ReceiptObservation(('a','a'), signed_receipts=2))
