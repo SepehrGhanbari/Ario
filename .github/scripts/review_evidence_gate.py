@@ -38,6 +38,11 @@ def require(condition: bool, code: str) -> None:
 
 def parse_record(body: str) -> dict:
     require(isinstance(body, str), "MISSING_PR_BODY")
+    # Reject every marker-like opener, including malformed or incomplete
+    # duplicates; counting only full regex matches would hide a corrupt
+    # second block after one otherwise valid record.
+    starts = re.findall(r"<!--[ \\t]*" + re.escape(MARKER) + r"\\b", body)
+    require(len(starts) == 1, "REVIEW_RECORD_ABSENT_OR_AMBIGUOUS")
     pattern = r"<!--[ \t]*" + MARKER + r"[ \t]*\r?\n(.*?)\r?\n-->"
     blocks = re.findall(pattern, body, flags=re.DOTALL)
     require(len(blocks) == 1, "REVIEW_RECORD_ABSENT_OR_AMBIGUOUS")
