@@ -1,0 +1,29 @@
+name: Ario Economy Six-Claim Synthetic Lab (no secrets)
+
+on:
+  pull_request:
+    paths:
+      - 'experiments/economy-six-claim-20261107/**'
+      - '.github/workflows/economy-six-claims-lab.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mock-six-claim-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Checkout exact PR source for an unprivileged offline test
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Execute synthetic-only stdlib tests (no keys, no devices, no network)
+        working-directory: experiments/economy-six-claim-20261107
+        run: python -m unittest -v test_claim_model
