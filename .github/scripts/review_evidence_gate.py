@@ -36,6 +36,16 @@ def require(condition: bool, code: str) -> None:
         raise GateError(code)
 
 
+def _strict_record_object(pairs: list[tuple[str, object]]) -> dict:
+    """Reject ambiguous JSON object members, including identical duplicates."""
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise GateError("DUPLICATE_REVIEW_RECORD_FIELD")
+        result[key] = value
+    return result
+
+
 def parse_record(body: str) -> dict:
     require(isinstance(body, str), "MISSING_PR_BODY")
     # Reject every marker-like opener, including malformed or incomplete
@@ -47,7 +57,7 @@ def parse_record(body: str) -> dict:
     blocks = re.findall(pattern, body, flags=re.DOTALL)
     require(len(blocks) == 1, "REVIEW_RECORD_ABSENT_OR_AMBIGUOUS")
     try:
-        data = json.loads(blocks[0])
+        data = json.loads(blocks[0], object_pairs_hook=_strict_record_object)
     except (ValueError, RecursionError) as exc:
         raise GateError("MALFORMED_REVIEW_RECORD") from exc
     require(isinstance(data, dict), "REVIEW_RECORD_NOT_OBJECT")

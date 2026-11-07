@@ -119,6 +119,25 @@ class ReviewEvidenceGateTests(unittest.TestCase):
         with self.assertRaisesRegex(GateError, "REVIEW_RECORD_ABSENT_OR_AMBIGUOUS"):
             parse_record(valid + "\n<!-- ARIO_REVIEW_EVIDENCE_V1")
 
+    def test_duplicate_json_risk_disposition_fields_rejected_in_both_orders(self):
+        # Even a single otherwise valid marker is ambiguous if the JSON field
+        # appears twice: the default JSON decoder silently takes the last.
+        payload = json.dumps(record())
+        safe = '"risk_disposition": "NO_KNOWN_BLOCKERS"'
+        dangerous = '"risk_disposition": "KNOWN_BLOCKERS"'
+        self.assertIn(safe, payload)
+        for variant in (
+            safe + ', ' + dangerous,
+            dangerous + ', ' + safe,
+            safe + ', ' + safe,
+        ):
+            with self.subTest(variant=variant):
+                body = "<!-- ARIO_REVIEW_EVIDENCE_V1\\n" + payload.replace(safe, variant) + "\\n-->"
+                with self.assertRaisesRegex(GateError, "DUPLICATE_REVIEW_RECORD_FIELD"):
+                    parse_record(body)
+        # Standard canonical record must retain the old accepted behavior.
+        self.assertEqual(parse_record("<!-- ARIO_REVIEW_EVIDENCE_V1\\n" + payload + "\\n-->"), record())
+
     def test_missing_or_duplicate_record_is_rejected(self):
         for body in ("", "ordinary PR description",
                      "<!-- ARIO_REVIEW_EVIDENCE_V1\n{}\n-->"):
