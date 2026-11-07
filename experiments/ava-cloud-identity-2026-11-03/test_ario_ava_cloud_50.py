@@ -644,5 +644,51 @@ class RunnerTests(unittest.TestCase):
                 self.assertFalse(fake.calls)
 
 
+    def test_postclose_error_blocks_same_instance_reuse_before_fake_dispatch(self):
+        """A complete ATTEMPT can survive a failed close; never retry it blindly."""
+        from unittest.mock import patch
+        temp, ledger = seeded(goal=1)
+        with temp:
+            before = ledger.path.read_bytes()
+            calls = []
+            class FakeReached(Exception):
+                pass
+            def transport(_request, _key):
+                calls.append("dispatched")
+                raise FakeReached("must not reach fake transport")
+
+            real_fsync, real_close = exp.os.fsync, exp.os.close
+            synced = set()
+            injected = []
+            def tracked_fsync(fd):
+                real_fsync(fd)
+                synced.add(fd)
+            def close_after_real_close(fd):
+                real_close(fd)
+                if fd in synced and not injected:
+                    injected.append(True)
+                    raise OSError("synthetic after real close")
+
+            with patch.object(exp, "now", return_value="2026-11-07T00:00:00Z"):
+                with patch.object(exp.os, "fsync", side_effect=tracked_fsync), \
+                     patch.object(exp.os, "close", side_effect=close_after_real_close):
+                    with self.assertRaisesRegex(OSError, "synthetic after real close"):
+                        exp.run(ledger, LETTER, "synthetic", transport)
+                first_disk = ledger.path.read_bytes()
+                self.assertEqual(injected, [True])
+                self.assertEqual(calls, [])
+                self.assertTrue(first_disk.startswith(before))
+                # No claim of *absence*: an ATTEMPT may be complete on disk.
+                reloaded = exp.Ledger(ledger.folder)
+                self.assertEqual(reloaded.last()["kind"], "ATTEMPT")
+                with self.assertRaisesRegex(exp.Hold, "DISPATCH_UNKNOWN_UNRESOLVED_ATTEMPT"):
+                    exp.run(reloaded, LETTER, "synthetic", transport)
+                # Original instance must reject reuse before any write or dispatch.
+                with self.assertRaisesRegex(exp.Hold, "UNCERTAIN_APPEND"):
+                    exp.run(ledger, LETTER, "synthetic", transport)
+                self.assertEqual(calls, [])
+                self.assertEqual(ledger.path.read_bytes(), first_disk)
+
+
 if __name__ == "__main__":
     unittest.main()
