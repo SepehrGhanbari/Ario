@@ -127,6 +127,52 @@ def evaluate(observation: ReceiptObservation, fixture: ScenarioAssumptions | Non
     return out
 
 
+
+@dataclass(frozen=True)
+class MockRouteAttempt:
+    """Synthetic route state, no names, ID, accounts, or actual delivery."""
+    route_available: bool | None
+    queue_rank: int | None
+    telemetry_opt_in: bool | None
+
+
+def mock_support_route(attempt: MockRouteAttempt) -> tuple[Verdict, int | None]:
+    """A route offer must NOT depend on optional telemetry consent.
+
+    A positive label is only a toy route-offer property, NOT delivered support.
+    Refusing telemetry must not create a refusal marker against the person.
+    """
+    if attempt.route_available is False:
+        return Verdict.REFUTED, None
+    if attempt.route_available is not True or type(attempt.queue_rank) is not int or attempt.queue_rank < 0:
+        return Verdict.UNKNOWN, None
+    return Verdict.FIXTURE_CONDITIONAL, attempt.queue_rank
+
+
+def compare_mock_opportunity(*, baseline_weak_completions: int | None,
+                             candidate_weak_completions: int | None,
+                             baseline_total_completions: int | None,
+                             candidate_total_completions: int | None) -> Verdict:
+    """Toy baseline-relative opportunity, not net benefit or universal fairness.
+
+    A loss with unchanged total service is a fixture counterexample; if the
+    total demand fell, the toy cannot blame the scheduling policy.
+    """
+    numbers=(baseline_weak_completions,candidate_weak_completions,
+             baseline_total_completions,candidate_total_completions)
+    if any(x is None for x in numbers):
+        return Verdict.UNKNOWN
+    if any(type(x) is not int or x < 0 for x in numbers):
+        raise ValueError("invalid synthetic completion count")
+    b,c,bt,ct=numbers
+    if b>bt or c>ct:
+        raise ValueError("weak-device completions exceed total")
+    if ct < bt:
+        return Verdict.UNKNOWN
+    if c < b:
+        return Verdict.REFUTED
+    return Verdict.FIXTURE_CONDITIONAL
+
 def local_pilot_admission(*, opted_in: bool, has_enforceable_stop: bool,
                           sensor_fresh: bool | None, within_heat_battery_data_budget: bool | None) -> str:
     """Mock-only refusal rule. NEVER reaches a device or starts a workload."""
