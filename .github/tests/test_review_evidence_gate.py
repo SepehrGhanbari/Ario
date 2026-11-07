@@ -181,6 +181,17 @@ class ReviewEvidenceGateTests(unittest.TestCase):
                     parse_record(valid + "\n" + malformed)
         self.assertEqual(parse_record(valid), record())
 
+    def test_unicode_whitespace_and_prefixed_marker_are_ambiguous(self):
+        valid = "<!-- ARIO_REVIEW_EVIDENCE_V1\n" + json.dumps(record()) + "\n-->"
+        malformed = "<!--\u0085ARIO_REVIEW_EVIDENCE_V1_BROKEN\n{}\n-->"
+        self.assertEqual(parse_record(valid), record())
+        for body in (valid + "\n" + malformed, malformed + "\n" + valid):
+            with self.subTest(marker_first=body.startswith("<!--\u0085")):
+                with self.assertRaisesRegex(
+                    GateError, "REVIEW_RECORD_ABSENT_OR_AMBIGUOUS"
+                ):
+                    parse_record(body)
+
     def test_missing_or_duplicate_record_is_rejected(self):
         for body in ("", "ordinary PR description",
                      "<!-- ARIO_REVIEW_EVIDENCE_V1\n{}\n-->"):
