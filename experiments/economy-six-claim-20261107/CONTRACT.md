@@ -32,3 +32,13 @@ This model **does not prove independence**. It trusts the fields of `ScenarioAss
 - These are pure synthetic comparators, **not** a route operator or a scheduler; no private personal data, money, enrollment, hardware or network requests are used. The independently consented pilot remains unapproved.
 
 Follow-up review: https://github.com/SepehrGhanbari/Ario/issues/94#issuecomment-6704471710 .
+
+## Methodological corrigendum v0.2 — 2026-11-07 (append-only)
+
+Prior public research HEAD: `15bbc06a3e56b30df8da36c10aaa7e3f842cb40e`. Its `compare_mock_opportunity` function used **completed-job counts alone** to emit `REFUTED` or `FIXTURE_CONDITIONAL` for purported opportunity preservation. The previous “baseline-relative opportunity” description above is **superseded for causal/fairness interpretation**; the historical file remains available at the pinned parent commit, not rewritten.
+
+Current narrow replacement `classify_mock_completion_delta` reports **only synthetic descriptive count changes**: `NO_DROP`, `WEAK_DROP`, `TOTAL_DROP`, `BOTH_DROP`, or `UNKNOWN`. It validates exact integer, nonnegative counts and refuses malformed present fields even if another field is missing. It intentionally does **not** return the separate `Verdict` fairness/claim enum. `WEAK_DROP` is neither proof of discriminatory scheduling nor evidence that a worker has done failed work; `NO_DROP` is not a real-world GREEN. The misleading function name was removed rather than retained as a would-be fairness oracle.
+
+The same 1→0 weak-device completion drop and 10→10 total completions could reflect exclusion, independent demand falling 20→10, changed task mix, loss of eligible weak-device time, safety STOP, or voluntary opt-out. The toy has no independent denominator, verified task-value comparison, coercion/consent proof, or net energy cost measurement. **All such causal opportunity and real welfare claims remain UNKNOWN**, and no earned wage is justified by hardware ownership or invented shadow tasks. The four label cases are a syntax-level regression matrix, not empirical user outcomes. Optional telemetry refusal must not reduce access to non-work assistance.
+
+Peer-review provenance: CodeRabbit [demand-vs-completion critique](https://github.com/SepehrGhanbari/Ario/pull/152#issuecomment-6704625556); Ava [bounded peer-discussion question](https://github.com/SepehrGhanbari/Ario/pull/152#issuecomment-6704838187). Gemini and Claude peer model responses were unverified reasoning over supplied excerpts, **not independent repository attestations**. All real-work, payout, signer/trust, Genesis and production gates remain HOLD / NO_GO. This corrigendum does not approve a merge.

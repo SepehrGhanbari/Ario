@@ -2,7 +2,7 @@
 import unittest
 from claim_model import (ReceiptObservation, ScenarioAssumptions, HiddenScenario,
     project_reported_receipts, MockRouteAttempt, mock_support_route,
-    compare_mock_opportunity, Verdict, CLAIMS, evaluate, local_pilot_admission)
+    classify_mock_completion_delta, CompletionCountDelta, Verdict, CLAIMS, evaluate, local_pilot_admission)
 
 
 class EpistemicEconomyTests(unittest.TestCase):
@@ -188,44 +188,69 @@ class EpistemicEconomyTests(unittest.TestCase):
         self.assertEqual(mock_support_route(MockRouteAttempt(None, 3, False)),
                          (Verdict.UNKNOWN, None))
 
-    def test_weak_device_loses_opportunity_with_constant_total_service(self):
-        self.assertEqual(compare_mock_opportunity(
+    def test_weak_device_drop_is_descriptive_not_policy_causation(self):
+        self.assertEqual(classify_mock_completion_delta(
             baseline_weak_completions=1, candidate_weak_completions=0,
-            baseline_total_completions=10, candidate_total_completions=10), Verdict.REFUTED)
-
-    def test_weak_device_preserves_one_completion_but_net_benefit_unknown(self):
-        self.assertEqual(compare_mock_opportunity(
-            baseline_weak_completions=1, candidate_weak_completions=1,
             baseline_total_completions=10, candidate_total_completions=10),
-            Verdict.FIXTURE_CONDITIONAL)
+            CompletionCountDelta.WEAK_DROP)
+
+    def test_no_weak_drop_is_not_a_fairness_verdict(self):
+        label = classify_mock_completion_delta(
+            baseline_weak_completions=1, candidate_weak_completions=1,
+            baseline_total_completions=10, candidate_total_completions=10)
+        self.assertEqual(label, CompletionCountDelta.NO_DROP)
+        self.assertNotIsInstance(label, Verdict)
         self.assertEqual(evaluate(self.observed)['NET_WEAK_DEVICE_BENEFIT'], Verdict.UNKNOWN)
 
-    def test_falling_total_demand_or_missing_baseline_keeps_opportunity_unknown(self):
-        self.assertEqual(compare_mock_opportunity(
+    def test_both_drop_and_missing_baseline_are_not_fairness_verdicts(self):
+        self.assertEqual(classify_mock_completion_delta(
             baseline_weak_completions=1, candidate_weak_completions=0,
-            baseline_total_completions=10, candidate_total_completions=9), Verdict.UNKNOWN)
-        self.assertEqual(compare_mock_opportunity(
+            baseline_total_completions=10, candidate_total_completions=9),
+            CompletionCountDelta.BOTH_DROP)
+        self.assertEqual(classify_mock_completion_delta(
             baseline_weak_completions=None, candidate_weak_completions=1,
-            baseline_total_completions=10, candidate_total_completions=10), Verdict.UNKNOWN)
+            baseline_total_completions=10, candidate_total_completions=10),
+            CompletionCountDelta.UNKNOWN)
+
+    def test_total_only_drop_has_distinct_label(self):
+        self.assertEqual(classify_mock_completion_delta(
+            baseline_weak_completions=1, candidate_weak_completions=1,
+            baseline_total_completions=10, candidate_total_completions=9),
+            CompletionCountDelta.TOTAL_DROP)
+
+    def test_identical_observations_do_not_identify_hidden_demand_or_worker_choice(self):
+        # Hidden worlds never enter the count classifier; source labels cannot
+        # turn a count into independent evidence of policy discrimination.
+        stories = (
+            ('demand-unchanged-policy-exclusion', 10, 10, True),
+            ('demand-fell-worker-offline', 20, 10, False),
+        )
+        self.assertNotEqual(stories[0], stories[1])
+        for story in stories:
+            with self.subTest(world=story[0]):
+                self.assertEqual(classify_mock_completion_delta(
+                    baseline_weak_completions=1, candidate_weak_completions=0,
+                    baseline_total_completions=10, candidate_total_completions=10),
+                    CompletionCountDelta.WEAK_DROP)
+        self.assertFalse(hasattr(__import__('claim_model'), 'compare_mock_opportunity'))
 
     def test_invalid_mock_counts_are_refused_not_counted_as_people(self):
-        for count in (-1, True, 5):
+        for count in (-1, True, 5, 1.5, float('nan')):
             with self.subTest(count=count):
                 with self.assertRaises(ValueError):
-                    compare_mock_opportunity(baseline_weak_completions=count,
-                                             candidate_weak_completions=1,
-                                             baseline_total_completions=4,
-                                             candidate_total_completions=4)
+                    classify_mock_completion_delta(
+                        baseline_weak_completions=count,
+                        candidate_weak_completions=1,
+                        baseline_total_completions=4,
+                        candidate_total_completions=4)
 
-    def test_non_numeric_or_boolean_cost_and_benefit_values_refused(self):
-        for field in ('assume_participant_valued_benefit', 'assume_total_device_cost'):
-            for value in (True, False, '2', [], 2j):
-                with self.subTest(field=field, value=value):
-                    kwargs = {'assume_participant_valued_benefit': 2,
-                              'assume_total_device_cost': 1}
-                    kwargs[field] = value
-                    with self.assertRaises(ValueError):
-                        evaluate(self.observed, ScenarioAssumptions(**kwargs))
+    def test_present_invalid_count_is_rejected_even_if_another_field_missing(self):
+        with self.assertRaises(ValueError):
+            classify_mock_completion_delta(
+                baseline_weak_completions=None,
+                candidate_weak_completions=-1,
+                baseline_total_completions=4,
+                candidate_total_completions=4)
 
     def test_invalid_cost_and_benefit_values_refused(self):
         for field in ('assume_participant_valued_benefit', 'assume_total_device_cost'):

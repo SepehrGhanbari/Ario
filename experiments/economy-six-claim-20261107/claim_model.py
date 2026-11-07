@@ -17,6 +17,15 @@ class Verdict(str, Enum):
     UNKNOWN = "UNKNOWN"
 
 
+class CompletionCountDelta(str, Enum):
+    """Count changes only, NEVER a fairness or scheduling verdict."""
+    NO_DROP = "NO_DROP"
+    WEAK_DROP = "WEAK_DROP"
+    TOTAL_DROP = "TOTAL_DROP"
+    BOTH_DROP = "BOTH_DROP"
+    UNKNOWN = "UNKNOWN"
+
+
 CLAIMS = (
     "OUTPUT_CORRECT", "REQUEST_INDEPENDENT", "EXTERNALLY_VALUED_DEMAND",
     "DELIVERED_USABLE_SUPPORT", "BENEFICIARY_CONTROL", "NET_WEAK_DEVICE_BENEFIT",
@@ -151,29 +160,35 @@ def mock_support_route(attempt: MockRouteAttempt) -> tuple[Verdict, int | None]:
     return Verdict.FIXTURE_CONDITIONAL, attempt.queue_rank
 
 
-def compare_mock_opportunity(*, baseline_weak_completions: int | None,
-                             candidate_weak_completions: int | None,
-                             baseline_total_completions: int | None,
-                             candidate_total_completions: int | None) -> Verdict:
-    """Toy baseline-relative opportunity, not net benefit or universal fairness.
+def classify_mock_completion_delta(*, baseline_weak_completions: int | None,
+                                   candidate_weak_completions: int | None,
+                                   baseline_total_completions: int | None,
+                                   candidate_total_completions: int | None) -> CompletionCountDelta:
+    """Describe observed mock count deltas, not opportunity, demand, quality or fairness.
 
-    A loss with unchanged total service is a fixture counterexample; if the
-    total demand fell, the toy cannot blame the scheduling policy.
+    WEAK_DROP is not proof of exclusion; NO_DROP is not a fairness GREEN.
+    Same visible counts can arise from demand change, worker opt-out,
+    network loss, task-mix shifts, or discriminatory routing. Those causal
+    properties are UNKNOWN here. No workload, payout or device is touched.
     """
-    numbers=(baseline_weak_completions,candidate_weak_completions,
-             baseline_total_completions,candidate_total_completions)
-    if any(x is None for x in numbers):
-        return Verdict.UNKNOWN
-    if any(type(x) is not int or x < 0 for x in numbers):
+    numbers = (baseline_weak_completions, candidate_weak_completions,
+               baseline_total_completions, candidate_total_completions)
+    # Invalid present inputs are rejected even if another input is missing.
+    if any(x is not None and (type(x) is not int or x < 0) for x in numbers):
         raise ValueError("invalid synthetic completion count")
-    b,c,bt,ct=numbers
-    if b>bt or c>ct:
+    if any(x is None for x in numbers):
+        return CompletionCountDelta.UNKNOWN
+    b, c, bt, ct = numbers
+    if b > bt or c > ct:
         raise ValueError("weak-device completions exceed total")
-    if ct < bt:
-        return Verdict.UNKNOWN
+    if c < b and ct < bt:
+        return CompletionCountDelta.BOTH_DROP
     if c < b:
-        return Verdict.REFUTED
-    return Verdict.FIXTURE_CONDITIONAL
+        return CompletionCountDelta.WEAK_DROP
+    if ct < bt:
+        return CompletionCountDelta.TOTAL_DROP
+    return CompletionCountDelta.NO_DROP
+
 
 def local_pilot_admission(*, opted_in: bool, has_enforceable_stop: bool,
                           sensor_fresh: bool | None, within_heat_battery_data_budget: bool | None) -> str:
