@@ -62,6 +62,29 @@ class EpistemicEconomyTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             project_reported_receipts(HiddenScenario('x', False, slot_count=-1))
 
+    def test_projection_refuses_noninteger_counts_before_observer_evaluation(self):
+        # A malformed hidden-world fixture must not generate an observation
+        # that evaluate() then rejects (e.g. bool True silently as count=1).
+        for count in (True, False, 1.0, -0.1, "3", None, [], {}):
+            with self.subTest(count=repr(count)):
+                with self.assertRaisesRegex(ValueError, "invalid synthetic slot count"):
+                    project_reported_receipts(HiddenScenario("common-controller", False,
+                                                            slot_count=count))
+        for count in (0, 1, 40, 1000):
+            with self.subTest(valid=count):
+                observation = project_reported_receipts(
+                    HiddenScenario("independent", True, slot_count=count))
+                self.assertEqual(observation.signed_receipts, count)
+                self.assertEqual(len(observation.slot_ids), count)
+                self.assertIn("OUTPUT_CORRECT", evaluate(observation))
+
+    def test_projection_refuses_nonstring_namespaces(self):
+        for namespace in (None, True, 1, b"slot", [], {}):
+            with self.subTest(namespace=repr(namespace)):
+                with self.assertRaisesRegex(ValueError, "invalid mock namespace"):
+                    project_reported_receipts(HiddenScenario("x", False,
+                                                            namespace=namespace))
+
     def test_different_40_ids_do_not_establish_40_useful_outcomes(self):
         self.assertEqual(len(set(self.observed.slot_ids)), 40)
         self.assertEqual(evaluate(self.observed)['EXTERNALLY_VALUED_DEMAND'], Verdict.UNKNOWN)

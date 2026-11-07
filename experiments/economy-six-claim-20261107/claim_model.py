@@ -78,9 +78,10 @@ class HiddenScenario:
 
 def project_reported_receipts(world: HiddenScenario) -> ReceiptObservation:
     """Generate the observer-visible mock view, dropping unobserved world truth."""
-    if not 0 <= world.slot_count <= 1000:
+    if type(world.slot_count) is not int or not 0 <= world.slot_count <= 1000:
+        # bool is an int subclass but cannot represent a count in this toy.
         raise ValueError("invalid synthetic slot count")
-    if not world.namespace.isascii() or not world.namespace:
+    if type(world.namespace) is not str or not world.namespace.isascii() or not world.namespace:
         raise ValueError("invalid mock namespace")
     return ReceiptObservation(
         slot_ids=tuple(f"{world.namespace}-{i:02d}" for i in range(world.slot_count)),
