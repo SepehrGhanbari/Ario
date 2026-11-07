@@ -132,11 +132,11 @@ class ReviewEvidenceGateTests(unittest.TestCase):
             safe + ', ' + safe,
         ):
             with self.subTest(variant=variant):
-                body = "<!-- ARIO_REVIEW_EVIDENCE_V1\\n" + payload.replace(safe, variant) + "\\n-->"
+                body = "<!-- ARIO_REVIEW_EVIDENCE_V1\n" + payload.replace(safe, variant) + "\n-->"
                 with self.assertRaisesRegex(GateError, "DUPLICATE_REVIEW_RECORD_FIELD"):
                     parse_record(body)
         # Standard canonical record must retain the old accepted behavior.
-        self.assertEqual(parse_record("<!-- ARIO_REVIEW_EVIDENCE_V1\\n" + payload + "\\n-->"), record())
+        self.assertEqual(parse_record("<!-- ARIO_REVIEW_EVIDENCE_V1\n" + payload + "\n-->"), record())
 
     def test_missing_or_duplicate_record_is_rejected(self):
         for body in ("", "ordinary PR description",
