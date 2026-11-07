@@ -569,5 +569,50 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(ledger.path.read_bytes(), damaged)
 
 
+    def test_malformed_event_json_is_typed_hold_before_fake_transport(self):
+        from unittest.mock import patch
+        cases = (
+            ("json_null", b"null\n"),
+            ("deep_json", b"[" * 20_000 + b"0" + b"]" * 20_000 + b"\n"),
+        )
+        for name, raw in cases:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as temp:
+                folder = Path(temp)
+                path = folder / "events.jsonl"
+                path.write_bytes(raw)
+                fake = Fake()
+                with patch.object(exp.Ledger, "add", side_effect=AssertionError("unexpected append")) as added:
+                    with self.assertRaisesRegex(exp.Hold, "INVALID_OR_INCOMPLETE_EVENT_LOG"):
+                        resumed = exp.Ledger(folder)
+                        exp.run(resumed, LETTER, "local-not-logged", fake)
+                    added.assert_not_called()
+                self.assertFalse(fake.calls)
+                self.assertEqual(path.read_bytes(), raw)
+
+    def test_complete_attempt_write_then_failed_fsync_never_auto_retries(self):
+        from unittest.mock import patch
+        temp, ledger = seeded(goal=2)
+        with temp:
+            baseline = (len(ledger.events), ledger.hash, ledger.byte_length,
+                        ledger._content_digest.digest())
+            original = ledger.path.read_bytes()
+            with patch.object(exp.os, "fsync", side_effect=OSError("injected postwrite fsync")):
+                with self.assertRaisesRegex(OSError, "injected postwrite fsync"):
+                    ledger.add("ATTEMPT", attempt_seq=1, speaker="A", expected_turn=1)
+            self.assertEqual(
+                (len(ledger.events), ledger.hash, ledger.byte_length,
+                 ledger._content_digest.digest()), baseline)
+            completed = ledger.path.read_bytes()
+            self.assertTrue(completed.startswith(original))
+            self.assertGreater(len(completed), len(original))
+            loaded = exp.Ledger(ledger.folder)
+            self.assertEqual(loaded.last()["kind"], "ATTEMPT")
+            fake = Fake()
+            with self.assertRaisesRegex(exp.Hold, "DISPATCH_UNKNOWN_UNRESOLVED_ATTEMPT"):
+                exp.run(loaded, LETTER, "local-not-logged", fake)
+            self.assertFalse(fake.calls)
+            self.assertEqual(ledger.path.read_bytes(), completed)
+
+
 if __name__ == "__main__":
     unittest.main()
