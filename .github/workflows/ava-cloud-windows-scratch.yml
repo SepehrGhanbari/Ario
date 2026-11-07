@@ -41,8 +41,9 @@ jobs:
         shell: pwsh
         run: |
           $probe = 'python -c "raise SystemExit(17)"; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; python -c "print(1)"'
-          pwsh -NoProfile -NonInteractive -Command $probe
-          if ($LASTEXITCODE -ne 17) { throw "GUARD_FAILURE_MASKED" }
+          $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($probe))
+          $child = Start-Process -FilePath (Get-Command pwsh).Source -ArgumentList @("-NoProfile", "-NonInteractive", "-EncodedCommand", $encoded) -Wait -PassThru -NoNewWindow
+          if ($child.ExitCode -ne 17) { throw "GUARD_FAILURE_MASKED_OR_UNEXPECTED_EXIT" }
       - name: Verify Python socket, child and urllib network-denial negative controls
         shell: pwsh
         run: |
