@@ -157,6 +157,11 @@ class Ledger:
                         or event.get("previous_sha256") != self.hash
                         or digest != sha(canonical(event))):
                         raise Hold("EVENT_CHAIN_MISMATCH")
+                    # A valid hash is not a valid event schema. Later
+                    # resume/dispatch assumes a nonempty kind and dict data.
+                    if (type(event.get("kind")) is not str or not event["kind"]
+                            or type(event.get("data")) is not dict):
+                        raise Hold("INVALID_OR_INCOMPLETE_EVENT_LOG")
                     event["event_sha256"] = digest
                     self.events.append(event)
                     self.hash = digest
