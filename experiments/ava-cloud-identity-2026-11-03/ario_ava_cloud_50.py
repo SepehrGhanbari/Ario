@@ -120,6 +120,8 @@ class Ledger:
         self.hash = "0" * 64
         self.file_identity = None
         self.byte_length = 0
+        # Bounded local-byte integrity check (not custody or crash proof).
+        self.byte_hash = hashlib.sha256()
         if self.path.exists():
             # Read through one opened descriptor; preserve that file identity
             # for subsequent appends. A pathname can later name another file.
@@ -139,6 +141,7 @@ class Ledger:
                     raise Hold("LEDGER_CHANGED_DURING_READ")
                 self.file_identity = (after.st_dev, after.st_ino)
                 self.byte_length = len(data)
+                self.byte_hash.update(data)
             if data and not data.endswith(b"\n"):
                 raise Hold("INCOMPLETE_TRAILING_EVENT_LINE")
             for raw in data.splitlines():
@@ -169,7 +172,9 @@ class Ledger:
         self.folder.mkdir(parents=True, exist_ok=True)
         # A new run must create a new ledger exclusively. Reopened ledgers
         # append only to the exact inode loaded or created previously.
-        flags = os.O_WRONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+        # O_RDWR permits checking exact loaded bytes on the SAME opened
+        # descriptor before append. O_APPEND still forces writes to EOF.
+        flags = os.O_RDWR | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
         if self.file_identity is None:
             flags |= os.O_CREAT | os.O_EXCL
         else:
@@ -190,6 +195,27 @@ class Ledger:
                 raise Hold("LEDGER_REPLACED_OR_SIZE_CHANGED")
             if self.file_identity is None and info.st_size != 0:
                 raise Hold("LEDGER_UNEXPECTED_NEW_FILE_CONTENTS")
+            if self.file_identity is not None:
+                # Inode and length alone miss same-size in-place tampering.
+                # Read via the descriptor we will append through, not a
+                # separate pathname (which could point elsewhere).
+                os.lseek(fd, 0, os.SEEK_SET)
+                observed = hashlib.sha256()
+                checked = 0
+                while checked < self.byte_length:
+                    part = os.read(fd, min(65536, self.byte_length - checked))
+                    if not part:
+                        raise Hold("LEDGER_CONTENT_READ_INCOMPLETE")
+                    observed.update(part)
+                    checked += len(part)
+                check = os.fstat(fd)
+                if ((check.st_dev, check.st_ino) != identity
+                        or check.st_size != self.byte_length
+                        or observed.digest() != self.byte_hash.digest()):
+                    raise Hold("LEDGER_CONTENT_CHANGED_BEFORE_APPEND")
+                # This is NOT an atomic anti-tamper guarantee: an attacker
+                # writing during/after this read can still race the append.
+                # Hostile directories require separately proven isolation.
             offset = 0
             while offset < len(line):
                 wrote = os.write(fd, line[offset:])
@@ -199,6 +225,7 @@ class Ledger:
             os.fsync(fd)
             self.file_identity = identity
             self.byte_length += len(line)
+            self.byte_hash.update(line)
         finally:
             os.close(fd)
         self.events.append(complete)

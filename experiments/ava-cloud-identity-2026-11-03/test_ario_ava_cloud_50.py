@@ -366,6 +366,40 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(len(ledger.items("REPLY")), 1)
             self.assertFalse(lock.path.exists())
 
+    def test_same_inode_same_size_edit_refused_before_attempt_and_transport(self):
+        import os
+        temp, ledger = seeded(goal=1)
+        with temp:
+            original = ledger.path.read_bytes()
+            needle = b'"target_new_messages":1'
+            self.assertIn(needle, original)
+            position = original.index(needle) + len(needle) - 1
+            identity = ledger.path.stat()
+            with ledger.path.open("r+b") as stream:
+                stream.seek(position)
+                stream.write(b"2")
+                stream.flush()
+                os.fsync(stream.fileno())
+            self.assertEqual(ledger.path.stat().st_size, len(original))
+            self.assertEqual((ledger.path.stat().st_dev, ledger.path.stat().st_ino),
+                             (identity.st_dev, identity.st_ino))
+            fake = Fake()
+            with self.assertRaisesRegex(exp.Hold, "LEDGER_CONTENT_CHANGED_BEFORE_APPEND"):
+                exp.run(ledger, LETTER, "local-not-logged", fake)
+            self.assertFalse(fake.calls)
+            self.assertFalse(ledger.items("ATTEMPT"))
+            self.assertEqual(len(ledger.path.read_bytes()), len(original))
+
+    def test_unmodified_byte_guard_can_complete_one_fake_turn(self):
+        temp, ledger = seeded(goal=1)
+        with temp:
+            fake = Fake()
+            self.assertEqual(exp.run(ledger, LETTER, "local-not-logged", fake),
+                             "PAUSED_OPEN_WINDOW_REACHED")
+            self.assertEqual(len(fake.calls), 1)
+            self.assertEqual(len(ledger.items("REPLY")), 1)
+            self.assertEqual(ledger.byte_length, ledger.path.stat().st_size)
+
     def test_ledger_symlink_is_refused_without_touching_target(self):
         with tempfile.TemporaryDirectory() as tmp:
             p = Path(tmp)
@@ -387,12 +421,14 @@ class RunnerTests(unittest.TestCase):
         with temp:
             outside = ledger.folder.parent / (ledger.folder.name + "_external.txt")
             outside.write_bytes(b"SAFE\n")
+            # Always clean up the sibling file, even when symlinks are
+            # unavailable and skipTest exits through an exception.
             try:
-                ledger.path.unlink()
-                ledger.path.symlink_to(outside)
-            except (OSError, NotImplementedError) as e:
-                self.skipTest(f"symlinks unavailable: {type(e).__name__}")
-            try:
+                try:
+                    ledger.path.unlink()
+                    ledger.path.symlink_to(outside)
+                except (OSError, NotImplementedError) as e:
+                    self.skipTest(f"symlinks unavailable: {type(e).__name__}")
                 with self.assertRaisesRegex(exp.Hold, "LEDGER_SYMLINK"):
                     ledger.add("NEVER", example="external")
                 self.assertEqual(outside.read_bytes(), b"SAFE\n")
