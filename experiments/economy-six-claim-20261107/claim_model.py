@@ -89,7 +89,8 @@ def evaluate(observation: ReceiptObservation, fixture: ScenarioAssumptions | Non
     absent assumptions yield UNKNOWN. Output correctness is the only claim supportable by in-band
     tests, and even that remains a scoped mock observation.
     """
-    if observation.signed_receipts < 0 or observation.signed_receipts > len(observation.slot_ids):
+    if (type(observation.signed_receipts) is not int
+            or not 0 <= observation.signed_receipts <= len(observation.slot_ids)):
         raise ValueError("inconsistent receipt count")
     if len(observation.slot_ids) != len(set(observation.slot_ids)):
         # Duplicate slots cannot be silently counted as independently useful work.
@@ -121,7 +122,8 @@ def evaluate(observation: ReceiptObservation, fixture: ScenarioAssumptions | Non
         out["BENEFICIARY_CONTROL"] = Verdict.FIXTURE_CONDITIONAL
     b, c = fixture.assume_participant_valued_benefit, fixture.assume_total_device_cost
     if b is not None and c is not None:
-        if not (0 <= b < float('inf') and 0 <= c < float('inf')):
+        if (type(b) not in (int, float) or type(c) not in (int, float)
+                or not (0 <= b < float('inf') and 0 <= c < float('inf'))):
             raise ValueError("invalid mock cost/benefit value")
         out["NET_WEAK_DEVICE_BENEFIT"] = Verdict.FIXTURE_CONDITIONAL if b > c else Verdict.REFUTED
     return out
