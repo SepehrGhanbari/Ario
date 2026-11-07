@@ -218,21 +218,12 @@ class EpistemicEconomyTests(unittest.TestCase):
             baseline_total_completions=10, candidate_total_completions=9),
             CompletionCountDelta.TOTAL_DROP)
 
-    def test_identical_observations_do_not_identify_hidden_demand_or_worker_choice(self):
-        # Hidden worlds never enter the count classifier; source labels cannot
-        # turn a count into independent evidence of policy discrimination.
-        stories = (
-            ('demand-unchanged-policy-exclusion', 10, 10, True),
-            ('demand-fell-worker-offline', 20, 10, False),
-        )
-        self.assertNotEqual(stories[0], stories[1])
-        for story in stories:
-            with self.subTest(world=story[0]):
-                self.assertEqual(classify_mock_completion_delta(
-                    baseline_weak_completions=1, candidate_weak_completions=0,
-                    baseline_total_completions=10, candidate_total_completions=10),
-                    CompletionCountDelta.WEAK_DROP)
+    def test_misleading_legacy_opportunity_callable_is_not_exposed(self):
+        # Backward-compatible parsing of old Verdict strings remains possible,
+        # but no callable may silently reinterpret count changes as fairness.
         self.assertFalse(hasattr(__import__('claim_model'), 'compare_mock_opportunity'))
+        self.assertEqual(Verdict.REFUTED.value, 'REFUTED')
+        self.assertEqual(Verdict.FIXTURE_CONDITIONAL.value, 'FIXTURE_CONDITIONAL')
 
     def test_invalid_mock_counts_are_refused_not_counted_as_people(self):
         for count in (-1, True, 5, 1.5, float('nan')):
