@@ -388,7 +388,30 @@ class RunnerTests(unittest.TestCase):
                 exp.run(ledger, LETTER, "local-not-logged", fake)
             self.assertFalse(fake.calls)
             self.assertFalse(ledger.items("ATTEMPT"))
-            self.assertEqual(len(ledger.path.read_bytes()), len(original))
+            expected_tampered = original[:position] + b"2" + original[position + 1:]
+            # A failure must not repair, truncate or append the attacked bytes.
+            self.assertEqual(ledger.path.read_bytes(), expected_tampered)
+
+    def test_reopened_ledger_still_detects_post_load_byte_edit(self):
+        import os
+        temp, ledger = seeded(goal=1)
+        with temp:
+            reopened = exp.Ledger(ledger.folder)
+            original = reopened.path.read_bytes()
+            self.assertEqual(reopened.byte_length, len(original))
+            marker = b'"target_new_messages":1'
+            self.assertIn(marker, original)
+            position = original.index(marker) + len(marker) - 1
+            with reopened.path.open("r+b") as stream:
+                stream.seek(position)
+                stream.write(b"2")
+                stream.flush()
+                os.fsync(stream.fileno())
+            expected_tampered = original[:position] + b"2" + original[position + 1:]
+            with self.assertRaisesRegex(exp.Hold, "LEDGER_CONTENT_CHANGED_BEFORE_APPEND"):
+                reopened.add("NEVER", value="no append after reopen")
+            self.assertEqual(reopened.path.read_bytes(), expected_tampered)
+            self.assertFalse(reopened.items("NEVER"))
 
     def test_unmodified_byte_guard_can_complete_one_fake_turn(self):
         temp, ledger = seeded(goal=1)
