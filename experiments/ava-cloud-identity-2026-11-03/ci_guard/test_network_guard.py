@@ -1,8 +1,8 @@
 """Negative controls for the opt-in, Python-level network guard only."""
 import os
-from pathlib import Path
 import socket
 import subprocess
+import tempfile
 import sys
 import unittest
 import urllib.request
@@ -30,13 +30,15 @@ class PythonNetworkGuardTests(unittest.TestCase):
             "    else:\n"
             "        raise SystemExit('NETWORK_GUARD_MISSING')\n"
         )
-        cwd = Path(__file__).resolve().parent.parent
-        proc = subprocess.run([sys.executable, "-c", script],
-                              cwd=str(cwd), env=os.environ.copy(),
-                              text=True, capture_output=True, timeout=10,
-                              check=False)
-        self.assertEqual(proc.returncode, 0, proc.stderr)
-        self.assertIn("ARIO_CI_PYTHON_NETWORK_DENIED", proc.stdout)
+        with tempfile.TemporaryDirectory() as scratch_cwd:
+            # This is deliberately NOT the experiment folder: relative
+            # PYTHONPATH would lose the guard. Only absolute CI path survives.
+            proc = subprocess.run([sys.executable, "-c", script],
+                                  cwd=scratch_cwd, env=os.environ.copy(),
+                                  text=True, capture_output=True, timeout=10,
+                                  check=False)
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            self.assertIn("ARIO_CI_PYTHON_NETWORK_DENIED", proc.stdout)
 
     def test_urllib_provider_request_is_blocked_before_dispatch(self):
         self.assertEqual(os.environ.get("ARIO_CI_PYTHON_NETWORK_DENY"), "1")
