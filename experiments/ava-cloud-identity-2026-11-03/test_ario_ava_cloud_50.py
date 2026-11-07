@@ -156,11 +156,26 @@ class RunnerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             source = Path(tmp) / "old.jsonl"
             raw = '{"speaker":"Ava-A","turn":1,"content":"Hello"}\n{"speaker":"Ava-B","turn":2,"content":"Hi"}\n'
-            source.write_text(raw, encoding="utf-8")
+            # Freeze source bytes explicitly: Path.write_text translates LF
+            # to CRLF on Windows, while import_legacy hashes actual bytes.
+            frozen = raw.encode("utf-8")
+            source.write_bytes(frozen)
             messages, h = exp.import_legacy(source)
-            self.assertEqual(h, exp.sha(raw.encode()))
+            self.assertEqual(h, exp.sha(frozen))
             self.assertEqual(len(messages), 2)
-            self.assertEqual(source.read_text(encoding="utf-8"), raw)
+            self.assertEqual(source.read_bytes(), frozen)
+
+    def test_legacy_crlf_jsonl_preserves_original_byte_hash(self):
+        # CRLF from a Windows export must be parsed without claiming LF bytes.
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "old-windows.jsonl"
+            raw = ('{"speaker":"Ava-A","turn":1,"content":"Hello"}\r\n'
+                   '{"speaker":"Ava-B","turn":2,"content":"Hi"}\r\n').encode("utf-8")
+            source.write_bytes(raw)
+            messages, digest = exp.import_legacy(source)
+            self.assertEqual(len(messages), 2)
+            self.assertEqual(digest, exp.sha(raw))
+            self.assertEqual(source.read_bytes(), raw)
 
     def test_corrupt_chain_is_not_silently_repaired(self):
         temp, ledger = seeded()
@@ -264,14 +279,19 @@ class RunnerTests(unittest.TestCase):
         from unittest.mock import patch
         import os
         original = os.open
+        # A fake flag must not erase the real Windows CRT binary mode.
+        # Without it, os.write silently transforms LF into CRLF and
+        # ExclusiveRunLock correctly refuses to release its altered bytes.
+        native_binary = getattr(os, "O_BINARY", 0)
         marker = 1 << 27
         flags_seen = []
         def fake_open(path, flags, mode=0o777, *, dir_fd=None):
             if str(path).endswith((".run_writer.lock", "events.jsonl")):
                 flags_seen.append((str(path), flags))
+            real_flags = (flags & ~marker) | (native_binary if flags & marker else 0)
             if dir_fd is not None:
-                return original(path, flags & ~marker, mode, dir_fd=dir_fd)
-            return original(path, flags & ~marker, mode)
+                return original(path, real_flags, mode, dir_fd=dir_fd)
+            return original(path, real_flags, mode)
         with tempfile.TemporaryDirectory() as temp:
             p = Path(temp)
             with patch.object(exp.os, "O_BINARY", marker, create=True):
