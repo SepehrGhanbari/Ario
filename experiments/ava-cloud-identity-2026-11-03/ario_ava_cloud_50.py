@@ -150,16 +150,17 @@ class Ledger:
                     raise Hold("CORRUPT_BLANK_EVENT")
                 try:
                     event = json.loads(raw)
+                    if not isinstance(event, dict):
+                        raise Hold("INVALID_OR_INCOMPLETE_EVENT_LOG")
                     digest = event.pop("event_sha256")
-                    if (not isinstance(event, dict)
-                        or event.get("seq") != len(self.events) + 1
+                    if (event.get("seq") != len(self.events) + 1
                         or event.get("previous_sha256") != self.hash
                         or digest != sha(canonical(event))):
                         raise Hold("EVENT_CHAIN_MISMATCH")
                     event["event_sha256"] = digest
                     self.events.append(event)
                     self.hash = digest
-                except (ValueError, TypeError, KeyError) as exc:
+                except (ValueError, TypeError, KeyError, RecursionError) as exc:
                     raise Hold("INVALID_OR_INCOMPLETE_EVENT_LOG") from exc
             self._content_digest.update(data)
 
