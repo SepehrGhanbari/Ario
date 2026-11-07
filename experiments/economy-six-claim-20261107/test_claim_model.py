@@ -175,6 +175,68 @@ class EpistemicEconomyTests(unittest.TestCase):
         f = ScenarioAssumptions(assume_participant_valued_benefit=4)
         self.assertEqual(evaluate(self.observed, f)['NET_WEAK_DEVICE_BENEFIT'], Verdict.UNKNOWN)
 
+    def test_slot_id_contract_rejects_malformed_ids_before_uniqueness(self):
+        # A slot is a nonempty string, not an integer, null or unhashable list.
+        for ids in (("",), (123,), (None,), (["slot"],), (True,)):
+            with self.subTest(ids=repr(ids)):
+                with self.assertRaisesRegex(ValueError, "invalid slot id"):
+                    evaluate(ReceiptObservation(ids, signed_receipts=1))
+
+    def test_slot_id_contract_rejects_unhashable_string_subclass(self):
+        class UnhashableString(str):
+            __hash__ = None
+        with self.assertRaisesRegex(ValueError, "invalid slot id"):
+            evaluate(ReceiptObservation((UnhashableString("slot"),), signed_receipts=1))
+
+    def test_slot_id_contract_accepts_unicode_without_ascii_projection(self):
+        # Composed/decomposed and whitespace-distinct strings stay distinct.
+        ids = ("شناسه-۱", "slot-é", "slot-三", " a ", "é", "e\u0301",
+               "slot", "slot ")
+        verdict = evaluate(ReceiptObservation(ids, signed_receipts=len(ids)))
+        self.assertEqual(verdict["REQUEST_INDEPENDENT"], Verdict.UNKNOWN)
+        self.assertNotEqual("é", "e\u0301")
+        self.assertNotEqual("slot", "slot ")
+
+    def test_slot_id_container_requires_exact_immutable_tuple(self):
+        class TupleSubclass(tuple):
+            pass
+        for ids in (["slot"], TupleSubclass(("slot",))):
+            with self.subTest(ids=repr(ids)):
+                with self.assertRaisesRegex(ValueError, "invalid slot id container"):
+                    evaluate(ReceiptObservation(ids, signed_receipts=1))
+
+    def test_hostile_string_subclasses_cannot_override_id_semantics(self):
+        class TruthyEmpty(str):
+            def __bool__(self):
+                return True
+
+        class UnequalSameBytes(str):
+            def __eq__(self, other):
+                return False
+            __hash__ = str.__hash__
+
+        class TwoHashFailure(str):
+            calls = 0
+            def __hash__(self):
+                self.calls += 1
+                if self.calls >= 2:
+                    raise TypeError("unstable hash")
+                return str.__hash__(self)
+
+        for ids in ((TruthyEmpty(""),), (UnequalSameBytes("slot"), "slot"),
+                    (TwoHashFailure("slot"),)):
+            with self.subTest(ids=repr(ids)):
+                with self.assertRaisesRegex(ValueError, "invalid slot id"):
+                    evaluate(ReceiptObservation(ids, signed_receipts=len(ids)))
+
+    def test_slot_id_contract_preserves_exact_duplicate_detection(self):
+        with self.assertRaisesRegex(ValueError, "duplicate slot ids"):
+            evaluate(ReceiptObservation(("شناسه-۱", "شناسه-۱"), signed_receipts=2))
+        self.assertEqual(
+            evaluate(ReceiptObservation((), signed_receipts=0))["REQUEST_INDEPENDENT"],
+            Verdict.UNKNOWN,
+        )
+
     def test_duplicate_ids_are_refused_not_double_counted(self):
         with self.assertRaisesRegex(ValueError, 'duplicate'):
             evaluate(ReceiptObservation(('a','a'), signed_receipts=2))

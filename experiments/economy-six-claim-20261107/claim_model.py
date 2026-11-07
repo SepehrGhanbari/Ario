@@ -99,11 +99,20 @@ def evaluate(observation: ReceiptObservation, fixture: ScenarioAssumptions | Non
     absent assumptions yield UNKNOWN. Output correctness is the only claim supportable by in-band
     tests, and even that remains a scoped mock observation.
     """
+    # A stable immutable container and exact built-in str values prevent
+    # caller-defined __bool__, __eq__ or __hash__ from changing validation.
+    # This is deliberately narrower than the previous subclass allowance.
+    slot_ids = observation.slot_ids
+    if type(slot_ids) is not tuple:
+        raise ValueError("invalid slot id container")
     if (type(observation.signed_receipts) is not int
-            or not 0 <= observation.signed_receipts <= len(observation.slot_ids)):
+            or not 0 <= observation.signed_receipts <= len(slot_ids)):
         raise ValueError("inconsistent receipt count")
-    if len(observation.slot_ids) != len(set(observation.slot_ids)):
-        # Duplicate slots cannot be silently counted as independently useful work.
+    for slot_id in slot_ids:
+        if type(slot_id) is not str or not slot_id:
+            raise ValueError("invalid slot id")
+    if len(slot_ids) != len(set(slot_ids)):
+        # Exact Unicode comparison; no implicit trimming or normalization.
         raise ValueError("duplicate slot ids")
     out: dict[str, Verdict] = dict.fromkeys(CLAIMS, Verdict.UNKNOWN)
     if observation.output_check is True:
