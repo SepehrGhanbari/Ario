@@ -94,17 +94,22 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(len(exp.current(ledger2)[1]), 50)
             self.assertEqual(exp.run(ledger2, LETTER, "local-not-logged", Fake()), "PAUSED_OPEN_WINDOW_REACHED")
 
-    def test_quota_pauses_and_resumes_without_rewriting_messages(self):
+    def test_quota_429_requires_review_and_preserves_existing_messages(self):
         temp, ledger = seeded(goal=3)
         with temp:
             fake = Fake(fail_at=2)
             self.assertEqual(exp.run(ledger, LETTER, "local-not-logged", fake), "PAUSED_RATE_LIMIT")
             self.assertEqual(len(ledger.items("REPLY")), 1)
             old_hash = ledger.items("REPLY")[0]["event_sha256"]
+            self.assertEqual(ledger.items("PAUSE")[-1]["data"]["status"],
+                             "PAUSED_FOR_REVIEW")
             new = exp.Ledger(ledger.folder)
-            self.assertEqual(exp.run(new, LETTER, "local-not-logged", Fake()), "PAUSED_OPEN_WINDOW_REACHED")
-            self.assertEqual(len(new.items("REPLY")), 3)
+            retry = Fake()
+            with self.assertRaisesRegex(exp.Hold, "REVIEW"):
+                exp.run(new, LETTER, "local-not-logged", retry)
+            self.assertEqual(len(new.items("REPLY")), 1)
             self.assertEqual(old_hash, new.items("REPLY")[0]["event_sha256"])
+            self.assertFalse(retry.calls)
 
     def test_explicit_stop_pauses_without_chasing_target(self):
         temp, ledger = seeded()
@@ -151,11 +156,26 @@ class RunnerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             source = Path(tmp) / "old.jsonl"
             raw = '{"speaker":"Ava-A","turn":1,"content":"Hello"}\n{"speaker":"Ava-B","turn":2,"content":"Hi"}\n'
-            source.write_text(raw, encoding="utf-8")
+            # Freeze source bytes explicitly: Path.write_text translates LF
+            # to CRLF on Windows, while import_legacy hashes actual bytes.
+            frozen = raw.encode("utf-8")
+            source.write_bytes(frozen)
             messages, h = exp.import_legacy(source)
-            self.assertEqual(h, exp.sha(raw.encode()))
+            self.assertEqual(h, exp.sha(frozen))
             self.assertEqual(len(messages), 2)
-            self.assertEqual(source.read_text(encoding="utf-8"), raw)
+            self.assertEqual(source.read_bytes(), frozen)
+
+    def test_legacy_crlf_jsonl_preserves_original_byte_hash(self):
+        # CRLF from a Windows export must be parsed without claiming LF bytes.
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "old-windows.jsonl"
+            raw = ('{"speaker":"Ava-A","turn":1,"content":"Hello"}\r\n'
+                   '{"speaker":"Ava-B","turn":2,"content":"Hi"}\r\n').encode("utf-8")
+            source.write_bytes(raw)
+            messages, digest = exp.import_legacy(source)
+            self.assertEqual(len(messages), 2)
+            self.assertEqual(digest, exp.sha(raw))
+            self.assertEqual(source.read_bytes(), raw)
 
     def test_corrupt_chain_is_not_silently_repaired(self):
         temp, ledger = seeded()
@@ -203,6 +223,327 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(exp.run(ledger, LETTER, "local-not-logged", provider), "PAUSED_LOOP_REVIEW")
             self.assertGreater(len(ledger.items("REPLY")), 1)
             self.assertFalse(ledger.items("WINDOW_REACHED_OPEN"))
+
+
+    def test_invalid_provider_shape_requires_review_before_retry(self):
+        temp, ledger = seeded(goal=2)
+        with temp:
+            calls = []
+            def invalid(_payload, _key):
+                calls.append("request")
+                return []
+            self.assertEqual(exp.run(ledger, LETTER, "local-not-logged", invalid),
+                             "PAUSED_INVALID_RESPONSE")
+            self.assertEqual(len(calls), 1)
+            pause = ledger.items("PAUSE")[-1]
+            self.assertEqual(pause["data"]["status"], "PAUSED_FOR_REVIEW")
+            fresh = exp.Ledger(ledger.folder)
+            retry = Fake()
+            with self.assertRaisesRegex(exp.Hold, "REVIEW"):
+                exp.run(fresh, LETTER, "local-not-logged", retry)
+            self.assertFalse(retry.calls)
+
+    def test_legacy_invalid_shape_pause_also_blocks_resume(self):
+        temp, ledger = seeded(goal=2)
+        with temp:
+            ledger.add("ATTEMPT", attempt_seq=1, speaker="A", expected_turn=1)
+            ledger.add("PAUSE", attempt_seq=1, reason="INVALID_PROVIDER_JSON")
+            retry = Fake()
+            with self.assertRaisesRegex(exp.Hold, "REVIEW"):
+                exp.run(exp.Ledger(ledger.folder), LETTER, "local-not-logged", retry)
+            self.assertFalse(retry.calls)
+
+    def test_failed_provider_body_decode_records_review_pause(self):
+        temp, ledger = seeded(goal=2)
+        with temp:
+            def broken(_payload, _key):
+                raise json.JSONDecodeError("not JSON", "<html>", 0)
+            self.assertEqual(exp.run(ledger, LETTER, "local-not-logged", broken),
+                             "PAUSED_INVALID_RESPONSE")
+            self.assertEqual(ledger.items("PAUSE")[-1]["data"]["status"],
+                             "PAUSED_FOR_REVIEW")
+            self.assertFalse(ledger.items("REPLY"))
+
+    def test_crash_after_stop_reply_must_not_dispatch_again(self):
+        temp, ledger = seeded(goal=2)
+        with temp:
+            ledger.add("ATTEMPT", attempt_seq=1, speaker="A", expected_turn=1)
+            ledger.add("REPLY", attempt_seq=1, speaker="A", turn=1,
+                       content="[[END_DIALOGUE]]")
+            retry = Fake()
+            with self.assertRaisesRegex(exp.Hold, "STOP.*REVIEW"):
+                exp.run(exp.Ledger(ledger.folder), LETTER, "local-not-logged", retry)
+            self.assertFalse(retry.calls)
+
+    def test_windows_binary_file_flags_are_explicit(self):
+        from unittest.mock import patch
+        import os
+        original = os.open
+        # A fake flag must not erase the real Windows CRT binary mode.
+        # Without it, os.write silently transforms LF into CRLF and
+        # ExclusiveRunLock correctly refuses to release its altered bytes.
+        native_binary = getattr(os, "O_BINARY", 0)
+        marker = 1 << 27
+        flags_seen = []
+        def fake_open(path, flags, mode=0o777, *, dir_fd=None):
+            if str(path).endswith((".run_writer.lock", "events.jsonl")):
+                flags_seen.append((str(path), flags))
+            real_flags = (flags & ~marker) | (native_binary if flags & marker else 0)
+            if dir_fd is not None:
+                return original(path, real_flags, mode, dir_fd=dir_fd)
+            return original(path, real_flags, mode)
+        with tempfile.TemporaryDirectory() as temp:
+            p = Path(temp)
+            with patch.object(exp.os, "O_BINARY", marker, create=True):
+                with patch.object(exp.os, "open", side_effect=fake_open):
+                    with exp.ExclusiveRunLock(p):
+                        exp.Ledger(p).add("PROBE", evidence="synthetic")
+        names = {Path(path).name for path, flags in flags_seen if flags & marker}
+        self.assertEqual(names, {".run_writer.lock", "events.jsonl"})
+
+
+    def test_http_500_requires_review_before_retry(self):
+        temp, ledger = seeded(goal=2)
+        with temp:
+            def failed(_payload, _key):
+                raise HTTPError(exp.ENDPOINT, 500, "ambiguous gateway failure", {}, None)
+            self.assertEqual(exp.run(ledger, LETTER, "local-not-logged", failed),
+                             "PAUSED_PROVIDER_ERROR")
+            self.assertEqual(ledger.items("PAUSE")[-1]["data"]["status"],
+                             "PAUSED_FOR_REVIEW")
+            retry = Fake()
+            with self.assertRaisesRegex(exp.Hold, "REVIEW"):
+                exp.run(exp.Ledger(ledger.folder), LETTER, "local-not-logged", retry)
+            self.assertFalse(retry.calls)
+
+    def test_old_http_error_pauses_do_not_auto_resume(self):
+        for previous_status in ("PAUSED_RATE_LIMIT", "PAUSED_PROVIDER_ERROR"):
+            with self.subTest(previous_status=previous_status):
+                temp, ledger = seeded(goal=2)
+                with temp:
+                    ledger.add("ATTEMPT", attempt_seq=1, speaker="A", expected_turn=1)
+                    ledger.add("PAUSE", attempt_seq=1, reason="HTTP_ERROR",
+                               http_code=429 if previous_status == "PAUSED_RATE_LIMIT" else 500,
+                               status=previous_status)
+                    retry = Fake()
+                    with self.assertRaisesRegex(exp.Hold, "REVIEW"):
+                        exp.run(exp.Ledger(ledger.folder), LETTER, "local-not-logged", retry)
+                    self.assertFalse(retry.calls)
+
+
+
+    def test_provider_transport_refuses_without_owned_writer_lock(self):
+        temp, ledger = seeded(goal=1)
+        with temp:
+            with self.assertRaisesRegex(exp.Hold, "LIVE_DISPATCH_REQUIRES_WRITER_LOCK"):
+                exp.run(ledger, LETTER, "synthetic-no-call", transport=exp.send)
+            self.assertFalse(ledger.items("ATTEMPT"))
+
+    def test_lock_disappears_during_first_reply_no_second_dispatch(self):
+        temp, ledger = seeded(goal=2)
+        with temp:
+            lock = exp.ExclusiveRunLock(ledger.folder)
+            calls = []
+            def tamper_transport(_request, _secret):
+                calls.append(1)
+                lock.path.write_bytes(b"interfering actor")
+                return {"model": exp.MODEL, "id": "tamper",
+                        "choices": [{"message": {"content": "one"}, "finish_reason": "stop"}]}
+            with self.assertRaisesRegex(exp.Hold, "WRITER_LOCK_"):
+                with lock:
+                    exp.run(ledger, LETTER, "local-not-logged",
+                            tamper_transport, writer_lock=lock)
+            self.assertEqual(len(calls), 1)
+            self.assertFalse(ledger.items("REPLY"))
+
+    def test_clean_owned_lock_allows_fake_transport(self):
+        temp, ledger = seeded(goal=1)
+        with temp:
+            with exp.ExclusiveRunLock(ledger.folder) as lock:
+                self.assertEqual(exp.run(ledger, LETTER, "local-not-logged",
+                                         Fake(), writer_lock=lock),
+                                 "PAUSED_OPEN_WINDOW_REACHED")
+            self.assertEqual(len(ledger.items("REPLY")), 1)
+            self.assertFalse(lock.path.exists())
+
+    def test_same_inode_same_size_edit_refused_before_attempt_and_transport(self):
+        import os
+        temp, ledger = seeded(goal=1)
+        with temp:
+            original = ledger.path.read_bytes()
+            needle = b'"target_new_messages":1'
+            self.assertIn(needle, original)
+            position = original.index(needle) + len(needle) - 1
+            identity = ledger.path.stat()
+            with ledger.path.open("r+b") as stream:
+                stream.seek(position)
+                stream.write(b"2")
+                stream.flush()
+                os.fsync(stream.fileno())
+            self.assertEqual(ledger.path.stat().st_size, len(original))
+            self.assertEqual((ledger.path.stat().st_dev, ledger.path.stat().st_ino),
+                             (identity.st_dev, identity.st_ino))
+            fake = Fake()
+            with self.assertRaisesRegex(exp.Hold, "LEDGER_CONTENT_CHANGED_BEFORE_APPEND"):
+                exp.run(ledger, LETTER, "local-not-logged", fake)
+            self.assertFalse(fake.calls)
+            self.assertFalse(ledger.items("ATTEMPT"))
+            expected_tampered = original[:position] + b"2" + original[position + 1:]
+            # A failure must not repair, truncate or append the attacked bytes.
+            self.assertEqual(ledger.path.read_bytes(), expected_tampered)
+
+    def test_reopened_ledger_still_detects_post_load_byte_edit(self):
+        import os
+        temp, ledger = seeded(goal=1)
+        with temp:
+            reopened = exp.Ledger(ledger.folder)
+            original = reopened.path.read_bytes()
+            self.assertEqual(reopened.byte_length, len(original))
+            marker = b'"target_new_messages":1'
+            self.assertIn(marker, original)
+            position = original.index(marker) + len(marker) - 1
+            with reopened.path.open("r+b") as stream:
+                stream.seek(position)
+                stream.write(b"2")
+                stream.flush()
+                os.fsync(stream.fileno())
+            expected_tampered = original[:position] + b"2" + original[position + 1:]
+            with self.assertRaisesRegex(exp.Hold, "LEDGER_CONTENT_CHANGED_BEFORE_APPEND"):
+                reopened.add("NEVER", value="no append after reopen")
+            self.assertEqual(reopened.path.read_bytes(), expected_tampered)
+            self.assertFalse(reopened.items("NEVER"))
+
+    def test_unmodified_byte_guard_can_complete_one_fake_turn(self):
+        temp, ledger = seeded(goal=1)
+        with temp:
+            fake = Fake()
+            self.assertEqual(exp.run(ledger, LETTER, "local-not-logged", fake),
+                             "PAUSED_OPEN_WINDOW_REACHED")
+            self.assertEqual(len(fake.calls), 1)
+            self.assertEqual(len(ledger.items("REPLY")), 1)
+            self.assertEqual(ledger.byte_length, ledger.path.stat().st_size)
+
+    def test_ledger_symlink_is_refused_without_touching_target(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp)
+            folder = p / "run"
+            folder.mkdir()
+            outside = p / "other.jsonl"
+            outside.write_bytes(b"ORIGINAL\n")
+            link = folder / "events.jsonl"
+            try:
+                link.symlink_to(outside)
+            except (OSError, NotImplementedError) as e:
+                self.skipTest(f"symlinks unavailable: {type(e).__name__}")
+            with self.assertRaisesRegex(exp.Hold, "LEDGER_SYMLINK"):
+                exp.Ledger(folder)
+            self.assertEqual(outside.read_bytes(), b"ORIGINAL\n")
+
+    def test_symlink_replacement_before_append_is_refused(self):
+        temp, ledger = seeded(goal=1)
+        with temp:
+            outside = ledger.folder.parent / (ledger.folder.name + "_external.txt")
+            outside.write_bytes(b"SAFE\n")
+            # Always clean up the sibling file, even when symlinks are
+            # unavailable and skipTest exits through an exception.
+            try:
+                try:
+                    ledger.path.unlink()
+                    ledger.path.symlink_to(outside)
+                except (OSError, NotImplementedError) as e:
+                    self.skipTest(f"symlinks unavailable: {type(e).__name__}")
+                with self.assertRaisesRegex(exp.Hold, "LEDGER_SYMLINK"):
+                    ledger.add("NEVER", example="external")
+                self.assertEqual(outside.read_bytes(), b"SAFE\n")
+            finally:
+                outside.unlink(missing_ok=True)
+
+
+
+    def test_symlink_run_folder_must_not_create_external_lock(self):
+        with tempfile.TemporaryDirectory() as temp:
+            top = Path(temp)
+            outside = top / "outside"
+            outside.mkdir()
+            link = top / "run-link"
+            try:
+                link.symlink_to(outside, target_is_directory=True)
+            except (OSError, NotImplementedError) as exc:
+                self.skipTest(f"directory symlinks unsupported: {type(exc).__name__}")
+            with self.assertRaisesRegex(exp.Hold, "RUN_FOLDER_SYMLINK_REFUSED"):
+                with exp.ExclusiveRunLock(link):
+                    pass
+            self.assertFalse((outside / ".run_writer.lock").exists())
+
+
+    def test_last_reply_stop_crash_does_not_claim_open_window(self):
+        temp, ledger = seeded(goal=1)
+        with temp:
+            ledger.add("ATTEMPT", attempt_seq=1, speaker="A", expected_turn=1)
+            ledger.add("REPLY", attempt_seq=1, speaker="A", turn=1,
+                       content="[[END_DIALOGUE]]")
+            old_count = len(ledger.events)
+            with self.assertRaisesRegex(exp.Hold, "PREVIOUS_STOP_MARKER_REQUIRES_REVIEW"):
+                exp.run(ledger, LETTER, "local-not-logged", Fake())
+            self.assertEqual(len(ledger.events), old_count)
+            self.assertFalse(ledger.items("WINDOW_REACHED_OPEN"))
+
+    def test_completed_window_still_honors_ambiguous_pause(self):
+        temp, ledger = seeded(goal=1)
+        with temp:
+            ledger.add("ATTEMPT", attempt_seq=1, speaker="A", expected_turn=1)
+            ledger.add("REPLY", attempt_seq=1, speaker="A", turn=1, content="Normal")
+            ledger.add("PAUSE", attempt_seq=2, reason="HTTP_ERROR", status="PAUSED_FOR_REVIEW")
+            old_count = len(ledger.events)
+            with self.assertRaisesRegex(exp.Hold, "PREVIOUS_UNRESOLVED_REVIEW_PAUSE"):
+                exp.run(ledger, LETTER, "local-not-logged", Fake())
+            self.assertEqual(len(ledger.events), old_count)
+            self.assertFalse(ledger.items("WINDOW_REACHED_OPEN"))
+
+    def test_lock_cannot_protect_another_ledger_folder(self):
+        temp, ledger = seeded(goal=1)
+        with temp:
+            with tempfile.TemporaryDirectory() as other:
+                with exp.ExclusiveRunLock(Path(other)) as unrelated_lock:
+                    calls = Fake()
+                    with self.assertRaisesRegex(exp.Hold, "LOCK_LEDGER_DIR_MISMATCH"):
+                        exp.run(ledger, LETTER, "local-not-logged",
+                                calls, writer_lock=unrelated_lock)
+                    self.assertFalse(calls.calls)
+                    self.assertFalse(ledger.items("ATTEMPT"))
+
+    def test_replaced_regular_ledger_rejected_before_append(self):
+        # Atomically replace the loaded inode with a distinct file, retaining
+        # identical bytes. unlink+recreate alone may recycle the inode on Linux.
+        import os
+        temp, ledger = seeded(goal=1)
+        with temp:
+            original = ledger.path.read_bytes()
+            old_ino = ledger.path.stat().st_ino
+            swap = ledger.folder / "other-regular-ledger.jsonl"
+            swap.write_bytes(original)
+            self.assertNotEqual(old_ino, swap.stat().st_ino)
+            os.replace(swap, ledger.path)
+            before = ledger.path.read_bytes()
+            with self.assertRaisesRegex(exp.Hold, "LEDGER_REPLACED"):
+                ledger.add("SHOULD_NOT_WRITE", why="different inode")
+            self.assertEqual(ledger.path.read_bytes(), before)
+            self.assertFalse(ledger.items("SHOULD_NOT_WRITE"))
+
+    def test_hardlinked_ledger_rejected_before_append(self):
+        import os
+        temp, ledger = seeded(goal=1)
+        with temp:
+            external = ledger.folder / "other-link.jsonl"
+            try:
+                os.link(ledger.path, external)
+            except (OSError, NotImplementedError) as exc:
+                self.skipTest("hardlink unavailable: " + type(exc).__name__)
+            before = ledger.path.read_bytes()
+            with self.assertRaisesRegex(exp.Hold, "LEDGER_MULTIPLE_LINKS"):
+                ledger.add("SHOULD_NOT_WRITE", why="hardlink alias")
+            self.assertEqual(ledger.path.read_bytes(), before)
+
 
 
 if __name__ == "__main__":
