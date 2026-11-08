@@ -444,7 +444,7 @@ def init_run(ledger: Ledger, letter: str, letter_sha: str, prior: list[dict],
              legacy_sha: str | None, goal: int) -> None:
     if ledger.events:
         raise Hold("EXISTING_RUN_WOULD_BE_OVERWRITTEN")
-    if not 1 <= goal <= 500:
+    if type(goal) is not int or not 1 <= goal <= 500:
         raise Hold("INVALID_TARGET_COUNT")
     ledger.add("INIT", protocol=PROTOCOL, model=MODEL, letter_sha256=letter_sha,
                identical_common_seed=True, imported_messages=prior,
@@ -453,6 +453,50 @@ def init_run(ledger: Ledger, letter: str, letter_sha: str, prior: list[dict],
                baseline_count=len(prior), target_new_messages=goal,
                generation={"temperature": 0.7, "max_tokens": 700, "stream": False},
                privacy="LETTER_ONLY_PLUS_AUTHORIZED_RELAY; NO_PRIVATE_CHATGPT_ARCHIVE")
+
+
+def verify_attempt_bindings(ledger: Ledger, baseline_count: int) -> None:
+    """Every attempted provider turn needs its own later matching resolution.
+
+    Unlike a hash chain, matching an attempt_seq anywhere in history does not
+    prove that a specific dispatch was resolved. Validate event order and
+    identity before reopening a run. A PAUSE never establishes a valid REPLY.
+    """
+    next_attempt_seq = 1
+    next_turn = baseline_count + 1
+    pending = None
+    for event in ledger.events:
+        kind, fields = event["kind"], event["data"]
+        if kind == "ATTEMPT":
+            if (pending is not None
+                    or fields["attempt_seq"] != next_attempt_seq
+                    or fields["expected_turn"] != next_turn
+                    or fields["speaker"] != ("A" if next_turn % 2 else "B")):
+                raise Hold("ATTEMPT_SEQUENCE_OR_IDENTITY_CONFLICT")
+            pending = fields
+            next_attempt_seq += 1
+        elif kind == "REPLY":
+            if (pending is None
+                    or fields["attempt_seq"] != pending["attempt_seq"]
+                    or fields["turn"] != pending["expected_turn"]
+                    or fields["turn"] != next_turn
+                    or fields["speaker"] != pending["speaker"]):
+                raise Hold("ATTEMPT_RESOLUTION_IDENTITY_CONFLICT")
+            pending = None
+            next_turn += 1
+        elif kind == "PAUSE" and "attempt_seq" in fields:
+            # A claimed resolution, even of an exact ID, is NOT a provider
+            # response. Human adjudication is required before dispatch.
+            if (pending is None
+                    or fields["attempt_seq"] != pending["attempt_seq"]):
+                raise Hold("ATTEMPT_PAUSE_IDENTITY_CONFLICT")
+            raise Hold("PREVIOUS_UNRESOLVED_REVIEW_PAUSE")
+        elif pending is not None:
+            # No event is allowed to interleave between a dispatch intent and
+            # its corresponding REPLY or PAUSE in this sequential relay.
+            raise Hold("DISPATCH_UNKNOWN_UNRESOLVED_ATTEMPT")
+    if pending is not None:
+        raise Hold("DISPATCH_UNKNOWN_UNRESOLVED_ATTEMPT")
 
 
 def run(ledger: Ledger, letter: str, key: str | None,
@@ -469,13 +513,6 @@ def run(ledger: Ledger, letter: str, key: str | None,
     for e in exts:
         target += e["data"]["additional"]
     achieved = len(previous) - base
-    # Crash after an intent cannot be assumed to have been a failed provider request.
-    for intent in ledger.items("ATTEMPT"):
-        req_id = intent["data"]["attempt_seq"]
-        resolved = any(e["data"].get("attempt_seq") == req_id for e in ledger.events
-                       if e["kind"] in ("REPLY", "PAUSE"))
-        if not resolved:
-            raise Hold("DISPATCH_UNKNOWN_UNRESOLVED_ATTEMPT")
     if any(e["kind"] in ("VOLUNTARY_STOP", "PAUSED_LOOP") for e in ledger.events):
         raise Hold("PREVIOUS_STOP_OR_LOOP_REQUIRES_REVIEW")
     if any(e["kind"] == "PAUSE" and (
@@ -490,6 +527,7 @@ def run(ledger: Ledger, letter: str, key: str | None,
         # A crash after REPLY but before VOLUNTARY_STOP may leave a stop
         # request persisted without its separate stop event.
         raise Hold("PREVIOUS_STOP_MARKER_REQUIRES_REVIEW")
+    verify_attempt_bindings(ledger, base)
     # Never report a completed window while a persisted stop, pause or
     # unresolved dispatch still needs review after a crash.
     if achieved >= target:
