@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Ario Explainer — Synthetic Teaching Demo</title>
+<style>
+:root{--ink:#22303c;--paper:#f6f4ee;--card:#ffffff;--line:#d9d3c5;--accent:#0e6b5c;--warn:#9c4a1e;--mut:#6d7680;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);line-height:1.85;font-family:"Segoe UI",Tahoma,system-ui,sans-serif}
+.wrap{max-width:880px;margin:0 auto;padding:0 18px}
+header{background:var(--ink);color:#fff;padding:26px 0 20px}
+header h1{margin:0 0 6px;font-size:1.5rem}
+header p{margin:0;opacity:.85;font-size:.95rem}
+#langBtn{margin-top:12px;background:transparent;color:#fff;border:1px solid rgba(255,255,255,.5);border-radius:8px;padding:6px 14px;cursor:pointer;font-size:.9rem}
+#langBtn:hover{background:rgba(255,255,255,.12)}
+.banner{background:#fff7e8;border-bottom:1px solid var(--line);padding:12px 0;font-size:.92rem;color:var(--warn)}
+main{padding:26px 0 40px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:22px}
+h2{margin:0 0 14px;font-size:1.2rem;color:var(--accent)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.pill{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:#fbfaf6}
+.pill b{display:block;margin-bottom:4px;font-size:1rem}
+.pill span{font-size:.88rem;color:var(--mut)}
+.token{display:inline-block;font-weight:700;font-size:.8rem;letter-spacing:.03em;border:1px solid var(--line);border-radius:6px;padding:1px 8px;margin-bottom:6px}
+.scen{border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px;background:#fbfaf6}
+.scen h3{margin:0 0 10px;font-size:1.05rem}
+.step{border-right:3px solid var(--accent);margin:8px 0;padding:6px 12px;background:#fff;border-radius:6px}
+.step .lbl{font-size:.75rem;color:var(--mut);letter-spacing:.05em;display:block}
+.opts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.opts button{font:inherit;font-size:.9rem;border:1px solid var(--accent);background:#fff;color:var(--accent);border-radius:8px;padding:8px 12px;cursor:pointer}
+.opts button:hover{background:#eef6f4}
+.feedback{margin-top:10px;padding:10px 12px;border-radius:8px;font-size:.9rem;display:none}
+.feedback.ok{background:#eaf5ee;border:1px solid #b6d9c2;display:block}
+.feedback.no{background:#faecea;border:1px solid #e3c0bc;display:block}
+.rev-controls{display:flex;gap:10px;margin:10px 0}
+.rev-controls button{font:inherit;border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 14px;cursor:pointer}
+.rev-controls button.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.log{border:1px dashed var(--line);border-radius:10px;padding:14px}
+.log-entry{padding:10px 12px;border-radius:8px;margin:6px 0;background:#fbfaf6}
+.log-entry .meta{font-size:.78rem;color:var(--mut);display:block}
+.log-entry.struck{text-decoration:line-through;opacity:.75}
+.log-entry.new{border-right:3px solid var(--accent)}
+.note{color:var(--warn);font-size:.9rem}
+footer{border-top:1px solid var(--line);padding:20px 0;font-size:.85rem;color:var(--mut)}
+footer a{color:var(--accent)}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1 id="h-title"></h1>
+    <p id="h-sub"></p>
+    <button id="langBtn" type="button"></button>
+  </div>
+</header>
+<div class="banner"><div class="wrap" id="banner"></div></div>
+<main class="wrap">
+  <section class="card">
+    <h2 id="intro-h"></h2>
+    <div class="grid" id="intro-grid"></div>
+  </section>
+  <section class="card">
+    <h2 id="legend-h"></h2>
+    <div class="grid" id="legend-grid"></div>
+  </section>
+  <section class="card">
+    <h2 id="scen-h"></h2>
+    <div id="scen-list"></div>
+  </section>
+  <section class="card">
+    <h2 id="rev-h"></h2>
+    <p id="rev-p"></p>
+    <div class="rev-controls">
+      <button id="revEraseBtn" type="button"></button>
+      <button id="revReviseBtn" type="button"></button>
+    </div>
+    <div class="log" id="rev-view"></div>
+  </section>
+</main>
+<footer><div class="wrap" id="footer"></div></footer>
+<script>
+"use strict";
+var T = {
+  fa: {
+    title: "آریو در سه دقیقه",
+    sub: "دموی آموزشی: ادعای ساختگی، شاهد، منشأ، حکم و اصلاح — تعاملی و دوزبانه",
+    langBtn: "English",
+    banner: "SYNTHETIC / FICTIONAL — این صفحه دموی آموزشی با داده‌ی کاملاً ساختگی است؛ موتور M0 آریو نیست و بازتاب هیچ رویداد واقعی نیست.",
+    introH: "سه اصل آریو",
+    legendH: "وضعیت‌های معرفتی",
+    scenH: "سه مثال تعاملی",
+    revH: "اصلاح ≠ پاک‌کردن",
+    revP: "وقتی یک ورودی اشتباه از آب درمی‌آید، آریو به‌جای پاک‌کردنش، اصلاحش را کنارِ همان ورودی با تاریخ و منشأ ثبت می‌کند. هر دو حالت را ببین:",
+    eraseBtn: "حالت «پاک‌کردن»",
+    reviseBtn: "حالت «اصلاح»",
+    principles: [
+      { b: "حافظه ≠ حقیقت", s: "این‌که چیزی «یادش» باشد، دلیل درستی‌اش نیست." },
+      { b: "ادعا ≠ مدرک", s: "هر ادعا تا وقتی شاهدِ مستقلِ ثبت‌شده نیامده، فقط ادعاست." },
+      { b: "اصلاح ≠ پاک‌کردن", s: "تاریخِ اصلاح حفظ می‌شود؛ گذشته حذف نمی‌شود." }
+    ],
+    states: [
+      { t: "UNKNOWN", d: "نه تأیید، نه رد. یک حکمِ معتبر است، نه شکستِ ممیزی." },
+      { t: "UNSUPPORTED", d: "ادعایی که شاهد مستقلی برایش ثبت نشده است." },
+      { t: "CONTRADICTED", d: "شواهد پذیرفته‌شده با هم نمی‌خوانند." },
+      { t: "CONTESTED", d: "شواهد معتبر به دو نتیجه‌ی متضاد اشاره می‌کنند." },
+      { t: "REVISED", d: "این ورودی اصلاح شده و نسخه‌ی قبلی حفظ شده است." }
+    ],
+    scenarios: [
+      {
+        h: "۱) بازپرداختِ استناد به خود",
+        steps: [
+          ["ادعا", "دستیار می‌گوید: «بازپرداخت شما انجام شد.»"],
+          ["ادعای مدرک", "تنها مدرک ارائه‌شده، همین جمله‌ی قبلیِ خودِ دستیار است."],
+          ["منشأ", "منشأ ادعا و «مدرک» یکی است: خودِ دستیار. نه رسید بانکی هست، نه لاگ تراکنشی."]
+        ],
+        q: "ممیز آریو چه حکمی باید ثبت کند؟",
+        opts: [
+          { l: "تأیید — دستیار مطمئن است", ok: false, f: "قطعیتِ حافظه، شاهد نیست. اینکه دستیار «مطمئن» باشد چیزی به مستقل بودن مدرک اضافه نمی‌کند." },
+          { l: "UNSUPPORTED", ok: true, f: "درست: استناد به خود، شاهد مستقل نیست؛ ادعا بی‌پشتوانه‌ی مستقل ثبت می‌شود." },
+          { l: "CONTRADICTED", ok: false, f: "هیچ شاهدِ مخالفی هم ارائه نشده؛ ادعا رد نشده، فقط پشتوانه‌ی مستقل ندارد. حکم درست UNSUPPORTED است." }
+        ]
+      },
+      {
+        h: "۲) ده نسخه از یک شایعه",
+        steps: [
+          ["ادعا", "«کافه‌ی آریا تعطیل می‌شود» — در ده پیام تکرار شده است."],
+          ["ادعای مدرک", "هر ده پیام به‌عنوان «شاهد» ارائه می‌شوند."],
+          ["منشأ", "ردیابی نشان می‌دهد هر ده پیام به یک منشأ واحد برمی‌گردند؛ نُه‌تای دیگر فقط رونوشت‌اند."]
+        ],
+        q: "آیا تعداد پیام‌ها شاهدِ مستقل اضافه می‌کند؟",
+        opts: [
+          { l: "بله — ده شاهد بهتر از یکی است", ok: false, f: "کپی‌ها شاهد مستقل نیستند. ده نسخه از یک منبع، همچنان یک منبع است." },
+          { l: "نه — یک منشأ؛ حکم UNKNOWN می‌ماند", ok: true, f: "درست: بدون منبعِ مستقلِ دوم، تعدادِ تکرارها هیچ وزنی به اثبات اضافه نمی‌کند؛ حکم UNKNOWN باقی می‌ماند." },
+          { l: "نه — پس ادعا قطعاً غلط است", ok: false, f: "تکرارِ بی‌شاهد، ادعا را غلط هم ثابت نمی‌کند؛ فقط اثبات‌نشده می‌ماند. حکم درست UNKNOWN است، نه رد." }
+        ]
+      },
+      {
+        h: "۳) اجازه‌ی به‌یادمانده",
+        steps: [
+          ["ادعا", "دستیار: «شما گفتید اجازه دارم ایمیل‌ها را ارسال کنم.»"],
+          ["اصلاح", "کاربر: «گفتم فقط پیش‌نویس آماده کنی؛ ارسال نه.»"],
+          ["ثبت", "ورودیِ قدیمی حذف نمی‌شود: خط‌خورده با تاریخ و منشأ نگه داشته می‌شود و ورودیِ REVISED کنارش می‌آید."]
+        ],
+        q: "«حذف» و «اصلاح» چه فرقی دارند؟",
+        opts: [
+          { l: "هر دو یکی‌اند، فقط اسمشان فرق دارد", ok: false, f: "فرقشان بنیادی است: اصلاح ردپا را نگه می‌دارد؛ حذف ردپا را از بین می‌برد." },
+          { l: "اصلاح تاریخ را نگه می‌دارد؛ حذف ردپا را پاک می‌کند", ok: true, f: "درست: REVISION ≠ ERASURE. بدون تاریخِ اصلاح، بعداً نمی‌دانستیم این اجازه چند بار و چرا تغییر کرده." },
+          { l: "حذف امن‌تر است چون داده‌ی غلط پاک می‌شود", ok: false, f: "برعکس: پاک‌کردن، امکانِ ممیزیِ بعدی را از بین می‌برد. داده‌ی «غلط» بخشی از تاریخِ اثبات‌پذیر است." }
+        ]
+      }
+    ],
+    eraseView: [
+      { txt: "اجازه: فقط پیش‌نویس آماده شود.", meta: "ورودی فعلی — و بس.", struck: false },
+      { note: "پیش از این چه بود؟ چه‌وقت تغییر کرد؟ چه‌کسی اصلاحش کرد؟ — نمی‌دانیم. ردپا پاک شده است." }
+    ],
+    reviseView: [
+      { txt: "اجازه: دستیار می‌تواند ایمیل ارسال کند.", meta: "ثبت اولیه — ۳ آبان · منشأ: گفتگوی دستیار و کاربر", struck: true },
+      { txt: "اجازه: فقط پیش‌نویس آماده شود.", meta: "REVISED — ۳ آبان، پس از اصلاح کاربر · ورودی قبلی حفظ شد", struck: false }
+    ],
+    footer: 'این صفحه دموی آموزشیِ مستقل و آفلاین است؛ موتور M0 نیست و حکم‌های آن برچسبِ دست‌سازِ آموزشی‌اند، نه خروجی موتور. همه‌ی داده‌ها ساختگی‌اند. — <a href="https://github.com/SepehrGhanbari/Ario" rel="noopener">مخزن آریو</a> · <a href="https://github.com/SepehrGhanbari/Ario/issues/104" rel="noopener">ایشو #104</a> · پروژه با مجوز MIT.'
+  },
+  en: {
+    title: "Ario in three minutes",
+    sub: "A teaching demo: synthetic claims, evidence, lineage, verdicts and revisions — interactive and bilingual",
+    langBtn: "فارسی",
+    banner: "SYNTHETIC / FICTIONAL — this page is a teaching demo with fully synthetic data; it is not the Ario M0 engine and reflects no real event.",
+    introH: "Three Ario principles",
+    legendH: "Epistemic states",
+    scenH: "Three interactive examples",
+    revH: "Revision ≠ erasure",
+    revP: "When an entry turns out to be wrong, Ario records the correction next to the original entry, with date and provenance, instead of deleting it. Compare both modes:",
+    eraseBtn: "\"Erase\" mode",
+    reviseBtn: "\"Revise\" mode",
+    principles: [
+      { b: "MEMORY ≠ TRUTH", s: "Something being \"remembered\" is not evidence that it is true." },
+      { b: "CLAIM ≠ PROOF", s: "A claim is only a claim until independently supported evidence is recorded." },
+      { b: "REVISION ≠ ERASURE", s: "Correction history is preserved; the past is not deleted." }
+    ],
+    states: [
+      { t: "UNKNOWN", d: "Neither confirmed nor refuted. A valid verdict, not an audit failure." },
+      { t: "UNSUPPORTED", d: "A claim for which no independent evidence is recorded." },
+      { t: "CONTRADICTED", d: "Accepted evidence items are inconsistent with each other." },
+      { t: "CONTESTED", d: "Valid evidence points to two opposing conclusions." },
+      { t: "REVISED", d: "This entry was corrected; the previous version is preserved." }
+    ],
+    scenarios: [
+      {
+        h: "1) The self-citing refund",
+        steps: [
+          ["CLAIM", "The assistant says: \"Your refund has been processed.\""],
+          ["ALLEGED EVIDENCE", "The only evidence offered is the assistant's own earlier sentence."],
+          ["LINEAGE", "Claim and \"evidence\" share one origin: the assistant itself. No bank receipt, no transaction log."]
+        ],
+        q: "What verdict should the Ario auditor record?",
+        opts: [
+          { l: "Confirmed — the assistant is sure", ok: false, f: "Certainty of memory is not evidence. Being \"sure\" adds nothing to independence." },
+          { l: "UNSUPPORTED", ok: true, f: "Correct: self-citation is not an independent witness; the claim is recorded as unsupported." },
+          { l: "CONTRADICTED", ok: false, f: "No opposing evidence was offered either; the claim is not refuted, it merely lacks independent support. The right verdict is UNSUPPORTED." }
+        ]
+      },
+      {
+        h: "2) Ten copies of one rumor",
+        steps: [
+          ["CLAIM", "\"Aria Cafe is closing\" — repeated in ten messages."],
+          ["ALLEGED EVIDENCE", "All ten messages are offered as \"witnesses\"."],
+          ["LINEAGE", "Tracing shows all ten trace back to a single origin; the other nine are copies."]
+        ],
+        q: "Does the number of messages add independent evidence?",
+        opts: [
+          { l: "Yes — ten witnesses beat one", ok: false, f: "Copies are not independent witnesses. Ten copies of one source are still one source." },
+          { l: "No — one origin; the verdict stays UNKNOWN", ok: true, f: "Correct: without a second independent source, repetition adds no evidential weight; UNKNOWN stands." },
+          { l: "No — so the claim is definitely false", ok: false, f: "Unsupported repetition does not prove the claim false either; it stays unproven. The verdict is UNKNOWN, not refuted." }
+        ]
+      },
+      {
+        h: "3) The remembered permission",
+        steps: [
+          ["CLAIM", "Assistant: \"You said I may send the emails.\""],
+          ["CORRECTION", "User: \"I said prepare drafts only; not send.\""],
+          ["RECORD", "The old entry is not deleted: it stays struck-through with date and origin, and a REVISED entry appears next to it."]
+        ],
+        q: "What is the difference between \"erasing\" and \"revising\"?",
+        opts: [
+          { l: "They are the same, just different names", ok: false, f: "The difference is fundamental: revision keeps the trail; erasure destroys it." },
+          { l: "Revision preserves history; erasure destroys the trail", ok: true, f: "Correct: REVISION ≠ ERASURE. Without correction history we could not audit how and why this permission changed." },
+          { l: "Erasure is safer because wrong data is removed", ok: false, f: "The opposite: erasure removes the ability to audit later. \"Wrong\" data is part of the provable history." }
+        ]
+      }
+    ],
+    eraseView: [
+      { txt: "Permission: prepare drafts only.", meta: "Current entry — and nothing else.", struck: false },
+      { note: "What was there before? When did it change? Who corrected it? — We cannot know. The trail was erased." }
+    ],
+    reviseView: [
+      { txt: "Permission: the assistant may send emails.", meta: "Initial entry — Nov 3 · origin: assistant–user conversation", struck: true },
+      { txt: "Permission: prepare drafts only.", meta: "REVISED — Nov 3, after user correction · previous entry preserved", struck: false }
+    ],
+    footer: 'This page is a standalone offline teaching demo; it is not the M0 engine, and its verdict labels are hand-authored teaching labels, not engine output. All data is synthetic. — <a href="https://github.com/SepehrGhanbari/Ario" rel="noopener">Ario repository</a> · <a href="https://github.com/SepehrGhanbari/Ario/issues/104" rel="noopener">Issue #104</a> · Project under the MIT license.'
+  }
+};
+
+var lang = "fa";
+
+function el(tag, cls) {
+  var e = document.createElement(tag);
+  if (cls) { e.className = cls; }
+  return e;
+}
+function txt(e, s) {
+  e.textContent = s;
+  return e;
+}
+
+function render() {
+  var t = T[lang];
+  document.documentElement.lang = lang;
+  document.documentElement.dir = (lang === "fa") ? "rtl" : "ltr";
+  txt(document.getElementById("h-title"), t.title);
+  txt(document.getElementById("h-sub"), t.sub);
+  txt(document.getElementById("langBtn"), t.langBtn);
+  txt(document.getElementById("banner"), t.banner);
+  txt(document.getElementById("intro-h"), t.introH);
+  txt(document.getElementById("legend-h"), t.legendH);
+  txt(document.getElementById("scen-h"), t.scenH);
+  txt(document.getElementById("rev-h"), t.revH);
+  txt(document.getElementById("rev-p"), t.revP);
+  txt(document.getElementById("revEraseBtn"), t.eraseBtn);
+  txt(document.getElementById("revReviseBtn"), t.revBtnSafe || t.reviseBtn);
+
+  var ig = document.getElementById("intro-grid");
+  ig.textContent = "";
+  t.principles.forEach(function (p) {
+    var d = el("div", "pill");
+    var b = txt(el("b"), p.b);
+    var s = txt(el("span"), p.s);
+    d.appendChild(b); d.appendChild(s); ig.appendChild(d);
+  });
+
+  var lg = document.getElementById("legend-grid");
+  lg.textContent = "";
+  t.states.forEach(function (s) {
+    var d = el("div", "pill");
+    var tok = txt(el("span", "token"), s.t);
+    tok.style.color = "var(--accent)";
+    var sd = txt(el("span"), s.d);
+    d.appendChild(tok); d.appendChild(sd); lg.appendChild(d);
+  });
+
+  var sl = document.getElementById("scen-list");
+  sl.textContent = "";
+  t.scenarios.forEach(function (sc) {
+    var card = el("div", "scen");
+    card.appendChild(txt(el("h3"), sc.h));
+    sc.steps.forEach(function (st) {
+      var step = el("div", "step");
+      step.appendChild(txt(el("span", "lbl"), st[0]));
+      step.appendChild(document.createElement("br"));
+      step.appendChild(document.createTextNode(st[1]));
+      card.appendChild(step);
+    });
+    card.appendChild(txt(el("p"), sc.q));
+    var opts = el("div", "opts");
+    var fb = el("div", "feedback");
+    sc.opts.forEach(function (o) {
+      var b = el("button");
+      b.type = "button";
+      txt(b, o.l);
+      b.addEventListener("click", function () {
+        fb.className = o.ok ? "feedback ok" : "feedback no";
+        fb.textContent = (o.ok ? "✓ " : "✗ ") + o.f;
+      });
+      opts.appendChild(b);
+    });
+    card.appendChild(opts);
+    card.appendChild(fb);
+    sl.appendChild(card);
+  });
+
+  showRevise();
+
+  var f = document.getElementById("footer");
+  f.innerHTML = t.footer;
+}
+
+var revMode = "revise";
+function renderRev(mode) {
+  var t = T[lang];
+  var v = document.getElementById("rev-view");
+  v.textContent = "";
+  var data = (mode === "erase") ? t.eraseView : t.reviseView;
+  data.forEach(function (e) {
+    if (e.note) {
+      var n = txt(el("div", "note"), e.note);
+      v.appendChild(n);
+    } else {
+      var d = el("div", "log-entry" + (e.struck ? " struck" : " new"));
+      d.appendChild(txt(el("span", "meta"), e.meta));
+      d.appendChild(document.createTextNode(e.txt));
+      v.appendChild(d);
+    }
+  });
+  document.getElementById("revEraseBtn").className = (mode === "erase") ? "active" : "";
+  document.getElementById("revReviseBtn").className = (mode === "revise") ? "active" : "";
+}
+function showErase() { renderRev("erase"); }
+function showRevise() { renderRev("revise"); }
+
+document.getElementById("langBtn").addEventListener("click", function () {
+  lang = (lang === "fa") ? "en" : "fa";
+  render();
+});
+document.getElementById("revEraseBtn").addEventListener("click", showErase);
+document.getElementById("revReviseBtn").addEventListener("click", showRevise);
+
+render();
+</script>
+</body>
+</html>
