@@ -181,6 +181,58 @@ class RunnerTests(unittest.TestCase):
             with self.assertRaisesRegex(exp.Hold, "DISPATCH_UNKNOWN"):
                 exp.run(new, LETTER, "local-not-logged", Fake())
 
+    def test_duplicate_attempt_id_cannot_borrow_older_reply(self):
+        """Each ATTEMPT needs its own later, identity-matched resolution."""
+        cases = (
+            ("duplicate_attempt_id", (
+                ("ATTEMPT", {"attempt_seq": 1, "speaker": "A", "expected_turn": 1}),
+                ("REPLY", {"attempt_seq": 1, "speaker": "A", "turn": 1,
+                           "content": "hello"}),
+                ("ATTEMPT", {"attempt_seq": 1, "speaker": "B", "expected_turn": 2}),
+            )),
+            ("reply_before_attempt", (
+                ("REPLY", {"attempt_seq": 1, "speaker": "A", "turn": 1,
+                           "content": "hello"}),
+                ("ATTEMPT", {"attempt_seq": 1, "speaker": "B", "expected_turn": 2}),
+            )),
+            ("two_replies_reuse_one_attempt", (
+                ("ATTEMPT", {"attempt_seq": 1, "speaker": "A", "expected_turn": 1}),
+                ("REPLY", {"attempt_seq": 1, "speaker": "A", "turn": 1,
+                           "content": "hello"}),
+                ("REPLY", {"attempt_seq": 1, "speaker": "B", "turn": 2,
+                           "content": "borrowed identity"}),
+            )),
+        )
+        for label, records in cases:
+            with self.subTest(label=label):
+                temp, ledger = seeded(goal=3)
+                with temp:
+                    for kind, data in records:
+                        ledger.add(kind, **data)
+                    original = ledger.path.read_bytes()
+                    fake = Fake()
+                    with self.assertRaisesRegex(exp.Hold,
+                                                "ATTEMPT|DISPATCH_UNKNOWN"):
+                        exp.run(exp.Ledger(ledger.folder), LETTER,
+                                "local-not-logged", fake)
+                    self.assertEqual(fake.calls, [])
+                    self.assertEqual(ledger.path.read_bytes(), original)
+
+    def test_valid_sequential_attempt_reply_pairs_can_resume(self):
+        temp, ledger = seeded(goal=3)
+        with temp:
+            ledger.add("ATTEMPT", attempt_seq=1, speaker="A", expected_turn=1)
+            ledger.add("REPLY", attempt_seq=1, speaker="A", turn=1, content="hello")
+            ledger.add("ATTEMPT", attempt_seq=2, speaker="B", expected_turn=2)
+            ledger.add("REPLY", attempt_seq=2, speaker="B", turn=2, content="world")
+            previous = ledger.path.read_bytes()
+            fake = Fake()
+            self.assertEqual(exp.run(exp.Ledger(ledger.folder), LETTER,
+                                     "local-not-logged", fake),
+                             "PAUSED_OPEN_WINDOW_REACHED")
+            self.assertEqual(len(fake.calls), 1)
+            self.assertTrue(ledger.path.read_bytes().startswith(previous))
+
     def test_model_mismatch_does_not_count_as_message(self):
         temp, ledger = seeded()
         with temp:
