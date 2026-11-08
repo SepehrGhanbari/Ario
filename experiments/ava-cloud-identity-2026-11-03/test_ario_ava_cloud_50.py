@@ -644,6 +644,88 @@ class RunnerTests(unittest.TestCase):
                 self.assertFalse(fake.calls)
 
 
+    def test_hash_valid_nested_init_data_hold_before_transport(self):
+        """A valid chain hash is not evidence of valid nested replay state."""
+        from unittest.mock import patch
+        cases = (
+            ("null_history", {"imported_messages": None}),
+            ("mapping_history", {"imported_messages": {}}),
+            ("null_imported_item", {"imported_messages": [None],
+                                    "baseline_count": 1}),
+            ("wrong_imported_turn", {"imported_messages": [
+                {"turn": "1", "speaker": "A", "content": "hello"}],
+                "baseline_count": 1}),
+            ("wrong_imported_speaker", {"imported_messages": [
+                {"turn": 1, "speaker": "B", "content": "hello"}],
+                "baseline_count": 1}),
+            ("wrong_imported_content", {"imported_messages": [
+                {"turn": 1, "speaker": "A", "content": None}],
+                "baseline_count": 1}),
+            ("null_baseline", {"baseline_count": None}),
+            ("string_target", {"target_new_messages": "2"}),
+            ("boolean_target", {"target_new_messages": True}),
+        )
+        for label, updates in cases:
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as tmp:
+                folder = Path(tmp)
+                original = exp.Ledger(folder)
+                exp.init_run(original, LETTER, exp.LETTER_SHA256, [], None, 2)
+                event = json.loads(original.path.read_bytes())
+                event["data"].update(updates)
+                event.pop("event_sha256")
+                event["event_sha256"] = exp.sha(exp.canonical(event))
+                raw = exp.canonical(event) + b"\n"
+                original.path.write_bytes(raw)
+                fake = Fake()
+                with patch.object(exp.Ledger, "add",
+                                  side_effect=AssertionError("unexpected append")) as appended:
+                    with self.assertRaisesRegex(exp.Hold,
+                                                "INVALID_OR_INCOMPLETE_EVENT_LOG"):
+                        resumed = exp.Ledger(folder)
+                        exp.run(resumed, LETTER, "local-not-logged", fake)
+                    appended.assert_not_called()
+                self.assertFalse(fake.calls)
+                self.assertEqual(original.path.read_bytes(), raw)
+
+    def test_hash_valid_nested_non_init_fields_hold_before_transport(self):
+        """Malformed consumed fields in later event kinds must fail on replay."""
+        from unittest.mock import patch
+        cases = (
+            ("reply_null_content", "REPLY",
+             {"attempt_seq": 1, "speaker": "A", "turn": 1, "content": None}),
+            ("reply_string_turn", "REPLY",
+             {"attempt_seq": 1, "speaker": "A", "turn": "1", "content": "hi"}),
+            ("extend_null_additional", "EXTEND", {"additional": None}),
+            ("attempt_null_seq", "ATTEMPT",
+             {"attempt_seq": None, "speaker": "A", "expected_turn": 1}),
+            ("pause_null_reason", "PAUSE",
+             {"attempt_seq": 1, "reason": None}),
+            ("window_string_count", "WINDOW_REACHED_OPEN",
+             {"total_count": 0, "new_count": "0",
+              "status": "PAUSED_OPEN_NOT_CLOSED"}),
+            ("stop_null_turn", "VOLUNTARY_STOP",
+             {"speaker": "A", "turn": None}),
+            ("loop_null_speaker", "PAUSED_LOOP",
+             {"speaker": None, "turn": 1}),
+        )
+        for label, kind, data in cases:
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as tmp:
+                folder = Path(tmp)
+                original = exp.Ledger(folder)
+                exp.init_run(original, LETTER, exp.LETTER_SHA256, [], None, 2)
+                original.add(kind, **data)
+                raw = original.path.read_bytes()
+                fake = Fake()
+                with patch.object(exp.Ledger, "add",
+                                  side_effect=AssertionError("unexpected append")) as appended:
+                    with self.assertRaisesRegex(exp.Hold,
+                                                "INVALID_OR_INCOMPLETE_EVENT_LOG"):
+                        resumed = exp.Ledger(folder)
+                        exp.run(resumed, LETTER, "local-not-logged", fake)
+                    appended.assert_not_called()
+                self.assertFalse(fake.calls)
+                self.assertEqual(original.path.read_bytes(), raw)
+
     def test_postclose_error_blocks_same_instance_reuse_before_fake_dispatch(self):
         """A complete ATTEMPT can survive a failed close; never retry it blindly."""
         from unittest.mock import patch
