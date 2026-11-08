@@ -233,6 +233,30 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(len(fake.calls), 1)
             self.assertTrue(ledger.path.read_bytes().startswith(previous))
 
+    def test_unrecognized_pause_cannot_claim_an_attempt_is_resolved(self):
+        temp, ledger = seeded(goal=2)
+        with temp:
+            ledger.add("ATTEMPT", attempt_seq=1, speaker="A", expected_turn=1)
+            # A PAUSE is not proof of a provider reply, regardless of an
+            # attacker-controlled status or reason string.
+            ledger.add("PAUSE", attempt_seq=1, reason="UNRECOGNIZED",
+                       status="CLAIMED_SAFE")
+            original = ledger.path.read_bytes()
+            fake = Fake()
+            with self.assertRaisesRegex(exp.Hold, "REVIEW|ATTEMPT"):
+                exp.run(exp.Ledger(ledger.folder), LETTER,
+                        "local-not-logged", fake)
+            self.assertFalse(fake.calls)
+            self.assertEqual(ledger.path.read_bytes(), original)
+
+    def test_boolean_target_is_not_valid_init_count(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            ledger = exp.Ledger(Path(tmp))
+            with self.assertRaisesRegex(exp.Hold, "INVALID_TARGET_COUNT"):
+                exp.init_run(ledger, LETTER, exp.LETTER_SHA256, [], None, True)
+            self.assertFalse(ledger.events)
+            self.assertFalse(ledger.path.exists())
+
     def test_model_mismatch_does_not_count_as_message(self):
         temp, ledger = seeded()
         with temp:
