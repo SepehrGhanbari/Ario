@@ -111,6 +111,73 @@ class ExclusiveRunLock:
         return False
 
 
+def validate_loaded_event_payload(kind: str, data: dict) -> None:
+    """Reject hash-valid but unusable replay fields before any resume action.
+
+    Validate fields the replay state machine consumes; preserve older optional
+    provider metadata and experimental scratch-event records. No repair or
+    normalization of historical event bytes is performed.
+    """
+    def invalid() -> None:
+        raise Hold("INVALID_OR_INCOMPLETE_EVENT_LOG")
+
+    def positive_integer(value: object) -> bool:
+        return type(value) is int and value >= 1
+
+    if kind == "INIT":
+        history = data.get("imported_messages")
+        baseline = data.get("baseline_count")
+        target = data.get("target_new_messages")
+        if (type(history) is not list or len(history) > 5000
+                or type(baseline) is not int or baseline != len(history)
+                or not positive_integer(target) or target > 500
+                or any(type(data.get(field)) is not str or not data[field]
+                       for field in ("protocol", "model", "letter_sha256"))):
+            invalid()
+        for index, message in enumerate(history, 1):
+            if (type(message) is not dict
+                    or type(message.get("turn")) is not int
+                    or message["turn"] != index
+                    or message.get("speaker") != ("A" if index % 2 else "B")
+                    or type(message.get("content")) is not str
+                    or not message["content"].strip()
+                    or len(message["content"]) > 100_000):
+                invalid()
+    elif kind == "REPLY":
+        if (not positive_integer(data.get("attempt_seq"))
+                or not positive_integer(data.get("turn"))
+                or data.get("speaker") not in ("A", "B")
+                or type(data.get("content")) is not str
+                or not data["content"].strip()):
+            invalid()
+    elif kind == "ATTEMPT":
+        if (not positive_integer(data.get("attempt_seq"))
+                or not positive_integer(data.get("expected_turn"))
+                or data.get("speaker") not in ("A", "B")):
+            invalid()
+    elif kind == "EXTEND":
+        additional = data.get("additional")
+        if not positive_integer(additional) or additional > 500:
+            invalid()
+    elif kind == "PAUSE":
+        if (type(data.get("reason")) is not str or not data["reason"]
+                or ("status" in data and
+                    (type(data["status"]) is not str or not data["status"]))
+                or ("attempt_seq" in data and
+                    not positive_integer(data["attempt_seq"]))):
+            invalid()
+    elif kind == "WINDOW_REACHED_OPEN":
+        if (type(data.get("new_count")) is not int
+                or data["new_count"] < 0
+                or type(data.get("total_count")) is not int
+                or data["total_count"] < 0):
+            invalid()
+    elif kind in ("VOLUNTARY_STOP", "PAUSED_LOOP"):
+        if (not positive_integer(data.get("turn"))
+                or data.get("speaker") not in ("A", "B")):
+            invalid()
+
+
 class Ledger:
     def __init__(self, folder: Path):
         self.folder = folder
@@ -165,6 +232,7 @@ class Ledger:
                     if (type(event.get("kind")) is not str or not event["kind"]
                             or type(event.get("data")) is not dict):
                         raise Hold("INVALID_OR_INCOMPLETE_EVENT_LOG")
+                    validate_loaded_event_payload(event["kind"], event["data"])
                     event["event_sha256"] = digest
                     self.events.append(event)
                     self.hash = digest
