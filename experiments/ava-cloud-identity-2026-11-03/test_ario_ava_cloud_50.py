@@ -579,6 +579,138 @@ class RunnerTests(unittest.TestCase):
             self.assertFalse(fake.calls)
             self.assertEqual(ledger.path.read_bytes(), bytes(raw))
 
+
+    def test_reentrant_add_during_write_is_refused_without_second_event(self):
+        """An injected same-thread callback cannot append with stale state."""
+        from unittest.mock import patch
+        import os
+        temp, ledger = seeded(goal=2)
+        with temp:
+            before = ledger.path.read_bytes()
+            real_write = os.write
+            invoked = []
+            denied = []
+            def reenter(fd, content):
+                if not invoked:
+                    invoked.append(True)
+                    try:
+                        ledger.add("NESTED", test="never allowed")
+                    except exp.Hold as exc:
+                        denied.append(str(exc))
+                return real_write(fd, content)
+            with patch.object(exp.os, "write", side_effect=reenter):
+                ledger.add("OUTER", test="single append")
+            self.assertEqual(invoked, [True])
+            self.assertTrue(any("REENTRANT" in text or "CONCURRENT" in text
+                                for text in denied), denied)
+            self.assertFalse(ledger.items("NESTED"))
+            self.assertEqual(len(ledger.items("OUTER")), 1)
+            self.assertTrue(ledger.path.read_bytes().startswith(before))
+            readback = exp.Ledger(ledger.folder)
+            self.assertEqual(len(readback.items("OUTER")), 1)
+            self.assertEqual(readback.hash, ledger.hash)
+
+    def test_same_instance_two_threads_cannot_both_append(self):
+        """Deterministic overlap at first write, without real provider IO."""
+        from unittest.mock import patch
+        import os
+        import threading
+        temp, ledger = seeded(goal=2)
+        with temp:
+            before = ledger.path.read_bytes()
+            gate = threading.Event()
+            release = threading.Event()
+            results = {}
+            real_write = os.write
+            def paused_write(fd, chunk):
+                if (threading.current_thread().name == "ario-writer-one"
+                        and not gate.is_set()):
+                    gate.set()
+                    if not release.wait(5):
+                        raise TimeoutError("synthetic writer rendezvous timed out")
+                return real_write(fd, chunk)
+            def worker(name, kind):
+                try:
+                    ledger.add(kind, test="thread")
+                    results[name] = "APPENDED"
+                except BaseException as exc:
+                    results[name] = exc
+            first = threading.Thread(target=worker, args=("first", "FIRST"),
+                                     name="ario-writer-one")
+            second = threading.Thread(target=worker, args=("second", "SECOND"),
+                                      name="ario-writer-two")
+            with patch.object(exp.os, "write", side_effect=paused_write):
+                first.start()
+                try:
+                    self.assertTrue(gate.wait(5), "first writer did not reach write")
+                    second.start()
+                    second.join(timeout=4)
+                    self.assertFalse(second.is_alive(), "second writer hung")
+                finally:
+                    release.set()
+                    first.join(timeout=5)
+                    if second.ident is not None:
+                        second.join(timeout=5)
+            self.assertFalse(first.is_alive())
+            self.assertIsInstance(results.get("second"), exp.Hold, results)
+            self.assertRegex(str(results["second"]), "REENTRANT|CONCURRENT")
+            self.assertEqual(results.get("first"), "APPENDED", results)
+            self.assertTrue(ledger.path.read_bytes().startswith(before))
+            readback = exp.Ledger(ledger.folder)
+            self.assertEqual(len(readback.items("FIRST")), 1)
+            self.assertFalse(readback.items("SECOND"))
+            self.assertEqual(readback.hash, ledger.hash)
+
+    def test_two_concurrent_runs_same_ledger_only_one_fake_dispatch(self):
+        """Two run() preflights cannot both dispatch the same logical turn."""
+        from unittest.mock import patch
+        import threading
+        temp, ledger = seeded(goal=1)
+        with temp:
+            entered = threading.Event()
+            release = threading.Event()
+            original_messages = exp.make_messages
+            fake = Fake()
+            results = {}
+            def rendezvous_messages(who, prior, letter):
+                if (threading.current_thread().name == "ario-runner-one"
+                        and not entered.is_set()):
+                    entered.set()
+                    if not release.wait(5):
+                        raise TimeoutError("synthetic run rendezvous timed out")
+                return original_messages(who, prior, letter)
+            def run_worker(name):
+                try:
+                    results[name] = exp.run(ledger, LETTER, "local-not-logged",
+                                            fake)
+                except BaseException as exc:
+                    results[name] = exc
+            first = threading.Thread(target=run_worker, args=("first",),
+                                     name="ario-runner-one")
+            second = threading.Thread(target=run_worker, args=("second",),
+                                      name="ario-runner-two")
+            with patch.object(exp, "make_messages",
+                              side_effect=rendezvous_messages):
+                first.start()
+                try:
+                    self.assertTrue(entered.wait(5), "first run did not reach rendezvous")
+                    second.start()
+                    second.join(timeout=4)
+                    self.assertFalse(second.is_alive(), "second run hung")
+                finally:
+                    release.set()
+                    first.join(timeout=5)
+                    if second.ident is not None:
+                        second.join(timeout=5)
+            self.assertFalse(first.is_alive())
+            self.assertEqual(results.get("first"), "PAUSED_OPEN_WINDOW_REACHED", results)
+            self.assertIsInstance(results.get("second"), exp.Hold, results)
+            self.assertRegex(str(results["second"]), "REENTRANT|CONCURRENT")
+            self.assertEqual(len(fake.calls), 1)
+            reloaded = exp.Ledger(ledger.folder)
+            self.assertEqual(len(reloaded.items("ATTEMPT")), 1)
+            self.assertEqual(len(reloaded.items("REPLY")), 1)
+
     def test_ledger_untampered_appends_refresh_cached_digest(self):
         temp, ledger = seeded(goal=2)
         with temp:
