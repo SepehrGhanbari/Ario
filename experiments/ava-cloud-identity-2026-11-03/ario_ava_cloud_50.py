@@ -18,6 +18,7 @@ import os
 from pathlib import Path
 import re
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -194,6 +195,10 @@ class Ledger:
         # Fail-closed reuse guard: a failed/ambiguous append must be
         # investigated with a fresh Ledger, never retried on this instance.
         self._uncertain_append = False
+        # Instance-local fail-fast gates: no queued writes or duplicate relay
+        # dispatch when a callback/thread reenters this Ledger object.
+        self._add_guard = threading.Lock()
+        self._run_guard = threading.Lock()
         if self.path.exists():
             # Read through one opened descriptor; preserve that file identity
             # for subsequent appends. A pathname can later name another file.
@@ -241,6 +246,17 @@ class Ledger:
             self._content_digest.update(data)
 
     def add(self, kind: str, **data: object) -> dict:
+        # Gate the entire read-validate-write-publish sequence, not just os.write.
+        # A nonblocking Lock refuses both same-thread recursion and a racing
+        # thread instead of silently queuing a stale intended append.
+        if not self._add_guard.acquire(blocking=False):
+            raise Hold("REENTRANT_OR_CONCURRENT_APPEND_REFUSED")
+        try:
+            return self._add_uncontended(kind, **data)
+        finally:
+            self._add_guard.release()
+
+    def _add_uncontended(self, kind: str, **data: object) -> dict:
         if self._uncertain_append:
             raise Hold("UNCERTAIN_APPEND_REQUIRES_RELOAD")
         item = {"seq": len(self.events) + 1, "previous_sha256": self.hash,
@@ -502,6 +518,21 @@ def verify_attempt_bindings(ledger: Ledger, baseline_count: int) -> None:
 def run(ledger: Ledger, letter: str, key: str | None,
         transport=send, max_new_calls: int | None = None,
         writer_lock: ExclusiveRunLock | None = None) -> str:
+    # A second same-instance run may pass the same preflight before the first
+    # appends ATTEMPT; protect the complete preflight/dispatch/record sequence.
+    # This is deliberately NOT a cross-process or cross-instance gate.
+    if not ledger._run_guard.acquire(blocking=False):
+        raise Hold("REENTRANT_OR_CONCURRENT_RUN_REFUSED")
+    try:
+        return _run_single_owner(ledger, letter, key, transport,
+                                 max_new_calls, writer_lock)
+    finally:
+        ledger._run_guard.release()
+
+
+def _run_single_owner(ledger: Ledger, letter: str, key: str | None,
+                      transport=send, max_new_calls: int | None = None,
+                      writer_lock: ExclusiveRunLock | None = None) -> str:
     if ledger._uncertain_append:
         raise Hold("UNCERTAIN_APPEND_REQUIRES_RELOAD")
     init, previous = current(ledger)
