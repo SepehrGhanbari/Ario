@@ -18,6 +18,7 @@ import os
 from pathlib import Path
 import re
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -111,6 +112,73 @@ class ExclusiveRunLock:
         return False
 
 
+def validate_loaded_event_payload(kind: str, data: dict) -> None:
+    """Reject hash-valid but unusable replay fields before any resume action.
+
+    Validate fields the replay state machine consumes; preserve older optional
+    provider metadata and experimental scratch-event records. No repair or
+    normalization of historical event bytes is performed.
+    """
+    def invalid() -> None:
+        raise Hold("INVALID_OR_INCOMPLETE_EVENT_LOG")
+
+    def positive_integer(value: object) -> bool:
+        return type(value) is int and value >= 1
+
+    if kind == "INIT":
+        history = data.get("imported_messages")
+        baseline = data.get("baseline_count")
+        target = data.get("target_new_messages")
+        if (type(history) is not list or len(history) > 5000
+                or type(baseline) is not int or baseline != len(history)
+                or not positive_integer(target) or target > 500
+                or any(type(data.get(field)) is not str or not data[field]
+                       for field in ("protocol", "model", "letter_sha256"))):
+            invalid()
+        for index, message in enumerate(history, 1):
+            if (type(message) is not dict
+                    or type(message.get("turn")) is not int
+                    or message["turn"] != index
+                    or message.get("speaker") != ("A" if index % 2 else "B")
+                    or type(message.get("content")) is not str
+                    or not message["content"].strip()
+                    or len(message["content"]) > 100_000):
+                invalid()
+    elif kind == "REPLY":
+        if (not positive_integer(data.get("attempt_seq"))
+                or not positive_integer(data.get("turn"))
+                or data.get("speaker") not in ("A", "B")
+                or type(data.get("content")) is not str
+                or not data["content"].strip()):
+            invalid()
+    elif kind == "ATTEMPT":
+        if (not positive_integer(data.get("attempt_seq"))
+                or not positive_integer(data.get("expected_turn"))
+                or data.get("speaker") not in ("A", "B")):
+            invalid()
+    elif kind == "EXTEND":
+        additional = data.get("additional")
+        if not positive_integer(additional) or additional > 500:
+            invalid()
+    elif kind == "PAUSE":
+        if (type(data.get("reason")) is not str or not data["reason"]
+                or ("status" in data and
+                    (type(data["status"]) is not str or not data["status"]))
+                or ("attempt_seq" in data and
+                    not positive_integer(data["attempt_seq"]))):
+            invalid()
+    elif kind == "WINDOW_REACHED_OPEN":
+        if (type(data.get("new_count")) is not int
+                or data["new_count"] < 0
+                or type(data.get("total_count")) is not int
+                or data["total_count"] < 0):
+            invalid()
+    elif kind in ("VOLUNTARY_STOP", "PAUSED_LOOP"):
+        if (not positive_integer(data.get("turn"))
+                or data.get("speaker") not in ("A", "B")):
+            invalid()
+
+
 class Ledger:
     def __init__(self, folder: Path):
         self.folder = folder
@@ -124,6 +192,13 @@ class Ledger:
         # SHA256 state tracks the exact validated, append-only bytes, never
         # a public checksum purported to come from an untrusted file.
         self._content_digest = hashlib.sha256()
+        # Fail-closed reuse guard: a failed/ambiguous append must be
+        # investigated with a fresh Ledger, never retried on this instance.
+        self._uncertain_append = False
+        # Instance-local fail-fast gates: no queued writes or duplicate relay
+        # dispatch when a callback/thread reenters this Ledger object.
+        self._add_guard = threading.Lock()
+        self._run_guard = threading.Lock()
         if self.path.exists():
             # Read through one opened descriptor; preserve that file identity
             # for subsequent appends. A pathname can later name another file.
@@ -150,20 +225,40 @@ class Ledger:
                     raise Hold("CORRUPT_BLANK_EVENT")
                 try:
                     event = json.loads(raw)
+                    if not isinstance(event, dict):
+                        raise Hold("INVALID_OR_INCOMPLETE_EVENT_LOG")
                     digest = event.pop("event_sha256")
-                    if (not isinstance(event, dict)
-                        or event.get("seq") != len(self.events) + 1
+                    if (event.get("seq") != len(self.events) + 1
                         or event.get("previous_sha256") != self.hash
                         or digest != sha(canonical(event))):
                         raise Hold("EVENT_CHAIN_MISMATCH")
+                    # A valid hash is not a valid event schema. Later
+                    # resume/dispatch assumes a nonempty kind and dict data.
+                    if (type(event.get("kind")) is not str or not event["kind"]
+                            or type(event.get("data")) is not dict):
+                        raise Hold("INVALID_OR_INCOMPLETE_EVENT_LOG")
+                    validate_loaded_event_payload(event["kind"], event["data"])
                     event["event_sha256"] = digest
                     self.events.append(event)
                     self.hash = digest
-                except (ValueError, TypeError, KeyError) as exc:
+                except (ValueError, TypeError, KeyError, RecursionError) as exc:
                     raise Hold("INVALID_OR_INCOMPLETE_EVENT_LOG") from exc
             self._content_digest.update(data)
 
     def add(self, kind: str, **data: object) -> dict:
+        # Gate the entire read-validate-write-publish sequence, not just os.write.
+        # A nonblocking Lock refuses both same-thread recursion and a racing
+        # thread instead of silently queuing a stale intended append.
+        if not self._add_guard.acquire(blocking=False):
+            raise Hold("REENTRANT_OR_CONCURRENT_APPEND_REFUSED")
+        try:
+            return self._add_uncontended(kind, **data)
+        finally:
+            self._add_guard.release()
+
+    def _add_uncontended(self, kind: str, **data: object) -> dict:
+        if self._uncertain_append:
+            raise Hold("UNCERTAIN_APPEND_REQUIRES_RELOAD")
         item = {"seq": len(self.events) + 1, "previous_sha256": self.hash,
                 "timestamp_utc": now(), "kind": kind, "data": data}
         digest = sha(canonical(item))
@@ -226,8 +321,18 @@ class Ledger:
             self.file_identity = identity
             self.byte_length += len(line)
             self._content_digest.update(line)
+        except BaseException:
+            # Writing may have partially or fully modified the file.
+            self._uncertain_append = True
+            raise
         finally:
-            os.close(fd)
+            try:
+                os.close(fd)
+            except BaseException:
+                # Even a successful fsync can precede a failed close. The
+                # persisted ATTEMPT may exist; keep it and block reuse.
+                self._uncertain_append = True
+                raise
         self.events.append(complete)
         self.hash = digest
         return complete
@@ -355,7 +460,7 @@ def init_run(ledger: Ledger, letter: str, letter_sha: str, prior: list[dict],
              legacy_sha: str | None, goal: int) -> None:
     if ledger.events:
         raise Hold("EXISTING_RUN_WOULD_BE_OVERWRITTEN")
-    if not 1 <= goal <= 500:
+    if type(goal) is not int or not 1 <= goal <= 500:
         raise Hold("INVALID_TARGET_COUNT")
     ledger.add("INIT", protocol=PROTOCOL, model=MODEL, letter_sha256=letter_sha,
                identical_common_seed=True, imported_messages=prior,
@@ -366,9 +471,70 @@ def init_run(ledger: Ledger, letter: str, letter_sha: str, prior: list[dict],
                privacy="LETTER_ONLY_PLUS_AUTHORIZED_RELAY; NO_PRIVATE_CHATGPT_ARCHIVE")
 
 
+def verify_attempt_bindings(ledger: Ledger, baseline_count: int) -> None:
+    """Every attempted provider turn needs its own later matching resolution.
+
+    Unlike a hash chain, matching an attempt_seq anywhere in history does not
+    prove that a specific dispatch was resolved. Validate event order and
+    identity before reopening a run. A PAUSE never establishes a valid REPLY.
+    """
+    next_attempt_seq = 1
+    next_turn = baseline_count + 1
+    pending = None
+    for event in ledger.events:
+        kind, fields = event["kind"], event["data"]
+        if kind == "ATTEMPT":
+            if (pending is not None
+                    or fields["attempt_seq"] != next_attempt_seq
+                    or fields["expected_turn"] != next_turn
+                    or fields["speaker"] != ("A" if next_turn % 2 else "B")):
+                raise Hold("ATTEMPT_SEQUENCE_OR_IDENTITY_CONFLICT")
+            pending = fields
+            next_attempt_seq += 1
+        elif kind == "REPLY":
+            if (pending is None
+                    or fields["attempt_seq"] != pending["attempt_seq"]
+                    or fields["turn"] != pending["expected_turn"]
+                    or fields["turn"] != next_turn
+                    or fields["speaker"] != pending["speaker"]):
+                raise Hold("ATTEMPT_RESOLUTION_IDENTITY_CONFLICT")
+            pending = None
+            next_turn += 1
+        elif kind == "PAUSE" and "attempt_seq" in fields:
+            # A claimed resolution, even of an exact ID, is NOT a provider
+            # response. Human adjudication is required before dispatch.
+            if (pending is None
+                    or fields["attempt_seq"] != pending["attempt_seq"]):
+                raise Hold("ATTEMPT_PAUSE_IDENTITY_CONFLICT")
+            raise Hold("PREVIOUS_UNRESOLVED_REVIEW_PAUSE")
+        elif pending is not None:
+            # No event is allowed to interleave between a dispatch intent and
+            # its corresponding REPLY or PAUSE in this sequential relay.
+            raise Hold("DISPATCH_UNKNOWN_UNRESOLVED_ATTEMPT")
+    if pending is not None:
+        raise Hold("DISPATCH_UNKNOWN_UNRESOLVED_ATTEMPT")
+
+
 def run(ledger: Ledger, letter: str, key: str | None,
         transport=send, max_new_calls: int | None = None,
         writer_lock: ExclusiveRunLock | None = None) -> str:
+    # A second same-instance run may pass the same preflight before the first
+    # appends ATTEMPT; protect the complete preflight/dispatch/record sequence.
+    # This is deliberately NOT a cross-process or cross-instance gate.
+    if not ledger._run_guard.acquire(blocking=False):
+        raise Hold("REENTRANT_OR_CONCURRENT_RUN_REFUSED")
+    try:
+        return _run_single_owner(ledger, letter, key, transport,
+                                 max_new_calls, writer_lock)
+    finally:
+        ledger._run_guard.release()
+
+
+def _run_single_owner(ledger: Ledger, letter: str, key: str | None,
+                      transport=send, max_new_calls: int | None = None,
+                      writer_lock: ExclusiveRunLock | None = None) -> str:
+    if ledger._uncertain_append:
+        raise Hold("UNCERTAIN_APPEND_REQUIRES_RELOAD")
     init, previous = current(ledger)
     if init.get("protocol") != PROTOCOL or init.get("model") != MODEL or sha(letter.encode("utf-8")) != init.get("letter_sha256"):
         raise Hold("SEED_OR_PROTOCOL_CHANGED")
@@ -378,13 +544,6 @@ def run(ledger: Ledger, letter: str, key: str | None,
     for e in exts:
         target += e["data"]["additional"]
     achieved = len(previous) - base
-    # Crash after an intent cannot be assumed to have been a failed provider request.
-    for intent in ledger.items("ATTEMPT"):
-        req_id = intent["data"]["attempt_seq"]
-        resolved = any(e["data"].get("attempt_seq") == req_id for e in ledger.events
-                       if e["kind"] in ("REPLY", "PAUSE"))
-        if not resolved:
-            raise Hold("DISPATCH_UNKNOWN_UNRESOLVED_ATTEMPT")
     if any(e["kind"] in ("VOLUNTARY_STOP", "PAUSED_LOOP") for e in ledger.events):
         raise Hold("PREVIOUS_STOP_OR_LOOP_REQUIRES_REVIEW")
     if any(e["kind"] == "PAUSE" and (
@@ -399,6 +558,7 @@ def run(ledger: Ledger, letter: str, key: str | None,
         # A crash after REPLY but before VOLUNTARY_STOP may leave a stop
         # request persisted without its separate stop event.
         raise Hold("PREVIOUS_STOP_MARKER_REQUIRES_REVIEW")
+    verify_attempt_bindings(ledger, base)
     # Never report a completed window while a persisted stop, pause or
     # unresolved dispatch still needs review after a crash.
     if achieved >= target:
