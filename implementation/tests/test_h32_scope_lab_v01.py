@@ -872,5 +872,50 @@ class H32ScopeResearchTests(unittest.TestCase):
                     self.assertEqual(result["events"][1]["assertion_review"], expected_review)
 
 
+    def test_obligation_requires_event_inside_fixed_window(self):
+        """Moving only the event clock must not carry a fixed obligation window."""
+        case = base_case()
+        case["events"][1]["scope_meta"] = None
+        case["obligations"] = [{
+            "id": "P", "start_at": 20, "end_at": 20, "channel": "typed",
+            "required_facets": {"population": "PATIENT"},
+        }]
+        self.assertEqual(global_label(case, "preservation_contract_breach"), "B")
+        for event_tick in (19, 21, 30):
+            with self.subTest(event_tick=event_tick):
+                shifted = copy.deepcopy(case)
+                shifted["events"][1]["at"] = event_tick
+                self.assertEqual(
+                    global_label(shifted, "preservation_contract_breach"), "NONE"
+                )
+
+    def test_moving_only_assertion_time_changes_evidence_eligibility(self):
+        """Evidence unavailable at B:20 must become eligible when B moves to 30."""
+        case = base_case()
+        case["guarantees"][0]["available_at"] = 21
+        self.assertEqual(global_label(case), "B")
+        case["events"][1]["at"] = 30
+        self.assertEqual(global_label(case), "NONE")
+
+    def test_tick_exact_maximum_is_valid_and_max_plus_one_rejected(self):
+        """The synthetic one-billion tick limit is inclusive, not unbounded."""
+        maximum = 1_000_000_000
+        case = base_case()
+        case["events"][1]["at"] = maximum
+        case["guarantees"][0]["published_at"] = maximum
+        self.assertEqual(global_label(case), "NONE")
+        for field in ("event", "published_at"):
+            with self.subTest(field=field):
+                invalid = copy.deepcopy(case)
+                if field == "event":
+                    invalid["events"][1]["at"] = maximum + 1
+                else:
+                    invalid["guarantees"][0]["published_at"] = maximum + 1
+                with self.assertRaisesRegex(
+                    ResearchInputError, "expected nonnegative integer tick"
+                ):
+                    evaluate_case(invalid)
+
+
 if __name__ == "__main__":
     unittest.main()
