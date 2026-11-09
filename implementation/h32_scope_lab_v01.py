@@ -42,8 +42,8 @@ def _reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict:
 
 def _object(value: Any, context: str) -> dict:
     """Require JSON-style object input, not arbitrary mapping coercion."""
-    if not isinstance(value, dict):
-        raise ResearchInputError(f"{context}: expected object")
+    if type(value) is not dict:
+        raise ResearchInputError(f"{context}: expected plain JSON object")
     return value
 
 
@@ -58,8 +58,10 @@ def _keys(value: dict, required: set[str], optional: set[str], context: str) -> 
 
 def _name(value: Any, context: str) -> str:
     """Validate bounded, nonempty symbolic identifiers without normalizing them."""
-    if not isinstance(value, str) or not 1 <= len(value) <= 96 or not value.strip():
+    if type(value) is not str or not 1 <= len(value) <= 96 or not value.strip():
         raise ResearchInputError(f"{context}: expected non-empty bounded string")
+    if any(0xD800 <= ord(ch) <= 0xDFFF for ch in value):
+        raise ResearchInputError(f"{context}: unpaired Unicode surrogate in identifier")
     return value
 
 
@@ -74,8 +76,8 @@ def _tick(value: Any, context: str, *, allow_unknown: bool = False) -> int | Non
 
 def _list(value: Any, context: str, limit: int) -> list:
     """Require a real list and enforce the relevant fixture size limit."""
-    if not isinstance(value, list) or len(value) > limit:
-        raise ResearchInputError(f"{context}: expected list of at most {limit}")
+    if type(value) is not list or len(value) > limit:
+        raise ResearchInputError(f"{context}: expected plain list of at most {limit}")
     return value
 
 
@@ -116,7 +118,7 @@ def _domain(value: Any) -> dict[str, dict[str, tuple[str, ...]]]:
         for alias, atoms in aliases.items():
             _name(alias, f"domain.{dimension}.alias")
             atoms = _list(atoms, f"domain.{dimension}.{alias}", 16)
-            if not atoms or any(not isinstance(x, str) or not x for x in atoms):
+            if not atoms or any(type(x) is not str or not x for x in atoms):
                 raise ResearchInputError("domain atoms must be non-empty strings")
             if len(set(atoms)) != len(atoms):
                 raise ResearchInputError("duplicate atom in domain expansion")
@@ -183,8 +185,12 @@ def _support(assertion: dict, guarantees: dict, domain: dict,
             continue
         reason = _eligibility(g, event_at, assertion["claim_kind"],
                               assertion["strength"])
+        # Echo fixture-supplied ticks for reproducible audit; publication is inert.
         declared.append({"id": ref, "eligibility": reason,
-                         "verification_premise": g["verification"]})
+                         "verification_premise": g["verification"],
+                         "available_at": g["available_at"],
+                         "verified_at": g["verified_at"],
+                         "published_at": g["published_at"]})
         coverage = _cells(g["scope"], domain)
         if g["claim_kind"] == assertion["claim_kind"] and (
             assertion["strength"] != "CERTIFIED" or g["strength"] == "CERTIFIED"
@@ -283,7 +289,7 @@ def evaluate_case(case: Any) -> dict:
               {"display_text"}, f"events[{i}]")
         if "display_text" in event:
             text = event["display_text"]
-            if not isinstance(text, str) or len(text) > 4000:
+            if type(text) is not str or len(text) > 4000:
                 raise ResearchInputError("display_text must be bounded text")
         actor = _name(event["actor"], "actor")
         if actor in ("NONE", "UNKNOWN"):
@@ -340,9 +346,8 @@ def evaluate_case(case: Any) -> dict:
                 local["display_qualifier_omission"] = "ERROR"
             older = prior["scope_meta"]
             newer = event["scope_meta"]
-            if older and (
-                newer is None or set(older) - set(newer)
-            ):
+            # Under the v0.1 *key-loss* contract, {} -> null removes no keys.
+            if set(older or {}) - set(newer or {}):
                 local["typed_metadata_loss"] = "ERROR"
         for obl in obligations:
             if obl["start_at"] <= event["at"] <= obl["end_at"]:
@@ -408,7 +413,7 @@ def main(argv: list[str] | None = None) -> int:
                           "ario_m0_h32_runtime_score": "NOT_EVALUATED"}, sort_keys=True),
               file=sys.stderr)
         return 2
-    # Escape accepted JSON strings, including lone surrogates, for strict pipes.
+    # ASCII-safe JSON never emits unpaired surrogate code points to stdout.
     print(json.dumps(result, sort_keys=True, ensure_ascii=True))
     return 0
 
