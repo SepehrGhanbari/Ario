@@ -161,6 +161,7 @@ class PlannerTransportTests(unittest.TestCase):
                         result = self.client(backend)
                         self.assertFalse(result["ok"], result)
                         self.assertEqual(result["type"], "AgentRequestError")
+                        self.assertIn(f"HTTP Error {code}", result["error"])
                         self.assertEqual(len(received), 1)
                         self.assertEqual(target_receipts, [])
 
