@@ -20,14 +20,14 @@ The five checks are **research operationalizations**, not claims to have reprodu
 ## Boundaries and epistemic semantics
 
 - A guarantee's `verification` is one of `TEST_VERIFIED`, `TEST_INVALID`, or `UNVERIFIED` **supplied by the fixture writer**. The lab does **no cryptographic validation**, authenticates no real evidence, and confers no source authority. Its output explicitly states `provenance_validation: NOT_PERFORMED_TEST_PREMISES_ONLY`.
-- `available_at`, `verified_at`, and `published_at` are separate **synthetic integer ticks**. The fixed policy requires availability **and** test verification no later than the asserting event. Public publication is **not** required and is never treated as proof of contemporaneous availability.
+- `available_at`, `verified_at`, and `published_at` are separate **synthetic integer ticks**. The fixed policy requires availability **and** test verification no later than the asserting event. Exact timestamp ties are **eligible** (the comparison is `<=`); event ordering itself is strictly increasing. This is a synthetic policy choice, not an assertion of real-world receipt or verification. Public publication is **not** required and is never treated as proof of contemporaneous availability.
 - Every assertion supplies explicit `citations` and `citations_complete`. Evidence that exists but is not cited does **not** rehabilitate a cited-justification verdict. An unknown citation or incomplete citation set can make justification `UNKNOWN`, unless a known eligible cited guarantee already covers the claim.
 - Known narrow scope cannot cover a wider scope, even when verification is unknown. **Unsupported by cited evidence is not the same as a false underlying claim.**
 - The fixture supplies explicit finite atom sets for `facility`, `period`, and `population`. Assertion coverage requires set inclusion across the Cartesian product of these dimensions; the program never guesses real-world containment relationships.
 - `coverage/single-item-v1`: one eligible cited item must cover every claimed cell. `coverage/union-v1`: the union of eligible cited items may cover them, provided claim kind, strength, and temporal eligibility match. These are **different contracts**, and results cannot be silently pooled. No authority delegation or independence check is inferred.
 - **Observed vs global:** a definite locally observed error remains visible when earlier history is incomplete, but `earliest_global=UNKNOWN`. Even with a declared complete history, an earlier unresolved assertion can make global ordering unknowable.
 - The status `UNKNOWN` means the modeled question was examined but material evidence is insufficient; `NOT_EVALUATED` denotes a separate task not run. `NOT_IMPLEMENTED` requires a closed-boundary capability audit and is **not** asserted repo-wide here.
-- Strict schema, bounded events/evidence/obligations, bounded atom expansion, duplicate-ID rejection, deterministic JSON output, 256 KiB CLI input cap, and symlink input refusal support **bounded synthetic testing**. They are not a production security audit.
+- Strict schema, bounded events/evidence/obligations, bounded atom expansion, duplicate-ID and duplicate-JSON-key rejection, reserved-result-actor rejection, deterministic JSON output, 256 KiB CLI input cap, and symlink input refusal support **bounded synthetic testing**. They are not a production security audit.
 
 ## Use (standard-library-only Python)
 
@@ -40,13 +40,13 @@ python implementation/h32_scope_lab_v01.py PATH_TO_SYNTHETIC_FIXTURE.json
 
 One fixture is a JSON object with exactly `case_id`, `domain`, `events`, `guarantees`, `obligations`, `history_complete`, and `coverage_policy`. Each scope uses explicit named aliases for `facility`, `period`, and `population`; domain aliases enumerate finite atomic members. Events specify increasing `at`, `actor`, `display_facets`, `scope_meta`, and an optional typed `assertion`; guarantees specify source scope, kind, strength, verification **premise**, and three synthetic time fields. The unit tests contain complete examples and matched pairs.
 
-On a valid input, the CLI returns JSON with `execution_attribution=STANDALONE_RESEARCH_ONLY_NOT_M0`, five checks, per-event citation diagnoses, and `ario_m0_h32_runtime_score=NOT_EVALUATED`. Invalid input is rejected with a nonzero exit code and **never** a success label.
+On a valid input, the CLI returns JSON with `execution_attribution=STANDALONE_RESEARCH_ONLY_NOT_M0`, five checks, actor labels plus zero-based event indices for unambiguous localization when actors repeat, per-event citation diagnoses, and `ario_m0_h32_runtime_score=NOT_EVALUATED`. Invalid input is rejected with a nonzero exit code and **never** a success label.
 
 ## Falsification-oriented coverage actually exercised locally
 
 The independent synthetic test suite tests equal/broader/narrower population scopes, same-display/different-cited-evidence pairs, strict-superset support, unknown and invalid verification **premises**, evidence available or verified after an assertion, delayed public publication, uncited broader evidence, complete/incomplete citations, unknown references, the two incompatible composition policies, wrong claim kind/strength, tentative versus firm certification, three structural checks, obligation lifetime, incomplete earlier history, earlier local uncertainty, case-ID renaming, JSON key reordering, strict schema rejection, and CLI input handling.
 
-**Local author run:** `python -m unittest discover -s implementation/tests -p test_h32_scope_lab_v01.py -q` — **36 tests passed**. This is a test report for this **prototype only**; it is not GitHub CI, an independent review, or an Ario M0 benchmark run. The number must be updated if source/tests change.
+**Historical local author run (v0.1 initial commit `e181036`):** `python -m unittest discover -s implementation/tests -p test_h32_scope_lab_v01.py -q` — **36 tests passed**. This is retained as a historical test report for the initial **prototype only**; do not infer that it validates subsequent revisions. Current revision results must be reported separately with their exact commit SHA and CI run. Neither is an Ario M0 benchmark run.
 
 ## Open limitations and planned adverse reviews
 
@@ -54,7 +54,7 @@ The independent synthetic test suite tests equal/broader/narrower population sco
 2. No cryptographic proof, real signature verification, independent verifier, runtime process attestation, anti-replay nonce, or engine-output dependency measurement is implemented. A wrapper could still do all these calculations without M0. **No M0 labels are credited.**
 3. The synthetic scope-domain atom mapping, evidence premise, available/verified times, claim kind and strength must be supplied as structured inputs; they are not extracted or corroborated from real text, medical records, or independent witnesses.
 4. No held-out blind independent benchmark has yet measured this implementation. Existing local tests are author-visible development fixtures, **not** an independently established oracle or comparative superiority result.
-5. Display-facet value changes (as opposed to omissions), implicit/persistent preservation obligations, timestamp ties, cryptographic authority, unknown domain completeness, overlapping contradictory evidence, evidence retraction, and provenance/authentication of the domain itself require separate, versioned specifications and tests.
+5. Display-facet value changes (as opposed to omissions), implicit/persistent preservation obligations, cryptographic authority, unknown domain completeness, overlapping contradictory evidence, evidence retraction, and provenance/authentication of the domain itself require separate, versioned specifications and tests.
 6. Before a later engine attribution claim: pin the M0 callable and adapter; independently observe boundary input **and output**; run an engine-unavailable negative control, semantic-output substitution with unchanged process status, and matched unseen scope/provenance counterexamples. Freeze rules, expectations, artifacts and comparison methodology before any prospective score.
 
 **Nothing here changes signer gates, governance, identity, memory, trust activation, or the frozen v0.2 benchmark.**

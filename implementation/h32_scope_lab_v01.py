@@ -30,13 +30,25 @@ class ResearchInputError(ValueError):
     """An invalid research fixture, distinct from UNKNOWN evidence."""
 
 
+def _reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict:
+    """Refuse ambiguous JSON keys before last-write-wins dict construction."""
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ResearchInputError(f"duplicate JSON object key: {key!r}")
+        result[key] = value
+    return result
+
+
 def _object(value: Any, context: str) -> dict:
+    """Require JSON-style object input, not arbitrary mapping coercion."""
     if not isinstance(value, dict):
         raise ResearchInputError(f"{context}: expected object")
     return value
 
 
 def _keys(value: dict, required: set[str], optional: set[str], context: str) -> None:
+    """Reject unknown fields and omitted required fields in closed schemas."""
     missing, extras = required - value.keys(), value.keys() - required - optional
     if missing or extras:
         raise ResearchInputError(
@@ -45,12 +57,14 @@ def _keys(value: dict, required: set[str], optional: set[str], context: str) -> 
 
 
 def _name(value: Any, context: str) -> str:
+    """Validate bounded, nonempty symbolic identifiers without normalizing them."""
     if not isinstance(value, str) or not 1 <= len(value) <= 96 or not value.strip():
         raise ResearchInputError(f"{context}: expected non-empty bounded string")
     return value
 
 
 def _tick(value: Any, context: str, *, allow_unknown: bool = False) -> int | None:
+    """Validate finite discrete timestamps; None is permitted only when declared."""
     if value is None and allow_unknown:
         return None
     if type(value) is not int or not 0 <= value <= 1_000_000_000:
@@ -59,12 +73,14 @@ def _tick(value: Any, context: str, *, allow_unknown: bool = False) -> int | Non
 
 
 def _list(value: Any, context: str, limit: int) -> list:
+    """Require a real list and enforce the relevant fixture size limit."""
     if not isinstance(value, list) or len(value) > limit:
         raise ResearchInputError(f"{context}: expected list of at most {limit}")
     return value
 
 
 def _scope(scope: Any, domain: dict, context: str) -> dict[str, str]:
+    """Validate each scope alias against an explicit finite atom domain."""
     scope = _object(scope, context)
     _keys(scope, set(domain), set(), context)
     for dimension, term in scope.items():
@@ -75,6 +91,7 @@ def _scope(scope: Any, domain: dict, context: str) -> dict[str, str]:
 
 
 def _field_map(value: Any, context: str, *, nullable: bool = False) -> dict | None:
+    """Validate displayed or typed symbolic facets within a bounded schema."""
     if value is None and nullable:
         return None
     value = _object(value, context)
@@ -87,6 +104,7 @@ def _field_map(value: Any, context: str, *, nullable: bool = False) -> dict | No
 
 
 def _domain(value: Any) -> dict[str, dict[str, tuple[str, ...]]]:
+    """Resolve the three dimensions to explicit finite synthetic atom sets."""
     value = _object(value, "domain")
     _keys(value, {"facility", "period", "population"}, set(), "domain")
     result = {}
@@ -107,6 +125,7 @@ def _domain(value: Any) -> dict[str, dict[str, tuple[str, ...]]]:
 
 
 def _cells(scope: dict, domain: dict) -> frozenset[tuple[str, str, str]]:
+    """Bound Cartesian expansion before materializing cells for containment."""
     dimensions = ("facility", "period", "population")
     vectors = [domain[d][scope[d]] for d in dimensions]
     size = 1
@@ -119,6 +138,7 @@ def _cells(scope: dict, domain: dict) -> frozenset[tuple[str, str, str]]:
 
 def _eligibility(guarantee: dict, event_at: int, requested_kind: str,
                  requested_strength: str) -> str:
+    """Use test-only premises and synthetic time, never real authentication."""
     # Independent known failures are decisive even when another field is UNKNOWN.
     if guarantee["claim_kind"] != requested_kind:
         return "REJECTED_KIND"
@@ -139,6 +159,7 @@ def _eligibility(guarantee: dict, event_at: int, requested_kind: str,
 
 def _covers(candidates: list[frozenset], target: frozenset,
             policy: str) -> bool:
+    """Evaluate whole-item or explicitly versioned cell-union containment."""
     if policy == "coverage/single-item-v1":
         return any(target <= candidate for candidate in candidates)
     covered: set = set()
@@ -149,6 +170,7 @@ def _covers(candidates: list[frozenset], target: frozenset,
 
 def _support(assertion: dict, guarantees: dict, domain: dict,
              event_at: int, policy: str) -> dict:
+    """Separate conditional coverage from eligible cited justification."""
     target = _cells(assertion["scope"], domain)
     eligible, possible, declared = [], [], []
     unresolved = False
@@ -199,21 +221,23 @@ def _support(assertion: dict, guarantees: dict, domain: dict,
 
 
 def _localize(states: list[str], events: list[dict], history_complete: bool) -> dict:
-    known_errors = [events[i]["actor"] for i, state in enumerate(states)
-                    if state == "ERROR"]
-    earliest_observed = (known_errors[0] if known_errors
+    """Keep observed and global earliest actors separate from event indices."""
+    first = next((i for i, state in enumerate(states) if state == "ERROR"), None)
+    earliest_observed = (events[first]["actor"] if first is not None
                          else "UNKNOWN" if "UNKNOWN" in states else "NONE")
-    # An earlier unknown can conceal an earlier error; an incomplete prefix can
-    # conceal one even when all visible checks are decisive.
+    # An earlier unknown or an incomplete prefix prevents global localization.
+    global_index = (first if (history_complete and first is not None
+                             and "UNKNOWN" not in states[:first]) else None)
     if not history_complete:
         earliest_global = "UNKNOWN"
-    elif known_errors:
-        first = states.index("ERROR")
-        earliest_global = "UNKNOWN" if "UNKNOWN" in states[:first] else known_errors[0]
+    elif first is not None:
+        earliest_global = events[first]["actor"] if global_index is not None else "UNKNOWN"
     else:
         earliest_global = "UNKNOWN" if "UNKNOWN" in states else "NONE"
     return {"earliest_observed": earliest_observed,
-            "earliest_global": earliest_global}
+            "earliest_global": earliest_global,
+            "earliest_observed_event_index": first,
+            "earliest_global_event_index": global_index}
 
 
 def evaluate_case(case: Any) -> dict:
@@ -238,6 +262,8 @@ def evaluate_case(case: Any) -> dict:
         if g_id in guarantees:
             raise ResearchInputError("duplicate guarantee ID")
         _scope(g["scope"], domain, f"guarantees[{i}].scope")
+        # Every supplied guarantee must obey the expansion bound, even uncited ones.
+        _cells(g["scope"], domain)
         _name(g["claim_kind"], "claim_kind")
         if g["strength"] not in ("TENTATIVE", "CERTIFIED"):
             raise ResearchInputError("unsupported guarantee strength")
@@ -259,7 +285,9 @@ def evaluate_case(case: Any) -> dict:
             text = event["display_text"]
             if not isinstance(text, str) or len(text) > 4000:
                 raise ResearchInputError("display_text must be bounded text")
-        _name(event["actor"], "actor")
+        actor = _name(event["actor"], "actor")
+        if actor in ("NONE", "UNKNOWN"):
+            raise ResearchInputError("actor name is reserved for result sentinels")
         at = _tick(event["at"], "event.at")
         if at in seen_times or (i and at <= events[i - 1]["at"]):
             raise ResearchInputError("event times must be strictly increasing")
@@ -277,10 +305,11 @@ def evaluate_case(case: Any) -> dict:
             if type(assertion["citations_complete"]) is not bool:
                 raise ResearchInputError("citations_complete must be boolean")
             citations = _list(assertion["citations"], "citations", MAX_GUARANTEES)
-            if len(set(citations)) != len(citations):
-                raise ResearchInputError("duplicate citation")
+            # Type validation must precede hashing; [] and {} are unhashable.
             for ref in citations:
                 _name(ref, "citation ID")
+            if len(set(citations)) != len(citations):
+                raise ResearchInputError("duplicate citation")
 
     obligations = _list(case["obligations"], "obligations", MAX_OBLIGATIONS)
     seen_obligations = set()
@@ -370,9 +399,10 @@ def main(argv: list[str] | None = None) -> int:
             data = stream.read(262145)
         if len(data) > 262144:
             raise ResearchInputError("fixture exceeds 256 KiB")
-        payload = json.loads(data.decode("utf-8"))
+        payload = json.loads(data.decode("utf-8"),
+                             object_pairs_hook=_reject_duplicate_keys)
         result = evaluate_case(payload)
-    except (OSError, UnicodeError, json.JSONDecodeError, ResearchInputError) as exc:
+    except (OSError, UnicodeError, ValueError, RecursionError) as exc:
         print(json.dumps({"lab_version": LAB_VERSION, "status": "REJECTED_INPUT",
                           "error_type": type(exc).__name__,
                           "ario_m0_h32_runtime_score": "NOT_EVALUATED"}, sort_keys=True),

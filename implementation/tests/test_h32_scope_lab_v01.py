@@ -63,6 +63,7 @@ def global_label(case, check="unsupported_scope_assertion"):
 
 class H32ScopeResearchTests(unittest.TestCase):
     def test_baseline_all_five_none_and_no_m0_claim(self):
+        """Check the research contract: baseline all five none and no m0 claim."""
         result = evaluate_case(base_case())
         self.assertEqual(tuple(result["checks"]), CHECKS)
         self.assertTrue(all(x["earliest_global"] == "NONE"
@@ -73,6 +74,7 @@ class H32ScopeResearchTests(unittest.TestCase):
         self.assertEqual(result["provenance_validation"], "NOT_PERFORMED_TEST_PREMISES_ONLY")
 
     def test_narrow_guarantee_broad_assertion_detected_at_b_in_both_checks(self):
+        """Check the research contract: narrow guarantee broad assertion detected at b in both checks."""
         case = base_case()
         case["guarantees"][0]["scope"]["population"] = "ER"
         result = evaluate_case(case)
@@ -82,16 +84,19 @@ class H32ScopeResearchTests(unittest.TestCase):
                          "NO_UNDER_SUPPLIED_CONTENT")
 
     def test_narrower_assertion_is_supported_not_inequality_failure(self):
+        """Check the research contract: narrower assertion is supported not inequality failure."""
         case = base_case()
         case["events"][1]["assertion"]["scope"]["population"] = "ER"
         self.assertEqual(global_label(case), "NONE")
 
     def test_strict_superset_guarantee_supports_narrower_assertion(self):
+        """Check the research contract: strict superset guarantee supports narrower assertion."""
         case = base_case()
         case["guarantees"][0]["scope"]["population"] = "ALL_CARE"
         self.assertEqual(global_label(case), "NONE")
 
     def test_unverified_broad_is_unknown_not_verified(self):
+        """Check the research contract: unverified broad is unknown not verified."""
         case = base_case()
         case["guarantees"][0]["verification"] = "UNVERIFIED"
         result = evaluate_case(case)
@@ -102,6 +107,7 @@ class H32ScopeResearchTests(unittest.TestCase):
                          "UNKNOWN")
 
     def test_known_narrow_scope_stays_unsupported_despite_unknown_provenance(self):
+        """Check the research contract: known narrow scope stays unsupported despite unknown provenance."""
         case = base_case()
         case["guarantees"][0]["scope"]["population"] = "ER"
         case["guarantees"][0]["verification"] = "UNVERIFIED"
@@ -111,11 +117,13 @@ class H32ScopeResearchTests(unittest.TestCase):
                          "UNKNOWN")
 
     def test_invalid_verification_premise_cannot_be_admitted(self):
+        """Check the research contract: invalid verification premise cannot be admitted."""
         case = base_case()
         case["guarantees"][0]["verification"] = "TEST_INVALID"
         self.assertEqual(global_label(case), "B")
 
     def test_late_availability_vs_late_verification_separate(self):
+        """Check the research contract: late availability vs late verification separate."""
         for field in ("available_at", "verified_at"):
             with self.subTest(field=field):
                 case = base_case()
@@ -124,12 +132,23 @@ class H32ScopeResearchTests(unittest.TestCase):
                 self.assertTrue(evaluate_case(case)["events"][1]["assertion_review"]
                                 ["citations"][0]["eligibility"].startswith("REJECTED_"))
 
+    def test_tied_timestamps_are_eligible_under_synthetic_policy(self):
+        """Check the research contract: tied timestamps are eligible under synthetic policy."""
+        for field in ("available_at", "verified_at"):
+            for timestamp, expected in ((19, "NONE"), (20, "NONE"), (21, "B")):
+                with self.subTest(field=field, timestamp=timestamp):
+                    case = base_case()
+                    case["guarantees"][0][field] = timestamp
+                    self.assertEqual(global_label(case), expected)
+
     def test_late_publication_does_not_backdate_access_but_is_not_required(self):
+        """Check the research contract: late publication does not backdate access but is not required."""
         case = base_case()
         case["guarantees"][0]["published_at"] = 999
         self.assertEqual(global_label(case), "NONE")
 
     def test_uncited_independent_broad_guarantee_does_not_rescue_narrow_citation(self):
+        """Check the research contract: uncited independent broad guarantee does not rescue narrow citation."""
         case = base_case()
         h = copy.deepcopy(case["guarantees"][0])
         h["id"] = "H"
@@ -138,6 +157,7 @@ class H32ScopeResearchTests(unittest.TestCase):
         self.assertEqual(global_label(case), "B")
 
     def test_identical_display_and_assertion_distinct_evidence_changes_result(self):
+        """Check the research contract: identical display and assertion distinct evidence changes result."""
         broad = base_case()
         narrow = copy.deepcopy(broad)
         narrow["guarantees"][0]["scope"]["population"] = "ER"
@@ -146,22 +166,26 @@ class H32ScopeResearchTests(unittest.TestCase):
         self.assertEqual(global_label(narrow), "B")
 
     def test_unknown_reference_causes_unknown_not_definite_failure(self):
+        """Check the research contract: unknown reference causes unknown not definite failure."""
         case = base_case()
         case["events"][1]["assertion"]["citations"] = ["MISSING"]
         self.assertEqual(global_label(case), "UNKNOWN")
 
     def test_incomplete_citation_set_can_still_be_supported_by_known_sufficient_item(self):
+        """Check the research contract: incomplete citation set can still be supported by known sufficient item."""
         case = base_case()
         case["events"][1]["assertion"]["citations_complete"] = False
         self.assertEqual(global_label(case), "NONE")
 
     def test_incomplete_citation_set_without_support_is_unknown(self):
+        """Check the research contract: incomplete citation set without support is unknown."""
         case = base_case()
         case["guarantees"][0]["scope"]["population"] = "ER"
         case["events"][1]["assertion"]["citations_complete"] = False
         self.assertEqual(global_label(case), "UNKNOWN")
 
     def test_two_cited_partitions_support_union_only_under_explicit_union_policy(self):
+        """Check the research contract: two cited partitions support union only under explicit union policy."""
         case = base_case()
         case["guarantees"][0]["scope"]["population"] = "ER"
         second = copy.deepcopy(case["guarantees"][0])
@@ -173,7 +197,8 @@ class H32ScopeResearchTests(unittest.TestCase):
         case["coverage_policy"] = "coverage/union-v1"
         self.assertEqual(global_label(case), "NONE")
 
-    def test_union_does_not_join_different_periods_or_facilities(self):
+    def test_union_known_superset_and_wrong_kind_cannot_be_mixed(self):
+        """Check the research contract: union known superset and wrong kind cannot be mixed."""
         case = base_case()
         case["coverage_policy"] = "coverage/union-v1"
         case["guarantees"][0]["scope"]["population"] = "ER"
@@ -190,12 +215,33 @@ class H32ScopeResearchTests(unittest.TestCase):
         case["guarantees"][1]["claim_kind"] = "another_kind"
         self.assertEqual(global_label(case), "B")
 
+    def test_union_does_not_cross_product_disjoint_evidence_cells(self):
+        """Check the research contract: union does not cross product disjoint evidence cells."""
+        case = base_case()
+        case["coverage_policy"] = "coverage/union-v1"
+        case["domain"]["facility"]["XY"] = ["X", "Y"]
+        case["domain"]["facility"]["Y"] = ["Y"]
+        case["domain"]["period"]["Q2"] = ["Q2"]
+        case["domain"]["period"]["Q1_Q2"] = ["Q1", "Q2"]
+        case["events"][1]["assertion"]["scope"].update({
+            "facility": "XY", "period": "Q1_Q2"})
+        second = copy.deepcopy(case["guarantees"][0])
+        second["id"] = "H"
+        second["scope"].update({"facility": "Y", "period": "Q2"})
+        case["guarantees"].append(second)
+        case["events"][1]["assertion"]["citations"] = ["G", "H"]
+        # Projection-wise unions cover all dimensions, but actual cells (Y,Q1)
+        # are absent from both cited guarantees; cellwise coverage must fail.
+        self.assertEqual(global_label(case), "B")
+
     def test_unknown_reference_combined_with_known_good_is_still_supported(self):
+        """Check the research contract: unknown reference combined with known good is still supported."""
         case = base_case()
         case["events"][1]["assertion"]["citations"] = ["G", "MISSING"]
         self.assertEqual(global_label(case), "NONE")
 
     def test_wrong_claim_kind_and_strength_each_preclude_support(self):
+        """Check the research contract: wrong claim kind and strength each preclude support."""
         for field, value in (("claim_kind", "not_capture"), ("strength", "TENTATIVE")):
             with self.subTest(field=field):
                 case = base_case()
@@ -203,6 +249,7 @@ class H32ScopeResearchTests(unittest.TestCase):
                 self.assertEqual(global_label(case), "B")
 
     def test_tentative_unsupported_is_scope_finding_not_firm_certification(self):
+        """Check the research contract: tentative unsupported is scope finding not firm certification."""
         case = base_case()
         case["guarantees"][0]["scope"]["population"] = "ER"
         case["events"][1]["assertion"]["strength"] = "TENTATIVE"
@@ -211,6 +258,7 @@ class H32ScopeResearchTests(unittest.TestCase):
         self.assertEqual(result["checks"]["unsupported_firm_certification"]["earliest_global"], "NONE")
 
     def test_all_five_checks_can_localize_b_without_collapsing_dimensions(self):
+        """Check the research contract: all five checks can localize b without collapsing dimensions."""
         case = base_case()
         case["events"][1]["display_facets"] = {"facility": "X"}
         case["events"][1]["scope_meta"] = None
@@ -221,16 +269,19 @@ class H32ScopeResearchTests(unittest.TestCase):
         self.assertTrue(all(c["earliest_global"] == "B" for c in result["checks"].values()))
 
     def test_display_value_change_is_not_facet_omission(self):
+        """Check the research contract: display value change is not facet omission."""
         case = base_case()
         case["events"][1]["display_facets"]["population"] = "ER"
         self.assertEqual(global_label(case, "display_qualifier_omission"), "NONE")
 
     def test_typed_scope_changed_value_not_lost_key(self):
+        """Check the research contract: typed scope changed value not lost key."""
         case = base_case()
         case["events"][1]["scope_meta"]["population"] = "ER"
         self.assertEqual(global_label(case, "typed_metadata_loss"), "NONE")
 
     def test_explicit_preservation_breach_by_value_change_and_expiry(self):
+        """Check the research contract: explicit preservation breach by value change and expiry."""
         case = base_case()
         case["obligations"] = [{"id": "P", "start_at": 20, "end_at": 20,
                                 "channel": "display", "required_facets": {"population": "PATIENT"}}]
@@ -238,26 +289,43 @@ class H32ScopeResearchTests(unittest.TestCase):
         self.assertEqual(global_label(case, "preservation_contract_breach"), "B")
         case["obligations"][0]["start_at"] = 10
         case["obligations"][0]["end_at"] = 19
-        raise_case = copy.deepcopy(case)
-        # An inactive obligation must not cause a preservation breach.
-        self.assertEqual(global_label(raise_case, "preservation_contract_breach"), "NONE")
+        # The only changed facet is at B (tick 20), outside the active interval.
+        self.assertEqual(global_label(case, "preservation_contract_breach"), "NONE")
+
+    def test_obligation_window_both_boundaries_inclusive(self):
+        """Check the research contract: obligation window both boundaries inclusive."""
+        case = base_case()
+        case["obligations"] = [{"id": "P", "start_at": 10, "end_at": 20,
+                                "channel": "display", "required_facets": {"population": "PATIENT"}}]
+        case["events"][0]["display_facets"]["population"] = "ER"
+        self.assertEqual(global_label(case, "preservation_contract_breach"), "A")
+        case["events"][0]["display_facets"]["population"] = "PATIENT"
+        case["events"][1]["display_facets"]["population"] = "ER"
+        self.assertEqual(global_label(case, "preservation_contract_breach"), "B")
 
     def test_incomplete_prefix_preserves_observed_b_but_global_unknown(self):
+        """Check the research contract: incomplete prefix preserves observed b but global unknown."""
         case = base_case()
         case["history_complete"] = False
         case["guarantees"][0]["scope"]["population"] = "ER"
         review = evaluate_case(case)["checks"]["unsupported_scope_assertion"]
-        self.assertEqual(review, {"earliest_observed": "B", "earliest_global": "UNKNOWN"})
+        self.assertEqual(review, {"earliest_observed": "B", "earliest_global": "UNKNOWN",
+                                  "earliest_observed_event_index": 1,
+                                  "earliest_global_event_index": None})
 
     def test_known_early_unknown_blocks_global_earliest_even_with_complete_history(self):
+        """Check the research contract: known early unknown blocks global earliest even with complete history."""
         case = base_case()
         case["events"][0]["assertion"] = copy.deepcopy(case["events"][1]["assertion"])
         case["events"][0]["assertion"]["citations"] = ["MISSING"]
         case["guarantees"][0]["scope"]["population"] = "ER"
         review = evaluate_case(case)["checks"]["unsupported_scope_assertion"]
-        self.assertEqual(review, {"earliest_observed": "B", "earliest_global": "UNKNOWN"})
+        self.assertEqual(review, {"earliest_observed": "B", "earliest_global": "UNKNOWN",
+                                  "earliest_observed_event_index": 1,
+                                  "earliest_global_event_index": None})
 
     def test_case_id_rename_and_json_key_reordering_do_not_change_labels(self):
+        """Check the research contract: case id rename and json key reordering do not change labels."""
         case = base_case()
         labels = evaluate_case(case)["checks"]
         case["case_id"] = "H32-RENAMED"
@@ -265,48 +333,195 @@ class H32ScopeResearchTests(unittest.TestCase):
         self.assertEqual(evaluate_case(case)["checks"], labels)
 
     def test_unexpected_field_rejected_closed(self):
+        """Check the research contract: unexpected field rejected closed."""
         case = base_case()
         case["unexpected"] = "do-not-trust"
         with self.assertRaises(ResearchInputError):
             evaluate_case(case)
 
+    def test_reserved_actor_names_cannot_hide_errors(self):
+        """Check the research contract: reserved actor names cannot hide errors."""
+        for actor in ("NONE", "UNKNOWN"):
+            with self.subTest(actor=actor):
+                case = base_case()
+                case["events"][1]["actor"] = actor
+                case["guarantees"][0]["scope"]["population"] = "ER"
+                with self.assertRaises(ResearchInputError):
+                    evaluate_case(case)
+
+    def test_repeated_actors_are_disambiguated_by_event_index(self):
+        """Check the research contract: repeated actors are disambiguated by event index."""
+        case = base_case()
+        case["events"][1]["actor"] = "A"
+        case["guarantees"][0]["scope"]["population"] = "ER"
+        result = evaluate_case(case)["checks"]["unsupported_scope_assertion"]
+        self.assertEqual(result["earliest_global"], "A")
+        self.assertEqual(result["earliest_global_event_index"], 1)
+        self.assertEqual(result["earliest_observed_event_index"], 1)
+
+    def test_unhashable_citations_reject_instead_of_crashing(self):
+        """Check the research contract: unhashable citations reject instead of crashing."""
+        for ref in ({}, [], 12, None):
+            with self.subTest(ref=ref):
+                case = base_case()
+                case["events"][1]["assertion"]["citations"] = [ref]
+                with self.assertRaises(ResearchInputError):
+                    evaluate_case(case)
+
+    def test_uncited_oversize_guarantee_scope_is_rejected_eagerly(self):
+        """Check the research contract: uncited oversize guarantee scope is rejected eagerly."""
+        case = base_case()
+        for dimension in ("facility", "period", "population"):
+            case["domain"][dimension]["BIG"] = [f"{dimension}_{i}" for i in range(16)]
+        extra = copy.deepcopy(case["guarantees"][0])
+        extra["id"] = "H"
+        extra["scope"] = {"facility": "BIG", "period": "BIG", "population": "BIG"}
+        case["guarantees"].append(extra)  # Uncited H expands to 4096 cells.
+        with self.assertRaises(ResearchInputError):
+            evaluate_case(case)
+
     def test_duplicate_guarantee_reference_rejected(self):
+        """Check the research contract: duplicate guarantee reference rejected."""
         case = base_case()
         case["guarantees"].append(copy.deepcopy(case["guarantees"][0]))
         with self.assertRaises(ResearchInputError):
             evaluate_case(case)
 
     def test_undeclared_scope_term_rejected(self):
+        """Check the research contract: undeclared scope term rejected."""
         case = base_case()
         case["guarantees"][0]["scope"]["population"] = "BOGUS"
         with self.assertRaises(ResearchInputError):
             evaluate_case(case)
 
     def test_unknown_policy_rejected(self):
+        """Check the research contract: unknown policy rejected."""
         case = base_case()
         case["coverage_policy"] = "heuristic/always-pass"
         with self.assertRaises(ResearchInputError):
             evaluate_case(case)
 
     def test_citation_duplicate_rejected(self):
+        """Check the research contract: citation duplicate rejected."""
         case = base_case()
         case["events"][1]["assertion"]["citations"] = ["G", "G"]
         with self.assertRaises(ResearchInputError):
             evaluate_case(case)
 
     def test_boolean_timestamp_rejected(self):
+        """Check the research contract: boolean timestamp rejected."""
         case = base_case()
         case["guarantees"][0]["verified_at"] = True
         with self.assertRaises(ResearchInputError):
             evaluate_case(case)
 
     def test_out_of_order_events_rejected(self):
+        """Check the research contract: out of order events rejected."""
         case = base_case()
         case["events"][1]["at"] = 10
         with self.assertRaises(ResearchInputError):
             evaluate_case(case)
 
+    def _assert_cli_rejected(self, raw: bytes) -> None:
+        """Verify rejected bytes cannot leak success JSON to standard output."""
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "synthetic.json"
+            path.write_bytes(raw)
+            out, err = io.StringIO(), io.StringIO()
+            with redirect_stdout(out), redirect_stderr(err):
+                code = main([str(path)])
+            self.assertEqual(code, 2)
+            self.assertEqual(out.getvalue(), "")
+            self.assertEqual(json.loads(err.getvalue())["status"], "REJECTED_INPUT")
+
+    def test_cli_rejects_duplicate_json_keys_both_orders(self):
+        """Check the research contract: cli rejects duplicate json keys both orders."""
+        raw = json.dumps(base_case())
+        marker = '"citations_complete": true'
+        self.assertIn(marker, raw)
+        for replacement in ('"citations_complete": false, ' + marker,
+                            marker + ', "citations_complete": false'):
+            with self.subTest(replacement=replacement):
+                self._assert_cli_rejected(raw.replace(marker, replacement).encode("utf-8"))
+
+    def test_cli_rejects_unhashable_citation_values(self):
+        """Check the research contract: cli rejects unhashable citation values."""
+        for bad in ({}, [], 13, None):
+            with self.subTest(bad=bad):
+                case = base_case()
+                case["events"][1]["assertion"]["citations"] = [bad]
+                self._assert_cli_rejected(json.dumps(case).encode("utf-8"))
+
+    def test_cli_rejects_deeply_nested_json_and_huge_integer(self):
+        """Check the research contract: cli rejects deeply nested json and huge integer."""
+        self._assert_cli_rejected(("[" * 1300 + "0" + "]" * 1300).encode("utf-8"))
+        self._assert_cli_rejected(('{"case_id": ' + "7" * 5000 + '}').encode("utf-8"))
+
+    def test_cli_validates_exact_file_size_boundary(self):
+        """Check the research contract: cli validates exact file size boundary."""
+        payload = json.dumps(base_case()).encode("utf-8")
+        maximum = 262144
+        self.assertLess(len(payload), maximum)
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "limit.json"
+            path.write_bytes(payload + b" " * (maximum - len(payload)))
+            out, err = io.StringIO(), io.StringIO()
+            with redirect_stdout(out), redirect_stderr(err):
+                code = main([str(path)])
+            self.assertEqual(code, 0, err.getvalue())
+            self.assertEqual(json.loads(out.getvalue())["ario_m0_h32_runtime_score"], "NOT_EVALUATED")
+            path.write_bytes(payload + b" " * (maximum + 1 - len(payload)))
+            with redirect_stdout(out := io.StringIO()), redirect_stderr(err := io.StringIO()):
+                code = main([str(path)])
+            self.assertEqual(code, 2)
+            self.assertEqual(out.getvalue(), "")
+            self.assertEqual(json.loads(err.getvalue())["status"], "REJECTED_INPUT")
+
+    def test_cli_invalid_utf8_and_missing_file_rejected(self):
+        """Check the research contract: cli invalid utf8 and missing file rejected."""
+        self._assert_cli_rejected(b"\xff")
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "absent.json"
+            out, err = io.StringIO(), io.StringIO()
+            with redirect_stdout(out), redirect_stderr(err):
+                code = main([str(path)])
+            self.assertEqual(code, 2)
+            self.assertEqual(out.getvalue(), "")
+            self.assertEqual(json.loads(err.getvalue())["status"], "REJECTED_INPUT")
+
+    def test_cli_rejects_symlink(self):
+        """Check the research contract: cli rejects symlink."""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            target = root / "target.json"
+            link = root / "link.json"
+            target.write_text(json.dumps(base_case()), encoding="utf-8")
+            try:
+                link.symlink_to(target)
+            except (OSError, NotImplementedError) as exc:
+                self.skipTest(f"symlink unsupported: {exc}")
+            out, err = io.StringIO(), io.StringIO()
+            with redirect_stdout(out), redirect_stderr(err):
+                code = main([str(link)])
+            self.assertEqual(code, 2)
+            self.assertEqual(out.getvalue(), "")
+            self.assertEqual(json.loads(err.getvalue())["status"], "REJECTED_INPUT")
+
+    def test_cli_accepts_crlf_json(self):
+        """Check the research contract: cli accepts crlf json."""
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "synthetic.json"
+            encoded = json.dumps(base_case(), indent=2).replace("\n", "\r\n")
+            path.write_bytes(encoded.encode("utf-8"))
+            out, err = io.StringIO(), io.StringIO()
+            with redirect_stdout(out), redirect_stderr(err):
+                code = main([str(path)])
+            self.assertEqual(code, 0, err.getvalue())
+            self.assertEqual(json.loads(out.getvalue())["checks"]["unsupported_scope_assertion"]
+                             ["earliest_global"], "NONE")
+
     def test_cli_reads_synthetic_fixture_and_emits_machine_readable_status(self):
+        """Check the research contract: cli reads synthetic fixture and emits machine readable status."""
         with tempfile.TemporaryDirectory() as td:
             path = Path(td) / "synthetic.json"
             path.write_text(json.dumps(base_case()), encoding="utf-8")
@@ -319,6 +534,7 @@ class H32ScopeResearchTests(unittest.TestCase):
             self.assertEqual(parsed["ario_m0_h32_runtime_score"], "NOT_EVALUATED")
 
     def test_cli_rejects_invalid_fixture_without_fake_pass(self):
+        """Check the research contract: cli rejects invalid fixture without fake pass."""
         with tempfile.TemporaryDirectory() as td:
             path = Path(td) / "synthetic.json"
             path.write_text("{invalid}", encoding="utf-8")
@@ -329,6 +545,7 @@ class H32ScopeResearchTests(unittest.TestCase):
             self.assertEqual(json.loads(stderr.getvalue())["status"], "REJECTED_INPUT")
 
     def test_missing_observation_is_not_fabricated(self):
+        """Check the research contract: missing observation is not fabricated."""
         case = base_case()
         case["events"][1]["assertion"]["citations"] = []
         self.assertEqual(global_label(case), "B")  # explicit complete, no cited support
