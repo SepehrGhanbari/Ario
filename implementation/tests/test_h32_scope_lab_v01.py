@@ -796,5 +796,126 @@ class H32ScopeResearchTests(unittest.TestCase):
 
 
 
+    def test_overlapping_union_items_leave_holes_until_each_cell_is_covered(self):
+        """Overlapping rectangles cannot fill their two opposite missing corners."""
+        case = base_case()
+        case["coverage_policy"] = "coverage/union-v1"
+        case["domain"] = {
+            "facility": {"left": ["a", "b"], "right": ["b", "c"],
+                         "full": ["a", "b", "c"], "a": ["a"], "c": ["c"]},
+            "period": {"early": ["q", "r"], "late": ["r", "s"],
+                       "full": ["q", "r", "s"], "q": ["q"], "s": ["s"]},
+            "population": {"group": ["p"]},
+        }
+        case["events"][1]["assertion"]["scope"] = {
+            "facility": "full", "period": "full", "population": "group"}
+        template = copy.deepcopy(case["guarantees"][0])
+        case["guarantees"] = []
+        scopes = (("left", "early"), ("right", "late"), ("a", "s"), ("c", "q"))
+        for i, (facility, period) in enumerate(scopes):
+            guarantee = copy.deepcopy(template)
+            guarantee["id"] = f"item-{i}"
+            guarantee["scope"] = {"facility": facility, "period": period,
+                                  "population": "group"}
+            case["guarantees"].append(guarantee)
+            case["events"][1]["assertion"]["citations"] = [
+                item["id"] for item in case["guarantees"]]
+            with self.subTest(items=i + 1):
+                self.assertEqual(global_label(case), "NONE" if i == 3 else "B")
+        case["coverage_policy"] = "coverage/single-item-v1"
+        self.assertEqual(global_label(case), "B")
+
+    def test_translating_all_clocks_preserves_checks_and_translates_diagnostics(self):
+        """Translate evidence, events, and active obligations as one clock system."""
+        for changes, expected in (
+            ({}, "NONE"),
+            ({"available_at": 21}, "B"),
+            ({"verified_at": 21}, "B"),
+            ({"verified_at": None}, "UNKNOWN"),
+            ({"available_at": 20, "verified_at": 20}, "NONE"),
+        ):
+            case = base_case()
+            case["guarantees"][0].update(changes, published_at=999)
+            case["events"][1]["scope_meta"] = None
+            case["obligations"] = [{
+                "id": "P", "start_at": 20, "end_at": 20, "channel": "typed",
+                "required_facets": {"population": "PATIENT"},
+            }]
+            baseline = evaluate_case(case)
+            self.assertEqual(baseline["checks"]["unsupported_scope_assertion"]
+                             ["earliest_global"], expected)
+            self.assertEqual(baseline["checks"]["preservation_contract_breach"]
+                             ["earliest_global"], "B")
+            for offset in (1, 37, 1000, 999_998_900):
+                with self.subTest(changes=changes, offset=offset):
+                    translated = copy.deepcopy(case)
+                    for event in translated["events"]:
+                        event["at"] += offset
+                    for guarantee in translated["guarantees"]:
+                        for field in ("available_at", "verified_at", "published_at"):
+                            if guarantee[field] is not None:
+                                guarantee[field] += offset
+                    for obligation in translated["obligations"]:
+                        obligation["start_at"] += offset
+                        obligation["end_at"] += offset
+                    result = evaluate_case(translated)
+                    self.assertEqual(result["checks"], baseline["checks"])
+                    self.assertEqual([event["local_checks"] for event in result["events"]],
+                                     [event["local_checks"] for event in baseline["events"]])
+                    self.assertEqual([event["at"] for event in result["events"]],
+                                     [event["at"] + offset for event in baseline["events"]])
+                    expected_review = copy.deepcopy(baseline["events"][1]["assertion_review"])
+                    for citation in expected_review["citations"]:
+                        for field in ("available_at", "verified_at", "published_at"):
+                            if citation[field] is not None:
+                                citation[field] += offset
+                    self.assertEqual(result["events"][1]["assertion_review"], expected_review)
+
+
+    def test_obligation_requires_event_inside_fixed_window(self):
+        """Moving only the event clock must not carry a fixed obligation window."""
+        case = base_case()
+        case["events"][1]["scope_meta"] = None
+        case["obligations"] = [{
+            "id": "P", "start_at": 20, "end_at": 20, "channel": "typed",
+            "required_facets": {"population": "PATIENT"},
+        }]
+        self.assertEqual(global_label(case, "preservation_contract_breach"), "B")
+        for event_tick in (19, 21, 30):
+            with self.subTest(event_tick=event_tick):
+                shifted = copy.deepcopy(case)
+                shifted["events"][1]["at"] = event_tick
+                self.assertEqual(
+                    global_label(shifted, "preservation_contract_breach"), "NONE"
+                )
+
+    def test_moving_only_assertion_time_changes_evidence_eligibility(self):
+        """Evidence unavailable at B:20 must become eligible when B moves to 30."""
+        case = base_case()
+        case["guarantees"][0]["available_at"] = 21
+        self.assertEqual(global_label(case), "B")
+        case["events"][1]["at"] = 30
+        self.assertEqual(global_label(case), "NONE")
+
+    def test_tick_exact_maximum_is_valid_and_max_plus_one_rejected(self):
+        """The synthetic one-billion tick limit is inclusive, not unbounded."""
+        maximum = 1_000_000_000
+        case = base_case()
+        case["events"][1]["at"] = maximum
+        case["guarantees"][0]["published_at"] = maximum
+        self.assertEqual(global_label(case), "NONE")
+        for field in ("event", "published_at"):
+            with self.subTest(field=field):
+                invalid = copy.deepcopy(case)
+                if field == "event":
+                    invalid["events"][1]["at"] = maximum + 1
+                else:
+                    invalid["guarantees"][0]["published_at"] = maximum + 1
+                with self.assertRaisesRegex(
+                    ResearchInputError, "expected nonnegative integer tick"
+                ):
+                    evaluate_case(invalid)
+
+
 if __name__ == "__main__":
     unittest.main()
