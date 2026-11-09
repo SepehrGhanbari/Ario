@@ -340,7 +340,7 @@ def evaluate_case(case: Any) -> dict:
                 local["display_qualifier_omission"] = "ERROR"
             older = prior["scope_meta"]
             newer = event["scope_meta"]
-            if older is not None and (
+            if older and (
                 newer is None or set(older) - set(newer)
             ):
                 local["typed_metadata_loss"] = "ERROR"
@@ -408,7 +408,8 @@ def main(argv: list[str] | None = None) -> int:
                           "ario_m0_h32_runtime_score": "NOT_EVALUATED"}, sort_keys=True),
               file=sys.stderr)
         return 2
-    print(json.dumps(result, sort_keys=True, ensure_ascii=False))
+    # Escape accepted JSON strings, including lone surrogates, for strict pipes.
+    print(json.dumps(result, sort_keys=True, ensure_ascii=True))
     return 0
 
 

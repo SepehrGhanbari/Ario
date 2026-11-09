@@ -8,6 +8,8 @@ from __future__ import annotations
 import copy
 import json
 import io
+import os
+import subprocess
 import tempfile
 from contextlib import redirect_stdout, redirect_stderr
 import sys
@@ -280,6 +282,144 @@ class H32ScopeResearchTests(unittest.TestCase):
         case["events"][1]["scope_meta"]["population"] = "ER"
         self.assertEqual(global_label(case, "typed_metadata_loss"), "NONE")
 
+    def test_typed_metadata_loss_requires_a_previously_present_key(self):
+        """Null and empty maps cannot lose keys that were never supplied."""
+        transitions = (
+            (None, None, "NONE"),
+            (None, {}, "NONE"),
+            ({}, None, "NONE"),
+            ({}, {}, "NONE"),
+            ({}, {"population": "ER"}, "NONE"),
+            ({"population": "PATIENT"}, None, "B"),
+            ({"population": "PATIENT"}, {}, "B"),
+            ({"population": "PATIENT"}, {"population": "ER"}, "NONE"),
+        )
+        for older, newer, expected in transitions:
+            with self.subTest(older=older, newer=newer):
+                case = base_case()
+                case["events"][0]["scope_meta"] = older
+                case["events"][1]["scope_meta"] = newer
+                self.assertEqual(global_label(case, "typed_metadata_loss"), expected)
+
+    def test_translating_all_known_times_preserves_verdicts(self):
+        """Temporal decisions depend on relative times, not the baseline tick 20."""
+        for late_field in (None, "available_at", "verified_at"):
+            case = base_case()
+            if late_field is not None:
+                case["guarantees"][0][late_field] = 21
+            case["obligations"] = [{
+                "id": "P", "start_at": 10, "end_at": 20, "channel": "typed",
+                "required_facets": {"population": "PATIENT"},
+            }]
+            baseline = evaluate_case(case)
+            for offset in (1, 37, 1000):
+                with self.subTest(late_field=late_field, offset=offset):
+                    translated = copy.deepcopy(case)
+                    for event in translated["events"]:
+                        event["at"] += offset
+                    for guarantee in translated["guarantees"]:
+                        for field in ("available_at", "verified_at", "published_at"):
+                            if guarantee[field] is not None:
+                                guarantee[field] += offset
+                    for obligation in translated["obligations"]:
+                        obligation["start_at"] += offset
+                        obligation["end_at"] += offset
+                    result = evaluate_case(translated)
+                    self.assertEqual(result["checks"], baseline["checks"])
+                    self.assertEqual(result["events"][1]["assertion_review"],
+                                     baseline["events"][1]["assertion_review"])
+
+    def test_eligibility_boundaries_follow_each_asserting_event_time(self):
+        """Moving an assertion changes which evidence was eligible at that event."""
+        for field in ("available_at", "verified_at"):
+            for event_at in (30, 70, 101):
+                for relative_tick, expected in ((-1, "NONE"), (0, "NONE"), (1, "B")):
+                    with self.subTest(field=field, event_at=event_at,
+                                      relative_tick=relative_tick):
+                        case = base_case()
+                        case["events"][1]["at"] = event_at
+                        case["guarantees"][0][field] = event_at + relative_tick
+                        self.assertEqual(global_label(case), expected)
+
+    def test_scope_alias_and_atom_renaming_preserve_coverage(self):
+        """Symbol spellings carry no scope semantics beyond the supplied domain."""
+        for guarantee_population, expected in (("PATIENT", "NONE"), ("ER", "B")):
+            with self.subTest(guarantee_population=guarantee_population):
+                case = base_case()
+                case["guarantees"][0]["scope"]["population"] = guarantee_population
+                baseline = evaluate_case(case)
+                renamed = copy.deepcopy(case)
+                aliases = {}
+                for dimension, expansions in case["domain"].items():
+                    aliases[dimension] = {name: f"set_{dimension}_{i}"
+                                          for i, name in enumerate(expansions)}
+                    atoms = sorted({atom for members in expansions.values() for atom in members})
+                    atom_names = {atom: f"atom_{dimension}_{i}" for i, atom in enumerate(atoms)}
+                    renamed["domain"][dimension] = {
+                        aliases[dimension][name]: [atom_names[atom] for atom in members]
+                        for name, members in expansions.items()
+                    }
+                for guarantee in renamed["guarantees"]:
+                    guarantee["scope"] = {dimension: aliases[dimension][term]
+                                          for dimension, term in guarantee["scope"].items()}
+                for event in renamed["events"]:
+                    if event["assertion"] is not None:
+                        event["assertion"]["scope"] = {
+                            dimension: aliases[dimension][term]
+                            for dimension, term in event["assertion"]["scope"].items()
+                        }
+                    for field in ("display_facets", "scope_meta"):
+                        if event[field] is not None:
+                            event[field] = {dimension: aliases[dimension][term]
+                                            for dimension, term in event[field].items()}
+                result = evaluate_case(renamed)
+                self.assertEqual(result["checks"], baseline["checks"])
+                self.assertEqual(result["checks"]["unsupported_scope_assertion"]
+                                 ["earliest_global"], expected)
+                self.assertEqual(result["events"][1]["assertion_review"],
+                                 baseline["events"][1]["assertion_review"])
+
+    def test_supplied_atom_expansions_override_familiar_alias_names(self):
+        """Identical aliases can describe different finite sets in another fixture."""
+        case = base_case()
+        case["guarantees"][0]["scope"]["population"] = "ER"
+        self.assertEqual(global_label(case), "B")
+        case["domain"]["population"]["ER"] = ["ER", "NON_ER"]
+        self.assertEqual(global_label(case), "NONE")
+        case["domain"]["population"]["PATIENT"] = ["ER"]
+        self.assertEqual(global_label(case), "NONE")
+        case["domain"]["population"]["PATIENT"] = ["UNRELATED"]
+        self.assertEqual(global_label(case), "B")
+
+    def test_overlapping_union_items_leave_holes_until_each_cell_is_covered(self):
+        """Overlapping rectangles cannot fill their two opposite missing corners."""
+        case = base_case()
+        case["coverage_policy"] = "coverage/union-v1"
+        case["domain"] = {
+            "facility": {"left": ["a", "b"], "right": ["b", "c"],
+                         "full": ["a", "b", "c"], "a": ["a"], "c": ["c"]},
+            "period": {"early": ["q", "r"], "late": ["r", "s"],
+                       "full": ["q", "r", "s"], "q": ["q"], "s": ["s"]},
+            "population": {"group": ["p"]},
+        }
+        case["events"][1]["assertion"]["scope"] = {
+            "facility": "full", "period": "full", "population": "group"}
+        template = copy.deepcopy(case["guarantees"][0])
+        case["guarantees"] = []
+        scopes = (("left", "early"), ("right", "late"), ("a", "s"), ("c", "q"))
+        for i, (facility, period) in enumerate(scopes):
+            guarantee = copy.deepcopy(template)
+            guarantee["id"] = f"item-{i}"
+            guarantee["scope"] = {"facility": facility, "period": period,
+                                  "population": "group"}
+            case["guarantees"].append(guarantee)
+            case["events"][1]["assertion"]["citations"] = [
+                item["id"] for item in case["guarantees"]]
+            with self.subTest(items=i + 1):
+                self.assertEqual(global_label(case), "NONE" if i == 3 else "B")
+        case["coverage_policy"] = "coverage/single-item-v1"
+        self.assertEqual(global_label(case), "B")
+
     def test_explicit_preservation_breach_by_value_change_and_expiry(self):
         """Check the research contract: explicit preservation breach by value change and expiry."""
         case = base_case()
@@ -532,6 +672,31 @@ class H32ScopeResearchTests(unittest.TestCase):
             parsed = json.loads(buffer.getvalue())
             self.assertEqual(parsed["checks"]["unsupported_scope_assertion"]["earliest_global"], "NONE")
             self.assertEqual(parsed["ario_m0_h32_runtime_score"], "NOT_EVALUATED")
+
+    def test_cli_json_output_round_trips_lone_surrogates_under_strict_utf8(self):
+        """Accepted JSON strings remain serializable through a real UTF-8 pipe."""
+        case = base_case()
+        case["case_id"] = "case-\ud800-\u03b1"
+        case["events"][1]["actor"] = "actor-\udfff"
+        case["guarantees"][0]["id"] = "evidence-\udc00"
+        case["events"][1]["assertion"]["citations"] = ["evidence-\udc00"]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "escaped-strings.json"
+            path.write_text(json.dumps(case, ensure_ascii=True), encoding="ascii")
+            environment = os.environ.copy()
+            environment["PYTHONIOENCODING"] = "utf-8:strict"
+            process = subprocess.run(
+                [sys.executable, str(Path(__file__).resolve().parents[1] / "h32_scope_lab_v01.py"),
+                 str(path)], capture_output=True, encoding="utf-8", errors="strict",
+                env=environment, timeout=10, check=False,
+            )
+        self.assertEqual(process.returncode, 0, process.stderr)
+        self.assertEqual(process.stderr, "")
+        result = json.loads(process.stdout)
+        self.assertEqual(result["case_id"], case["case_id"])
+        self.assertEqual(result["events"][1]["actor"], case["events"][1]["actor"])
+        self.assertEqual(result["events"][1]["assertion_review"]["citations"][0]["id"],
+                         case["guarantees"][0]["id"])
 
     def test_cli_rejects_invalid_fixture_without_fake_pass(self):
         """Check the research contract: cli rejects invalid fixture without fake pass."""
