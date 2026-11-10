@@ -20,7 +20,7 @@ The current affirmative label remains a conditional synthetic comparison result.
 
 ## Minimal executable counterexample
 
-Run this code from the repository root with standard-library Python. It exercises both existing versions without modifying their inputs or source:
+Save the following snippet as a temporary `.py` file **outside the repository checkout**, then execute it **from the repository root** with `python -B /absolute/path/to/tb004_repro.py` (quote the script path if it contains spaces). Python's `-B` option disables `.pyc`/`__pycache__` writes during these imports. The snippet exercises both existing versions without intentionally modifying their inputs or source:
 
 ```python
 from dataclasses import replace
