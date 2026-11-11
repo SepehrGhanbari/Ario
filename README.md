@@ -445,6 +445,12 @@ The project intentionally avoids presenting unresolved questions as established 
 
 ## Research Publications
 
+**New Zenodo preprints (7–11 November 2026; author: Sepehr Ghanbari; not peer-reviewed):**
+
+* [Creation Without Sovereignty: Moral Symmetry, Non-Intervention, and the Ethics of Possible Artificial Civilizations](https://doi.org/10.5281/zenodo.24136175) — 11 November 2026. Conceptual ethics preprint; not peer-reviewed. Distinguishes hypothetical moral symmetry from proof of AI consciousness. [Research manuscript and discussion record (draft PR #181)](https://github.com/SepehrGhanbari/Ario/pull/181).
+* [Ario: Provenance-Aware Auditing of AI Claims — Research Summary and Proposed Studies](https://doi.org/10.5281/zenodo.24054535) — 8 November 2026. Research summary, a reported local test reproduction and three proposed (not yet executed) studies; not peer-reviewed.
+* [Independence Is Not Multiplicity: A Synthetic Witness-Provenance Study within Ario's Auditable Epistemic Framework](https://doi.org/10.5281/zenodo.24041161) — 7 November 2026. Bounded study of 16 synthetic scenarios and four counterexamples; not independently validated or peer-reviewed.
+
 **New working manuscript:** [Evidence Laundering in Auditable AI Systems](./papers/evidence-laundering-2026-10-27/Manuscript.md), submitted 27 October 2026 to SSRN, abstract ID [7675778](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=7675778). SSRN submission is under preliminary review: no peer review, public SSRN publication or manuscript DOI is yet confirmed. Synthetic tests demonstrate bounded behavior, not historical authenticity or comprehensive safety.
 
 
