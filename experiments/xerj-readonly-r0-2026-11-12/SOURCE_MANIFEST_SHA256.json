@@ -40,8 +40,8 @@
     },
     {
       "name": "R03_RESEARCH_NOTE_FA.md",
-      "sha256": "b6f8a763ee6b9cfddfaaf1c54acc6c51a70d88f8781ffa172ef0a223b3fdeec4",
-      "size": 2121
+      "sha256": "29c7bea50c00cc3e6657cb871ff1d0e78068f87851603e04771a552989234a6c",
+      "size": 4506
     },
     {
       "name": "TEST_LOG_R02.txt",
@@ -58,5 +58,6 @@
       "sha256": "55aa819809ff7fb0a4674b6c5f7128838a0b2626ddbe29b4c9b1fcda3452e1b7",
       "size": 1167
     }
-  ]
+  ],
+  "utf8_persian_report_repaired": true
 }
