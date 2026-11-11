@@ -5,9 +5,11 @@
   "experiment": "ARIO-XERJ-READONLY-R0",
   "live_xerj_executed": false,
   "main_repo_mutated": false,
+  "real_engine_behavior_verified": false,
+  "review_round": "coderabbit_3_findings_remediated_in_draft",
   "status": "RESEARCH_ONLY_MOCK_HTTP_TESTED",
   "unit_tests_failed": 0,
-  "unit_tests_passed": 26,
+  "unit_tests_passed": 33,
   "upstream_code_copied": false,
   "upstream_commit": "50e4ffded5518b1822cfac5450fa34d3829ab8ab"
 }

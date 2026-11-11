@@ -80,6 +80,47 @@ class ContractTests(unittest.TestCase):
         x['hits']['hits'][0]['_index']='ario_probe'
         r=parse_candidates(x,self.ledger,expected_index='ario_probe')
         self.assertEqual(r['status'],'CANDIDATES_ONLY')
+    def test_malformed_timeout_string_is_incomplete(self):
+        x = self.resp('e1')
+        x['timed_out'] = "true"
+        r = parse_candidates(x, self.ledger)
+        self.assertEqual(r['status'], 'RETRIEVAL_INCOMPLETE')
+        self.assertIn('malformed_timeout_metadata', r['anomalies'])
+
+    def test_malformed_timeout_number_is_incomplete(self):
+        x = self.resp('e1')
+        x['timed_out'] = 0
+        r = parse_candidates(x, self.ledger)
+        self.assertIn('malformed_timeout_metadata', r['anomalies'])
+
+    def test_malformed_shards_list_is_incomplete(self):
+        x = self.resp('e1')
+        x['_shards'] = []
+        r = parse_candidates(x, self.ledger)
+        self.assertEqual(r['status'], 'RETRIEVAL_INCOMPLETE')
+        self.assertIn('malformed_shard_metadata', r['anomalies'])
+
+    def test_missing_shard_failure_count_is_incomplete(self):
+        x = self.resp('e1')
+        x['_shards'] = {'total': 1, 'successful': 1}
+        self.assertIn('malformed_shard_metadata', parse_candidates(x, self.ledger)['anomalies'])
+
+    def test_boolean_shard_failure_count_is_incomplete(self):
+        x = self.resp('e1')
+        x['_shards'] = {'total': 1, 'successful': 1, 'failed': False}
+        self.assertIn('malformed_shard_metadata', parse_candidates(x, self.ledger)['anomalies'])
+
+    def test_inconsistent_shard_count_is_incomplete(self):
+        x = self.resp('e1')
+        x['_shards'] = {'total': 1, 'successful': 1, 'failed': 0, 'skipped': 1}
+        self.assertIn('malformed_shard_metadata', parse_candidates(x, self.ledger)['anomalies'])
+
+    def test_valid_completion_metadata_remains_candidate_only(self):
+        x = self.resp('e1')
+        x['timed_out'] = False
+        x['_shards'] = {'total': 1, 'successful': 1, 'skipped': 0, 'failed': 0}
+        self.assertEqual(parse_candidates(x, self.ledger)['status'], 'CANDIDATES_ONLY')
+
     def test_timeout_reports_incomplete(self):
         x=self.resp('e1');x['timed_out']=True
         r=parse_candidates(x,self.ledger)

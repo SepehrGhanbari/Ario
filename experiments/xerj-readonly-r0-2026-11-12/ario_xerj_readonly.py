@@ -62,11 +62,27 @@ def parse_candidates(result: object, ledger: Mapping[str, ArioRecord], *, k: int
     if len(hits) > k:
         raise ValueError("search response exceeds requested k")
     candidates, anomalies, seen = [], [], set()
-    if result.get("timed_out") is True:
-        anomalies.append("search_timed_out")
-    shards = result.get("_shards")
-    if isinstance(shards, dict) and (not isinstance(shards.get("failed", 0), int) or shards.get("failed", 0) != 0):
-        anomalies.append("search_shard_failures")
+    # When completion metadata is present, fail closed on malformed types.
+    # A non-boolean truthy value such as "true" must never mean success.
+    if "timed_out" in result:
+        timed_out = result["timed_out"]
+        if type(timed_out) is not bool:
+            anomalies.append("malformed_timeout_metadata")
+        elif timed_out:
+            anomalies.append("search_timed_out")
+    if "_shards" in result:
+        shards = result["_shards"]
+        if not isinstance(shards, dict):
+            anomalies.append("malformed_shard_metadata")
+        elif any(type(shards.get(field)) is not int or shards[field] < 0
+                 for field in ("total", "successful", "failed")):
+            anomalies.append("malformed_shard_metadata")
+        elif (type(shards.get("skipped", 0)) is not int or
+              shards.get("skipped", 0) < 0 or
+              shards["successful"] + shards["failed"] + shards.get("skipped", 0) > shards["total"]):
+            anomalies.append("malformed_shard_metadata")
+        elif shards["failed"]:
+            anomalies.append("search_shard_failures")
     for rank, hit in enumerate(hits, 1):
         if not isinstance(hit, dict) or not isinstance(hit.get("_id"), str):
             anomalies.append("malformed_hit")
@@ -143,8 +159,10 @@ class XERJReadOnly:
                          headers={"Content-Type":"application/json", "Authorization": f"ApiKey {self.key}"})
             resp = conn.getresponse()
             data = resp.read(262145)  # max 256 KiB +1
-            if resp.status != 200 or len(data) > 262144:
-                raise RuntimeError("search failed or returned oversized body")
+            if resp.status != 200:
+                raise RuntimeError(f"search returned HTTP {resp.status}")
+            if len(data) > 262144:
+                raise RuntimeError("search returned oversized body")
             try:
                 obj = json.loads(data)
             except (json.JSONDecodeError, UnicodeDecodeError) as exc:
