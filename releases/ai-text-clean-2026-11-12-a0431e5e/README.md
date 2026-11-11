@@ -24,11 +24,29 @@ omitted files and explains why each is not duplicated.
 Nested archives such as prior 44.48 MB and 17.75 MB full-text exports, the older
 2.86 MB copies, and all PDF/ZIP/DOCX binaries are **not embedded**. The historical
 files themselves have not been altered; binaries are available from repository
-sources and the older reproducibility ZIP. The previously bloated 44.48 MB text
-export is to be removed from the *active* main tree in this publication PR,
-while remaining accessible through Git history at its historical commit.
+sources and the older reproducibility ZIP. The previous bloated 44.48 MB text export has been removed from the active
+Git tree and remains available only through its historical Git commit.
 
 This is a text-readable source snapshot, **not** a complete byte-for-byte
 repository restoration package. Git history, ignored/untracked files, and other
 external resources are outside scope. Loading it does not prove that any
 particular model has consumed the entire text or verified project claims.
+
+## Paired clean ZIP — exact same pinned source commit
+
+- File: [ario-source-clean.zip](./ario-source-clean.zip)
+- Size: **4,205,488** bytes (approximately 4.21 MB)
+- SHA-256: 559c3c19e5179440d4e2fe857b6da55ad4af1244d6f1b0f276a30cb8b354a781
+- Pinned source commit: a0431e5e294a5c1169d17d18e28312b7fe234855 (same as the TXT)
+- Audited **215** Git-tracked paths; **208 unique useful original files** physically included
+- **197** unmodified text/code files and **11** original non-text binary assets (PDF/DOCX/published ZIP)
+- **6** redundant earlier repository exports and **1** exact same-content text copy omitted
+- ZIP includes EXPORT_META/manifest.json and EXPORT_META/README.txt describing every included/excluded source blob
+- All 208 original file bodies were checked by size, Git blob SHA-1, SHA-256 and ZIP round-trip CRC/hash.
+
+The ZIP and TXT are complementary **deduplicated** views of the very same 215-file
+source commit. The TXT is intended for language models; the ZIP retains the
+real binary assets and source file structure. Neither claims to contain all 215
+physical blobs because that would re-embed old exported archives and duplicates.
+A lossless original 215-blob repository ZIP can still be fetched from GitHub's
+archive of the pinned source commit if exact original tree restoration is needed.
