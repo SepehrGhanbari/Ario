@@ -154,3 +154,12 @@ This metadata-only clarification does not change the underlying research, test o
 - `24054535` reports a local reproduction and proposed studies; this site does not reclassify proposals as executed experiments.
 - `24041161` studies constructed witness-provenance scenarios, not proven real-world witness independence.
 - Updated paths: `README.md`, `papers/README.md`, `website/index.html`, `website/research.html`, `website/SOURCES.md`. Existing publication items were retained and no CSS, JavaScript, CSP, configuration, keys or runtime were modified.
+
+## Full repo model-readable download — 11 November 2026
+
+- **Author requested** complete ZIP and TXT versions of the latest public GitHub tree, with *no summarization* or loss of binary files.
+- **Source snapshot** pinned at commit `05ba5c960aaea96fc6bb80504b53b4d47e7d42f5`, tree `8a9429d396c09fe17682a61dd91cb43672d3cb79`: 204 tracked files, 16,183,258 bytes.
+- [ZIP](https://raw.githubusercontent.com/SepehrGhanbari/Ario/main/releases/ai-readable-full-2026-11-11-05ba5c9/ario-full.zip) (6,524,694 bytes; SHA-256 `d11269dc593f9cbb70e7d622a8acc31d0fe36d292a935225aca6b8f98d5c5d51`), [TXT](https://raw.githubusercontent.com/SepehrGhanbari/Ario/main/releases/ai-readable-full-2026-11-11-05ba5c9/ario-full.txt) (17,751,878 bytes; SHA-256 `86aafca0e20fb356bdee14c05815d017b3212ef68afed8757fa16f1a1b746af6`), [manifest](https://raw.githubusercontent.com/SepehrGhanbari/Ario/main/releases/ai-readable-full-2026-11-11-05ba5c9/ario-manifest.json) and [reproduction notes](https://github.com/SepehrGhanbari/Ario/tree/main/releases/ai-readable-full-2026-11-11-05ba5c9).
+- Export method: enumerate `git ls-tree -r -z HEAD`, read each blob with `git cat-file`, verify original Git object ID and SHA-256; ZIP entries and length-framed TXT records all re-read and byte-compared. Independent TXT restore reproduced 204 files with matching SHA-256.
+- The snapshot does **not** claim Git full history, private/off-repo data, future commits, consciousness, truth or source-independent certification. The publication/link commit necessarily occurs after the pinned source commit.
+- Historical Zenodo snapshot (159 files, 25 October) and old model-readable TXT remain unchanged. This update adds links and evidence metadata only; inline CSS/JS, CSP, Vercel configuration, runtime, security and governance are untouched.
