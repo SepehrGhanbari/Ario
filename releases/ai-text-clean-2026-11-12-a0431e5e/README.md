@@ -4,14 +4,14 @@ This is the **recommended text input** for models reading the Ario source. It is
 a pinned snapshot of the public repository; it is not a rolling export.
 
 - Source: https://github.com/SepehrGhanbari/Ario
-- Pinned source commit: \`a0431e5e294a5c1169d17d18e28312b7fe234855\`
+- Pinned source commit: `a0431e5e294a5c1169d17d18e28312b7fe234855`
 - Git-tracked source files checked: **215** (85,029,571 source bytes)
 - Full, unique UTF-8 code/text payloads included verbatim: **197**
 - Identical text copies represented by one path plus an alias entry: **1**
 - Archived snapshot exports and non-text binaries omitted from payload: **17**
 - Output TXT file: [ario-source-clean.txt](./ario-source-clean.txt)
 - Output bytes: **3,497,045**
-- Output SHA-256: \`0b78796c9e2afe361951c590297538cfe881409046cc9e6f64371cb76800b77c\`
+- Output SHA-256: `0b78796c9e2afe361951c590297538cfe881409046cc9e6f64371cb76800b77c`
 - Source inventory and per-file SHA-256: [manifest.json](./manifest.json)
 
 ## What is and is not here
