@@ -1,0 +1,40 @@
+{
+  "files": [
+    {
+      "name": "README.md",
+      "sha256": "4b264492a94e78ab29ed515dda46ca857dbf05a03142b09e89d9d5443b1a4273",
+      "size": 1237
+    },
+    {
+      "name": "ASSESSMENT_FA.md",
+      "sha256": "947b0d75eadaf273a1fe282888013e5dc9af9530db6009ff8c7ab7fef1f219ee",
+      "size": 12200
+    },
+    {
+      "name": "ario_xerj_readonly.py",
+      "sha256": "e0980f09529919ac508339ba3ad5d034017fbdef9c54be60c5a0d5f5251d1722",
+      "size": 7011
+    },
+    {
+      "name": "test_ario_xerj_readonly.py",
+      "sha256": "e603eeb35ed6247ceabf254a92f731bae5cf834e06f5c827b8f1dd4562f91ff7",
+      "size": 5635
+    },
+    {
+      "name": "test_wire_contract.py",
+      "sha256": "96e44ce7c6bbbd7c801c476fa16f544a5bd835489e5008c87d272e6c73408638",
+      "size": 3187
+    },
+    {
+      "name": "TEST_LOG.txt",
+      "sha256": "18504584b68c84ca60ed794c4aacc50579608bd8bab7836e4d4bcb44eb00b326",
+      "size": 2867
+    },
+    {
+      "name": "RESULTS.json",
+      "sha256": "7d64e79a04b57e966842fb5fe7a4c8b3c9910ae92fc691ed42f959feaa01cc39",
+      "size": 410
+    }
+  ],
+  "status": "RESEARCH_ONLY"
+}
