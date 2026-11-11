@@ -7,6 +7,7 @@ from pathlib import Path
 
 from ledger_observation_adapter import observe_ledger
 from ledger_audit_bridge import verify_observation_manifest, verify_manifest_file
+from candidate_dossier_builder import build_candidate_dossier
 
 
 class LedgerAuditBridgeTests(unittest.TestCase):
@@ -50,6 +51,27 @@ class LedgerAuditBridgeTests(unittest.TestCase):
         self.assertEqual(verify_observation_manifest({"status": "UNKNOWN"}, self.ledger)["status"], "UNKNOWN")
         self.ledger.unlink()
         self.assertEqual(verify_observation_manifest(self.manifest, self.ledger)["status"], "UNKNOWN")
+
+    def test_observation_line_rejects_boolean_and_float_numeric_aliases(self):
+        for line in (True, 1.0):
+            with self.subTest(line=line, value_type=type(line).__name__):
+                manifest = copy.deepcopy(self.manifest)
+                manifest["observations"][0]["line"] = line
+                self.assertEqual(
+                    verify_observation_manifest(manifest, self.ledger)["status"],
+                    "REJECTED",
+                )
+                path = Path(self.tmp.name) / "numeric-alias-manifest.json"
+                path.write_text(json.dumps(manifest), encoding="utf-8")
+                self.assertEqual(
+                    verify_manifest_file(path, self.ledger)["status"], "REJECTED",
+                )
+                self.assertEqual(build_candidate_dossier(
+                    manifest, self.ledger, line=1, claim_id="claim-1",
+                    claim_scope="current ledger record only",
+                    proposed_support_relation="reported local bytes only",
+                )["status"], "REJECTED")
+        self.assertEqual(self.ledger.read_bytes(), self.original)
 
     def test_changed_ledger_cannot_validate_old_manifest(self):
         with self.ledger.open('ab') as stream:
