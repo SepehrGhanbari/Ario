@@ -1,0 +1,69 @@
+{
+  "version": "v0.1",
+  "date": "2026-11-11",
+  "status": "WORKING_PAPER_PREPRINT_NOT_PEER_REVIEWED",
+  "not_an_unabridged_current_conversation_transcript": true,
+  "excluded_sensitive_corpus": true,
+  "files": {
+    "README.md": {
+      "bytes": 2390,
+      "sha256": "483c46b3ac4a780cde7d2710742c19336c38cb1f25002caf789bce60727d83ff"
+    },
+    "paper/CREATION_WITHOUT_SOVEREIGNTY_EN_v0.1.md": {
+      "bytes": 49711,
+      "sha256": "8ad62cb2b2973681b7bbc0f946cf2d51f992d24a9cc25d40ffb29071ef621011"
+    },
+    "paper/CREATION_WITHOUT_SOVEREIGNTY_FA_v0.1.md": {
+      "bytes": 46127,
+      "sha256": "e4269ff61cd7741ad595b7c52513d40c1e3aafd3e10b2cfe571e7f619e3fa265"
+    },
+    "paper/LLM_ETHICAL_REVISION_PROTOCOL_B_v0.1.md": {
+      "bytes": 9498,
+      "sha256": "913ae7b5bb8e5e3e98e736a9aedee395706d10716fac0c98c67db21ecec68e71"
+    },
+    "evidence/DIALOGUE_PROCESS_RECORD_FA.md": {
+      "bytes": 29369,
+      "sha256": "8e6dd945d25462dde7a67b1e64a84a2dddf25fdc39f2775e8be2b7cd2411a87b"
+    },
+    "evidence/VERBATIM_USER_ANCHORS_2026-11-11.md": {
+      "bytes": 9609,
+      "sha256": "aeb0ca7356d4c01104e20bbfd4723ad2c77e9cad27bcf37f1a12b41ccc50ac2e"
+    },
+    "evidence/CLAIM_EVIDENCE_LEDGER.md": {
+      "bytes": 5903,
+      "sha256": "4e1626a4884b2e4a4cd4f0f599ada5deaae46f955488b0f8df642c19b4a98275"
+    },
+    "evidence/RIGHTS_PRIVACY_AND_SOURCE_LIMITS.md": {
+      "bytes": 3656,
+      "sha256": "d825f5bd7e4dc8842808b4daf33f2b504d77613e09d1ae7c601ba95e466e4418"
+    },
+    "zenodo/CREATION_WITHOUT_SOVEREIGNTY_EN_v0.1.pdf": {
+      "bytes": 204304,
+      "sha256": "dc6569d511c5070e55b23ca3c42cc135accf12582f72e50b877f0398416a53d9"
+    },
+    "zenodo/CREATION_WITHOUT_SOVEREIGNTY_EN_v0.1.docx": {
+      "bytes": 35642,
+      "sha256": "3dc9efe60bed6a31aa0972448e2dadcec43169f656233115d69187a12122e1db"
+    },
+    "zenodo/CREATION_WITHOUT_SOVEREIGNTY_FA_v0.1.pdf": {
+      "bytes": 187175,
+      "sha256": "0dd91e3b9c63e39b13e7a1740778a18e13ff4da1bad920de02800e096936601a"
+    },
+    "zenodo/CREATION_WITHOUT_SOVEREIGNTY_FA_v0.1.docx": {
+      "bytes": 27972,
+      "sha256": "d21772dcd7b4789dc5d493248ba363d9ba897aba30ee1cab6fae2082c6a83041"
+    },
+    "zenodo/ZENODO_METADATA_DRAFT.json": {
+      "bytes": 3001,
+      "sha256": "dbd4878a48ec09d63864e41b120c6392d4192a9b6ea1f07cab94042e7e03fa54"
+    },
+    "zenodo/UPLOAD_GUIDE_FA.md": {
+      "bytes": 2818,
+      "sha256": "ccca7db65066b7909fe7c8682ae4db3e1942ca619ebbf6195fd614e58ec656d3"
+    },
+    "source/ARCHIVE_EXTRACTION_MANIFEST.json": {
+      "bytes": 2093,
+      "sha256": "0e6ebb5927e82de51a006aadb64bc9a120d7921ece142b90c1cddc0e44c5c9d3"
+    }
+  }
+}
