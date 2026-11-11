@@ -1,0 +1,27 @@
+{
+  "commit": "05ba5c960aaea96fc6bb80504b53b4d47e7d42f5",
+  "git_tree": "8a9429d396c09fe17682a61dd91cb43672d3cb79",
+  "tracked_files": 204,
+  "tracked_bytes": 16183258,
+  "verification": "PASS: ZIP and TXT independently reconstructed all Git blobs and matched source SHA1/SHA256.",
+  "ario-full.zip": {
+    "bytes": 6524694,
+    "sha256": "d11269dc593f9cbb70e7d622a8acc31d0fe36d292a935225aca6b8f98d5c5d51"
+  },
+  "ario-full.txt": {
+    "bytes": 17751878,
+    "sha256": "86aafca0e20fb356bdee14c05815d017b3212ef68afed8757fa16f1a1b746af6"
+  },
+  "ario-manifest.json": {
+    "bytes": 63205,
+    "sha256": "f86fb10ef3eb71dd6e3c348b3f0c9b42c88b3837ae889918c33d8f5d62fe11d8"
+  },
+  "README-EXPORT.txt": {
+    "bytes": 794,
+    "sha256": "6886802bdf66b9a5761cdd0070c69a2f6415d42478c0f6c19e95a81df64a96b0"
+  },
+  "RESTORE_FROM_TXT.py": {
+    "bytes": 1623,
+    "sha256": "6a258ee6a736b16302ef9416139ebf585855ab6a1baa6940d1b9334fbe349d04"
+  }
+}

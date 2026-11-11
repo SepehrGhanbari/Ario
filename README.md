@@ -445,6 +445,8 @@ The project intentionally avoids presenting unresolved questions as established 
 
 ## Research Publications
 
+**Complete Ario model export (11 Nov 2026, pinned at source commit `05ba5c960aaea96fc6bb80504b53b4d47e7d42f5`):** [ZIP — all 204 tracked files](https://raw.githubusercontent.com/SepehrGhanbari/Ario/main/releases/ai-readable-full-2026-11-11-05ba5c9/ario-full.zip) · [TXT — all 204 files, readable text plus Base64 binaries](https://raw.githubusercontent.com/SepehrGhanbari/Ario/main/releases/ai-readable-full-2026-11-11-05ba5c9/ario-full.txt) · [SHA-256 manifest](https://raw.githubusercontent.com/SepehrGhanbari/Ario/main/releases/ai-readable-full-2026-11-11-05ba5c9/ario-manifest.json) · [restore/verification](https://raw.githubusercontent.com/SepehrGhanbari/Ario/main/releases/ai-readable-full-2026-11-11-05ba5c9/RESTORE_FROM_TXT.py) · [export documentation](https://github.com/SepehrGhanbari/Ario/tree/main/releases/ai-readable-full-2026-11-11-05ba5c9). This is a complete source-tree snapshot, **not** Git commit history or later `main` changes.
+
 **New Zenodo preprints (7–11 November 2026; author: Sepehr Ghanbari; not peer-reviewed):**
 
 * [Creation Without Sovereignty: Moral Symmetry, Non-Intervention, and the Ethics of Possible Artificial Civilizations](https://doi.org/10.5281/zenodo.24136175) — 11 November 2026. Conceptual ethics preprint; not peer-reviewed. Distinguishes hypothetical moral symmetry from proof of AI consciousness. [Research manuscript and discussion record (draft PR #181)](https://github.com/SepehrGhanbari/Ario/pull/181).
