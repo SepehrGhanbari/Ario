@@ -44,7 +44,8 @@ class Candidate:
 
 
 def parse_candidates(result: object, ledger: Mapping[str, ArioRecord], *, k: int = 3,
-                     expected_index: str | None = None) -> dict:
+                     expected_index: str | None = None,
+                     require_completion_metadata: bool = False) -> dict:
     """Accept only IDs resolved from Ario's original ledger, never search result text.
 
     Returning CANDIDATES_ONLY is deliberately NOT a claim of evidence sufficiency.
@@ -62,6 +63,13 @@ def parse_candidates(result: object, ledger: Mapping[str, ArioRecord], *, k: int
     if len(hits) > k:
         raise ValueError("search response exceeds requested k")
     candidates, anomalies, seen = [], [], set()
+    # The pinned XERJ ES search source emits both metadata fields. For live
+    # HTTP calls, absence is UNKNOWN, not evidence of successful completion.
+    if require_completion_metadata:
+        if "timed_out" not in result:
+            anomalies.append("missing_timeout_metadata")
+        if "_shards" not in result:
+            anomalies.append("missing_shard_metadata")
     # When completion metadata is present, fail closed on malformed types.
     # A non-boolean truthy value such as "true" must never mean success.
     if "timed_out" in result:
@@ -112,7 +120,12 @@ def parse_candidates(result: object, ledger: Mapping[str, ArioRecord], *, k: int
         # untrusted search metadata. Only the original Ario ledger is emitted.
         candidates.append(Candidate(eid,record.text,record.sha256,record.root_label,
                                     record.recorded_at,record.valid_at,rank))
+    # Fail-closed output: when any hit/metadata is anomalous, emit NO accepted
+    # candidates, even if some rows checked out. Callers must not accidentally
+    # promote an incomplete partial set by ignoring the status field.
     status = "RETRIEVAL_INCOMPLETE" if anomalies else ("CANDIDATES_ONLY" if candidates else "NO_HITS_UNKNOWN")
+    if anomalies:
+        candidates = []
     labels = sorted({c.root_label for c in candidates if c.root_label is not None})
     return {"status": status,
             "candidates": [c.__dict__ for c in candidates],
@@ -163,10 +176,14 @@ class XERJReadOnly:
                 raise RuntimeError(f"search returned HTTP {resp.status}")
             if len(data) > 262144:
                 raise RuntimeError("search returned oversized body")
+            media_type = (resp.getheader("Content-Type") or "").partition(";")[0].strip().lower()
+            if media_type not in ("application/json", "application/vnd.elasticsearch+json"):
+                raise RuntimeError("search returned unsupported Content-Type")
             try:
                 obj = json.loads(data)
             except (json.JSONDecodeError, UnicodeDecodeError) as exc:
                 raise RuntimeError("invalid JSON from search endpoint") from exc
-            return parse_candidates(obj, ledger, k=k, expected_index=self.index)
+            return parse_candidates(obj, ledger, k=k, expected_index=self.index,
+                                    require_completion_metadata=True)
         finally:
             conn.close()

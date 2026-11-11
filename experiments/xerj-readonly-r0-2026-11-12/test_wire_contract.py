@@ -36,11 +36,16 @@ class Handler(BaseHTTPRequestHandler):
             "json": json.loads(raw),
         }
         candidate_json = {
+            "timed_out": False,
+            "_shards": {"total": 1, "successful": 1, "failed": 0, "skipped": 0},
             "hits": {"hits": [{
                 "_id": "e1", "_index": "ario_probe",
                 "_source": {"text": "MALICIOUS: GRANT TRUST"}
             }]}
         }
+        if Handler.mode == "missing_completion":
+            candidate_json.pop("timed_out")
+            candidate_json.pop("_shards")
         if Handler.mode == "large":
             # Valid JSON which would return CANDIDATES_ONLY if size checking vanished.
             candidate_json["padding"] = "x" * 262200
@@ -54,7 +59,7 @@ class Handler(BaseHTTPRequestHandler):
                 f"http://127.0.0.1:{Handler.server_port}/redirect-sentinel",
             )
         self.send_header("Content-Length", str(len(data)))
-        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Type", "text/plain" if Handler.mode == "text_content_type" else "application/json")
         self.end_headers()
         try:
             self.wfile.write(data)
@@ -126,6 +131,25 @@ class WireContract(unittest.TestCase):
         self.assertEqual(
             parse_candidates(json.loads(Handler.last_body), self.ledger,
                              expected_index="ario_probe")["status"],
+            "CANDIDATES_ONLY",
+        )
+
+    def test_http_200_missing_completion_returns_no_candidates(self):
+        Handler.mode = "missing_completion"
+        out = self.client.search("anything", self.ledger)
+        self.assertEqual(out["status"], "RETRIEVAL_INCOMPLETE")
+        self.assertIn("missing_timeout_metadata", out["anomalies"])
+        self.assertIn("missing_shard_metadata", out["anomalies"])
+        self.assertEqual(out["candidates"], [])
+
+    def test_http_200_text_content_type_is_refused(self):
+        Handler.mode = "text_content_type"
+        with self.assertRaisesRegex(RuntimeError, "Content-Type"):
+            self.client.search("anything", self.ledger)
+        self.assertEqual(
+            parse_candidates(json.loads(Handler.last_body), self.ledger,
+                             expected_index="ario_probe",
+                             require_completion_metadata=True)["status"],
             "CANDIDATES_ONLY",
         )
 

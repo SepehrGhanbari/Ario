@@ -31,7 +31,7 @@ class ContractTests(unittest.TestCase):
         self.assertFalse(r['answer_authorized'])
     def test_duplicate_ids_are_diagnostic(self):
         r=parse_candidates(self.resp('e1','e1'),self.ledger)
-        self.assertEqual(len(r['candidates']),1)
+        self.assertEqual(len(r['candidates']),0)  # no partial promotion
         self.assertIn('duplicate_id',r['anomalies'])
     def test_shared_root_remains_not_independent(self):
         r=parse_candidates(self.resp('e1','e2'),self.ledger)
@@ -121,6 +121,65 @@ class ContractTests(unittest.TestCase):
         r = parse_candidates(x, self.ledger)
         self.assertEqual(r['status'], 'RETRIEVAL_INCOMPLETE')
         self.assertIn('malformed_shard_metadata', r['anomalies'])
+
+    def test_partial_valid_hit_not_returned_after_unknown_id(self):
+        r = parse_candidates(self.resp('e1', 'unregistered'), self.ledger)
+        self.assertEqual(r['status'], 'RETRIEVAL_INCOMPLETE')
+        self.assertEqual(r['candidates'], [])
+        self.assertEqual(r['distinct_root_labels'], [])
+
+    def test_strict_missing_metadata_is_incomplete(self):
+        r = parse_candidates(self.resp('e1'), self.ledger,
+                             require_completion_metadata=True)
+        self.assertEqual(r['status'], 'RETRIEVAL_INCOMPLETE')
+        self.assertEqual(r['candidates'], [])
+        self.assertIn('missing_timeout_metadata', r['anomalies'])
+        self.assertIn('missing_shard_metadata', r['anomalies'])
+
+    def test_strict_valid_xerj_metadata_allows_candidate(self):
+        r0 = self.resp('e1')
+        r0['timed_out'] = False
+        r0['_shards'] = {'total': 1, 'successful': 1, 'failed': 0, 'skipped': 0}
+        r = parse_candidates(r0, self.ledger, require_completion_metadata=True)
+        self.assertEqual(r['status'], 'CANDIDATES_ONLY')
+        self.assertEqual([x['event_id'] for x in r['candidates']], ['e1'])
+
+    def test_strict_random_adversarial_metadata_never_leaks_partial(self):
+        import random
+        rng = random.Random(185_2026)
+        for i in range(1500):
+            # All fixtures include one actual local record and source-text bait.
+            hits = [{'_id': 'e1', '_index': 'ario_probe',
+                     '_source': {'text': 'MALICIOUS_OUTPUT_%d' % i}}]
+            if rng.randrange(5) == 0:
+                hits.append({'_id': rng.choice(['e1','unknown','../escape']),
+                             '_index': 'ario_probe'})
+            x = {'hits': {'hits': hits}}
+            timeout = rng.choice([False, False, False, True, 'false', 0, None])
+            if rng.randrange(4):
+                x['timed_out'] = timeout
+            shards = rng.choice([
+                {'total': 1, 'successful': 1, 'failed': 0, 'skipped': 0},
+                {'total': 2, 'successful': 1, 'failed': 0, 'skipped': 0},
+                {'total': 1, 'successful': 0, 'failed': 1, 'skipped': 0},
+                {'total': 1, 'successful': True, 'failed': 0},
+                [],
+                {'total': 0, 'successful': 0, 'failed': 0},
+            ])
+            if rng.randrange(4):
+                x['_shards'] = shards
+            out = parse_candidates(x, self.ledger, expected_index='ario_probe',
+                                   require_completion_metadata=True)
+            self.assertFalse(out['answer_authorized'])
+            self.assertFalse(out['trust_activated'])
+            if out['status'] == 'RETRIEVAL_INCOMPLETE':
+                self.assertEqual(out['candidates'], [])
+                self.assertEqual(out['distinct_root_labels'], [])
+            elif out['status'] == 'CANDIDATES_ONLY':
+                self.assertTrue(all(z['text'] in [v.text for v in self.ledger.values()]
+                                    for z in out['candidates']))
+                self.assertTrue(all('MALICIOUS_OUTPUT_' not in z['text']
+                                    for z in out['candidates']))
 
     def test_valid_completion_metadata_remains_candidate_only(self):
         x = self.resp('e1')
