@@ -2,7 +2,7 @@
   "files": [
     {
       "name": "README.md",
-      "sha256": "3ce18f523790814186ef257bb0269f23751ea12af6b1463b4228849f90a3a93f",
+      "sha256": "5ca3c7c43d0fb471458903fcfbda3dc6c9d4319889e19ab8378125a2f1dbd70e",
       "size": 1700
     },
     {
@@ -12,13 +12,13 @@
     },
     {
       "name": "ario_xerj_readonly.py",
-      "sha256": "78a3558c8a0614ac403948a560622e206a71dc583c00b6bd83ed364c9b9cc25d",
-      "size": 7897
+      "sha256": "02c83c91cb61d4aee8cdfcb23e44743b1ad5270186b905a9552572860e7359d5",
+      "size": 7898
     },
     {
       "name": "test_ario_xerj_readonly.py",
-      "sha256": "0b922d40dad4d1fd9af528be6153b0db87c491c1b63a9f44d74b2998b5cb20e8",
-      "size": 7503
+      "sha256": "f32876505bff997237052bbfd9508150f165f7121b58634af6f54d0eacb9b29a",
+      "size": 7848
     },
     {
       "name": "test_wire_contract.py",
@@ -27,15 +27,15 @@
     },
     {
       "name": "TEST_LOG.txt",
-      "sha256": "0b633daa766db2449f9c174b2f82c5c5bdb646c113e7873a59db9f7979be97c3",
-      "size": 3838
+      "sha256": "6bbcd56c1227156659a8cc99038d5d22130ec3e05636f518d6c254a437f3ffea",
+      "size": 3981
     },
     {
       "name": "RESULTS.json",
-      "sha256": "a465b1eb64b5678a8ba46ebd8343c21b4d3660861b99eb913f8875c5a0d35f40",
+      "sha256": "2dc1e1a36179feb52cac27349ba793663cdaffdc6455e4261f25e3d8eeb045d0",
       "size": 515
     }
   ],
   "status": "RESEARCH_ONLY",
-  "review_round": "CODE_RABBIT_R0_HARDENING_2026-11-12"
+  "review_round": "CODE_RABBIT_FOLLOWUP_HARDENING_2026-11-12"
 }

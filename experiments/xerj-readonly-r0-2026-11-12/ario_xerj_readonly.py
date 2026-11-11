@@ -79,7 +79,7 @@ def parse_candidates(result: object, ledger: Mapping[str, ArioRecord], *, k: int
             anomalies.append("malformed_shard_metadata")
         elif (type(shards.get("skipped", 0)) is not int or
               shards.get("skipped", 0) < 0 or
-              shards["successful"] + shards["failed"] + shards.get("skipped", 0) > shards["total"]):
+              shards["successful"] + shards["failed"] + shards.get("skipped", 0) != shards["total"]):
             anomalies.append("malformed_shard_metadata")
         elif shards["failed"]:
             anomalies.append("search_shard_failures")

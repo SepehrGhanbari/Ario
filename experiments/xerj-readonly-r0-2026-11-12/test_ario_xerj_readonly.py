@@ -115,6 +115,13 @@ class ContractTests(unittest.TestCase):
         x['_shards'] = {'total': 1, 'successful': 1, 'failed': 0, 'skipped': 1}
         self.assertIn('malformed_shard_metadata', parse_candidates(x, self.ledger)['anomalies'])
 
+    def test_unaccounted_shard_completion_is_incomplete(self):
+        x = self.resp('e1')
+        x['_shards'] = {'total': 2, 'successful': 1, 'failed': 0, 'skipped': 0}
+        r = parse_candidates(x, self.ledger)
+        self.assertEqual(r['status'], 'RETRIEVAL_INCOMPLETE')
+        self.assertIn('malformed_shard_metadata', r['anomalies'])
+
     def test_valid_completion_metadata_remains_candidate_only(self):
         x = self.resp('e1')
         x['timed_out'] = False
