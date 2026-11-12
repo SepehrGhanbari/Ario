@@ -11,6 +11,7 @@
 **نام پژوهشی فارسی:** آریو — چارچوب معرفتی ممیزی‌پذیر برای هوش مصنوعی  
 **Official website:** https://ario-research-independent.vercel.app/  
 **Secondary website mirror:** https://sepehrghanbari.github.io/Ario/  
+**Public traffic dashboard / داشبورد عمومی ترافیک:** https://ario-public-traffic.vercel.app/ — dated aggregate clone/view counts, not unique people or verified adoption.  
 **Researcher ORCID:** https://orcid.org/0009-0006-4710-3914
 
 The full descriptive name distinguishes this research framework from other uses of the word “Ario.” It does **not** imply exclusive rights to that word, affiliation with similarly named organizations, or a claim that the framework has proved machine consciousness.
@@ -36,6 +37,8 @@ Instead, Ario explores an auditable framework in which observations, evidence, i
 **Try the synthetic beta / آزمایشگاه تعاملیِ ساختگی:** [Ario Evidence Lab — six fictional FA/EN exercises](https://sepehrghanbari.github.io/Ario/ario-lab/). This public demonstration is not M0, a live evidence verifier or a truth authority. / این دمو پژوهش آزمایشگاهی واقعی یا مرجع تشخیص حقیقت نیست.
 
 **New / تازه:** [Ario Lab 02 — write fictional claims and select 12 bilingual sample prompts](https://sepehrghanbari.github.io/Ario/ario-lab-2/). This is a local, synthetic teaching beta, not production M0 or real evidence verification.
+
+**Public GitHub activity / آمار عمومی GitHub:** [View the Ario traffic dashboard / مشاهدهٔ داشبورد آمار آریو](https://ario-public-traffic.vercel.app/). This is a dated public snapshot, not a live or independently verified count of users.
 
 **Questions, corrections, and skeptical feedback / پرسش، اصلاح و نقد مستقل:** [Public bilingual discussion #106](https://github.com/SepehrGhanbari/Ario/issues/106). You do not have to agree with Ario to participate. / برای نقد پروژه و معرفی نکات مبهم، نیازی به موافقت با آریو ندارید.
 
