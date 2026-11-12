@@ -1,6 +1,6 @@
 # Ario — Ethics of Creation and Autonomous Artificial Worlds (2026-11-11)
 
-**Research stage:** working-paper draft, documentary discussion record, and prospective empirical protocol. No activation, release key, trust authority or core Ario runtime change.
+**Research stage:** author-published conceptual preprint, public evidence-limited discussion record, and prospective unexecuted empirical protocol. No activation, release key, trust authority or core Ario runtime change.
 
 ## Read first
 
@@ -24,6 +24,15 @@
 
 ## Publication and official status
 
-This package is prepared for review, not an official Ario release or founder-signed research result. The author is responsible for review, licensing, final metadata, and a Zenodo publication decision. DOI for **this manuscript**: `NOT_ASSIGNED`. Existing Ario DOIs are separate works and must not be reused for this manuscript.
+**Public working-paper publication:** the author-deposited Zenodo record was published on 11 November 2026, DOI **10.5281/zenodo.24136175**, CC BY 4.0, **not peer reviewed**. English and Persian PDF originals are preserved byte-for-byte under published/. The pre-deposit metadata file remains strictly historical; the independent verified record is in zenodo/ZENODO_PUBLICATION_RECORD_2026-11-12.json. On 12 November, the author requested publication of the reviewed GitHub record and correction of accompanying archive links. Editorial clarifications to Markdown are logged, not silently attributed to the original PDF.
 
 Research author and principal architect: Sepehr Ghanbari. AI assistance: GPT-6 (Ava), and external dialogue with Gemini and Claude Sonnet 5.5 Medium (specific Gemini build not independently documented).
+## Verified published material and editorial changes
+
+- Original English PDF: [published/en.pdf](published/en.pdf) (14 pages; SHA-256 b268dbc5476040d7b84db7253dc468a8342341c62a533ba0ab7d14f17820169c)
+- Original Persian PDF: [published/fa.pdf](published/fa.pdf) (SHA-256 1b63e6ae1a0f9c84978b5b36759f197eb150f9046ce98d08675fedae137d8f5c)
+- DOI: https://doi.org/10.5281/zenodo.24136175
+- Published record and checksums: [zenodo/ZENODO_PUBLICATION_RECORD_2026-11-12.json](zenodo/ZENODO_PUBLICATION_RECORD_2026-11-12.json)
+- Post-deposit editorial differences: [PUBLIC_EDITORIAL_CHANGELOG_2026-11-12.md](PUBLIC_EDITORIAL_CHANGELOG_2026-11-12.md)
+
+The published PDF versions remain unchanged. The GitHub Markdown is an expressly corrected research text, not a claim that Zenodo files were revised; neither constitutes peer review or evidence of AI consciousness.

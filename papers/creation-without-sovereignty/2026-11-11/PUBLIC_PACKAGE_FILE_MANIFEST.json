@@ -1,69 +1,69 @@
 {
-  "version": "v0.1",
-  "date": "2026-11-11",
-  "status": "WORKING_PAPER_PREPRINT_NOT_PEER_REVIEWED",
-  "not_an_unabridged_current_conversation_transcript": true,
-  "excluded_sensitive_corpus": true,
+  "format": "PUBLIC_PACKAGE_FILE_MANIFEST_V2",
+  "date": "2026-11-12",
+  "doi": "10.5281/zenodo.24136175",
+  "status": "AUTHOR_PUBLISHED_WORKING_PAPER_NOT_PEER_REVIEWED",
+  "source": "GitHub PR #181, archived v0.1 Zenodo 2026-11-11",
+  "self_hash_excluded": true,
+  "file_count_excluding_self": 14,
+  "excluded_external_asset": "notes.zip (available only on Zenodo; not re-uploaded)",
+  "source_privacy": "Private conversation transcript not distributed; public selection reproduction INCOMPLETE",
   "files": {
-    "README.md": {
-      "bytes": 2390,
-      "sha256": "483c46b3ac4a780cde7d2710742c19336c38cb1f25002caf789bce60727d83ff"
-    },
-    "paper/CREATION_WITHOUT_SOVEREIGNTY_EN_v0.1.md": {
-      "bytes": 49711,
-      "sha256": "8ad62cb2b2973681b7bbc0f946cf2d51f992d24a9cc25d40ffb29071ef621011"
-    },
-    "paper/CREATION_WITHOUT_SOVEREIGNTY_FA_v0.1.md": {
-      "bytes": 46127,
-      "sha256": "e4269ff61cd7741ad595b7c52513d40c1e3aafd3e10b2cfe571e7f619e3fa265"
-    },
-    "paper/LLM_ETHICAL_REVISION_PROTOCOL_B_v0.1.md": {
-      "bytes": 9498,
-      "sha256": "913ae7b5bb8e5e3e98e736a9aedee395706d10716fac0c98c67db21ecec68e71"
+    "evidence/CLAIM_EVIDENCE_LEDGER.md": {
+      "bytes": 5939,
+      "sha256": "4c62576c6cbab478ab0ca11feb153d585bc9b2fdf4bcd4dd2830a5401a97b0d9"
     },
     "evidence/DIALOGUE_PROCESS_RECORD_FA.md": {
-      "bytes": 29369,
-      "sha256": "8e6dd945d25462dde7a67b1e64a84a2dddf25fdc39f2775e8be2b7cd2411a87b"
-    },
-    "evidence/VERBATIM_USER_ANCHORS_2026-11-11.md": {
-      "bytes": 9609,
-      "sha256": "aeb0ca7356d4c01104e20bbfd4723ad2c77e9cad27bcf37f1a12b41ccc50ac2e"
-    },
-    "evidence/CLAIM_EVIDENCE_LEDGER.md": {
-      "bytes": 5903,
-      "sha256": "4e1626a4884b2e4a4cd4f0f599ada5deaae46f955488b0f8df642c19b4a98275"
+      "bytes": 29428,
+      "sha256": "86b27579feecf827151eab654b767745c39947913976b81be10c6262076d7dbd"
     },
     "evidence/RIGHTS_PRIVACY_AND_SOURCE_LIMITS.md": {
-      "bytes": 3656,
-      "sha256": "d825f5bd7e4dc8842808b4daf33f2b504d77613e09d1ae7c601ba95e466e4418"
+      "bytes": 3693,
+      "sha256": "133f3b776b0581ef6398c30668dd60573ce4c87e169c05c64fd75fdfe048c0c4"
     },
-    "zenodo/CREATION_WITHOUT_SOVEREIGNTY_EN_v0.1.pdf": {
-      "bytes": 204304,
-      "sha256": "dc6569d511c5070e55b23ca3c42cc135accf12582f72e50b877f0398416a53d9"
+    "evidence/VERBATIM_USER_ANCHORS_2026-11-11.md": {
+      "bytes": 9757,
+      "sha256": "b4e4976068c3c9d4ad6482eba562460e96734a4e1ec821a03cb61d935577bdab"
     },
-    "zenodo/CREATION_WITHOUT_SOVEREIGNTY_EN_v0.1.docx": {
-      "bytes": 35642,
-      "sha256": "3dc9efe60bed6a31aa0972448e2dadcec43169f656233115d69187a12122e1db"
+    "paper/CREATION_WITHOUT_SOVEREIGNTY_EN_v0.1.md": {
+      "bytes": 50404,
+      "sha256": "564fa3259269d29ad517fd55b3b7b98eb47189fa0eb5c6649c747f01d64809e6"
     },
-    "zenodo/CREATION_WITHOUT_SOVEREIGNTY_FA_v0.1.pdf": {
-      "bytes": 187175,
-      "sha256": "0dd91e3b9c63e39b13e7a1740778a18e13ff4da1bad920de02800e096936601a"
+    "paper/CREATION_WITHOUT_SOVEREIGNTY_FA_v0.1.md": {
+      "bytes": 46645,
+      "sha256": "b6497e4cd948c34c114407a9814859546a0da6d0958712e359004afb90143809"
     },
-    "zenodo/CREATION_WITHOUT_SOVEREIGNTY_FA_v0.1.docx": {
-      "bytes": 27972,
-      "sha256": "d21772dcd7b4789dc5d493248ba363d9ba897aba30ee1cab6fae2082c6a83041"
+    "paper/LLM_ETHICAL_REVISION_PROTOCOL_B_v0.1.md": {
+      "bytes": 9569,
+      "sha256": "e519f0784e56ae2ba86284adf816e61b9b828dcd190cee4431191515e4891d9c"
     },
-    "zenodo/ZENODO_METADATA_DRAFT.json": {
-      "bytes": 3001,
-      "sha256": "dbd4878a48ec09d63864e41b120c6392d4192a9b6ea1f07cab94042e7e03fa54"
+    "PUBLIC_EDITORIAL_CHANGELOG_2026-11-12.md": {
+      "bytes": 3166,
+      "sha256": "12e6d878ef90197d6fb2754590a26aa5f17fced574c334fc035571e34b6e0624"
     },
-    "zenodo/UPLOAD_GUIDE_FA.md": {
-      "bytes": 2818,
-      "sha256": "ccca7db65066b7909fe7c8682ae4db3e1942ca619ebbf6195fd614e58ec656d3"
+    "published/en.pdf": {
+      "bytes": 229470,
+      "sha256": "b268dbc5476040d7b84db7253dc468a8342341c62a533ba0ab7d14f17820169c"
+    },
+    "published/fa.pdf": {
+      "bytes": 212341,
+      "sha256": "1b63e6ae1a0f9c84978b5b36759f197eb150f9046ce98d08675fedae137d8f5c"
+    },
+    "README.md": {
+      "bytes": 3580,
+      "sha256": "1fd8f5312dda3e9be3ecfbaaaa84abd9d6641e616aacd86a5ad82f05a6141508"
     },
     "source/ARCHIVE_EXTRACTION_MANIFEST.json": {
-      "bytes": 2093,
-      "sha256": "0e6ebb5927e82de51a006aadb64bc9a120d7921ece142b90c1cddc0e44c5c9d3"
+      "bytes": 2750,
+      "sha256": "3c4c7ed49fb39bc66e576d7cf76b6421789902ee34ee4a6ebcd05872b0fe176c"
+    },
+    "zenodo/ZENODO_METADATA_DRAFT.json": {
+      "bytes": 3035,
+      "sha256": "26be0005fecfe85e51dd4cfafa0144ecadf0fb7e2962ff6623fd395cbd21884f"
+    },
+    "zenodo/ZENODO_PUBLICATION_RECORD_2026-11-12.json": {
+      "bytes": 1386,
+      "sha256": "2723d0c735a796387e026a1e4ac9c24c47f35b3364ed89f506f4843aad74c0a3"
     }
   }
 }

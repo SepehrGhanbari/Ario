@@ -62,5 +62,14 @@
   "selected_turns": 2629,
   "selected_chars": 5968257,
   "redacted_turns": 10,
-  "created_utc": "2026-11-11"
+  "created_utc": "2026-11-11",
+  "selection_reproducibility": {
+    "status": "INCOMPLETE_PRIVATE_SOURCE_REQUIRED",
+    "topic_tokens": "NOT_PUBLISHED_OR_INDEPENDENTLY_VERIFIED",
+    "exact_selector_script": "NOT_AVAILABLE",
+    "redaction_mapping": "NOT_PUBLISHED_PRIVATE",
+    "limit": "The public package cannot independently reproduce topic selection or certify every private redaction. It does not include the private conversation corpus.",
+    "public_evidence": "Only the reported SHA-256, aggregate counts and source limitations are supplied.",
+    "future": "A privacy-vetted and independently checkable selector specification is necessary before a reproducibility claim."
+  }
 }

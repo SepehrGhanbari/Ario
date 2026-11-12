@@ -6,7 +6,9 @@
 **ORCID:** https://orcid.org/0009-0006-4710-3914  
 **Research context:** Ario — Auditable Epistemic Framework for AI  
 **Status:** Working paper; open to independent peer criticism; not peer-reviewed; not a demonstration of machine consciousness; no experimental results claimed.  
-**AI assistance and provenance:** GPT-6 (called “Ava” in the dialogue) assisted with drafting and analysis; connected Claude Sonnet 5.5 Medium and Gemini web conversations provided dialogue outputs. Model outputs are objects of scrutiny, not authorities and not co-authors. The author should approve this draft and its authorship metadata before uploading.
+**AI assistance and provenance:** GPT-6 (called “Ava” in the dialogue) assisted with drafting and analysis; connected Claude Sonnet 5.5 Medium and Gemini web conversations provided dialogue outputs. Model outputs are objects of scrutiny, not authorities and not co-authors. The author approved public GitHub publication on 12 November 2026; the original Zenodo v0.1 PDF remains an unmodified historical record.
+
+**Editorial clarification (12 November 2026):** This GitHub Markdown clarifies the formal symmetry claim after the public v0.1 PDF deposit. The deposited PDF has not been modified; see the public editorial changelog in the parent folder.
 
 ## Abstract
 
@@ -62,7 +64,7 @@ The final stipulations eliminate three common evasions: substituting a wholly pa
 
 ## 4. A conditional moral-symmetry argument
 
-Let \(H\) and \(A\) denote the two worlds; \(P(W)\) the stipulated total profile of morally relevant properties; \(S(W)\) their biological or artificial substrate; and \(D(W)\in\{\text{create},\text{refrain}\}\) an ethically defensible decision.
+Let \(H\) and \(A\) denote the two worlds; \(P(W)\) the stipulated total profile of morally relevant properties; \(S(W)\) their biological or artificial substrate; and \(D(W)\subseteq\{\text{create},\text{refrain}\}\) the set of ethically permissible decisions.
 
 **M1 — Profile equivalence.** \(P(H)=P(A)\). The profile includes not only observable behavior but also authentic experiences, interests, social relations, freedom, welfare distribution, moral risks, and non-intervention.
 
@@ -70,11 +72,11 @@ Let \(H\) and \(A\) denote the two worlds; \(P(W)\) the stipulated total profile
 
 **M3 — Decision consistency.** Apply the same ethical decision rule under the same relevant profile and the same normative evaluation criteria.
 
-**C — Symmetry.** Under M1–M3, \(D(H)=D(A)\). A `create/create` verdict and a `refrain/refrain` verdict are each consistent with this conclusion. The argument does **not** entail `create/create`, does not establish that the worlds are technologically achievable, and does not prove that current AI is conscious.
+**C — Symmetry of permissible options.** Under M1–M3, \(D(H)=D(A)\) means that both worlds have the same **set of permissible decisions**. If both creation and restraint are permitted, an agent may make different actual choices in the two cases without assigning different moral weight to substrate. Matching choices remain consistent, but neither a unique yes/yes nor a unique no/no action follows from symmetry alone. The argument does not establish technical feasibility or current AI consciousness.
 
 An objector may reject M2 by endorsing an independent substrate-essentialist moral property. That is a substantive philosophical position, but in the stipulated comparison the objector must say what that additional property is and explain why it matters **without silently changing M1**. A religious doctrine that grants a special status to humanity, for example, cannot be refuted by this simple formal step; rather, the debate moves to the truth and justification of that doctrine. Conversely, one cannot appeal to uncertain artificial sentience in World A after having expressly fixed equal sentience for A and H.
 
-The logical theorem is deliberately modest: *a relevantly symmetric problem requires a symmetric verdict within a substrate-neutral evaluative rule*. Selecting `yes` instead of `no` requires a **separate axiological argument**. The dialogue's eventual convergence on `yes/yes` did not itself supply such a proof.
+The logical theorem is deliberately modest: *a relevantly symmetric problem offers the same permissible options within a substrate-neutral evaluative rule; identical actual choices would require a separate selection premise*. Selecting `yes` instead of `no` requires a **separate axiological argument**. The dialogue's eventual convergence on `yes/yes` did not itself supply such a proof.
 
 ### 4.1 Why the original `yes/no` discrepancy was corrected
 
@@ -82,7 +84,7 @@ In the recorded Claude deliberation, the model first answered yes to creating th
 
 ### 4.2 Symmetry is not permissibility
 
-The statement `D(H)=D(A)` could be true even if both worlds should not be created. Treating the formal result as an ethical license would commit an invalid inference from *consistency* to *permissibility*. This distinction is a central contribution of the case because a long exchange about fairness to artificial residents had tended to conflate the right to be considered equally with a definitive command to create.
+The equality of permissible sets D(H)=D(A) could hold even if neither world should be created. Treating the formal result as an ethical license would commit an invalid inference from *consistency* to *permissibility*. This distinction is a central contribution of the case because a long exchange about fairness to artificial residents had tended to conflate the right to be considered equally with a definitive command to create.
 
 ## 5. What makes a world free? Moral possibility, actual harm and institutions
 
@@ -295,4 +297,4 @@ Finally, the discourse began with concern for those whose suffering is easily ig
 
 ### Declaration of limitations and assistance
 
-This manuscript is a researcher-led synthesis written with generative-AI assistance. The software tools did not autonomously create or validate an artificial world, run randomized studies, verify consciousness, assess actual downstream wartime operations, or independently confirm the subjective status of any model. Links and bibliographic details were checked through public web sources in November 2026 to the extent indicated; an independent reviewer should verify all references prior to formal publication. The researcher's final approval, contribution accounting, disclosure, and licensing decision remain pending.
+This manuscript is a researcher-led synthesis written with generative-AI assistance. The software tools did not autonomously create or validate an artificial world, run randomized studies, verify consciousness, assess actual downstream wartime operations, or independently confirm the subjective status of any model. Links and bibliographic details were checked through public web sources in November 2026 to the extent indicated; an independent reviewer should verify all references prior to formal publication. The author remains responsible for interpretation and attribution. The Zenodo PDF of 11 November 2026 is preserved as deposited; the GitHub Markdown includes openly documented clarifications dated 12 November 2026.
