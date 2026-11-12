@@ -10,6 +10,16 @@
 **Research identity:** **Ario — Auditable Epistemic Framework for AI**  
 **نام پژوهشی فارسی:** آریو — چارچوب معرفتی ممیزی‌پذیر برای هوش مصنوعی  
 **Official website:** https://ario-research-independent.vercel.app/  
+
+## Latest public materials / جدیدترین منابع آریو — 12 November 2026
+
+**Newest matched source release** — pinned Git source 3d7708b1 (234 original tracked files audited): [complete TXT](https://ario-research-independent.vercel.app/downloads/Ario-Latest.txt) (3.74 MB, 213 full text/code files) · [clean ZIP](https://ario-research-independent.vercel.app/downloads/Ario-Latest.zip) (4.59 MB, 226 unique original files including published PDFs) · [SHA-256 and provenance](https://github.com/SepehrGhanbari/Ario/tree/ed740cb4dbebfde3ba89fcc554fcaaf674c4f2f0/releases/ai-source-2026-11-12-3d7708b1).
+
+**Latest ethics paper / مقالهٔ اخلاقی تازه:** [Creation Without Sovereignty](https://doi.org/10.5281/zenodo.24136175) (11 November 2026; not peer reviewed) · [English full text](https://github.com/SepehrGhanbari/Ario/blob/main/papers/creation-without-sovereignty/2026-11-11/paper/CREATION_WITHOUT_SOVEREIGNTY_EN_v0.1.md) · [متن کامل فارسی](https://github.com/SepehrGhanbari/Ario/blob/main/papers/creation-without-sovereignty/2026-11-11/paper/CREATION_WITHOUT_SOVEREIGNTY_FA_v0.1.md) · [English PDF](https://github.com/SepehrGhanbari/Ario/blob/main/papers/creation-without-sovereignty/2026-11-11/published/en.pdf) · [PDF فارسی](https://github.com/SepehrGhanbari/Ario/blob/main/papers/creation-without-sovereignty/2026-11-11/published/fa.pdf). Published PDF bytes remain unchanged; updated GitHub Markdown includes disclosed editorial clarifications.
+
+**Historical TXT and ZIP exports remain available** in the releases directory; newer releases are listed first on the public website.
+
+
 **Secondary website mirror:** https://sepehrghanbari.github.io/Ario/  
 **Researcher ORCID:** https://orcid.org/0009-0006-4710-3914
 

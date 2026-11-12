@@ -58,7 +58,7 @@ The records below were inspected via public Zenodo landing-page text on 11 Novem
 - **DOI:** [10.5281/zenodo.24136175](https://doi.org/10.5281/zenodo.24136175)
 - **Creator:** Sepehr Ghanbari
 - **Scope:** Conceptual ethics preprint; not peer-reviewed. Distinguishes hypothetical moral symmetry from proof of AI consciousness.
-- **Related GitHub review:** [Creation Without Sovereignty — draft PR #181](https://github.com/SepehrGhanbari/Ario/pull/181); its research branch is not part of `main` until separately reviewed and merged.
+- **GitHub publication:** [complete bilingual research package](https://github.com/SepehrGhanbari/Ario/tree/main/papers/creation-without-sovereignty/2026-11-11) and [merged PR #181](https://github.com/SepehrGhanbari/Ario/pull/181). Published English/Persian PDFs are byte-identical to the Zenodo record; the Markdown has an openly documented editorial clarification dated 12 November 2026.
 
 ### 8 November 2026 — Ario: Provenance-Aware Auditing of AI Claims — Research Summary and Proposed Studies
 

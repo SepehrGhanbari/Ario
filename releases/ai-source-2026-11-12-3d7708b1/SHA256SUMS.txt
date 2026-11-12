@@ -1,0 +1,2 @@
+f66f092cf258551a8eb5ea92ffd15ee725b78723563c938c7b17b804460db6f7  ario-source-latest.txt
+921a53127d9b4d974fe2decade01fd953df1624e7c75d2be4c952be0af25416d  ario-source-latest.zip
