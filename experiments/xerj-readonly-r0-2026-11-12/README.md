@@ -25,3 +25,7 @@ After CodeRabbit's three findings, present-but-malformed timed_out and _shards m
 ## R03 fail-closed follow-up
 
 See R03_RESEARCH_NOTE_FA.md. Live HTTP now requires strict completion metadata and JSON Content-Type; anomalous responses return no usable candidates. One deterministic randomized test covers 1,500 adversarial variants. Earlier R02 records are snapshotted. No live XERJ backend has been run.
+
+## R04 follow-up: non-vacuous randomized test
+
+See R04_NONVACUOUS_TEST_NOTE.md. 41/41 synthetic tests; seeded 1,500-case loop must include BOTH accepted canonical results and incomplete rejections, and no all-UNKNOWN or empty-accepted shortcuts. Historical R03 logs/results/manifest are preserved as *_R03 files. No real XERJ backend has been executed.

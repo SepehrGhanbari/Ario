@@ -1,12 +1,12 @@
 {
   "status": "RESEARCH_ONLY",
-  "review_round": "R03_STRICT_COMPLETION_AND_FAIL_CLOSED_2026_11_12",
-  "previous_git_head": "2a72ca559540f2b46968c69e304dc49016d06588",
+  "review_round": "R04_NONVACUOUS_METAMORPHIC_CONTROLS_2026_11_12",
+  "previous_git_head": "55ff24656eee425f6427c27107d092e8daee0f0d",
   "files": [
     {
       "name": "README.md",
-      "sha256": "73d4867ecf5f54e4dc0aad28319fb2eb65d4b806bdb629dfdfc6a0497b6c6358",
-      "size": 2023
+      "sha256": "6087a043ba28e9f991689d63e5ff1cb3fe323ad63e8df0a729b2830a839f5c35",
+      "size": 2377
     },
     {
       "name": "ASSESSMENT_FA.md",
@@ -20,8 +20,8 @@
     },
     {
       "name": "test_ario_xerj_readonly.py",
-      "sha256": "4b16c5b27f6e4e2b3e03ffc4ffd1a9e6b9e8a57bf0331cd56438d943003467cb",
-      "size": 11022
+      "sha256": "4f7a75d0fb7e170a055395e779306c0ddc879a2878d923c500fbb64a2db5281e",
+      "size": 12090
     },
     {
       "name": "test_wire_contract.py",
@@ -30,13 +30,13 @@
     },
     {
       "name": "TEST_LOG.txt",
-      "sha256": "8aebf373db9e8429f521552e03ae167cd239d30d7cab93af390ba60da5d12da8",
-      "size": 4857
+      "sha256": "4b92174d13ebe9bb6e074344753ee55aadc2e574b56c5b8559f9b7e65c0f741b",
+      "size": 4998
     },
     {
       "name": "RESULTS.json",
-      "sha256": "fe4dc76b8672d6f6cdaedbf21c39573cd8f62ec2e861a1c3026508b3dd55f8df",
-      "size": 728
+      "sha256": "62ef21f9fdc39337ba35f6ca41d43e52b81693b7b28544350bb08c57d46694a6",
+      "size": 773
     },
     {
       "name": "R03_RESEARCH_NOTE_FA.md",
@@ -57,7 +57,26 @@
       "name": "SOURCE_MANIFEST_SHA256_R02.json",
       "sha256": "55aa819809ff7fb0a4674b6c5f7128838a0b2626ddbe29b4c9b1fcda3452e1b7",
       "size": 1167
+    },
+    {
+      "name": "R04_NONVACUOUS_TEST_NOTE.md",
+      "sha256": "0e6506823fca63d22a3380cbeaeb5f59e60711fe8da6117337d0b86b104a4977",
+      "size": 1646
+    },
+    {
+      "name": "TEST_LOG_R03.txt",
+      "sha256": "8aebf373db9e8429f521552e03ae167cd239d30d7cab93af390ba60da5d12da8",
+      "size": 4857
+    },
+    {
+      "name": "RESULTS_R03.json",
+      "sha256": "fe4dc76b8672d6f6cdaedbf21c39573cd8f62ec2e861a1c3026508b3dd55f8df",
+      "size": 728
+    },
+    {
+      "name": "SOURCE_MANIFEST_SHA256_R03.json",
+      "sha256": "6293e17d4e6ba5e32c63b3a6886d343aeb0616f11f1b38e0c03212633a9a5b28",
+      "size": 1903
     }
-  ],
-  "utf8_persian_report_repaired": true
+  ]
 }

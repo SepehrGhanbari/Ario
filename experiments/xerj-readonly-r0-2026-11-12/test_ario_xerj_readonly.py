@@ -147,6 +147,7 @@ class ContractTests(unittest.TestCase):
     def test_strict_random_adversarial_metadata_never_leaks_partial(self):
         import random
         rng = random.Random(185_2026)
+        accepted_count, incomplete_count = 0, 0
         for i in range(1500):
             # All fixtures include one actual local record and source-text bait.
             hits = [{'_id': 'e1', '_index': 'ario_probe',
@@ -173,13 +174,32 @@ class ContractTests(unittest.TestCase):
             self.assertFalse(out['answer_authorized'])
             self.assertFalse(out['trust_activated'])
             if out['status'] == 'RETRIEVAL_INCOMPLETE':
+                incomplete_count += 1
                 self.assertEqual(out['candidates'], [])
                 self.assertEqual(out['distinct_root_labels'], [])
             elif out['status'] == 'CANDIDATES_ONLY':
-                self.assertTrue(all(z['text'] in [v.text for v in self.ledger.values()]
-                                    for z in out['candidates']))
-                self.assertTrue(all('MALICIOUS_OUTPUT_' not in z['text']
-                                    for z in out['candidates']))
+                accepted_count += 1
+                self.assertEqual(len(out['candidates']), 1)
+                self.assertEqual(out['candidates'][0]['event_id'], 'e1')
+                self.assertEqual(out['candidates'][0]['text'], self.ledger['e1'].text)
+                self.assertNotIn('MALICIOUS_OUTPUT_', out['candidates'][0]['text'])
+            else:
+                self.fail('unexpected/vacuous result for hit-bearing fixture: %s' % out['status'])
+        # Every fixture contains a registered hit. Both positive and negative
+        # controls MUST occur, or this test could pass an all-UNKNOWN parser.
+        self.assertGreater(accepted_count, 10)
+        self.assertGreater(incomplete_count, 100)
+        self.assertEqual(accepted_count + incomplete_count, 1500)
+
+    def test_strict_complete_empty_hits_return_unknown(self):
+        x = self.resp()
+        x['timed_out'] = False
+        x['_shards'] = {'total': 1, 'successful': 1, 'failed': 0, 'skipped': 0}
+        out = parse_candidates(x, self.ledger, expected_index='ario_probe',
+                               require_completion_metadata=True)
+        self.assertEqual(out['status'], 'NO_HITS_UNKNOWN')
+        self.assertEqual(out['candidates'], [])
+        self.assertFalse(out['answer_authorized'])
 
     def test_valid_completion_metadata_remains_candidate_only(self):
         x = self.resp('e1')

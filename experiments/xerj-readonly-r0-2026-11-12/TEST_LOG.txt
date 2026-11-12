@@ -21,6 +21,7 @@ test_non_loopback_rejected (test_ario_xerj_readonly.ContractTests.test_non_loopb
 test_partial_valid_hit_not_returned_after_unknown_id (test_ario_xerj_readonly.ContractTests.test_partial_valid_hit_not_returned_after_unknown_id) ... ok
 test_shard_failure_reports_incomplete (test_ario_xerj_readonly.ContractTests.test_shard_failure_reports_incomplete) ... ok
 test_shared_root_remains_not_independent (test_ario_xerj_readonly.ContractTests.test_shared_root_remains_not_independent) ... ok
+test_strict_complete_empty_hits_return_unknown (test_ario_xerj_readonly.ContractTests.test_strict_complete_empty_hits_return_unknown) ... ok
 test_strict_missing_metadata_is_incomplete (test_ario_xerj_readonly.ContractTests.test_strict_missing_metadata_is_incomplete) ... ok
 test_strict_random_adversarial_metadata_never_leaks_partial (test_ario_xerj_readonly.ContractTests.test_strict_random_adversarial_metadata_never_leaks_partial) ... ok
 test_strict_valid_xerj_metadata_allows_candidate (test_ario_xerj_readonly.ContractTests.test_strict_valid_xerj_metadata_allows_candidate) ... ok
@@ -40,6 +41,6 @@ test_http_redirect_refused (test_wire_contract.WireContract.test_http_redirect_r
 test_too_long_question_refused_prior_to_http (test_wire_contract.WireContract.test_too_long_question_refused_prior_to_http) ... ok
 
 ----------------------------------------------------------------------
-Ran 40 tests in 0.636s
+Ran 41 tests in 0.632s
 
 OK
