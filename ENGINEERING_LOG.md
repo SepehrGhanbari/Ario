@@ -501,3 +501,12 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - The runner's default TEMP uses C:\Users\RUNNER~1, while Path.resolve expands file paths to C:\Users\runneradmin. Five tests invoke internal helpers or intercept Path.open with a raw TemporaryDirectory path; alias mismatch causes workspace-boundary rejection or misses the expected recorder. No external path was admitted.
 - The Windows job now selects the runner's dedicated TEMP/TMP (runner.temp), matching canonical workspace assumptions without changing test selection, assertions, runtime source, token permissions, or Linux job. The subsequent hosted run must validate the same full suite.
 - General acceptance of unresolved 8.3 workspace roots by internal helpers is not fixed or claimed. That behavior is outside PR #175's file scope. Backup of pre-correction workflow and log: closeout/backups/windows-temp; previous published candidate e16702390aa38593127d912ba767e6de76e6c682 remains in history and in the verified bundle.
+
+
+### 2026-11-12 — Windows advisory workflow expression-context correction (Ava continuation)
+
+- Original PR #175 HEAD: `3b94ca239092e46e6e6d13f70ab2f0968389383a`. Hosted run [43196716521](https://github.com/SepehrGhanbari/Ario/actions/runs/43196716521) failed at workflow validation with zero jobs: `runner.temp` cannot be used from job-level `env`. CodeRabbit also identified the unsupported placement.
+- Preserve the earlier [43196202374](https://github.com/SepehrGhanbari/Ario/actions/runs/43196202374) Windows run with five real test failures (8.3 RUNNER~1 versus runneradmin alias) as RED evidence.
+- Narrow patch: move TEMP/TMP `runner.temp` expressions from job-level env to the Windows pytest **step-level env**, where the GitHub runner context is permitted. Linux job, dependency pins, Windows test selection, no-skip, failure visibility, token permissions and PR-only advisory scope stay unchanged.
+- Complete local preimage backups (byte-verified): `Ario_Engineering_Closeout_20261112/backups/windows-step-env-ava-20261112/`; the earlier complete-history Git bundle remains preserved.
+- This append is a source/change record, **not** a claim of passing hosted Windows CI. New HEAD push and pull_request runs must be read back before any GREEN claim. No merge, rule change, signer, Genesis or trust activation.

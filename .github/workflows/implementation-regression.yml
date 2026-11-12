@@ -31,11 +31,6 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: windows-2022
     timeout-minutes: 15
-    env:
-      # GitHub's account TEMP may use an 8.3 alias (RUNNER~1).
-      # Internal-helper fixtures require a canonical workspace path.
-      TEMP: ${{ runner.temp }}
-      TMP: ${{ runner.temp }}
     defaults:
       run:
         working-directory: implementation
@@ -53,4 +48,8 @@ jobs:
           python -VV
           python -m pip check
       - name: Run Windows regression suites with bounded display IDs
+        # Canonical runner temp avoids the default RUNNER~1 / runneradmin alias split.
+        env:
+          TEMP: ${{ runner.temp }}
+          TMP: ${{ runner.temp }}
         run: python -B -m pytest -p no:cacheprovider -p tests.test_m0_reproducibility_demo -q tests
