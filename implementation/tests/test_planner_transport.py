@@ -64,6 +64,24 @@ with urllib.request.urlopen(sys.argv[1], data=sys.argv[2].encode(), timeout=5) a
 """
 
 
+GET_REDIRECT_PROBE = """
+import json, sys, urllib.request
+from ario_planner import _open_local_ollama
+req = urllib.request.Request(sys.argv[1], method="GET")
+try:
+    if sys.argv[2] == "default":
+        with urllib.request.build_opener(urllib.request.ProxyHandler({})).open(req, timeout=5) as response:
+            response.read()
+    else:
+        with _open_local_ollama(req, timeout=5) as response:
+            response.read()
+    print(json.dumps({"ok": True}))
+except Exception as exc:
+    print(json.dumps({"ok": False, "type": type(exc).__name__,
+                      "code": getattr(exc, "code", None)}))
+"""
+
+
 @contextmanager
 def fake_server(redirect_to=None, redirect_code=302, *, host="127.0.0.1", responses=None):
     receipts = []
@@ -115,6 +133,18 @@ def fake_server(redirect_to=None, redirect_code=302, *, host="127.0.0.1", respon
 
 
 class PlannerTransportTests(unittest.TestCase):
+    @staticmethod
+    def localhost_binding():
+        # Mirror the actual runtime's loopback preference without assuming IPv4.
+        addresses = {item[4][0] for item in socket.getaddrinfo(
+            "localhost", 11434, type=socket.SOCK_STREAM)}
+        assert addresses and addresses <= {"127.0.0.1", "::1"}, addresses
+        return "127.0.0.1" if "127.0.0.1" in addresses else "::1"
+
+    @staticmethod
+    def hostname_localhost(backend):
+        return backend.replace("127.0.0.1", "localhost").replace("[::1]", "localhost")
+
     def environment(self, proxy_url=None, bypass=None):
         env = {key: value for key, value in os.environ.items()
                if not key.lower().endswith("_proxy") and key.upper() != "REQUEST_METHOD"}
@@ -196,6 +226,35 @@ class PlannerTransportTests(unittest.TestCase):
                         self.assertEqual(target_receipts, [])
 
 
+    def test_get_redirect_handler_distinguishes_custom_307_308_from_default(self):
+        # Default urllib follows GET 307/308; our request-local handler must not.
+        # POST-only 307/308 controls cannot distinguish these implementations.
+        for code in (307, 308):
+            with self.subTest(code=code):
+                with fake_server() as (target, target_receipts):
+                    with fake_server(target + "/redirected", code) as (backend, received):
+                        def run(mode):
+                            process = subprocess.run(
+                                [sys.executable, "-B", "-c", GET_REDIRECT_PROBE,
+                                 backend + "/api/chat", mode],
+                                env=self.environment(), capture_output=True,
+                                text=True, timeout=20,
+                            )
+                            self.assertEqual(process.returncode, 0, process.stderr)
+                            return json.loads(process.stdout)
+                        baseline = run("default")
+                        self.assertTrue(baseline["ok"], baseline)
+                        self.assertEqual(len(received), 1)
+                        self.assertEqual(len(target_receipts), 1)
+                        self.assertEqual(target_receipts[0]["method"], "GET")
+                        protected = run("protected")
+                        self.assertFalse(protected["ok"], protected)
+                        self.assertEqual(protected["type"], "HTTPError")
+                        self.assertEqual(protected["code"], code)
+                        self.assertEqual(len(received), 2)
+                        self.assertEqual(len(target_receipts), 1)
+
+
     def test_ipv6_loopback_bypasses_ipv4_proxy(self):
         with fake_server(host="::1") as (backend, received), fake_server() as (proxy, proxied):
             result = self.client(backend, proxy)
@@ -205,13 +264,15 @@ class PlannerTransportTests(unittest.TestCase):
             self.assertEqual({a[0] for a in result["attempts"]}, {"::1"})
 
     def test_real_localhost_resolution_is_pinned_to_loopback(self):
-        with fake_server() as (backend, received), fake_server() as (proxy, proxied):
-            result = self.client(backend.replace("127.0.0.1", "localhost"), proxy)
+        selected = self.localhost_binding()
+        with fake_server(host=selected) as (backend, received), fake_server() as (proxy, proxied):
+            result = self.client(self.hostname_localhost(backend), proxy)
             self.assertTrue(result["ok"], result)
             self.assertEqual(result["dns_calls"], ["localhost"])
-            self.assertEqual({a[0] for a in result["attempts"]}, {"127.0.0.1"})
+            self.assertEqual({a[0] for a in result["attempts"]}, {selected})
             self.assertEqual(len(received), 1)
             self.assertEqual(proxied, [])
+
 
     def test_unsafe_localhost_resolution_is_rejected_before_connect(self):
         with fake_server() as (backend, received), fake_server() as (proxy, proxied):
@@ -224,11 +285,14 @@ class PlannerTransportTests(unittest.TestCase):
             self.assertEqual(proxied, [])
 
     def test_localhost_is_not_resolved_again_after_validation(self):
-        with fake_server() as (backend, received):
-            result = self.client(backend.replace("127.0.0.1", "localhost"), dns="rebind")
+        selected = self.localhost_binding()
+        with fake_server(host=selected) as (backend, received):
+            result = self.client(self.hostname_localhost(backend), dns="rebind")
             self.assertTrue(result["ok"], result)
             self.assertEqual(result["dns_calls"], ["localhost"])
+            self.assertEqual({a[0] for a in result["attempts"]}, {selected})
             self.assertEqual(len(received), 1)
+
 
     def test_correction_attempt_stays_direct_and_is_bounded(self):
         invalid = json.dumps({"message": {"content": "{}"}}).encode()
