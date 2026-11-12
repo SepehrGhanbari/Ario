@@ -24,6 +24,83 @@
           "value": "camera=(), microphone=(), geolocation=()"
         }
       ]
+    },
+    {
+      "source": "/downloads/Ario-Full-204.txt",
+      "headers": [
+        {
+          "key": "Content-Disposition",
+          "value": "attachment; filename=\"Ario-Full-204.txt\""
+        },
+        {
+          "key": "Content-Type",
+          "value": "text/plain; charset=utf-8"
+        }
+      ]
+    },
+    {
+      "source": "/downloads/Ario-Full-204.zip",
+      "headers": [
+        {
+          "key": "Content-Disposition",
+          "value": "attachment; filename=\"Ario-Full-204.zip\""
+        },
+        {
+          "key": "Content-Type",
+          "value": "application/zip"
+        }
+      ]
+    },
+    {
+      "source": "/downloads/Ario-Clean.txt",
+      "headers": [
+        {
+          "key": "Content-Disposition",
+          "value": "attachment; filename=\"Ario-Clean.txt\""
+        },
+        {
+          "key": "Content-Type",
+          "value": "text/plain; charset=utf-8"
+        }
+      ]
+    },
+    {
+      "source": "/downloads/Ario-Clean.zip",
+      "headers": [
+        {
+          "key": "Content-Disposition",
+          "value": "attachment; filename=\"Ario-Clean.zip\""
+        },
+        {
+          "key": "Content-Type",
+          "value": "application/zip"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/downloads/Ario-Clean.zip",
+      "destination": "https://raw.githubusercontent.com/SepehrGhanbari/Ario/dc5de3a2d58086b694d23fbcd5d578ac958749c1/releases/ai-text-clean-2026-11-12-a0431e5e/ario-source-clean.zip"
+    },
+    {
+      "source": "/downloads/Ario-Clean.txt",
+      "destination": "https://raw.githubusercontent.com/SepehrGhanbari/Ario/0df20a1bdc3f40568c0acceb72c9ffcb9c8a93f1/releases/ai-text-clean-2026-11-12-a0431e5e/ario-source-clean.txt"
+    },
+    {
+      "source": "/downloads/Ario-Full-204.txt",
+      "destination": "https://raw.githubusercontent.com/SepehrGhanbari/Ario/4731c912ba4b34b302843dd37067822ffb699ba7/releases/ai-readable-full-2026-11-11-05ba5c9/ario-full.txt"
+    },
+    {
+      "source": "/downloads/Ario-Full-204.zip",
+      "destination": "https://raw.githubusercontent.com/SepehrGhanbari/Ario/4731c912ba4b34b302843dd37067822ffb699ba7/releases/ai-readable-full-2026-11-11-05ba5c9/ario-full.zip"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/downloads/Ario-Full-213.txt",
+      "destination": "/downloads/Ario-Clean.txt",
+      "permanent": false
     }
   ]
 }

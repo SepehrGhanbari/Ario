@@ -1,6 +1,7 @@
 """Real transport controls using isolated clients and two loopback-only fake servers."""
 import json
 import os
+import socket
 from pathlib import Path
 import subprocess
 import sys
@@ -27,14 +28,34 @@ if sys.argv[3] == "trap":
         def open(self, *args, **kwargs):
             raise AssertionError("process-global opener used")
     urllib.request.install_opener(Trap())
+# Test containment: no probe may connect to a non-loopback address, even if
+# the runtime regression under test is broken. Record attempted connections.
+import ipaddress, socket
+attempts = []
+dns_calls = []
+real_resolve = socket.getaddrinfo
+def resolve(host, *args, **kwargs):
+    if host == "localhost":
+        dns_calls.append(host)
+        if sys.argv[5] == "unsafe" or (sys.argv[5] == "rebind" and len(dns_calls) > 1):
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("192.0.2.1", 11434))]
+    return real_resolve(host, *args, **kwargs)
+socket.getaddrinfo = resolve
+def audit(event, args):
+    if event == "socket.connect":
+        address = args[1]
+        attempts.append(list(address))
+        if not ipaddress.ip_address(address[0]).is_loopback:
+            raise AssertionError("test containment blocked non-loopback connection")
+sys.addaudithook(audit)
 before = urllib.request._opener
 try:
     workflow = request_plan(sys.argv[4], sys.argv[1], ollama_url=sys.argv[2], timeout=5)
     print(json.dumps({"ok": True, "global_unchanged": urllib.request._opener is before,
-                      "stages": len(workflow["stages"])}))
+                      "stages": len(workflow["stages"]), "attempts": attempts, "dns_calls": dns_calls}))
 except Exception as exc:
     print(json.dumps({"ok": False, "type": type(exc).__name__, "error": str(exc),
-                      "global_unchanged": urllib.request._opener is before}))
+                      "global_unchanged": urllib.request._opener is before, "attempts": attempts, "dns_calls": dns_calls}))
 """
 DIRECT = """
 import sys, urllib.request
@@ -44,7 +65,7 @@ with urllib.request.urlopen(sys.argv[1], data=sys.argv[2].encode(), timeout=5) a
 
 
 @contextmanager
-def fake_server(redirect_to=None, redirect_code=302):
+def fake_server(redirect_to=None, redirect_code=302, *, host="127.0.0.1", responses=None):
     receipts = []
 
     class Handler(BaseHTTPRequestHandler):
@@ -63,7 +84,7 @@ def fake_server(redirect_to=None, redirect_code=302):
                 payload = b""
             else:
                 self.send_response(200)
-                payload = RESPONSE
+                payload = RESPONSE if responses is None else responses[min(len(receipts) - 1, len(responses) - 1)]
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(payload)))
             self.end_headers()
@@ -72,12 +93,21 @@ def fake_server(redirect_to=None, redirect_code=302):
         def log_message(self, *args):
             pass
 
-    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    class IPv6Server(ThreadingHTTPServer):
+        address_family = socket.AF_INET6
+    server_type = IPv6Server if ":" in host else ThreadingHTTPServer
+    try:
+        server = server_type((host, 0), Handler)
+    except OSError as exc:
+        if host == "::1":
+            raise unittest.SkipTest(f"IPv6 loopback unavailable: {exc}") from exc
+        raise
     server.daemon_threads = True
     thread = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True)
     thread.start()
     try:
-        yield f"http://127.0.0.1:{server.server_port}", receipts
+        endpoint_host = f"[{host}]" if ":" in host else host
+        yield f"http://{endpoint_host}:{server.server_port}", receipts
     finally:
         server.shutdown()
         server.server_close()
@@ -96,7 +126,7 @@ class PlannerTransportTests(unittest.TestCase):
             env.update(NO_PROXY=bypass, no_proxy=bypass)
         return env
 
-    def client(self, backend, proxy=None, bypass=None, trap=False):
+    def client(self, backend, proxy=None, bypass=None, trap=False, dns="normal"):
         with tempfile.TemporaryDirectory() as directory:
             for relative in ("implementation/ario_planner.py",
                              "implementation/tests/test_planner_runtime.py"):
@@ -105,7 +135,7 @@ class PlannerTransportTests(unittest.TestCase):
                 path.write_text("# " + CANARY + "\n", encoding="utf-8")
             result = subprocess.run(
                 [sys.executable, "-B", "-c", CLIENT, directory, backend,
-                 "trap" if trap else "normal", CANARY],
+                 "trap" if trap else "normal", CANARY, dns],
                 env=self.environment(proxy, bypass), cwd=directory,
                 capture_output=True, text=True, timeout=20,
             )
@@ -161,6 +191,78 @@ class PlannerTransportTests(unittest.TestCase):
                         result = self.client(backend)
                         self.assertFalse(result["ok"], result)
                         self.assertEqual(result["type"], "AgentRequestError")
+                        self.assertIn(f"HTTP Error {code}", result["error"])
+                        self.assertEqual(len(received), 1)
+                        self.assertEqual(target_receipts, [])
+
+
+    def test_ipv6_loopback_bypasses_ipv4_proxy(self):
+        with fake_server(host="::1") as (backend, received), fake_server() as (proxy, proxied):
+            result = self.client(backend, proxy)
+            self.assertTrue(result["ok"], result)
+            self.assertEqual(len(received), 1)
+            self.assertEqual(proxied, [])
+            self.assertEqual({a[0] for a in result["attempts"]}, {"::1"})
+
+    def test_real_localhost_resolution_is_pinned_to_loopback(self):
+        with fake_server() as (backend, received), fake_server() as (proxy, proxied):
+            result = self.client(backend.replace("127.0.0.1", "localhost"), proxy)
+            self.assertTrue(result["ok"], result)
+            self.assertEqual(result["dns_calls"], ["localhost"])
+            self.assertEqual({a[0] for a in result["attempts"]}, {"127.0.0.1"})
+            self.assertEqual(len(received), 1)
+            self.assertEqual(proxied, [])
+
+    def test_unsafe_localhost_resolution_is_rejected_before_connect(self):
+        with fake_server() as (backend, received), fake_server() as (proxy, proxied):
+            result = self.client(backend.replace("127.0.0.1", "localhost"), proxy, dns="unsafe")
+            self.assertFalse(result["ok"], result)
+            self.assertEqual(result["type"], "AgentRequestError")
+            self.assertIn("localhost must resolve only to loopback", result["error"])
+            self.assertEqual(result["attempts"], [])
+            self.assertEqual(received, [])
+            self.assertEqual(proxied, [])
+
+    def test_localhost_is_not_resolved_again_after_validation(self):
+        with fake_server() as (backend, received):
+            result = self.client(backend.replace("127.0.0.1", "localhost"), dns="rebind")
+            self.assertTrue(result["ok"], result)
+            self.assertEqual(result["dns_calls"], ["localhost"])
+            self.assertEqual(len(received), 1)
+
+    def test_correction_attempt_stays_direct_and_is_bounded(self):
+        invalid = json.dumps({"message": {"content": "{}"}}).encode()
+        for responses, expected_ok in (([invalid, RESPONSE], True), ([invalid], False)):
+            with self.subTest(expected_ok=expected_ok):
+                with fake_server(responses=responses) as (backend, received), fake_server() as (proxy, proxied):
+                    result = self.client(backend, proxy)
+                    self.assertEqual(result["ok"], expected_ok, result)
+                    self.assertEqual(len(received), 2)
+                    self.assertEqual(proxied, [])
+                    self.assertTrue(all(row["path"] == "/api/chat" for row in received))
+                    correction = json.loads(received[1]["body"])
+                    self.assertIn("Do not return stages", correction["messages"][-1]["content"])
+                    if not expected_ok:
+                        self.assertIn("one correction attempt", result["error"])
+
+    def test_external_redirects_are_rejected_before_outbound_connect(self):
+        for code in (301, 302, 303, 307, 308):
+            with self.subTest(code=code):
+                with fake_server("http://192.0.2.1:9/never-contact", code) as (backend, received):
+                    result = self.client(backend)
+                    self.assertFalse(result["ok"], result)
+                    self.assertEqual(result["type"], "AgentRequestError")
+                    self.assertIn(f"HTTP Error {code}", result["error"])
+                    self.assertEqual(len(received), 1)
+                    self.assertEqual({a[0] for a in result["attempts"]}, {"127.0.0.1"})
+
+    def test_ipv6_redirects_never_reach_a_second_server(self):
+        for code in (301, 302, 303, 307, 308):
+            with self.subTest(code=code):
+                with fake_server(host="::1") as (target, target_receipts):
+                    with fake_server(target + "/redirected", code, host="::1") as (backend, received):
+                        result = self.client(backend)
+                        self.assertFalse(result["ok"], result)
                         self.assertIn(f"HTTP Error {code}", result["error"])
                         self.assertEqual(len(received), 1)
                         self.assertEqual(target_receipts, [])
