@@ -493,3 +493,11 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - Limits: direct pins are not a transitive/hash lock. Hosted Windows Server differs from the owner's Windows 10; no universal filesystem/transport assurance.
 - Preservation: complete-history, verified Git bundle at C:\Users\xx4773\Documents\Ario_Engineering_Closeout_20261112\backups\pre-closeout.bundle, SHA-256 379e251f5e7e502569208992eb0eab2276241e241525f40cf5ddf28f1bc8eccc; per-file working copies and authoritative log blob retained alongside. Existing main log is an exact byte prefix in the committed log; earlier PR log tail retained verbatim. Initial CRLF-vs-Git-blob comparison failed during preparation and was corrected using authoritative blob bytes before edits were published.
 - Evidence: pr175-full-094943.log and mutation records, if applicable, in that isolated closeout directory. This is same-host custody, not independent backup or external approval. No main merge, production ruleset, signer, Genesis, or trust activation.
+
+
+### Windows pilot RED and bounded environment correction
+
+- Actual hosted run 43196202374 on Windows Server 2022 / CPython 3.13.17: 5 failed, 1123 passed, 100 subtests. Dependency installation and pip check passed. Failure logs retained; run is not relabelled as success.
+- The runner's default TEMP uses C:\Users\RUNNER~1, while Path.resolve expands file paths to C:\Users\runneradmin. Five tests invoke internal helpers or intercept Path.open with a raw TemporaryDirectory path; alias mismatch causes workspace-boundary rejection or misses the expected recorder. No external path was admitted.
+- The Windows job now selects the runner's dedicated TEMP/TMP (runner.temp), matching canonical workspace assumptions without changing test selection, assertions, runtime source, token permissions, or Linux job. The subsequent hosted run must validate the same full suite.
+- General acceptance of unresolved 8.3 workspace roots by internal helpers is not fixed or claimed. That behavior is outside PR #175's file scope. Backup of pre-correction workflow and log: closeout/backups/windows-temp; previous published candidate e16702390aa38593127d912ba767e6de76e6c682 remains in history and in the verified bundle.

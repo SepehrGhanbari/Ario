@@ -31,6 +31,11 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: windows-2022
     timeout-minutes: 15
+    env:
+      # GitHub's account TEMP may use an 8.3 alias (RUNNER~1).
+      # Internal-helper fixtures require a canonical workspace path.
+      TEMP: ${{ runner.temp }}
+      TMP: ${{ runner.temp }}
     defaults:
       run:
         working-directory: implementation
