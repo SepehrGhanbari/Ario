@@ -1,0 +1,19 @@
+{
+  "admission": "HOLD",
+  "ario_commit": "4731c912ba4b34b302843dd37067822ffb699ba7",
+  "date": "2026-11-12",
+  "earlier_round_results": "RESULTS_R03.json",
+  "experiment": "ARIO-XERJ-READONLY-R0",
+  "historical_round_preserved": "RESULTS_R02.json",
+  "live_xerj_executed": false,
+  "main_repo_mutated": false,
+  "real_engine_behavior_verified": false,
+  "review_round": "R04_NONVACUOUS_METAMORPHIC_CONTROLS_2026_11_12",
+  "seeded_adversarial_variants": 1500,
+  "status": "RESEARCH_ONLY_MOCK_HTTP_TESTED",
+  "unit_tests_failed": 0,
+  "unit_tests_passed": 41,
+  "upstream_code_copied": false,
+  "upstream_commit": "50e4ffded5518b1822cfac5450fa34d3829ab8ab",
+  "upstream_contract_source": "xerj-org/xerj@50e4ffde engine/crates/xerj-api/src/es_compat.rs lines ~19920-19950"
+}

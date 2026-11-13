@@ -1,0 +1,39 @@
+test_boolean_shard_failure_count_is_incomplete (test_ario_xerj_readonly.ContractTests.test_boolean_shard_failure_count_is_incomplete) ... ok
+test_correct_index_passes (test_ario_xerj_readonly.ContractTests.test_correct_index_passes) ... ok
+test_digest_mismatch (test_ario_xerj_readonly.ContractTests.test_digest_mismatch) ... ok
+test_distinct_roots_not_independence_proof (test_ario_xerj_readonly.ContractTests.test_distinct_roots_not_independence_proof) ... ok
+test_duplicate_ids_are_diagnostic (test_ario_xerj_readonly.ContractTests.test_duplicate_ids_are_diagnostic) ... ok
+test_empty_unknown (test_ario_xerj_readonly.ContractTests.test_empty_unknown) ... ok
+test_foreign_index_refused (test_ario_xerj_readonly.ContractTests.test_foreign_index_refused) ... ok
+test_good_only_cites_original (test_ario_xerj_readonly.ContractTests.test_good_only_cites_original) ... ok
+test_inconsistent_shard_count_is_incomplete (test_ario_xerj_readonly.ContractTests.test_inconsistent_shard_count_is_incomplete) ... ok
+test_index_wildcards_and_traversal_rejected (test_ario_xerj_readonly.ContractTests.test_index_wildcards_and_traversal_rejected) ... ok
+test_injected_result_cannot_modify_original (test_ario_xerj_readonly.ContractTests.test_injected_result_cannot_modify_original) ... ok
+test_invalid_json_structure (test_ario_xerj_readonly.ContractTests.test_invalid_json_structure) ... ok
+test_ledger_id_mismatch (test_ario_xerj_readonly.ContractTests.test_ledger_id_mismatch) ... ok
+test_malformed_id (test_ario_xerj_readonly.ContractTests.test_malformed_id) ... ok
+test_malformed_shards_list_is_incomplete (test_ario_xerj_readonly.ContractTests.test_malformed_shards_list_is_incomplete) ... ok
+test_malformed_timeout_number_is_incomplete (test_ario_xerj_readonly.ContractTests.test_malformed_timeout_number_is_incomplete) ... ok
+test_malformed_timeout_string_is_incomplete (test_ario_xerj_readonly.ContractTests.test_malformed_timeout_string_is_incomplete) ... ok
+test_missing_shard_failure_count_is_incomplete (test_ario_xerj_readonly.ContractTests.test_missing_shard_failure_count_is_incomplete) ... ok
+test_no_empty_auth (test_ario_xerj_readonly.ContractTests.test_no_empty_auth) ... ok
+test_non_loopback_rejected (test_ario_xerj_readonly.ContractTests.test_non_loopback_rejected) ... ok
+test_shard_failure_reports_incomplete (test_ario_xerj_readonly.ContractTests.test_shard_failure_reports_incomplete) ... ok
+test_shared_root_remains_not_independent (test_ario_xerj_readonly.ContractTests.test_shared_root_remains_not_independent) ... ok
+test_timeout_reports_incomplete (test_ario_xerj_readonly.ContractTests.test_timeout_reports_incomplete) ... ok
+test_timestamps_from_original (test_ario_xerj_readonly.ContractTests.test_timestamps_from_original) ... ok
+test_too_many (test_ario_xerj_readonly.ContractTests.test_too_many) ... ok
+test_unaccounted_shard_completion_is_incomplete (test_ario_xerj_readonly.ContractTests.test_unaccounted_shard_completion_is_incomplete) ... ok
+test_unknown_id_fail_partial (test_ario_xerj_readonly.ContractTests.test_unknown_id_fail_partial) ... ok
+test_unregistered_only_does_not_authorize (test_ario_xerj_readonly.ContractTests.test_unregistered_only_does_not_authorize) ... ok
+test_valid_completion_metadata_remains_candidate_only (test_ario_xerj_readonly.ContractTests.test_valid_completion_metadata_remains_candidate_only) ... ok
+test_http_401_refused (test_wire_contract.WireContract.test_http_401_refused) ... ok
+test_http_oversize_refused (test_wire_contract.WireContract.test_http_oversize_refused) ... ok
+test_http_path_auth_and_inert_output (test_wire_contract.WireContract.test_http_path_auth_and_inert_output) ... ok
+test_http_redirect_refused (test_wire_contract.WireContract.test_http_redirect_refused) ... ok
+test_too_long_question_refused_prior_to_http (test_wire_contract.WireContract.test_too_long_question_refused_prior_to_http) ... ok
+
+----------------------------------------------------------------------
+Ran 34 tests in 0.571s
+
+OK
