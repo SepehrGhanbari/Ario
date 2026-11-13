@@ -15,6 +15,8 @@
 
 **Scope limitation of public oracle:** two fixtures with one intentionally clean witness B and constrained control/source flags; no general-purpose arbitrary custody graph checker. The baseline TB-003 and new oracle answer different questions, and label collisions must never be presented as external proof of correctness.
 
+**Strict supported-scope restriction:** In this v0.1 comparator, witness B is a fixed laboratory fixture (capture and declared holder P2, no B transfer history). A different `other_witness_custodians` value is a **schema error**, not evidence of separation or lack thereof. Both witnesses' modeled risk is considered only inside this restricted domain; the project does not yet have a general two-chain snapshot oracle. An independent challenger wishing to vary B must first propose an explicit B transfer schema and freeze a new version, not smuggle alternate B facts into the existing one.
+
 ## 2. Predicted discriminators
 
 - A: no transfer, capture and HELD_BY same -> H_S MATCH.
