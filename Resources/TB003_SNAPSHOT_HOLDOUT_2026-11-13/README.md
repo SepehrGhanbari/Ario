@@ -11,6 +11,8 @@ This experiment distinguishes two questions:
 
 These are alternative tasks, not a proven defect in the old evaluator. Under H_S we also require complete transfer history (separate from control/source completeness), both witnesses' custody exposure, and separate source/admin independence verdicts.
 
+**Bounded witness-B rule for v0.1:** Witness B has a single declared LAB capture and direct hold by P2, without transfer events. Both the reference oracle and evaluation adapter reject any challenge that supplies `other_witness_custodians` other than `["P2"]`. Therefore this pilot cannot claim to evaluate arbitrary two-witness custody histories; a later version must add explicit B-transfer events and separately adjudicate them. The future hidden holdout must obey this restriction or be preregistered as a new schema.
+
 ## Files
 
 - [PREREGISTRATION.md](PREREGISTRATION.md): definitions, falsifiers, planned blind experiment, expected directions, and failure criteria.
