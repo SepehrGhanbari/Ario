@@ -102,6 +102,8 @@ def run(dataset_path, source_file=None):
     for item in dataset["cases"]:
         if type(item) is not dict or set(item) != allowed_case:
             raise ValueError("CASE_UNEXPECTED_OR_GOLD_FIELDS")
+        if item.get("other_witness_custodians") != ["P2"]:
+            raise ValueError("UNSUPPORTED_WITNESS_B_CONFIGURATION")
         if type(item["capture"]) is not dict or set(item["capture"]) != {"custodian", "sequence"}:
             raise ValueError("INVALID_CAPTURE_SHAPE")
         if type(item["transfers"]) is not list or any(
