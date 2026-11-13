@@ -510,3 +510,10 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - Narrow patch: move TEMP/TMP `runner.temp` expressions from job-level env to the Windows pytest **step-level env**, where the GitHub runner context is permitted. Linux job, dependency pins, Windows test selection, no-skip, failure visibility, token permissions and PR-only advisory scope stay unchanged.
 - Complete local preimage backups (byte-verified): `Ario_Engineering_Closeout_20261112/backups/windows-step-env-ava-20261112/`; the earlier complete-history Git bundle remains preserved.
 - This append is a source/change record, **not** a claim of passing hosted Windows CI. New HEAD push and pull_request runs must be read back before any GREEN claim. No merge, rule change, signer, Genesis or trust activation.
+
+
+## 2026-11-13 — #175 Windows advisory SHA-pinned action refs
+- Scope: existing .github/workflows/implementation-regression.yml, Windows-only action refs, and append-only ENGINEERING_LOG.md. Linux required m0-regression job, workflow trigger, direct dependency pins, Windows event guard, timeout, test command and protections unchanged.
+- Pin sources: GitHub Git tag API at change time: actions/checkout@v4 => 11d5960a326750d5838078e36cf38b85af677262; actions/setup-python@v5 => a26af69be951a213d495a4c3e4e4022e16d87065. Both target objects were commits; mutable tags retained only as comments.
+- Evidence: prior exact-head Windows advisory succeeded on pull_request, and skipped intentionally on push; skipped is NOT a test PASS. The new workflow does not become a trusted external test harness. Original files backed up with verified Git blob hashes.
+- Parent HEAD: 1a53f58560a0e96a9a253fcc0be2e13e5e2aba8b. Fresh hosted GitHub CI required. No independent audit or local test execution asserted for this two-reference change.
