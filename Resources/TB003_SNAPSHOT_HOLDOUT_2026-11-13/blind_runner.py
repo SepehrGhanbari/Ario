@@ -16,6 +16,123 @@ URL = "https://raw.githubusercontent.com/SepehrGhanbari/Ario/" + PINNED_COMMIT +
 SHA256 = "71912958bad6db97218ac630cadee6c34c04b286aec99b3f7cda071f8d79f567"
 BLOB_SHA1 = "4faf010d73219af63c254097e9c135da68d60078"
 
+
+# Proposed H_S research input schema. No claim about historical authenticity.
+SCHEMA = "ARIO-TB003-SNAPSHOT-CHALLENGE-0.1"
+ROOT_KEYS = {"schema", "kind", "cases"}
+CASE_KEYS = {
+    "case_id", "snapshot_sequence", "complete_transfer_surface",
+    "capture", "declared_holder", "transfers", "compromised_custodians",
+    "other_witness_custodians", "complete_control_surface",
+    "complete_source_surface", "common_control", "shared_storage", "common_source"
+}
+BOOL_KEYS = {
+    "complete_transfer_surface", "complete_control_surface",
+    "complete_source_surface", "common_control", "shared_storage", "common_source"
+}
+RESERVED_GRAPH_IDS = {"A", "B", "CAPA", "CAPB", "DA", "DB", "SA", "SB", "CTRL"}
+CAPTURE_KEYS = {"custodian", "sequence"}
+TRANSFER_KEYS = {"from", "to", "origin", "sequence"}
+
+
+def _ascii_id(value):
+    return (type(value) is str and 0 < len(value) <= 128
+            and all(32 <= ord(ch) <= 126 for ch in value))
+
+
+def _custodian_id(value):
+    return _ascii_id(value) and value not in RESERVED_GRAPH_IDS
+
+
+def _sequence(value):
+    return type(value) is int and 0 <= value <= 1_000_000
+
+
+def _reject_duplicate_json_keys(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("DUPLICATE_JSON_KEY:" + key)
+        result[key] = value
+    return result
+
+
+def validate_case(item):
+    """Reject unexpected fields, malformed values and graph-ID collisions."""
+    if type(item) is not dict or set(item) != CASE_KEYS:
+        raise ValueError("CASE_UNEXPECTED_OR_GOLD_FIELDS")
+    if not _ascii_id(item["case_id"]):
+        raise ValueError("INVALID_CASE_ID")
+    for key in BOOL_KEYS:
+        if type(item[key]) is not bool:
+            raise ValueError("FLAG_NOT_BOOLEAN:" + key)
+    if not _sequence(item["snapshot_sequence"]):
+        raise ValueError("INVALID_SNAPSHOT_SEQUENCE")
+    if not _custodian_id(item["declared_holder"]):
+        raise ValueError("INVALID_OR_RESERVED_DECLARED_HOLDER")
+    if (type(item["other_witness_custodians"]) is not list
+            or item["other_witness_custodians"] != ["P2"]):
+        raise ValueError("UNSUPPORTED_WITNESS_B_CONFIGURATION")
+    cap = item["capture"]
+    if type(cap) is not dict or set(cap) != CAPTURE_KEYS:
+        raise ValueError("INVALID_CAPTURE_SHAPE")
+    if not _custodian_id(cap["custodian"]) or not _sequence(cap["sequence"]):
+        raise ValueError("INVALID_CAPTURE_VALUE")
+    moves = item["transfers"]
+    # 8 fixed base edges, up to two common-controller edges; MAX_EDGES=128.
+    if type(moves) is not list or len(moves) > 118:
+        raise ValueError("INVALID_TRANSFER_LIST")
+    custodians = {"P1", "P2", "P3", "P4", "P5", cap["custodian"], item["declared_holder"]}
+    for move in moves:
+        if type(move) is not dict or set(move) != TRANSFER_KEYS:
+            raise ValueError("TRANSFER_UNEXPECTED_OR_GOLD_FIELDS")
+        if not (_custodian_id(move["from"]) and _custodian_id(move["to"])
+                and _sequence(move["sequence"])
+                and type(move["origin"]) is str
+                and move["origin"] in ("LAB", "SELF")):
+            raise ValueError("INVALID_TRANSFER_VALUE")
+        custodians.update((move["from"], move["to"]))
+    compromised = item["compromised_custodians"]
+    if (type(compromised) is not list or len(compromised) > 64
+            or any(not _custodian_id(name) for name in compromised)):
+        raise ValueError("INVALID_COMPROMISE_LIST")
+    if len(set(compromised)) != len(compromised):
+        raise ValueError("DUPLICATE_COMPROMISED_CUSTODIAN")
+    custodians.update(compromised)
+    if len(custodians) > 12:
+        raise ValueError("TOO_MANY_CUSTODIANS")
+
+
+def parse_unlabeled_dataset(raw):
+    """Fail closed on duplicated keys, unexpected keys and illegal types."""
+    if type(raw) is not bytes or not 0 < len(raw) <= 4_000_000:
+        raise ValueError("INVALID_DATASET_SIZE_OR_TYPE")
+    try:
+        dataset = json.loads(raw.decode("utf-8"),
+                             object_pairs_hook=_reject_duplicate_json_keys)
+    except UnicodeDecodeError as error:
+        raise ValueError("INVALID_UTF8") from error
+    if (type(dataset) is not dict
+            or set(dataset) not in ({"schema", "cases"}, ROOT_KEYS)):
+        raise ValueError("DATASET_UNEXPECTED_OR_GOLD_FIELDS")
+    if dataset["schema"] != SCHEMA:
+        raise ValueError("UNSUPPORTED_DATASET_SCHEMA")
+    if ("kind" in dataset and
+            (type(dataset["kind"]) is not str or dataset["kind"] not in
+             ("PUBLIC_DEVELOPMENT_ONLY", "UNLABELED_HOLDOUT", "EXPLORATORY_TEST"))):
+        raise ValueError("UNSUPPORTED_DATASET_KIND")
+    items = dataset["cases"]
+    if type(items) is not list or not 1 <= len(items) <= 240:
+        raise ValueError("INVALID_CASE_IDS_OR_COUNT")
+    ids = set()
+    for item in items:
+        validate_case(item)
+        if item["case_id"] in ids:
+            raise ValueError("DUPLICATE_CASE_ID")
+        ids.add(item["case_id"])
+    return dataset
+
+
 def load_pinned(path: str | None):
     if path:
         raw = Path(path).read_bytes()
@@ -84,36 +201,7 @@ def make_case(p, item):
 
 def run(dataset_path, source_file=None):
     raw = Path(dataset_path).read_bytes()
-    dataset = json.loads(raw)
-    if dataset.get("schema") != "ARIO-TB003-SNAPSHOT-CHALLENGE-0.1":
-        raise ValueError("UNSUPPORTED_DATASET_SCHEMA")
-    # A concealed reference label must never be carried in the evaluator input.
-    allowed_root = {"schema", "kind", "cases"}
-    allowed_case = {
-        "case_id", "snapshot_sequence", "complete_transfer_surface",
-        "capture", "declared_holder", "transfers", "compromised_custodians",
-        "other_witness_custodians", "complete_control_surface",
-        "complete_source_surface", "common_control", "shared_storage", "common_source"
-    }
-    if type(dataset) is not dict or set(dataset) - allowed_root:
-        raise ValueError("DATASET_UNEXPECTED_OR_GOLD_FIELDS")
-    if type(dataset.get("cases")) is not list:
-        raise ValueError("INVALID_CASES_SHAPE")
-    for item in dataset["cases"]:
-        if type(item) is not dict or set(item) != allowed_case:
-            raise ValueError("CASE_UNEXPECTED_OR_GOLD_FIELDS")
-        if item.get("other_witness_custodians") != ["P2"]:
-            raise ValueError("UNSUPPORTED_WITNESS_B_CONFIGURATION")
-        if type(item["capture"]) is not dict or set(item["capture"]) != {"custodian", "sequence"}:
-            raise ValueError("INVALID_CAPTURE_SHAPE")
-        if type(item["transfers"]) is not list or any(
-            type(t) is not dict or set(t) != {"from", "to", "origin", "sequence"}
-            for t in item["transfers"]
-        ):
-            raise ValueError("TRANSFER_UNEXPECTED_OR_GOLD_FIELDS")
-    ids = [x["case_id"] for x in dataset["cases"]]
-    if len(ids) != len(set(ids)) or not 1 <= len(ids) <= 240:
-        raise ValueError("INVALID_CASE_IDS_OR_COUNT")
+    dataset = parse_unlabeled_dataset(raw)
     p = load_pinned(source_file)
     results = []
     for item in dataset["cases"]:
