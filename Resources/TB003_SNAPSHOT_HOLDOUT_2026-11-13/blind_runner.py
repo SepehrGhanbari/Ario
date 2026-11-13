@@ -88,7 +88,7 @@ def run(dataset_path, source_file=None):
     if dataset.get("schema") != "ARIO-TB003-SNAPSHOT-CHALLENGE-0.1":
         raise ValueError("UNSUPPORTED_DATASET_SCHEMA")
     ids = [x["case_id"] for x in dataset["cases"]]
-    if len(ids) != len(set(ids)) or not 1 <= len(ids) <= 200:
+    if len(ids) != len(set(ids)) or not 1 <= len(ids) <= 240:
         raise ValueError("INVALID_CASE_IDS_OR_COUNT")
     p = load_pinned(source_file)
     results = []
