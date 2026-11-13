@@ -515,3 +515,52 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - **Deliberate mutation on a wholly separate disposable source copy:** removed the custom redirect refusal, leaving default urllib GET redirect behavior. The strengthened test failed for both 307 and 308, as intended: exit 1, 2 failed subtests, log `ava-get-redirect-mutant-red.log`. Both original PR file and source are unmodified by the mutation. This RED validates test sensitivity, not universal transport security.
 - Byte-verified preimage backups: `Ario_Engineering_Closeout_20261112/backups/planner-test-controls-ava-20261112/`. Prior Codex complete-history bundle remains present with SHA256 `379e251f5e7e502569208992eb0eab2276241e241525f40cf5ddf28f1bc8eccc`.
 - Hosted exact-head GitHub CI must be verified separately. No independent human approval, real Internet egress test, merging into main, ruleset, signature, trust or Genesis action is claimed. #177 remains Draft/HOLD pending governance decision.
+
+## 2026-11-10 — Candidate: align regression CI with the documented research dependency pins
+
+- **Scope and basis:** independent repository/backlog review at main `e6ab569fec79d192a83a121f834af23e93397674` found that CI installed a floating `pytest`, while `implementation/requirements-research.txt` and `docs/REPRODUCE_M0.md` specify `pytest==9.1.1` and `cryptography==46.0.4`. The owner requested justified proposed corrections; this is a narrow draft candidate, not a governance adoption or merge authorization.
+- **Changed paths:** only `.github/workflows/implementation-regression.yml` and this append-only log entry. CI now installs the existing pinned research requirements in one step. The workflow name, triggers, job identity, permissions, Python 3.13 selection and regression command are unchanged. No runtime source, dependency pins, required checks, branch rules, review gate, credentials, signer, trust or production settings changed.
+- **Preservation:** before edits, byte-identical SHA-256-verified local copies of both paths were retained at `C:\Users\xx4773\Documents\Ario_Comprehensive_Review_20261110\backups\ci-repro-ffac943fb9794f78ae37ea5e17ee0c3b\`, with `manifest.json`. The original log bytes remain a verified exact prefix. This local backup shares the review host and is not independent/offline custody.
+- **Executed validation:** the review virtual environment reported CPython 3.13.16, pytest 9.1.1 and cryptography 46.0.4; `python -m pip check` returned `No broken requirements found`. From `implementation`, the documented Windows command `python -B -m pytest -p no:cacheprovider -p tests.test_m0_reproducibility_demo -q tests` completed with **1127 passed, 98 subtests passed in 90.29 seconds**, exit 0. The optional existing plugin changes oversized display IDs only; it skips no tests. A newline-normalized exact-diff invariant check confirmed that only the dependency-install block changed and the requirements content stayed identical. `git diff --check` passed.
+- **Limits:** no hosted Ubuntu workflow execution or full YAML/actionlint parser run is claimed for this candidate before publication. This reuses the existing direct-dependency pins; it does not hash-lock transitive dependencies, authenticate package supply chains, freeze the hosted runner/Python patch release, or establish semantic correctness. GitHub Actions validation and independent review of the eventual exact published head remain pending. Existing #133/#151 governance HOLD and research non-authorization boundaries are unaffected.
+
+## 2026-11-12 — PR #175 non-destructive main reconciliation (candidate only)
+
+- Base main `059127eccf7c7f10e1b6f14525918fb8a4098477`; earlier PR head `a27d74e18f997d136406ea41239971f997896e11`; backup `backup/pr175-pre-main-reconciliation-20261112-a27d74e` preserves the historical original head.
+- The current main ENGINEERING_LOG.md is retained as a byte-exact prefix. The full original PR #175 post-base log tail is appended verbatim; prior PR source/log remain in immutable Git history. This is a two-parent reconciliation commit to the PR branch, not a rebase or force-push.
+- The only proposed new substantive change against current main remains the existing test dependency installation adjustment in `.github/workflows/implementation-regression.yml`. No workflow trigger/permission or ruleset modification.
+- No tests run in this reconciliation operation. Prior PR-head CI does NOT validate the new combined head; recheck new GitHub CI, exact HEAD, source diff, and independent review before considering readiness. PR stays DRAFT/HOLD; no main merge, owner-signer, Genesis or trust activation.
+
+
+## 2026-11-12 — PR #175 bounded engineering closeout
+
+- Owner-authorized existing-PR work; current main 7397d671ae1abb5f921836474146ee3b7e61fd50 reconciled without rebase/force-push, retaining earlier head 78b8ce91ab341cf0d15ebbcf12d45d0b6c8fc065 as a commit parent.
+- Retained the existing direct dependency pins (pytest 9.1.1, cryptography 46.0.4) and Linux m0-regression identity. Added a pull-request-only windows-2022 / Python 3.13 job, windows-differential-advisory, to the existing workflow. It uses contents:read, no secrets/write scope, the same requirements file, pip check, and the existing bounded-display-ID hook for the full suite. No required-check or protection setting changes; failures remain visible (no continue-on-error).
+- Local Windows 10 / Python 3.13.16 full regression: 1128 passed / 100 subtests. Hosted Windows and Ubuntu results must be read from the new commit's actual runs; this entry does not predeclare their outcome.
+- Limits: direct pins are not a transitive/hash lock. Hosted Windows Server differs from the owner's Windows 10; no universal filesystem/transport assurance.
+- Preservation: complete-history, verified Git bundle at C:\Users\xx4773\Documents\Ario_Engineering_Closeout_20261112\backups\pre-closeout.bundle, SHA-256 379e251f5e7e502569208992eb0eab2276241e241525f40cf5ddf28f1bc8eccc; per-file working copies and authoritative log blob retained alongside. Existing main log is an exact byte prefix in the committed log; earlier PR log tail retained verbatim. Initial CRLF-vs-Git-blob comparison failed during preparation and was corrected using authoritative blob bytes before edits were published.
+- Evidence: pr175-full-094943.log and mutation records, if applicable, in that isolated closeout directory. This is same-host custody, not independent backup or external approval. No main merge, production ruleset, signer, Genesis, or trust activation.
+
+
+### Windows pilot RED and bounded environment correction
+
+- Actual hosted run 43196202374 on Windows Server 2022 / CPython 3.13.17: 5 failed, 1123 passed, 100 subtests. Dependency installation and pip check passed. Failure logs retained; run is not relabelled as success.
+- The runner's default TEMP uses C:\Users\RUNNER~1, while Path.resolve expands file paths to C:\Users\runneradmin. Five tests invoke internal helpers or intercept Path.open with a raw TemporaryDirectory path; alias mismatch causes workspace-boundary rejection or misses the expected recorder. No external path was admitted.
+- The Windows job now selects the runner's dedicated TEMP/TMP (runner.temp), matching canonical workspace assumptions without changing test selection, assertions, runtime source, token permissions, or Linux job. The subsequent hosted run must validate the same full suite.
+- General acceptance of unresolved 8.3 workspace roots by internal helpers is not fixed or claimed. That behavior is outside PR #175's file scope. Backup of pre-correction workflow and log: closeout/backups/windows-temp; previous published candidate e16702390aa38593127d912ba767e6de76e6c682 remains in history and in the verified bundle.
+
+
+### 2026-11-12 — Windows advisory workflow expression-context correction (Ava continuation)
+
+- Original PR #175 HEAD: `3b94ca239092e46e6e6d13f70ab2f0968389383a`. Hosted run [43196716521](https://github.com/SepehrGhanbari/Ario/actions/runs/43196716521) failed at workflow validation with zero jobs: `runner.temp` cannot be used from job-level `env`. CodeRabbit also identified the unsupported placement.
+- Preserve the earlier [43196202374](https://github.com/SepehrGhanbari/Ario/actions/runs/43196202374) Windows run with five real test failures (8.3 RUNNER~1 versus runneradmin alias) as RED evidence.
+- Narrow patch: move TEMP/TMP `runner.temp` expressions from job-level env to the Windows pytest **step-level env**, where the GitHub runner context is permitted. Linux job, dependency pins, Windows test selection, no-skip, failure visibility, token permissions and PR-only advisory scope stay unchanged.
+- Complete local preimage backups (byte-verified): `Ario_Engineering_Closeout_20261112/backups/windows-step-env-ava-20261112/`; the earlier complete-history Git bundle remains preserved.
+- This append is a source/change record, **not** a claim of passing hosted Windows CI. New HEAD push and pull_request runs must be read back before any GREEN claim. No merge, rule change, signer, Genesis or trust activation.
+
+
+## 2026-11-13 — #175 Windows advisory SHA-pinned action refs
+- Scope: existing .github/workflows/implementation-regression.yml, Windows-only action refs, and append-only ENGINEERING_LOG.md. Linux required m0-regression job, workflow trigger, direct dependency pins, Windows event guard, timeout, test command and protections unchanged.
+- Pin sources: GitHub Git tag API at change time: actions/checkout@v4 => 11d5960a326750d5838078e36cf38b85af677262; actions/setup-python@v5 => a26af69be951a213d495a4c3e4e4022e16d87065. Both target objects were commits; mutable tags retained only as comments.
+- Evidence: prior exact-head Windows advisory succeeded on pull_request, and skipped intentionally on push; skipped is NOT a test PASS. The new workflow does not become a trusted external test harness. Original files backed up with verified Git blob hashes.
+- Parent HEAD: 1a53f58560a0e96a9a253fcc0be2e13e5e2aba8b. Fresh hosted GitHub CI required. No independent audit or local test execution asserted for this two-reference change.
