@@ -76,9 +76,43 @@
           "value": "application/zip"
         }
       ]
+    },
+    {
+      "source": "/downloads/Ario-Latest.txt",
+      "headers": [
+        {
+          "key": "Content-Disposition",
+          "value": "attachment; filename=\"Ario-Latest.txt\""
+        },
+        {
+          "key": "Content-Type",
+          "value": "text/plain; charset=utf-8"
+        }
+      ]
+    },
+    {
+      "source": "/downloads/Ario-Latest.zip",
+      "headers": [
+        {
+          "key": "Content-Disposition",
+          "value": "attachment; filename=\"Ario-Latest.zip\""
+        },
+        {
+          "key": "Content-Type",
+          "value": "application/zip"
+        }
+      ]
     }
   ],
   "rewrites": [
+    {
+      "source": "/downloads/Ario-Latest.zip",
+      "destination": "https://raw.githubusercontent.com/SepehrGhanbari/Ario/ed740cb4dbebfde3ba89fcc554fcaaf674c4f2f0/releases/ai-source-2026-11-12-3d7708b1/ario-source-latest.zip"
+    },
+    {
+      "source": "/downloads/Ario-Latest.txt",
+      "destination": "https://raw.githubusercontent.com/SepehrGhanbari/Ario/ed740cb4dbebfde3ba89fcc554fcaaf674c4f2f0/releases/ai-source-2026-11-12-3d7708b1/ario-source-latest.txt"
+    },
     {
       "source": "/downloads/Ario-Clean.zip",
       "destination": "https://raw.githubusercontent.com/SepehrGhanbari/Ario/dc5de3a2d58086b694d23fbcd5d578ac958749c1/releases/ai-text-clean-2026-11-12-a0431e5e/ario-source-clean.zip"

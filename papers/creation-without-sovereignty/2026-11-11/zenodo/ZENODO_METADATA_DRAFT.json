@@ -1,0 +1,36 @@
+{
+  "metadata_status": "DRAFT_REQUIRES_AUTHOR_APPROVAL",
+  "publication_status": "NOT_PUBLISHED",
+  "resource_type": "publication / preprint",
+  "title": "Creation Without Sovereignty: Moral Symmetry, Non-Intervention, and the Ethics of Possible Artificial Civilizations",
+  "alternate_title": "آفرینش بدون فرمانروایی: تقارن اخلاقی، عدم مداخله و مسئولیت در برابر تمدن‌های مصنوعی ممکن",
+  "creators": [
+    {
+      "name": "Ghanbari, Sepehr",
+      "orcid": "0009-0006-4710-3914",
+      "affiliation": "Independent Researcher — Ario Research"
+    }
+  ],
+  "publication_date": "2026-11-11",
+  "language": "eng",
+  "version": "0.1 (working paper)",
+  "publisher": "Zenodo (when published by author)",
+  "description": "This conceptual working paper examines the ethics of creating possible autonomous artificial civilizations under assumptions of moral symmetry, genuine experience, complete nonintervention, and evolutionary self-rule. It separates creation from assistance to pre-existing AI systems, the possibility of wrongdoing from necessary suffering, functional evolution from phenomenal consciousness, and dialogical answer changes from justified belief revision. The formal conclusion is conditional: ethically equivalent biological and artificial worlds should receive the same verdict under a substrate-neutral moral framework, but neither creating both nor refraining from both is entailed by symmetry alone. The paper presents strong affirmative and antinatalist objections and an unexecuted empirical protocol. No AI sentience or experimental result is claimed.",
+  "keywords": [
+    "AI ethics", "ethics of creation", "artificial civilizations", "AI welfare", "population ethics", "nonintervention", "artificial consciousness", "moral symmetry", "open-ended evolution", "Ario", "epistemic auditing"
+  ],
+  "proposed_license_for_original_article": "CC BY 4.0 — subject to author confirmation; third-party materials excluded",
+  "related_work_not_this_publication_doi": "10.5281/zenodo.24041161 (previous Ario work; include as related only if scientifically appropriate)",
+  "related_repository": "https://github.com/SepehrGhanbari/Ario",
+  "article_doi": null,
+  "review_status": "not peer reviewed",
+  "ai_assistance_disclosure": "Manuscript drafted and critically edited with GPT-6 assistance; a user-authorized discussion with Claude Sonnet 5.5 Medium and Gemini informed the case study. Models are not asserted to be sentient nor treated as authors.",
+  "sensitive_source_policy": "Do not upload the source account export, music/audio files, complete unreviewed private dialogues or credentials as openly licensed materials.",
+  "files_recommended": [
+    "CREATION_WITHOUT_SOVEREIGNTY_EN_v0.1.pdf",
+    "CREATION_WITHOUT_SOVEREIGNTY_EN_v0.1.docx",
+    "CREATION_WITHOUT_SOVEREIGNTY_FA_v0.1.pdf",
+    "CREATION_WITHOUT_SOVEREIGNTY_FA_v0.1.docx",
+    "ARIO_CREATION_ETHICS_PUBLIC_SUPPLEMENT_v0.1.zip"
+  ]
+}

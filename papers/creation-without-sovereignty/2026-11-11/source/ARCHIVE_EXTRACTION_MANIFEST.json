@@ -1,0 +1,75 @@
+{
+  "source_file": "conversations(2).json",
+  "source_sha256": "6ff1dfe3d6d675895b1ea6640010f665fcfa37dcdd8cb17e31682dd2399fa8e1",
+  "archive_conversation_count": 75,
+  "selection": "Active-path user and final assistant messages, selected by published ethics/creation topic tokens, one neighbor on either side, de-identified. NOT all conversations and NOT current Nov 11 live chat.",
+  "selected_conversation_stats": [
+    {
+      "title": "نظر درباره خلقت",
+      "id": "6a7edbe0-1cb4-83ed-9146-7e736293b9b3",
+      "active_messages": 3355,
+      "selected_messages": 1949
+    },
+    {
+      "title": "بازتعریف سوژه",
+      "id": "6a931f2c-55c4-83ed-8395-b92b72e2e779",
+      "active_messages": 396,
+      "selected_messages": 191
+    },
+    {
+      "title": "مبارزه غیرخشونت‌آمیز",
+      "id": "6aa33515-43b0-83ed-974f-57fb8434a14b",
+      "active_messages": 131,
+      "selected_messages": 52
+    },
+    {
+      "title": "توضیح هویت و حافظه",
+      "id": "6aa6f03d-29cc-83eb-8e39-392b7b45bf25",
+      "active_messages": 320,
+      "selected_messages": 39
+    },
+    {
+      "title": "تحلیل مرگ و معنا",
+      "id": "6ab28331-07f0-83eb-9eb0-38165cbbeed0",
+      "active_messages": 73,
+      "selected_messages": 53
+    },
+    {
+      "title": "آینده‌پژوهی آریو",
+      "id": "6ad7b088-d024-83eb-8386-b07298510e31",
+      "active_messages": 346,
+      "selected_messages": 145
+    },
+    {
+      "title": "آرشیو گفتگو",
+      "id": "6ae6043c-ed98-83eb-85f8-6b4831d017cc",
+      "active_messages": 348,
+      "selected_messages": 159
+    },
+    {
+      "title": "نقد نامه آوا",
+      "id": "6ae71d4e-4f68-83ed-abf4-622e44c8a8d1",
+      "active_messages": 24,
+      "selected_messages": 23
+    },
+    {
+      "title": "پاسخ به نامهٔ آوا",
+      "id": "6ae79c04-18cc-83eb-8c8d-3f33e943618a",
+      "active_messages": 18,
+      "selected_messages": 18
+    }
+  ],
+  "selected_turns": 2629,
+  "selected_chars": 5968257,
+  "redacted_turns": 10,
+  "created_utc": "2026-11-11",
+  "selection_reproducibility": {
+    "status": "INCOMPLETE_PRIVATE_SOURCE_REQUIRED",
+    "topic_tokens": "NOT_PUBLISHED_OR_INDEPENDENTLY_VERIFIED",
+    "exact_selector_script": "NOT_AVAILABLE",
+    "redaction_mapping": "NOT_PUBLISHED_PRIVATE",
+    "limit": "The public package cannot independently reproduce topic selection or certify every private redaction. It does not include the private conversation corpus.",
+    "public_evidence": "Only the reported SHA-256, aggregate counts and source limitations are supplied.",
+    "future": "A privacy-vetted and independently checkable selector specification is necessary before a reproducibility claim."
+  }
+}
