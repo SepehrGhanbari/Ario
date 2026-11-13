@@ -87,6 +87,28 @@ def run(dataset_path, source_file=None):
     dataset = json.loads(raw)
     if dataset.get("schema") != "ARIO-TB003-SNAPSHOT-CHALLENGE-0.1":
         raise ValueError("UNSUPPORTED_DATASET_SCHEMA")
+    # A concealed reference label must never be carried in the evaluator input.
+    allowed_root = {"schema", "kind", "cases"}
+    allowed_case = {
+        "case_id", "snapshot_sequence", "complete_transfer_surface",
+        "capture", "declared_holder", "transfers", "compromised_custodians",
+        "other_witness_custodians", "complete_control_surface",
+        "complete_source_surface", "common_control", "shared_storage", "common_source"
+    }
+    if type(dataset) is not dict or set(dataset) - allowed_root:
+        raise ValueError("DATASET_UNEXPECTED_OR_GOLD_FIELDS")
+    if type(dataset.get("cases")) is not list:
+        raise ValueError("INVALID_CASES_SHAPE")
+    for item in dataset["cases"]:
+        if type(item) is not dict or set(item) != allowed_case:
+            raise ValueError("CASE_UNEXPECTED_OR_GOLD_FIELDS")
+        if type(item["capture"]) is not dict or set(item["capture"]) != {"custodian", "sequence"}:
+            raise ValueError("INVALID_CAPTURE_SHAPE")
+        if type(item["transfers"]) is not list or any(
+            type(t) is not dict or set(t) != {"from", "to", "origin", "sequence"}
+            for t in item["transfers"]
+        ):
+            raise ValueError("TRANSFER_UNEXPECTED_OR_GOLD_FIELDS")
     ids = [x["case_id"] for x in dataset["cases"]]
     if len(ids) != len(set(ids)) or not 1 <= len(ids) <= 240:
         raise ValueError("INVALID_CASE_IDS_OR_COUNT")
