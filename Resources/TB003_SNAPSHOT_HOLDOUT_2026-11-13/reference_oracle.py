@@ -13,6 +13,13 @@ def adjudicate(item: dict[str, Any]) -> dict[str, Any]:
     report = {"case_id": item["case_id"], "final_holder": None,
               "holder_status": "UNKNOWN", "chain_independence": "UNKNOWN",
               "source_independence": "UNKNOWN", "reason": []}
+    if item.get("other_witness_custodians") != ["P2"]:
+        raise ValueError("UNSUPPORTED_WITNESS_B_CONFIGURATION")
+    # Source provenance is an orthogonal axis, not conditional on custody validity.
+    if item["common_source"]:
+        report["source_independence"] = "COMMON_SOURCE_DETECTED"
+    elif item["complete_source_surface"]:
+        report["source_independence"] = "LAB_CONDITIONALLY_DISTINCT"
     if not item["complete_transfer_surface"]:
         report["reason"].append("INCOMPLETE_TRANSFER_SURFACE")
         return report
@@ -55,8 +62,4 @@ def adjudicate(item: dict[str, Any]) -> dict[str, Any]:
     else:
         report["chain_independence"] = "LAB_CONDITIONALLY_SEPARATE"
         report["reason"].append("BOUNDED_LAB_CHAIN_SEPARATION")
-    if item["common_source"]:
-        report["source_independence"] = "COMMON_SOURCE_DETECTED"
-    elif item["complete_source_surface"]:
-        report["source_independence"] = "LAB_CONDITIONALLY_DISTINCT"
     return report
