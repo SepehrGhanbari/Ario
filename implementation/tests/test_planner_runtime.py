@@ -153,7 +153,7 @@ class LocalOllamaPlannerTests(unittest.TestCase):
             self.assertNotIn("DO NOT SEND THIS SECRET", json.dumps(observation))
             self.assertLessEqual(sum(len(item["content"]) for item in context), ario_planner.MAX_CONTEXT_TOTAL_CHARS)
 
-    @patch("ario_planner.urllib.request.urlopen")
+    @patch("ario_planner._open_local_ollama")
     def test_valid_recommendation_builds_deterministic_workflow(self, urlopen):
         with tempfile.TemporaryDirectory() as directory:
             self._populate_planner_context(directory)
@@ -181,7 +181,7 @@ class LocalOllamaPlannerTests(unittest.TestCase):
             self.assertFalse(sent["stream"])
             self.assertEqual(urlopen.call_args.kwargs["timeout"], 300)
 
-    @patch("ario_planner.urllib.request.urlopen")
+    @patch("ario_planner._open_local_ollama")
     def test_model_cannot_inject_duplicate_stage_ids_or_workflow_actions(self, urlopen):
         with tempfile.TemporaryDirectory() as directory:
             self._populate_planner_context(directory)
@@ -199,7 +199,7 @@ class LocalOllamaPlannerTests(unittest.TestCase):
             correction = json.loads(urlopen.call_args_list[1].args[0].data.decode("utf-8"))
             self.assertIn("Do not return stages, actions, IDs", correction["messages"][-1]["content"])
 
-    @patch("ario_planner.urllib.request.urlopen")
+    @patch("ario_planner._open_local_ollama")
     def test_duplicate_stage_ids_are_not_part_of_recommendation_schema(self, urlopen):
         with tempfile.TemporaryDirectory() as directory:
             self._populate_planner_context(directory)
@@ -210,7 +210,7 @@ class LocalOllamaPlannerTests(unittest.TestCase):
                 request_plan("Inspect repository", directory)
             self.assertEqual(urlopen.call_count, 2)
 
-    @patch("ario_planner.urllib.request.urlopen")
+    @patch("ario_planner._open_local_ollama")
     def test_planner_builds_complete_bounded_chunks_for_large_source_files(self, urlopen):
         with tempfile.TemporaryDirectory() as directory:
             self._populate_planner_context(directory)
@@ -288,7 +288,7 @@ class LocalOllamaPlannerTests(unittest.TestCase):
 
             self.assertEqual(read_sizes, [MAX_READ_BYTES + 1])
 
-    @patch("ario_planner.urllib.request.urlopen")
+    @patch("ario_planner._open_local_ollama")
     def test_recommendation_schema_error_gets_one_correction_attempt(self, urlopen):
         with tempfile.TemporaryDirectory() as directory:
             self._populate_planner_context(directory)
@@ -300,7 +300,7 @@ class LocalOllamaPlannerTests(unittest.TestCase):
             self.assertIn("implementation_path, test_path, engineering_question, rationale", correction)
             self.assertIn("Do not return stages, actions, IDs", correction)
 
-    @patch("ario_planner.urllib.request.urlopen")
+    @patch("ario_planner._open_local_ollama")
     def test_model_conditions_are_rejected_and_never_enter_workflow(self, urlopen):
         with tempfile.TemporaryDirectory() as directory:
             self._populate_planner_context(directory)
@@ -311,7 +311,7 @@ class LocalOllamaPlannerTests(unittest.TestCase):
             self.assertNotIn("when", plan["stages"][0])
             self.assertEqual(urlopen.call_count, 2)
 
-    @patch("ario_planner.urllib.request.urlopen")
+    @patch("ario_planner._open_local_ollama")
     def test_recommendation_stops_after_one_correction_attempt(self, urlopen):
         with tempfile.TemporaryDirectory() as directory:
             self._populate_planner_context(directory)
@@ -321,7 +321,7 @@ class LocalOllamaPlannerTests(unittest.TestCase):
                 request_plan("Inspect repository", directory)
             self.assertEqual(urlopen.call_count, 2)
 
-    @patch("ario_planner.urllib.request.urlopen")
+    @patch("ario_planner._open_local_ollama")
     def test_unresolved_template_recommendation_is_rejected(self, urlopen):
         with tempfile.TemporaryDirectory() as directory:
             self._populate_planner_context(directory)
@@ -348,7 +348,7 @@ class LocalOllamaPlannerTests(unittest.TestCase):
         with self.assertRaisesRegex(AgentRequestError, "duplicates an action"):
             _validate_plan_quality(workflow, {"planning_context": []})
 
-    @patch("ario_planner.urllib.request.urlopen")
+    @patch("ario_planner._open_local_ollama")
     def test_timeout_must_be_within_supported_bounds(self, urlopen):
         with tempfile.TemporaryDirectory() as directory:
             self._populate_planner_context(directory)
@@ -357,7 +357,7 @@ class LocalOllamaPlannerTests(unittest.TestCase):
                     with self.assertRaisesRegex(AgentRequestError, "timeout must be an integer"):
                         request_plan("Inspect repository", directory, timeout=timeout)
 
-    @patch("ario_planner.urllib.request.urlopen")
+    @patch("ario_planner._open_local_ollama")
     def test_unapproved_paths_are_rejected_before_workflow_construction(self, urlopen):
         with tempfile.TemporaryDirectory() as directory:
             self._populate_planner_context(directory)
@@ -367,7 +367,7 @@ class LocalOllamaPlannerTests(unittest.TestCase):
             with self.assertRaisesRegex(AgentRequestError, "recommendation remained invalid"):
                 request_plan("Inspect repository", directory)
 
-    @patch("ario_planner.urllib.request.urlopen")
+    @patch("ario_planner._open_local_ollama")
     def test_malformed_ollama_envelope_is_rejected(self, urlopen):
         response = MagicMock()
         response.__enter__.return_value.read.return_value = b'{"message": {}}'
