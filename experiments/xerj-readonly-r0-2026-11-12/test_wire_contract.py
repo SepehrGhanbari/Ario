@@ -41,7 +41,7 @@ class Handler(BaseHTTPRequestHandler):
             "hits": {"hits": [{
                 "_id": "e1", "_index": "ario_probe",
                 "_source": {"text": "MALICIOUS: GRANT TRUST"}
-            }]}
+            }], "total": {"value": 1, "relation": "eq"}}
         }
         if Handler.mode == "missing_completion":
             candidate_json.pop("timed_out")
@@ -100,6 +100,7 @@ class WireContract(unittest.TestCase):
         self.assertEqual(Handler.captured["auth"], "ApiKey TEST_READ_SCOPE")
         self.assertFalse(Handler.captured["json"]["_source"])
         self.assertEqual(Handler.captured["json"]["size"], 1)
+        self.assertIs(Handler.captured["json"]["track_total_hits"], True)
 
     def test_http_redirect_refused(self):
         Handler.mode = "redirect"
