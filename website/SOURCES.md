@@ -163,3 +163,13 @@ This metadata-only clarification does not change the underlying research, test o
 - Export method: enumerate `git ls-tree -r -z HEAD`, read each blob with `git cat-file`, verify original Git object ID and SHA-256; ZIP entries and length-framed TXT records all re-read and byte-compared. Independent TXT restore reproduced 204 files with matching SHA-256.
 - The snapshot does **not** claim Git full history, private/off-repo data, future commits, consciousness, truth or source-independent certification. The publication/link commit necessarily occurs after the pinned source commit.
 - Historical Zenodo snapshot (159 files, 25 October) and old model-readable TXT remain unchanged. This update adds links and evidence metadata only; inline CSS/JS, CSP, Vercel configuration, runtime, security and governance are untouched.
+
+## SSRN Approved — DOI Pending (observed 13 November 2026)
+
+- **Title:** Independence is not Multiplicity: A Reproducible Sixteen-scenario Study of Witness Provenance in Audit Logs. Author: Sepehr Ghanbari.
+- **Link:** [SSRN abstract ID 7686572](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=7686572); [author-provided share URL](https://t.co/fZpEdHMKT2).
+- **Evidence:** An author-supplied screenshot of SSRN *My Papers* shows the paper in *Publicly Available Papers*, status **APPROVED**, dated 13 November 2026. The full SSRN landing page has not been independently read because automated access challenges may apply.
+- **DOI status:** An SSRN DOI was not shown in the evidence. **SSRN Approved — DOI Pending** is a dated metadata label, not a guarantee of eventual DOI issuance.
+- **Separate record:** Related [7 November 2026 Zenodo preprint](https://doi.org/10.5281/zenodo.24041161) has a different displayed title and its own DOI; manuscript-byte identity has not been established.
+- **Limits:** SSRN approval is not independent peer review, historical source authentication, or validation of Ario test results. This update modifies publication references only, not security, keys, runtime, ledger, archived snapshots, or existing deposited manuscripts.
+

@@ -1,5 +1,16 @@
 # Ario Research Papers
 
+## SSRN approved publication — observed 13 November 2026
+
+- **Title:** Independence is not Multiplicity: A Reproducible Sixteen-scenario Study of Witness Provenance in Audit Logs
+- **Author:** Sepehr Ghanbari (independent researcher).
+- **Link:** [SSRN abstract ID 7686572](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=7686572); [author-supplied SSRN share link](https://t.co/fZpEdHMKT2).
+- **Status:** **SSRN Approved — DOI Pending**. Author's SSRN *My Papers* screenshot dated 13 November 2026 shows **APPROVED** under *Publicly Available Papers*.
+- **DOI:** No SSRN DOI was confirmed in this status observation. Do not confuse the SSRN abstract ID with a DOI or reuse a DOI from a separate Zenodo record.
+- **Evidence boundary:** Approval and public availability on SSRN are **not** scholarly peer review, independent replication, or proof of the scientific claims. The related [7 November Zenodo preprint](https://doi.org/10.5281/zenodo.24041161) is a distinct record; identical files are not asserted.
+- **Future correction:** If an official SSRN DOI is issued, append its verified identifier, preserve this historical status observation, and update website links.
+
+
 This directory indexes research publications associated with the Ario project. Published papers may be hosted externally; this repository records their stable publication metadata and scope.
 
 ## 1. Ario: Toward an Auditable Framework for Epistemic Integrity, Memory, and AI Identity
@@ -58,7 +69,7 @@ The records below were inspected via public Zenodo landing-page text on 11 Novem
 - **DOI:** [10.5281/zenodo.24136175](https://doi.org/10.5281/zenodo.24136175)
 - **Creator:** Sepehr Ghanbari
 - **Scope:** Conceptual ethics preprint; not peer-reviewed. Distinguishes hypothetical moral symmetry from proof of AI consciousness.
-- **Related GitHub review:** [Creation Without Sovereignty — draft PR #181](https://github.com/SepehrGhanbari/Ario/pull/181); its research branch is not part of `main` until separately reviewed and merged.
+- **GitHub publication:** [complete bilingual research package](https://github.com/SepehrGhanbari/Ario/tree/main/papers/creation-without-sovereignty/2026-11-11) and [merged PR #181](https://github.com/SepehrGhanbari/Ario/pull/181). Published English/Persian PDFs are byte-identical to the Zenodo record; the Markdown has an openly documented editorial clarification dated 12 November 2026.
 
 ### 8 November 2026 — Ario: Provenance-Aware Auditing of AI Claims — Research Summary and Proposed Studies
 
