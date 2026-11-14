@@ -39,13 +39,11 @@ We welcome contributions from everyone, regardless of experience level.
    git checkout -b feature/your-feature-name
    ```
 4. Make your changes
-5. Test your changes:
-   ```bash
-   python -m pytest implementation/tests/
-   ```
+5. Test your changes using [Running Tests](#running-tests) below and the documented working directory.
 6. Commit with clear messages:
    ```bash
-   git commit -m "feat: add new feature X"
+   git add path/to/changed-file
+   git commit -s -m "feat: add new feature X"
    ```
 7. Push and create a PR
 
@@ -55,7 +53,7 @@ We welcome contributions from everyone, regardless of experience level.
 - **Tests**: Add tests for new functionality
 - **Documentation**: Update docs if needed
 - **Code Style**: Follow existing patterns
-- **Sign-off**: Use `git commit -s` for DCO
+- **Commit sign-off**: Use `git commit -s` as shown; a sign-off is not a review approval
 
 ### 4. **Documentation**
 - Improve existing docs
@@ -101,73 +99,89 @@ Ario/
 ## 🛠 Development Setup
 
 ### Prerequisites
-- Python 3.8+
+- CPython 3.13 (per the repository's reproducibility guide)
 - Git
 - GitHub account
 
 ### Installation
-```bash
-# Clone the repository
+
+Use [the reproducibility guide](docs/REPRODUCE_M0.md) for the canonical Python 3.13 setup and pinned test dependencies. There is no root editable Python package or root `requirements-test.txt`. From a new repository checkout (choose another venv path if one already exists):
+
+Linux / macOS:
+
+```sh
 git clone https://github.com/SepehrGhanbari/Ario.git
 cd Ario
+python3.13 -m venv ../ario-contrib-venv
+PYTHON="$(cd ../ario-contrib-venv/bin && pwd)/python"
+"$PYTHON" -m pip install -r implementation/requirements-research.txt
+"$PYTHON" -m pip check
+```
 
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+Windows PowerShell:
 
-# Install dependencies
-pip install -e .
-pip install -r requirements-test.txt
+```powershell
+git clone https://github.com/SepehrGhanbari/Ario.git
+Set-Location Ario
+py -3.13 -m venv ..\ario-contrib-venv
+$python = (Resolve-Path ..\ario-contrib-venv\Scripts\python.exe).Path
+& $python -m pip install -r implementation/requirements-research.txt
+& $python -m pip check
 ```
 
 ### Running Tests
-```bash
-# Run all tests
-python -m pytest implementation/tests/
 
-# Run specific test
-python -m pytest implementation/tests/test_agent_runtime.py
+Run from `implementation/` so imports such as `ario_agent` and `core` resolve. Use the same virtual-environment interpreter as above.
 
-# With coverage
-python -m pytest --cov=implementation implementation/tests/
+Linux / macOS:
+
+```sh
+(cd implementation && "$PYTHON" -B -m pytest -p no:cacheprovider -q tests)
+(cd implementation && "$PYTHON" -B -m pytest -p no:cacheprovider -q tests/test_agent_runtime.py)
 ```
+
+Windows PowerShell (the full suite requires the documented long-ID display plugin):
+
+```powershell
+Push-Location implementation
+& $python -B -m pytest -p no:cacheprovider -p tests.test_m0_reproducibility_demo -q tests
+& $python -B -m pytest -p no:cacheprovider -q tests/test_agent_runtime.py
+Pop-Location
+```
+
+Check each test command's exit code. Coverage is optional: if desired, install `pytest-cov` separately in the same environment, record its version, then use `--cov=ario_agent` from `implementation/`. It is not in the pinned test requirements.
 
 ---
 
-## 📜 Code of Conduct
+## 📜 Community conduct and project governance
 
-We expect all contributors to follow our [Code of Conduct](CODE_OF_CONDUCT.md).
-Be respectful, inclusive, and professional.
+Be respectful, inclusive, and professional. See the existing [project governance policy](GOVERNANCE.md). There is no separate published `CODE_OF_CONDUCT.md` in the repository; this is contributor guidance, not a claim that one exists.
 
 ---
 
 ## 🎓 Good First Issues
 
-Look for issues labeled:
-- `good first issue` - Beginner-friendly
-- `help wanted` - Needs assistance
-- `documentation` - Documentation improvements
+Browse [open issues](https://github.com/SepehrGhanbari/Ario/issues) and select suitable beginner-friendly labels if they exist; no particular label is guaranteed.
 
 ---
 
 ## 📞 Communication
 
 - **GitHub Issues**: For bug reports and feature requests
-- **GitHub Discussions**: For general questions and discussions
+- **GitHub Issues**: For questions while the repository Discussions feature is unavailable
 - **Pull Requests**: For code contributions
 
 ---
 
 ## ✅ Recognition
 
-All meaningful contributions will be recognized:
-- Added to CONTRIBUTORS.md
-- Mentioned in release notes
-- Invited to become maintainers (for significant contributions)
+Contributions retain attribution through Git commits and PR history. Release notes may acknowledge substantive contributions, but this is not automatic. Contributing does not confer maintainer or publication authority; see [GOVERNANCE.md](GOVERNANCE.md).
 
 ---
 
-# Farsi: راهنمای مشارکت در آریو
+# Farsi
+
+**راهنمای مشارکت در آریو**
 
 از اینکه به فکر مشارکت در **آریو - چارچوب معرفت‌شناسی قابل بررسی برای هوش مصنوعی** هستید، سپاسگزاریم! 
 مشارکت همه افراد، صرف نظر از سطح تجربه، خوش‌آمدید است.
@@ -204,13 +218,11 @@ All meaningful contributions will be recognized:
    git checkout -b feature/نام-ویژگی-شما
    ```
 4. تغییرات خود را اعمال کنید
-5. تغییرات را تست کنید:
-   ```bash
-   python -m pytest implementation/tests/
-   ```
+5. تغییرات خود را با روش بخش «اجرای تست‌ها» در ادامه و از مسیر درست بررسی کنید.
 6. با پیام‌های واضح commit کنید:
    ```bash
-   git commit -m "feat: اضافه کردن ویژگی X"
+   git add path/to/changed-file
+   git commit -s -m "feat: اضافه کردن ویژگی X"
    ```
 7. Push کنید و PR ایجاد کنید
 
@@ -220,7 +232,7 @@ All meaningful contributions will be recognized:
 - **تست‌ها**: تست‌های جدید برای قابلیت‌های جدید اضافه کنید
 - **مستندات**: اگر لازم است مستندات را آپدیت کنید
 - **سبک کد**: از الگوهای موجود پیروی کنید
-- **امضا**: از `git commit -s` برای DCO استفاده کنید
+- **امضای کامیت**: از `git commit -s` استفاده کنید؛ این به معنی تأیید بازبینی نیست
 
 ### ۴. مستندات
 - بهبود مستندات موجود
@@ -266,57 +278,74 @@ Ario/
 ## راه‌اندازی محیط توسعه
 
 ### پیش‌نیازها
-- Python 3.8+
+- CPython 3.13 (مطابق راهنمای بازتولید پروژه)
 - Git
 - حساب GitHub
 
 ### نصب
-```bash
-# کلون کردن ریپازیتوری
+
+برای نصب قابل‌بازتولید Python 3.13 و وابستگی‌های آزمون به [راهنمای بازتولید پروژه](docs/REPRODUCE_M0.md) مراجعه کنید. در ریشهٔ مخزن فایل `requirements-test.txt` یا بسته‌ای برای `pip install -e .` وجود ندارد. این مراحل را از یک کلون جدید اجرا کنید؛ اگر مسیر محیط مجازی وجود دارد نام دیگری انتخاب کنید.
+
+Linux / macOS:
+
+```sh
 git clone https://github.com/SepehrGhanbari/Ario.git
 cd Ario
-
-# ایجاد محیط مجازی
-python -m venv venv
-source venv/bin/activate  # در Windows: venv\Scripts\activate
-
-# نصب واسطه‌ها
-pip install -e .
-pip install -r requirements-test.txt
+python3.13 -m venv ../ario-contrib-venv
+PYTHON="$(cd ../ario-contrib-venv/bin && pwd)/python"
+"$PYTHON" -m pip install -r implementation/requirements-research.txt
+"$PYTHON" -m pip check
 ```
 
-### اجرا کردن تست‌ها
-```bash
-# اجرا کردن تمام تست‌ها
-python -m pytest implementation/tests/
+Windows PowerShell:
 
-# اجرا کردن تست خاص
-python -m pytest implementation/tests/test_agent_runtime.py
-
-# با پوشش کد
-python -m pytest --cov=implementation implementation/tests/
+```powershell
+git clone https://github.com/SepehrGhanbari/Ario.git
+Set-Location Ario
+py -3.13 -m venv ..\ario-contrib-venv
+$python = (Resolve-Path ..\ario-contrib-venv\Scripts\python.exe).Path
+& $python -m pip install -r implementation/requirements-research.txt
+& $python -m pip check
 ```
+
+### اجرای تست‌ها
+
+تست‌ها را از پوشهٔ `implementation/` اجرا کنید تا واردکردن ماژول‌هایی مانند `ario_agent` و `core` درست انجام شود. از همان پایتون محیط مجازی بالا استفاده کنید.
+
+Linux / macOS:
+
+```sh
+(cd implementation && "$PYTHON" -B -m pytest -p no:cacheprovider -q tests)
+(cd implementation && "$PYTHON" -B -m pytest -p no:cacheprovider -q tests/test_agent_runtime.py)
+```
+
+Windows PowerShell (اجرای کامل به افزونهٔ نمایش شناسه‌های طولانی نیاز دارد):
+
+```powershell
+Push-Location implementation
+& $python -B -m pytest -p no:cacheprovider -p tests.test_m0_reproducibility_demo -q tests
+& $python -B -m pytest -p no:cacheprovider -q tests/test_agent_runtime.py
+Pop-Location
+```
+
+کد خروجی فرمان‌های تست را بررسی کنید. پوشش تست اختیاری است: در صورت نیاز `pytest-cov` را جداگانه در همین محیط نصب کنید، نسخه‌اش را ثبت کنید و از `implementation/` با گزینهٔ `--cov=ario_agent` اجرا کنید. این افزونه جزو وابستگی‌های پین‌شده نیست.
 
 ---
 
-## قوانین رفتار
+## رفتار مشارکت‌کنندگان و راهبری پروژه
 
-ما از تمام مشارکت‌کنندگان انتظار داریم که [قوانین رفتار](CODE_OF_CONDUCT.md) ما را دنبال کنند.
-احترام‌گذار، فراگیر و حرفه‌ای باشید.
+در مشارکت با دیگران محترمانه، فراگیر و حرفه‌ای رفتار کنید. [سند راهبری پروژه](GOVERNANCE.md) را ببینید. فعلاً فایل مستقل `CODE_OF_CONDUCT.md` منتشر نشده است.
 
 ---
 
 ## ارتباط
 
 - **GitHub Issues**: برای گزارش باگ‌ها و درخواست ویژگی‌ها
-- **GitHub Discussions**: برای سوالات عمومی و بحث‌ها
+- **GitHub Issues**: برای پرسش‌ها تا زمانی که قابلیت Discussions در دسترس نیست
 - **Pull Requests**: برای مشارکت در کد
 
 ---
 
 ## شناسایی
 
-تمام مشارکت‌های معنادار شناسایی خواهند شد:
-- اضافه شدن به CONTRIBUTORS.md
-- ذکر در یادداشت‌های نسخه
-- دعوت به تبدیل شدن به maintainer (برای مشارکت‌های قابل توجه)
+نام مشارکت‌کنندگان در تاریخچهٔ Git و Pull Requestها حفظ می‌شود. ممکن است در یادداشت انتشار از مشارکت‌های مهم قدردانی شود، اما این وعدهٔ خودکار نیست. مشارکت به‌تنهایی اختیار نگهداری یا انتشار رسمی نمی‌دهد؛ [GOVERNANCE.md](GOVERNANCE.md) را ببینید.
