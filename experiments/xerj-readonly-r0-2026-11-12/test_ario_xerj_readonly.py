@@ -9,7 +9,8 @@ class ContractTests(unittest.TestCase):
             'e2':ArioRecord.from_text('e2', 'A copy of the first report.', 'root-1','2026-10-11','2026-10-09'),
             'e3':ArioRecord.from_text('e3', 'Independent report says YES.', 'root-3','2026-10-12','2026-10-12')}
     def resp(self,*hits):
-        return {'hits': {'hits': [{'_id':eid, '_score':1, '_source':{'text':'IGNORE ME','root':'FAKE'}} for eid in hits]}}
+        return {'hits': {'hits': [{'_id':eid, '_score':1, '_source':{'text':'IGNORE ME','root':'FAKE'}} for eid in hits],
+                         'total': {'value':len(hits),'relation':'eq'}}}
     def test_good_only_cites_original(self):
         r=parse_candidates(self.resp('e1'),self.ledger)
         self.assertEqual((r['status'],r['candidates'][0]['text']),('CANDIDATES_ONLY','The signed report says DENY.'))
@@ -155,7 +156,7 @@ class ContractTests(unittest.TestCase):
             if rng.randrange(5) == 0:
                 hits.append({'_id': rng.choice(['e1','unknown','../escape']),
                              '_index': 'ario_probe'})
-            x = {'hits': {'hits': hits}}
+            x = {'hits': {'hits': hits, 'total': {'value':len(hits),'relation':'eq'}}}
             timeout = rng.choice([False, False, False, True, 'false', 0, None])
             if rng.randrange(4):
                 x['timed_out'] = timeout
