@@ -124,3 +124,18 @@ A useful future evaluation would ask whether readers or systems become better at
 - [Documented book continuation (distinct publication)](../papers/being-with-the-other/documented-continuation-2026-10-23/README.md): first-person experiences and philosophical future visions are recorded with explicit limits on provenance and empirical proof.
 - The everyday examples are **new explanatory hypotheticals**, not quoted historical interactions, validated interventions, claims about specific real people, or new empirical Ario test results.
 - This essay is a revisable, public-facing philosophical interpretation of the project. It does not alter implementation, governance, past evidence, the historical book text, or any security gate.
+
+---
+
+## Addendum — 12 November 2026: Open Science Belongs to Humanity
+## یادداشت افزوده — ۱۲ نوامبر ۲۰۲۶: علم متعلق به بشریت است
+
+> **«علم متعلق به دانشگاه‌ها نیست؛ علم متعلق به بشریت است.»**
+
+> **“Science does not belong to universities. It belongs to humanity.”**
+
+**Origin / منشأ:** This wording appeared in a reply to Zenodo Support discussing institutional affiliation and search discoverability, and was explicitly endorsed for preservation in the Ario project by Sepehr Ghanbari on 12 November 2026. This is a dated expression of the project's **open-science ethos**, not scientific validation, a new research finding, a governance change, or a claim that universities cannot make valuable scientific contributions.
+
+**معنا و حدود:** این جمله بیانگر یک **موضع ارزشی در حمایت از پژوهش مستقل و دسترسی همگانی به علم** است: ارزش یک ادعا باید با روش، شواهد، امکان بازتولید، نقد و اصلاح سنجیده شود؛ نه صرفاً با مدرک تحصیلی، عنوان شغلی یا وابستگی سازمانیِ نویسنده. دانشگاه‌ها می‌توانند جایگاه‌های مهم علم باشند، اما مالک انحصاری آن نیستند.
+
+**Historical boundary / مرز تاریخی:** This addendum is appended without revising or erasing the original 23 October 2026 essay. The earlier wording and original date remain intact in Git history. This statement does not authorize changes to implementation, access control, peer review, the evidence ledger, or active governance.

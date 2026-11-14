@@ -42,6 +42,13 @@ def verify_observation_manifest(manifest: Any, ledger_path: str | Path) -> dict:
             or not isinstance(manifest.get("epistemic_limit"), str)):
         return result("REJECTED", "manifest field types invalid")
 
+    # Python container equality treats True and 1.0 as equal to integer 1.
+    # A locator must retain the adapter's integer type before comparison.
+    if any(not isinstance(observation, dict)
+           or type(observation.get("line")) is not int
+           for observation in manifest["observations"]):
+        return result("REJECTED", "observation line must be an integer")
+
     target = Path(ledger_path)
     # Never trust a manifest to redirect us to a different source.
     if manifest["source"] != str(target.absolute()):

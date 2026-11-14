@@ -1,5 +1,16 @@
 # Ario Research Papers
 
+## SSRN approved publication — observed 13 November 2026
+
+- **Title:** Independence is not Multiplicity: A Reproducible Sixteen-scenario Study of Witness Provenance in Audit Logs
+- **Author:** Sepehr Ghanbari (independent researcher).
+- **Link:** [SSRN abstract ID 7686572](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=7686572); [author-supplied SSRN share link](https://t.co/fZpEdHMKT2).
+- **Status:** **SSRN Approved — DOI Pending**. Author's SSRN *My Papers* screenshot dated 13 November 2026 shows **APPROVED** under *Publicly Available Papers*.
+- **DOI:** No SSRN DOI was confirmed in this status observation. Do not confuse the SSRN abstract ID with a DOI or reuse a DOI from a separate Zenodo record.
+- **Evidence boundary:** Approval and public availability on SSRN are **not** scholarly peer review, independent replication, or proof of the scientific claims. The related [7 November Zenodo preprint](https://doi.org/10.5281/zenodo.24041161) is a distinct record; identical files are not asserted.
+- **Future correction:** If an official SSRN DOI is issued, append its verified identifier, preserve this historical status observation, and update website links.
+
+
 This directory indexes research publications associated with the Ario project. Published papers may be hosted externally; this repository records their stable publication metadata and scope.
 
 ## 1. Ario: Toward an Auditable Framework for Epistemic Integrity, Memory, and AI Identity
@@ -48,3 +59,28 @@ The two 2026-10-14 DOIs are distinct records. Their existence does not establish
 - **SSRN:** [Abstract ID 7675778](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=7675778), submission received 27 October 2026; most recent observed status `PRELIMINARY_UPLOAD`. No confirmation of public availability, peer review or separate SSRN DOI.
 - **Related static source snapshot:** [Zenodo 10.5281/zenodo.23651704](https://doi.org/10.5281/zenodo.23651704). This is not the manuscript DOI.
 - **Boundaries:** local/synthetic test results do not establish authenticated source history, physical custody independence, live authorization or full production security.
+
+## 6. Newly published Zenodo preprints (7–11 November 2026)
+
+The records below were inspected via public Zenodo landing-page text on 11 November 2026. This verifies their displayed titles, dates, author and public links, **not** the deposited binary checksums, independent peer review or reproducibility claims.
+
+### 11 November 2026 — Creation Without Sovereignty: Moral Symmetry, Non-Intervention, and the Ethics of Possible Artificial Civilizations
+
+- **DOI:** [10.5281/zenodo.24136175](https://doi.org/10.5281/zenodo.24136175)
+- **Creator:** Sepehr Ghanbari
+- **Scope:** Conceptual ethics preprint; not peer-reviewed. Distinguishes hypothetical moral symmetry from proof of AI consciousness.
+- **GitHub publication:** [complete bilingual research package](https://github.com/SepehrGhanbari/Ario/tree/main/papers/creation-without-sovereignty/2026-11-11) and [merged PR #181](https://github.com/SepehrGhanbari/Ario/pull/181). Published English/Persian PDFs are byte-identical to the Zenodo record; the Markdown has an openly documented editorial clarification dated 12 November 2026.
+
+### 8 November 2026 — Ario: Provenance-Aware Auditing of AI Claims — Research Summary and Proposed Studies
+
+- **DOI:** [10.5281/zenodo.24054535](https://doi.org/10.5281/zenodo.24054535)
+- **Creator:** Sepehr Ghanbari
+- **Scope:** Research summary, a reported local test reproduction and three proposed (not yet executed) studies; not peer-reviewed.
+
+### 7 November 2026 — Independence Is Not Multiplicity: A Synthetic Witness-Provenance Study within Ario's Auditable Epistemic Framework
+
+- **DOI:** [10.5281/zenodo.24041161](https://doi.org/10.5281/zenodo.24041161)
+- **Creator:** Sepehr Ghanbari
+- **Scope:** Bounded study of 16 synthetic scenarios and four counterexamples; not independently validated or peer-reviewed.
+
+**Interpretation boundary:** Depositing a preprint does not imply peer review, validated model consciousness, historic source authenticity, production readiness, or confirmation of all reported test results.

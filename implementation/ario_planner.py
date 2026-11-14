@@ -405,6 +405,21 @@ def _build_deterministic_workflow(goal: str, recommendation: dict, root: Path) -
     return workflow
 
 
+class _NoOllamaRedirects(urllib.request.HTTPRedirectHandler):
+    """Keep local planning traffic at the validated endpoint, including retries."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def _open_local_ollama(request: urllib.request.Request, *, timeout: int):
+    """Use a request-local transport without proxy discovery or redirects."""
+    opener = urllib.request.build_opener(
+        urllib.request.ProxyHandler({}), _NoOllamaRedirects(),
+    )
+    return opener.open(request, timeout=timeout)
+
+
 def request_plan(
     goal: str,
     workspace: str | Path,
@@ -452,7 +467,7 @@ def request_plan(
             method="POST",
         )
         try:
-            with urllib.request.urlopen(request, timeout=timeout) as response:
+            with _open_local_ollama(request, timeout=timeout) as response:
                 raw = response.read(MAX_RESPONSE_BYTES + 1)
         except (urllib.error.URLError, TimeoutError, OSError) as exc:
             raise AgentRequestError(f"could not obtain a response from local Ollama: {exc}") from exc

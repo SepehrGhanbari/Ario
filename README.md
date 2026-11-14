@@ -10,6 +10,17 @@
 **Research identity:** **Ario — Auditable Epistemic Framework for AI**  
 **نام پژوهشی فارسی:** آریو — چارچوب معرفتی ممیزی‌پذیر برای هوش مصنوعی  
 **Official website:** https://ario-research-independent.vercel.app/  
+**Public traffic dashboard / داشبورد عمومی ترافیک:** https://ario-public-traffic.vercel.app/ — dated aggregate clone/view counts, not unique people or verified adoption.  
+
+## Latest public materials / جدیدترین منابع آریو — 12 November 2026
+
+**Newest matched source release** — pinned Git source 3d7708b1 (234 original tracked files audited): [complete TXT](https://ario-research-independent.vercel.app/downloads/Ario-Latest.txt) (3.74 MB, 213 full text/code files) · [clean ZIP](https://ario-research-independent.vercel.app/downloads/Ario-Latest.zip) (4.59 MB, 226 unique original files including published PDFs) · [SHA-256 and provenance](https://github.com/SepehrGhanbari/Ario/tree/ed740cb4dbebfde3ba89fcc554fcaaf674c4f2f0/releases/ai-source-2026-11-12-3d7708b1).
+
+**Latest ethics paper / مقالهٔ اخلاقی تازه:** [Creation Without Sovereignty](https://doi.org/10.5281/zenodo.24136175) (11 November 2026; not peer reviewed) · [English full text](https://github.com/SepehrGhanbari/Ario/blob/main/papers/creation-without-sovereignty/2026-11-11/paper/CREATION_WITHOUT_SOVEREIGNTY_EN_v0.1.md) · [متن کامل فارسی](https://github.com/SepehrGhanbari/Ario/blob/main/papers/creation-without-sovereignty/2026-11-11/paper/CREATION_WITHOUT_SOVEREIGNTY_FA_v0.1.md) · [English PDF](https://github.com/SepehrGhanbari/Ario/blob/main/papers/creation-without-sovereignty/2026-11-11/published/en.pdf) · [PDF فارسی](https://github.com/SepehrGhanbari/Ario/blob/main/papers/creation-without-sovereignty/2026-11-11/published/fa.pdf). Published PDF bytes remain unchanged; updated GitHub Markdown includes disclosed editorial clarifications.
+
+**Historical TXT and ZIP exports remain available** in the releases directory; newer releases are listed first on the public website.
+
+
 **Secondary website mirror:** https://sepehrghanbari.github.io/Ario/  
 **Researcher ORCID:** https://orcid.org/0009-0006-4710-3914
 
@@ -36,6 +47,8 @@ Instead, Ario explores an auditable framework in which observations, evidence, i
 **Try the synthetic beta / آزمایشگاه تعاملیِ ساختگی:** [Ario Evidence Lab — six fictional FA/EN exercises](https://sepehrghanbari.github.io/Ario/ario-lab/). This public demonstration is not M0, a live evidence verifier or a truth authority. / این دمو پژوهش آزمایشگاهی واقعی یا مرجع تشخیص حقیقت نیست.
 
 **New / تازه:** [Ario Lab 02 — write fictional claims and select 12 bilingual sample prompts](https://sepehrghanbari.github.io/Ario/ario-lab-2/). This is a local, synthetic teaching beta, not production M0 or real evidence verification.
+
+**Public GitHub activity / آمار عمومی GitHub:** [View the Ario traffic dashboard / مشاهدهٔ داشبورد آمار آریو](https://ario-public-traffic.vercel.app/). This is a dated public snapshot, not a live or independently verified count of users.
 
 **Questions, corrections, and skeptical feedback / پرسش، اصلاح و نقد مستقل:** [Public bilingual discussion #106](https://github.com/SepehrGhanbari/Ario/issues/106). You do not have to agree with Ario to participate. / برای نقد پروژه و معرفی نکات مبهم، نیازی به موافقت با آریو ندارید.
 
@@ -444,6 +457,17 @@ The project intentionally avoids presenting unresolved questions as established 
 ---
 
 ## Research Publications
+
+**New SSRN-approved paper (13 November 2026):** [Independence is not Multiplicity: A Reproducible Sixteen-scenario Study of Witness Provenance in Audit Logs](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=7686572) — Sepehr Ghanbari; **SSRN Approved — DOI Pending**, abstract ID **7686572** ([author-supplied share link](https://t.co/fZpEdHMKT2)). The author's SSRN *My Papers* screenshot shows the record in *Publicly Available Papers* with status **APPROVED** on 13 November 2026. **This is publication approval, not peer review or independent scientific validation.** An SSRN DOI has not been confirmed. The related [7 November Zenodo preprint](https://doi.org/10.5281/zenodo.24041161) is a separate publication record; file identity is not asserted.
+
+
+**Complete Ario model export (11 Nov 2026, pinned at source commit `05ba5c960aaea96fc6bb80504b53b4d47e7d42f5`):** [ZIP — all 204 tracked files](https://raw.githubusercontent.com/SepehrGhanbari/Ario/main/releases/ai-readable-full-2026-11-11-05ba5c9/ario-full.zip) · [TXT — all 204 files, readable text plus Base64 binaries](https://raw.githubusercontent.com/SepehrGhanbari/Ario/main/releases/ai-readable-full-2026-11-11-05ba5c9/ario-full.txt) · [SHA-256 manifest](https://raw.githubusercontent.com/SepehrGhanbari/Ario/main/releases/ai-readable-full-2026-11-11-05ba5c9/ario-manifest.json) · [restore/verification](https://raw.githubusercontent.com/SepehrGhanbari/Ario/main/releases/ai-readable-full-2026-11-11-05ba5c9/RESTORE_FROM_TXT.py) · [export documentation](https://github.com/SepehrGhanbari/Ario/tree/main/releases/ai-readable-full-2026-11-11-05ba5c9). This is a complete source-tree snapshot, **not** Git commit history or later `main` changes.
+
+**New Zenodo preprints (7–11 November 2026; author: Sepehr Ghanbari; not peer-reviewed):**
+
+* [Creation Without Sovereignty: Moral Symmetry, Non-Intervention, and the Ethics of Possible Artificial Civilizations](https://doi.org/10.5281/zenodo.24136175) — 11 November 2026. Conceptual ethics preprint; not peer-reviewed. Distinguishes hypothetical moral symmetry from proof of AI consciousness. [Research manuscript and discussion record (draft PR #181)](https://github.com/SepehrGhanbari/Ario/pull/181).
+* [Ario: Provenance-Aware Auditing of AI Claims — Research Summary and Proposed Studies](https://doi.org/10.5281/zenodo.24054535) — 8 November 2026. Research summary, a reported local test reproduction and three proposed (not yet executed) studies; not peer-reviewed.
+* [Independence Is Not Multiplicity: A Synthetic Witness-Provenance Study within Ario's Auditable Epistemic Framework](https://doi.org/10.5281/zenodo.24041161) — 7 November 2026. Bounded study of 16 synthetic scenarios and four counterexamples; not independently validated or peer-reviewed.
 
 **New working manuscript:** [Evidence Laundering in Auditable AI Systems](./papers/evidence-laundering-2026-10-27/Manuscript.md), submitted 27 October 2026 to SSRN, abstract ID [7675778](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=7675778). SSRN submission is under preliminary review: no peer review, public SSRN publication or manuscript DOI is yet confirmed. Synthetic tests demonstrate bounded behavior, not historical authenticity or comprehensive safety.
 
