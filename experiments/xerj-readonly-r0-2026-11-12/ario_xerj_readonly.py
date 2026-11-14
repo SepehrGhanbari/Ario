@@ -91,6 +91,37 @@ def parse_candidates(result: object, ledger: Mapping[str, ArioRecord], *, k: int
             anomalies.append("malformed_shard_metadata")
         elif shards["failed"]:
             anomalies.append("search_shard_failures")
+    # Research-only strict completion contract for one concrete index with
+    # exactly one participating shard. Do not infer external completeness.
+    if require_completion_metadata:
+        shards = result.get("_shards")
+        if (type(shards) is dict
+                and all(type(shards.get(n)) is int for n in ("total", "successful", "failed"))
+                and type(shards.get("skipped", 0)) is int
+                and (shards["total"], shards["successful"], shards["failed"],
+                     shards.get("skipped", 0)) != (1, 1, 0, 0)):
+            anomalies.append("unsupported_incomplete_shard_shape")
+        if "terminated_early" in result:
+            early = result["terminated_early"]
+            if type(early) is not bool:
+                anomalies.append("malformed_early_termination_metadata")
+            elif early:
+                anomalies.append("search_terminated_early")
+        # Hits-total can be omitted by XERJ depending on query options. Its
+        # 'gte' value is a lower bound, not an exact count.
+        if "total" in result["hits"]:
+            count = result["hits"]["total"]
+            if type(count) is int:
+                if count < len(hits):
+                    anomalies.append("contradictory_exact_hits_total")
+            elif type(count) is dict:
+                n, relation = count.get("value"), count.get("relation")
+                if (type(n) is not int or n < 0 or relation not in ("eq", "gte")):
+                    anomalies.append("malformed_hits_total")
+                elif relation == "eq" and n < len(hits):
+                    anomalies.append("contradictory_exact_hits_total")
+            else:
+                anomalies.append("malformed_hits_total")
     for rank, hit in enumerate(hits, 1):
         if not isinstance(hit, dict) or not isinstance(hit.get("_id"), str):
             anomalies.append("malformed_hit")
