@@ -1,0 +1,34 @@
+{
+  "record_status": "PUBLISHED_VERIFIED_2026-11-12",
+  "source": "https://zenodo.org/api/records/24136175",
+  "doi": "10.5281/zenodo.24136175",
+  "publication_date": "2026-11-11",
+  "license": "CC BY 4.0",
+  "author": "Sepehr Ghanbari",
+  "title": "Creation Without Sovereignty: Moral Symmetry, Non-Intervention, and the Ethics of Possible Artificial Civilizations",
+  "review_status": "working paper; not peer-reviewed",
+  "uploaded_english_pdf_matches_zenodo_md5": true,
+  "files": {
+    "en.pdf": {
+      "size": 229470,
+      "md5": "0107eb9bf48a57d078f869a4fb1a1985",
+      "sha256": "b268dbc5476040d7b84db7253dc468a8342341c62a533ba0ab7d14f17820169c"
+    },
+    "fa.pdf": {
+      "size": 212341,
+      "md5": "d217afe0f88a90d03f2d8a17503d7a45",
+      "sha256": "1b63e6ae1a0f9c84978b5b36759f197eb150f9046ce98d08675fedae137d8f5c"
+    },
+    "notes.zip": {
+      "size": 27203,
+      "md5": "c258621088952e02794d987db2f36a6b",
+      "sha256": "f2796dacdaafa4716426416b7d7d125df7d0a0b76413df91529509aaef6e4e1d"
+    }
+  },
+  "github_pdfs": [
+    "published/en.pdf",
+    "published/fa.pdf"
+  ],
+  "note": "PDF files match the original Zenodo publication byte-for-byte. Markdown versions received explicit post-publication editorial clarifications on 12 November. zenodo/ZENODO_METADATA_DRAFT.json remains a historical pre-deposit record.",
+  "private_source_material_included": false
+}

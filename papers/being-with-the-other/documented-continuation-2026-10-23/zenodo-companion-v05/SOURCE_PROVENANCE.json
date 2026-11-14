@@ -1,0 +1,27 @@
+{
+  "source_doi": "10.5281/zenodo.23600820",
+  "source_archive_sha256": "03f15f9e384af86b86182195970654d1a11decb94a5489ea896a0e160a34c527",
+  "items": [
+    {
+      "filename": "Ario_Independent_Continuation_EN_2026-10-23.pdf",
+      "original_bytes": 177654,
+      "sha256": "020c0c362d14f81783801eecfa4d1187947057f5bcddbff6d03fdd5fbd514f96"
+    },
+    {
+      "filename": "Ario_Independent_Continuation_FA_2026-10-23.pdf",
+      "original_bytes": 137641,
+      "sha256": "fa0a1991b8b977a47e0d2ae03eb570b2720f3ff7180dc844f94995b3b1f0fece"
+    },
+    {
+      "filename": "Ario_Evidence_Public_EN_2026-10-23.md",
+      "original_bytes": 35040,
+      "sha256": "b73088536743dfd06d26a5069622b015793666a38e2c7d8b0cb8cf0490156dab"
+    },
+    {
+      "filename": "QC_SOURCE_AND_LAYOUT_REPORT.json",
+      "original_bytes": 2044,
+      "sha256": "7f85a787e87bf26529cbfd6e42e71a8a64975f6195245cbf728ad11d5219633a"
+    }
+  ],
+  "note": "Only separately useful research PDFs and original evidence/QC records from historical public Zenodo continuation are retained here. The older whole ZIP and redundant mirrors are not recursively embedded."
+}
