@@ -84,7 +84,7 @@ Proposed rule for later, not applied in this branch:
 
 Naming suggestion, deliberately **not** implemented here: if a result token can be mistaken for "the claim is true," prefer a token such as `STRUCTURAL_MATCH`. Renaming is a behavior change and needs its own tests and its own pull request. Modules whose docstrings say they must not grant admission should not return a word that looks like a verdict.
 
-Witness comparisons against an oracle supplied by the same laboratory controller do not measure independence. Either a later experiment uses a witness outside the author's process (second repository, second person, separate signature), or the experiment title says, in the same sentence as the method, that independence is not what is being measured. The middle state — strong wording, laboratory assumption — is the failure mode this note is trying to keep visible.
+Witness comparisons against an oracle supplied or controlled by the same laboratory controller do not measure independence. A later experiment may claim to *test* independence only if its method documents who independently controls the source observations **and** the reference oracle, what prevents the author from modifying either, and how separate custody and failure/compromise are checked. A second repository, person, or signature alone does not establish those conditions. If independent source-and-oracle control cannot be shown, the experiment title **and** method must explicitly say `independence NOT MEASURED`. The failure mode to avoid is strong independence wording resting on a shared-control laboratory assumption.
 
 ## What this pull request asks reviewers to do
 
