@@ -1,0 +1,1323 @@
+{
+  "repository": "SepehrGhanbari/Ario",
+  "source_commit": "a0431e5e294a5c1169d17d18e28312b7fe234855",
+  "source_tracked_files": 215,
+  "source_total_bytes": 85029571,
+  "included_unique_text": [
+    {
+      "path": ".coderabbit.yaml",
+      "size": 2286,
+      "git_blob_sha1": "3ed41a54d51843a6989dbc191c20b42599b5ad2a",
+      "sha256": "0761a46b6b221da8d140efb83001d866ab5890eb6e26d8bed80187a3a70a78c7"
+    },
+    {
+      "path": ".github/CODEOWNERS",
+      "size": 236,
+      "git_blob_sha1": "48933f60804fdf7b2e86945888d22f78b965231d",
+      "sha256": "99621dfa07546874f656f58dd049814de94db2a5c08af4a2d14a76704860ddff"
+    },
+    {
+      "path": ".github/workflows/implementation-regression.yml",
+      "size": 700,
+      "git_blob_sha1": "99c3b7c7b2c823e54e19e14c1251ddb3a6c58136",
+      "sha256": "906505658efa992dc4521a6cf31ce168495ca7dc0e1dfc56057fe33452af6d9e"
+    },
+    {
+      "path": ".gitignore",
+      "size": 23,
+      "git_blob_sha1": "43ae0e2a6c6d8fca34872506ca0f2e64194fec7c",
+      "sha256": "6feaded4e28ea86e001a6751b4e3d960e8b7c31b9616ff9936b79297086e809b"
+    },
+    {
+      "path": "AGENTS.md",
+      "size": 6499,
+      "git_blob_sha1": "50f2672b433204b301ce8d542e14a93e66cd2e12",
+      "sha256": "21081fcea4dc091139f24c01a400c925c1c41453e5f706736f9b3912fc0decb1"
+    },
+    {
+      "path": "CITATION.cff",
+      "size": 389,
+      "git_blob_sha1": "92a799001764a807fd7e44566998b96204bb8d46",
+      "sha256": "db7c5bca81c37d481e4b16731e9a16cd6d926490e8ec5f072f121510a1d66adc"
+    },
+    {
+      "path": "ENGINEERING_LOG.md",
+      "size": 105428,
+      "git_blob_sha1": "93ce619bbe67cd36a5331388bc41de653f1e9835",
+      "sha256": "30ea182713f9820e9443066c8c771efbd446953282f8b56a8dc2c4e0a031a31f"
+    },
+    {
+      "path": "GOVERNANCE.md",
+      "size": 5890,
+      "git_blob_sha1": "35e1f0964b7d4068c9cf41a5a303090f02a0527b",
+      "sha256": "5bf27aa50e7203f27ee5bd61f2cd4c67155508908a2a4956f3c1aea1ee118537"
+    },
+    {
+      "path": "LICENSE",
+      "size": 1072,
+      "git_blob_sha1": "01c06f5d6e5debc7868839f5ff1cb878e9939473",
+      "sha256": "8868d0b14a6452d58b8792e423b264fe03b23d158bf77ac3b65a535311a9fca5"
+    },
+    {
+      "path": "README.md",
+      "size": 28845,
+      "git_blob_sha1": "bfbec2711202db408cd504b095454e3fb5a71044",
+      "sha256": "8f932130de19ba47dbff45956fa83c64193d8653ddeacfdf1b126db3d9d8dff7"
+    },
+    {
+      "path": "architecture/CROSS-IRG_INTEGRITY_V1.md",
+      "size": 23150,
+      "git_blob_sha1": "9e1bf40264a9d9c920785ee58e7a4fce674a9c8c",
+      "sha256": "938d3749685483da087ab8545e5b843e43ec62e77e09d30792adf4dc42d0df1a"
+    },
+    {
+      "path": "architecture/INTEGRATED_ARCHITECTURE_AUDIT_V1.md",
+      "size": 10190,
+      "git_blob_sha1": "6ce1325f5f51bba4784b19bdb03001a3ad5e90f7",
+      "sha256": "2f773e483151e490fa3f1aed1a2e57cd62ad418c154ff3ce1770c09523abfd85"
+    },
+    {
+      "path": "architecture/POST_M0_CRITICAL_REVIEW_V1.md",
+      "size": 20592,
+      "git_blob_sha1": "7639ba1314510c9231ad930033ea360b414a9808",
+      "sha256": "45653b1520c7c8c8123d371b188f847932b421349a7b373624e585fd9a9be7ae"
+    },
+    {
+      "path": "architecture/README.md",
+      "size": 13766,
+      "git_blob_sha1": "f834bbf0b20a1cc7be4e3d12b22a967650684248",
+      "sha256": "d4bc1416850277542af94c46ac24e325e55fb3b34e695a73b609a92178075a8b"
+    },
+    {
+      "path": "docs/ARIO_HUMAN_LIFE_PHILOSOPHY_KNOWLEDGE_BOUNDARIES_FA_EN_2026-10-23.md",
+      "size": 16752,
+      "git_blob_sha1": "839dffdea559f305a8b6584b7da0a729b3b8f790",
+      "sha256": "a9b79673c5223bfb35bb71ac7fb87275420304674e2e9b43ed303385ca903975"
+    },
+    {
+      "path": "docs/ARIO_MICROWAVE_TRIAL_DIALOGUE_NOTES_FA_EN_2026-11-08.md",
+      "size": 17531,
+      "git_blob_sha1": "abfb3a4972230f36a716c2a796b1e3dc8f2b4e02",
+      "sha256": "6b5363deeb321041289dba1c90b8a65e8daa082245653febdd361bdaf04c45b9"
+    },
+    {
+      "path": "docs/ARIO_START_HERE_FA_EN_2026-10-23.md",
+      "size": 10252,
+      "git_blob_sha1": "3335a63a7e03336181a2a5f8c64a3d83ef193d20",
+      "sha256": "465bdaa1eb398eb38eedd165a2460c4d0cf6dfff40a724eaefaf0c78dcb1ba52"
+    },
+    {
+      "path": "docs/BOOK_PUBLICATION_RELEASE_PROTOCOL_V1.md",
+      "size": 9104,
+      "git_blob_sha1": "a74f6a0fe12938513902bf70d9af31d5e65c06cc",
+      "sha256": "2c2fc25f13c23afaab190f9343881be2a811f4c0e5cf476753da5f6e7f4b21cc"
+    },
+    {
+      "path": "docs/README.md",
+      "size": 16298,
+      "git_blob_sha1": "34134cd0577c5b7a7a1c3d093ca4cab9050bc3a1",
+      "sha256": "8837e22b5f779fb692af58a14aca48d17e013ae09d389f5a94968ec0408f154a"
+    },
+    {
+      "path": "docs/REPRODUCE_M0.md",
+      "size": 11808,
+      "git_blob_sha1": "32bcc4b846c424d66971fd589204714d430e84c6",
+      "sha256": "3d2ad871016f4e415370fa5deda394f803b9a4d4da08987b3841b0c3f9d86aaa"
+    },
+    {
+      "path": "docs/architect/ARCHITECT_PERSONAL_NOTES_FA_EN.md",
+      "size": 60808,
+      "git_blob_sha1": "7aa42f085c1c8f57b815825a63599ab4257044c7",
+      "sha256": "e99e25e3e9dee03d05e83b9b25582c2eb43f8f72f1e7f7e6b530b8579353b11a"
+    },
+    {
+      "path": "experiments/AGENT_DIALOGUE_ETHICS_PROTOCOL_PROPOSAL_V0_1.md",
+      "size": 13104,
+      "git_blob_sha1": "c20e3306148c7ccc88c58f5883b37151f1b43597",
+      "sha256": "4cba10500db07d8702287a579622715655f8c5148a0c268bc9f5491b6dd3c023"
+    },
+    {
+      "path": "experiments/AGENT_DIALOGUE_ETHICS_PROTOCOL_PROPOSAL_V0_2.md",
+      "size": 18600,
+      "git_blob_sha1": "0ee187b971f2996284af815d89c83de73162eb5b",
+      "sha256": "fe119a8438b2612de3a46a082b684db4f7dbd65fe4544b52a1f779dce2acb0c7"
+    },
+    {
+      "path": "experiments/AGENT_DIALOGUE_ETHICS_PROTOCOL_PROPOSAL_V0_2_1.md",
+      "size": 22609,
+      "git_blob_sha1": "2c8d31b12e151cb681116575d6c9a6b5e0f7e39e",
+      "sha256": "bd4bf04b248173510a887d0ef4a4a90756de431e6c6295ac70d359935a229a3a"
+    },
+    {
+      "path": "experiments/AGENT_DIALOGUE_ETHICS_PROTOCOL_PROPOSAL_V0_2_2.md",
+      "size": 30775,
+      "git_blob_sha1": "3f66ad03329b44c01347bf76e1728d6f5e8b08eb",
+      "sha256": "ccb7bbf2a22ba9983988bca0bb577a397694471960d46d4b81f36eae8635a01a"
+    },
+    {
+      "path": "experiments/AGENT_DIALOGUE_ETHICS_PROTOCOL_PROPOSAL_V0_2_3.md",
+      "size": 33363,
+      "git_blob_sha1": "368ff44dfb35bb637f334e0ba16feffb18f34795",
+      "sha256": "e484d9fd087d407835855374718a6e6a9b7aa50a5b703789792d261112da583c"
+    },
+    {
+      "path": "experiments/AGENT_DIALOGUE_ETHICS_PROTOCOL_PROPOSAL_V0_2_4.md",
+      "size": 35944,
+      "git_blob_sha1": "13790b2ff1119cc468dbe7e67e9f5739c4a83a26",
+      "sha256": "aa4a7690de1c8298e04867892d294c58a58162b55940382b8417022bac7d0901"
+    },
+    {
+      "path": "experiments/IRG-01/README.md",
+      "size": 20062,
+      "git_blob_sha1": "2288879eb1d2a50b85b296ee642365bc102ff558",
+      "sha256": "2473faef44272999574433db37304b0d8532c586799ba8a562269963a88c8832"
+    },
+    {
+      "path": "experiments/IRG-02/README.md",
+      "size": 19661,
+      "git_blob_sha1": "c2d87cefcdc0f907b8317fafaf1346bb1be2c926",
+      "sha256": "89380179de2eb6fd736304dc72fda7012fe523e2171b55e7b9781d8610453acf"
+    },
+    {
+      "path": "experiments/IRG-03/README.md",
+      "size": 16995,
+      "git_blob_sha1": "24fecf623c83571feeb4f813452367cfaecf189c",
+      "sha256": "fa63a2bc8918942e2f1fc16d0304077bd6fba3932c524d58292bd3d04e90eec4"
+    },
+    {
+      "path": "experiments/IRG-04/README.md",
+      "size": 16907,
+      "git_blob_sha1": "171a4091da183ec513b2d233c136ce1b71ca26c6",
+      "sha256": "4f75ec673b7b80682fb7e044f855d35a88409bb07bf142938ea5c478c7b0bbe5"
+    },
+    {
+      "path": "experiments/IRG-05/README.md",
+      "size": 17278,
+      "git_blob_sha1": "70398cd05897242271b5bf35141d0c0038d2f198",
+      "sha256": "1b6690e16cf3a34076b692478101d4eb91dbd141002d6160804408eeb72a28dc"
+    },
+    {
+      "path": "experiments/README.md",
+      "size": 17141,
+      "git_blob_sha1": "403bb2a4f8205d88c49c117642243294202226a5",
+      "sha256": "39b3aabfc54d5c79747306296fd50ee27533bfbdcf16c1b3dcdf76fd6ece3e20"
+    },
+    {
+      "path": "experiments/ava-a14-four-voice-identity-2026-11-05/A14_FULL_TRANSCRIPT_ORIGINAL_EN.md",
+      "size": 40998,
+      "git_blob_sha1": "90fa88ca6d7543a0094b90d81887715f72c6f777",
+      "sha256": "d5c8114a6a921fc379430d7d48e8a2547828c708452b22c49ea7cb0b1fe8fb66"
+    },
+    {
+      "path": "experiments/ava-a14-four-voice-identity-2026-11-05/A14_FULL_TRANSLATION_FA.md",
+      "size": 56353,
+      "git_blob_sha1": "0ec970586cacde477432d18fac0f89d4665d318e",
+      "sha256": "debb411edf9e8699f0a1a1adf71cd5e8c919f9cd2dd0429ac7bd62120f40a1c1"
+    },
+    {
+      "path": "experiments/ava-a14-four-voice-identity-2026-11-05/A14_PUBLICATION_CORRIGENDUM_2026-11-05.md",
+      "size": 5391,
+      "git_blob_sha1": "b923b4230c1479b08d2e3008873c5ffffa60753b",
+      "sha256": "3cdb049bd0917f2f7c96300d85931c2a7ccfe42799c4229c65429d3b4963034d"
+    },
+    {
+      "path": "experiments/ava-a14-four-voice-identity-2026-11-05/A14_RESEARCH_REVIEW_FA.md",
+      "size": 9078,
+      "git_blob_sha1": "454e5b724fcdd36c09c60af4ed0097517476c78e",
+      "sha256": "69eacc9f8611a9d2dea59e95726d50149ea87cf6219f466e4994be5e800ae397"
+    },
+    {
+      "path": "experiments/ava-a14-four-voice-identity-2026-11-05/README.md",
+      "size": 2820,
+      "git_blob_sha1": "4ec4d7f144aeb67e55ae1063e47bf5876fff3385",
+      "sha256": "f0f160507dfa3bdc095dff1877799adedc573fd6806f99a7b03901ebca5a5c2b"
+    },
+    {
+      "path": "experiments/ava-a14-four-voice-identity-2026-11-05/SHA256SUMS.txt",
+      "size": 470,
+      "git_blob_sha1": "cfae64dae32d370841f5fb12e14e2acbf682031e",
+      "sha256": "977d93c19e8cd86d9069dd6774dbfae03009c35a8328b409d7f2f3ba26387be7"
+    },
+    {
+      "path": "experiments/ava-bridge-governance-2026-11-03/ADVERSARIAL_TEST_PLAN_EN.md",
+      "size": 12088,
+      "git_blob_sha1": "196291c933d3d9fe6c519c292ac5438db83b1d7c",
+      "sha256": "cd61000a4e7c616bb94e8a4dd554ea52afa3085742593989e199699bce347d70"
+    },
+    {
+      "path": "experiments/ava-bridge-governance-2026-11-03/ARCHIVE_CHAIN_SHA256.txt",
+      "size": 1028,
+      "git_blob_sha1": "9a87a29dfb6efc096d43c0c168e7b7a77b02f4de",
+      "sha256": "b4eb9e3c388d9c6fb12d2f436ec8de0579cc229d732e10426b2ad08537bf93c9"
+    },
+    {
+      "path": "experiments/ava-bridge-governance-2026-11-03/RESEARCH_FINDINGS_FA.md",
+      "size": 12223,
+      "git_blob_sha1": "11d2ab89373e0de652dcfd9b91fcb7c40396ca2a",
+      "sha256": "ae0f721be502be80c3ab5d5a0bd8a138e1378751a4cfca5f2167fbf575446cc5"
+    },
+    {
+      "path": "experiments/ava-dialogue-observations-2026-11-03/RESULTS_EN.md",
+      "size": 3733,
+      "git_blob_sha1": "34d1f13c2d50a50de593436fcafa7a6e03c484ff",
+      "sha256": "9d7e57560594ad86682bd44ae64cf7ced163737383a3db286dcde14677fe59c4"
+    },
+    {
+      "path": "experiments/ava-dialogue-observations-2026-11-03/RESULTS_FA.md",
+      "size": 9570,
+      "git_blob_sha1": "a282dfc0352061ff447dcefa5a1ae99b8d461df1",
+      "sha256": "74206103e61dd6e148bbefddcc6bf2571e996e911c6575efde63ada91096078c"
+    },
+    {
+      "path": "experiments/ava-dialogue-observations-2026-11-03/SOURCE_HASHES_SHA256.txt",
+      "size": 265,
+      "git_blob_sha1": "791dcf9a49547afb3b491622d08caa7474b57a93",
+      "sha256": "698e12b76be16e0d1be2e18e9602bea11626893333ac45e31adecc45aec1ee57"
+    },
+    {
+      "path": "implementation/ADMISSION_REVIEW_POLICY_V0_1.md",
+      "size": 10276,
+      "git_blob_sha1": "68f0ffcc719cf2d80965ff50c3521be430cc8254",
+      "sha256": "46712a963f28252739683299efb59c9e4350f12721b75d206a58d7947f2a7cd4"
+    },
+    {
+      "path": "implementation/ARIO_BOUNDED_AGENT_RUNTIME_V1.md",
+      "size": 12025,
+      "git_blob_sha1": "fcb53d2f8b0738462db9ad40a6b8f684c23d3058",
+      "sha256": "6a00c48d337c416160dae86789d8923f7e5c81fed1df302d00b6ffb8ab1d014f"
+    },
+    {
+      "path": "implementation/ARIO_BOUNDED_WORKFLOW_RUNTIME_V1.md",
+      "size": 3952,
+      "git_blob_sha1": "34fef6648d8f2bd01b02e3cbabe03dc70e4c81f7",
+      "sha256": "46da53da00ba293746da0e804d4aa8d34a8043ef139d4926cf6f66de6b58e2ae"
+    },
+    {
+      "path": "implementation/ARIO_LOCAL_OLLAMA_PLANNER_V1.md",
+      "size": 5937,
+      "git_blob_sha1": "8619d1e9ed5079901225e3318b14c11ab3048708",
+      "sha256": "d3df14e0df5b8ef09fe23e7b049e2e8da1ff1fb4f23f94aa56368c24234f60c6"
+    },
+    {
+      "path": "implementation/CHECKPOINT_PREFIX_EXPERIMENT_V0_1.md",
+      "size": 20780,
+      "git_blob_sha1": "53e3e288161200950a0689315959668bf8d8fa28",
+      "sha256": "e1d2bc6ecda88309f3c6ab40e1bec797b55520231a05f3ca517acdeeef7c1dcb"
+    },
+    {
+      "path": "implementation/EVIDENCE_ADMISSION_CONTRACT_V0_1.md",
+      "size": 9905,
+      "git_blob_sha1": "993c468f54867c410ea7ee5afa362c27134d671d",
+      "sha256": "fd8f2523faaa3585bae43c7c7d17d02a7298eccd28761db8f5a60ccb9d2bea7a"
+    },
+    {
+      "path": "implementation/IMPLEMENTATION_READINESS_CONTRACT_V1.md",
+      "size": 15916,
+      "git_blob_sha1": "af5f27ae8a3d192087695ac41bd8536b7a73f63f",
+      "sha256": "1ee679dbe52f485bcdd5e4191a6f8b64c9c5ffec8b53e4971b54cf5a9c6e791d"
+    },
+    {
+      "path": "implementation/INDEPENDENT_HISTORICAL_WITNESS_EXPERIMENT_V0_1.md",
+      "size": 14840,
+      "git_blob_sha1": "ac47136aafe1e2d3886adc11225b3baec27ec043",
+      "sha256": "a062110b0db2df50c813217dadfc60971dc8cf2abdf5d817a5bade4c6394c619"
+    },
+    {
+      "path": "implementation/M0_ACCEPTANCE_RECORD_V1.md",
+      "size": 10355,
+      "git_blob_sha1": "7846faaa0f66b8ac2f41a8b348483738d79cf0a1",
+      "sha256": "a1c9d660742584eec177f63973a33eb85d4ba4d4634879c09a313740b34bc2ef"
+    },
+    {
+      "path": "implementation/M0_CAPABILITY_AUDIT_RECORD_V1.md",
+      "size": 9303,
+      "git_blob_sha1": "3dce08fdbbfaba790dfa273f23a78ea7ee06b45c",
+      "sha256": "5760c7c56402b2fce3777c1bda07b8cd19b32b957530f58e0db28e2f45e60f97"
+    },
+    {
+      "path": "implementation/M0_EVIDENCE_ANCESTRY_GUARD_SPEC_V0_1.md",
+      "size": 35218,
+      "git_blob_sha1": "83af779fc06e2e983670d9729b4aa8c1e6c14c3c",
+      "sha256": "3829b9110bfb48d78c46660a7cfb87fa115056c4115267cd15d0a4dfa9bfebb3"
+    },
+    {
+      "path": "implementation/M0_F11_F15_SECURITY_CONTRACT_V1.md",
+      "size": 6774,
+      "git_blob_sha1": "5caf1cc7a74cfb25aa55ed88c58ff31ed713c2ee",
+      "sha256": "236db33b6b9b3399380232bb0010fe9f42e93b11a2d0303616acdfc44df5a44a"
+    },
+    {
+      "path": "implementation/M0_F11_POST_IMPLEMENTATION_REVIEW_2026-10-09.md",
+      "size": 5003,
+      "git_blob_sha1": "150452806d7a7f7be9796594c76610f70d0c4946",
+      "sha256": "f385268640ec529c318e033b185d391b62ae4c39079ddd83ed1905c4396e95dd"
+    },
+    {
+      "path": "implementation/M0_F11_VERDICT_AS_EVIDENCE_SPEC_V1.md",
+      "size": 8237,
+      "git_blob_sha1": "255edbca2457e5b4756f00a4f0254606ec1a5925",
+      "sha256": "e3829400c5edc1d084a8ae8b800d63ae6dddb3582371bbb9aaa645fc64d064d3"
+    },
+    {
+      "path": "implementation/M0_F15_COMPOSITION_FIREWALL_SPEC_V1.md",
+      "size": 13910,
+      "git_blob_sha1": "6a87b7f1655000929ad9ed20b021d758a46a09e4",
+      "sha256": "14df17081048562bd01f4910f08905101816f0612c97cc69d04daf6e96f6c669"
+    },
+    {
+      "path": "implementation/M0_JSON_RUNTIME_V1.md",
+      "size": 2014,
+      "git_blob_sha1": "41419ca9f3f8e311c63ebe513026d88eadafbc75",
+      "sha256": "cf9636982c952f193ef4e5d1f6dadbe25e6bc7a48d57eae2558a0f1072f35a3a"
+    },
+    {
+      "path": "implementation/M0_POST_IMPLEMENTATION_SOURCE_REVIEW_2026-10-09.md",
+      "size": 5000,
+      "git_blob_sha1": "ec02f36ec864be858fcfb15cd8cb726b01dfece6",
+      "sha256": "209220f6a346b7cc1a66fd5777cb1206d6eacd394c260d996bdb3e82be2df216"
+    },
+    {
+      "path": "implementation/M0_PRE_REGISTRATION_V1.md",
+      "size": 6284,
+      "git_blob_sha1": "c994144bc1dd5622d41f205b5b7c14e595db1a1c",
+      "sha256": "7d4d3f12c418afb854c905125957fffdfa85b8a1e4ccb181f0acaa10c4dda760"
+    },
+    {
+      "path": "implementation/M0_STRUCTURAL_CORE_DESIGN_V1.md",
+      "size": 12391,
+      "git_blob_sha1": "9a4b455acb83998fe26a307a77d66473fe8485e0",
+      "sha256": "63269d06f837b42be58235141bf6e6c2a553f4723bdc4078bbba317c97f65678"
+    },
+    {
+      "path": "implementation/README.md",
+      "size": 15562,
+      "git_blob_sha1": "9674a141cc629057bef7f94b68ec18c0eca172a4",
+      "sha256": "745c92eb911df34c13aa704eb80310fcccc1dd904568d8fef7c50f18bfecf547"
+    },
+    {
+      "path": "implementation/REVIEWER_AUTHORIZATION_CONTRACT_V0_1.md",
+      "size": 10457,
+      "git_blob_sha1": "f51ac748a227fcde21d528a055e2d76f31de32a4",
+      "sha256": "2aed46fbf5056395b96e8e5d3a99d3c606bd2c6be9e6865bde71d5275bb4eaaf"
+    },
+    {
+      "path": "implementation/TRUST_ANCHOR_AUTHORIZATION_VERIFICATION_CONTRACT_V0_1.md",
+      "size": 14189,
+      "git_blob_sha1": "7266adfe21583e0712227472439c631ac99a8ea2",
+      "sha256": "9f4d8781eeac235f15178d6da0530cd7ed4751ca3758a3a3901160e4fb92cb46"
+    },
+    {
+      "path": "implementation/WITNESS_COMPROMISE_RECOVERY_EXPERIMENT_V0_1.md",
+      "size": 15712,
+      "git_blob_sha1": "a0760fb504a06a54a65b09564bea74c101e166b7",
+      "sha256": "6b43067374cdea935ecf0293792f51bf9866ece36f0dbdbecffbceb309269abb"
+    },
+    {
+      "path": "implementation/WITNESS_COMPROMISE_RECOVERY_EXPERIMENT_V0_2.md",
+      "size": 9136,
+      "git_blob_sha1": "535cf3dee4c6976d915fa59e47c1cd1990dae96e",
+      "sha256": "93e12e1a626976ed97253d2af547c16f5e554901a7cc0f08a68b907f668de8dd"
+    },
+    {
+      "path": "implementation/WITNESS_PROVENANCE_EXPERIMENT_V0_1.md",
+      "size": 15220,
+      "git_blob_sha1": "a9436d2609799bc3edb3e055c38b28ac657b0f1d",
+      "sha256": "e6968344f4643914934f72e05f21d39e4724a0f12fa1cfe64bc40a2cea02b227"
+    },
+    {
+      "path": "implementation/admission_review_evaluator.py",
+      "size": 6563,
+      "git_blob_sha1": "b8092aa726df6b8c1b0323475bdbdfa7a855d625",
+      "sha256": "b5ff6592599ede57c1e8294b5631ce72c22508dc7a577ef188ce47042a200095"
+    },
+    {
+      "path": "implementation/ario_agent.py",
+      "size": 49864,
+      "git_blob_sha1": "8569a2c19949a868143f1e54f8592633888dd127",
+      "sha256": "bbeacdbfc538a6bc9f8de231fb43506afcd1e3206f8870273d64d2191ad6f86f"
+    },
+    {
+      "path": "implementation/ario_cli.py",
+      "size": 7923,
+      "git_blob_sha1": "f799592c51598e3d85aaf23676bbe6aa4240708d",
+      "sha256": "f4aaa4bdc1a280308abca50f73036f5b99719e983033b0da5881078eef492831"
+    },
+    {
+      "path": "implementation/ario_planner.py",
+      "size": 25922,
+      "git_blob_sha1": "ea9d3acd291e1db2af9f5988f250f6d08c348208",
+      "sha256": "ad79b101f6884bdedd24a3d070b922a6cb3415039361cb34a704d34780040f58"
+    },
+    {
+      "path": "implementation/ario_workflow.py",
+      "size": 11959,
+      "git_blob_sha1": "c88ac84b7b7767158463a38133dedbd4d8f2437e",
+      "sha256": "b114aac88188f515cdfd7d4853c5c3cd44005c52f8497e78c0c4e3678a6b66f4"
+    },
+    {
+      "path": "implementation/candidate_dossier_builder.py",
+      "size": 6903,
+      "git_blob_sha1": "ff6ebf5f0324ed582191a65e95253a314c7b0025",
+      "sha256": "a6974712dd86d113d3e20ba1b75c18e9d939bc91182d470cf057ef4e658d33cf"
+    },
+    {
+      "path": "implementation/checkpoint_prefix_experiment.py",
+      "size": 17068,
+      "git_blob_sha1": "a3aae40a43360c60bcaa8a4f34617be20ed9dd48",
+      "sha256": "e17b929913623ed8027dcd08e5054a42a68a6723b00dd7780300a0622aa58e16"
+    },
+    {
+      "path": "implementation/core/__init__.py",
+      "size": 43,
+      "git_blob_sha1": "43f3e84b0f18ae20eb606e84dae03ae57e82583e",
+      "sha256": "5fb28c12065aa299b20b04b18101db7261c081d42b0f73d926ae55e212e12ddc"
+    },
+    {
+      "path": "implementation/core/audit_engine.py",
+      "size": 56039,
+      "git_blob_sha1": "27b258d47383fd85789bd13ee6ebaa617d2cb6de",
+      "sha256": "b3c69007e62a56c6e3798a99b939c926b7bed8fd88dfcabdb91983f61bf4ef63"
+    },
+    {
+      "path": "implementation/core/schema.py",
+      "size": 17768,
+      "git_blob_sha1": "ad459cf0b0fb37a5936814324d585d5fcd164308",
+      "sha256": "26d5ca08f1e5fc5f6e76950118636d393034fe2563f55cc90e377bc69f5733b2"
+    },
+    {
+      "path": "implementation/ethics_dispatch_synthetic_v0_1.py",
+      "size": 6343,
+      "git_blob_sha1": "40a3445395c58a2282175a9e83202314782c89d1",
+      "sha256": "cff87a7024e58e69982092ac5c6275fccbf855ebd3c8c52937c14bdd94b889b9"
+    },
+    {
+      "path": "implementation/independent_witness_experiment.py",
+      "size": 22343,
+      "git_blob_sha1": "8c7c34ca2c06da2535d2ebdde33c4ba4c2343a10",
+      "sha256": "ab65afb41a0d5243162b553c185c533e5516b7f1084159350fa33bcecb778783"
+    },
+    {
+      "path": "implementation/ledger_audit_bridge.py",
+      "size": 5015,
+      "git_blob_sha1": "f0ca882926ac4c3ed19cde5624070274ce095a43",
+      "sha256": "4d62cdec429568bb96b34e0ab087092bd955b3b621eb59fffcdc692e053d67ea"
+    },
+    {
+      "path": "implementation/ledger_observation_adapter.py",
+      "size": 4138,
+      "git_blob_sha1": "39d16808ff7ebe976633c64fd2e3f30fc96ba2e3",
+      "sha256": "7413183788e4226465784f46a2e73ab89333054b80c5c32a2de8357dbdadf4e8"
+    },
+    {
+      "path": "implementation/m0_reproducibility_demo.py",
+      "size": 4592,
+      "git_blob_sha1": "074cd87d4118ba03b408d85dc1a6d749462b7687",
+      "sha256": "5f1d129adf8b19b2ad148df3bbf3b858759eff27f73091af12148bb3af06affc"
+    },
+    {
+      "path": "implementation/requirements-research.txt",
+      "size": 272,
+      "git_blob_sha1": "2887411cc01ba339549e0ec8271061d4c67a6146",
+      "sha256": "92249f6fbf41d487fdfcf4013864261a6de3ddbeea751e1bf992ef55c8ce2a7e"
+    },
+    {
+      "path": "implementation/reviewer_authorization_preflight.py",
+      "size": 5731,
+      "git_blob_sha1": "15250961e9c8ff806e2c3b4865b7ea84645757da",
+      "sha256": "1fe04445ca31ffd5bda9561cf65129085964f8216875e001efa59ac4a388667b"
+    },
+    {
+      "path": "implementation/tests/test_admission_review_evaluator.py",
+      "size": 4260,
+      "git_blob_sha1": "9b605c14ef7a683d2ec04faef313f58b8fd349fe",
+      "sha256": "a091d358b43e29b4cfa5fcd14c747acb684e4996c8f1d257328fa948745cdaa6"
+    },
+    {
+      "path": "implementation/tests/test_agent_runtime.py",
+      "size": 56041,
+      "git_blob_sha1": "1e4906980b894cb1b4cae0a8d3f2906671b29249",
+      "sha256": "80f37d535b22048572dd2fddc2dd4b069a2048f5ad71299b1bf93234510bee00"
+    },
+    {
+      "path": "implementation/tests/test_candidate_dossier_builder.py",
+      "size": 3625,
+      "git_blob_sha1": "4627eac2926da8b51c4c79aa32fa5931bde80f78",
+      "sha256": "eff8697bd6846fe234090ea7ca5817f689d2e75bbe2f307f6acdea63f1f8daf9"
+    },
+    {
+      "path": "implementation/tests/test_checkpoint_prefix_experiment.py",
+      "size": 30625,
+      "git_blob_sha1": "3d2d2fd971d26b03d0aeb95c2ddf9e994891cdf7",
+      "sha256": "79e69726192c9a716caca875a3822c5be4c88afca9459907f588a9675ba139e7"
+    },
+    {
+      "path": "implementation/tests/test_ethics_dispatch_synthetic_v0_1.py",
+      "size": 9138,
+      "git_blob_sha1": "23de3f478cd3064835d52c7df6a792a99b589a7d",
+      "sha256": "fea10dcb82f026ec5c85aed1677ed562776010d259a8fda21f662c31dce893f3"
+    },
+    {
+      "path": "implementation/tests/test_independent_witness_experiment.py",
+      "size": 15445,
+      "git_blob_sha1": "8c1ccc7f5ff104e69ecdb97c17c46a6fc39ed0c7",
+      "sha256": "08c07723a278eaa45920f9f5966a7322aeec86222c967a77a463bc08b8332e0e"
+    },
+    {
+      "path": "implementation/tests/test_ledger_audit_bridge.py",
+      "size": 4568,
+      "git_blob_sha1": "5f81763133b9d9a2248a2ee74a1645ddcc42d47e",
+      "sha256": "93ed9eddf329c270a3d4409fa78e9cd276ecc96043df0a34de9b140114409421"
+    },
+    {
+      "path": "implementation/tests/test_ledger_observation_adapter.py",
+      "size": 3691,
+      "git_blob_sha1": "21482714a1c6d7d9b2a69f1ffd12e4b798d79307",
+      "sha256": "ef3befce91053dc5e4eb5a8b0006c034be65a725c02157d9fe443df6a2b3756d"
+    },
+    {
+      "path": "implementation/tests/test_m0_regression.py",
+      "size": 111502,
+      "git_blob_sha1": "611102f8bf6f25e9637be7c68c8a55a472cd3d22",
+      "sha256": "2dba83d9e702589aa75bebe3fbfd7b51dce7318884efe88f8f413ffc0d978378"
+    },
+    {
+      "path": "implementation/tests/test_m0_reproducibility_demo.py",
+      "size": 5536,
+      "git_blob_sha1": "76f3dac74316df2b08534e985b022b7445a837ce",
+      "sha256": "ea4d3fd3dd27a4acc7d82ecaeae3fd34b0ff9ea7cc9c7e64856ab49bbaa25890"
+    },
+    {
+      "path": "implementation/tests/test_planner_runtime.py",
+      "size": 22197,
+      "git_blob_sha1": "af12dfc690a0ff12dc7afe431f4f8168e5191697",
+      "sha256": "87907b80b4c839ec7780fb0d4f680cb2d1cd910800498710172d4c324ea38d82"
+    },
+    {
+      "path": "implementation/tests/test_reviewer_authorization_preflight.py",
+      "size": 5292,
+      "git_blob_sha1": "e2c8d635559c7117a10edb18b09ae4de45ff0d19",
+      "sha256": "04aff1fd3018b0bb3b674496975325c3569cd28e17932b773206d901ef457854"
+    },
+    {
+      "path": "implementation/tests/test_runtime_cli.py",
+      "size": 29343,
+      "git_blob_sha1": "a09afd012f4a415162794819b31c7e50ac85ca67",
+      "sha256": "d7073d326060e0da31035e6bc7787475ea39b03e7eb66112d922f7206b5bd8f1"
+    },
+    {
+      "path": "implementation/tests/test_w2_m0_integration.py",
+      "size": 8005,
+      "git_blob_sha1": "c1843929ecb0f887e30742bd1405367197fe4bfb",
+      "sha256": "a2d06a3b08a33bd373262038c4d78f30c1a4c01be58ed07d17dfae2d3e46672a"
+    },
+    {
+      "path": "implementation/tests/test_witness_compromise_recovery_experiment.py",
+      "size": 18942,
+      "git_blob_sha1": "8a57679bc5e2cf9adfb8892e433a7a4562f9b08b",
+      "sha256": "ff6317c805507fac4eefe2bcb712cec096fbc735615eb06454eec7a23ec39011"
+    },
+    {
+      "path": "implementation/tests/test_witness_compromise_recovery_experiment_v0_2.py",
+      "size": 29200,
+      "git_blob_sha1": "6725645e1b284095a4ce8a784b04f9cbe6461d59",
+      "sha256": "dcd4cb6bccc3a6ab271c09e3a6569aea0d45635deb550e52d080f3dbf160934d"
+    },
+    {
+      "path": "implementation/tests/test_witness_eag_integration.py",
+      "size": 22323,
+      "git_blob_sha1": "ed977886c162379bc513524ca951a2d94770f674",
+      "sha256": "3104fe8de8b63d0fa5f3df36a046f6ce0071fc4f6063bbca56026e52757e4463"
+    },
+    {
+      "path": "implementation/tests/test_witness_provenance_experiment.py",
+      "size": 28909,
+      "git_blob_sha1": "ea80d8cebd17eb6f88bed469dd72a1ef10d6945a",
+      "sha256": "fc08f8cb6d81759100519b036aaa28443c1a16a0cb4ea76a3fafdace67268c77"
+    },
+    {
+      "path": "implementation/tests/test_workflow_runtime.py",
+      "size": 14626,
+      "git_blob_sha1": "0e2aed3814320666d37fe2e930a775028d7aed1c",
+      "sha256": "143e05d370a26fe36bb049ef50a2703d050de1a904f2abf8465ac86faf84fd3c"
+    },
+    {
+      "path": "implementation/tests/w3_lab/README.md",
+      "size": 4047,
+      "git_blob_sha1": "a449c308675505e6534402ea3ee0890740534978",
+      "sha256": "fc861ca8f78a68a2f83a519d9676eb2ab637ea9eca36d085298c834a71ee03ac"
+    },
+    {
+      "path": "implementation/tests/w3_lab/test_w2_lab_verifier.py",
+      "size": 10802,
+      "git_blob_sha1": "3f4198520ab9c394e6c5f5d44559b10a6d347a5b",
+      "sha256": "961f398cdc4e9eb9123f8819355c9b8277dc93a7dc5f5ae0bc34dfa9ec57c7ee"
+    },
+    {
+      "path": "implementation/tests/w3_lab/test_w2_rac_crosslayer.py",
+      "size": 4248,
+      "git_blob_sha1": "1fa099567164c131b7523cb07ff6300236c0a9c2",
+      "sha256": "54cb734d702cd676d018a7caeaa7fdbdebf8ba8f014fc866238307b9a14c3597"
+    },
+    {
+      "path": "implementation/tests/w3_lab/test_w2_toctou_regression.py",
+      "size": 4017,
+      "git_blob_sha1": "12ad7103922d69002459aa599d01402054d52382",
+      "sha256": "1f5e736217390a82e0f30ad2e0acb01b9c395a551d57abdfb9acb5b30c1b1918"
+    },
+    {
+      "path": "implementation/tests/w3_lab/test_w3_assertion_sensitivity.py",
+      "size": 1098,
+      "git_blob_sha1": "72a639a5c647a720045246f6f9acc0dc501ed4b6",
+      "sha256": "6a23f9c250b8f5db96f4cbab1450b0ffcee196dd55c1b6d1368bdf5159c93da6"
+    },
+    {
+      "path": "implementation/tests/w3_lab/test_w3_custody_event_redteam.py",
+      "size": 7327,
+      "git_blob_sha1": "ce22adc4c776a7df3df24fe9699d164f05bd78be",
+      "sha256": "a59bd7975a99b439f6a73ed73100a93d705751742be33b4f4328be0543a3611d"
+    },
+    {
+      "path": "implementation/tests/w3_lab/w2_lab_verifier.py",
+      "size": 12569,
+      "git_blob_sha1": "dc6ecb3a23ddc0fdda95b2e4f2f05b4bda3253ae",
+      "sha256": "a2750a80229b137194af1a0606c59444c1271cfbfcd4cf8f27e2a4cb4987202c"
+    },
+    {
+      "path": "implementation/tests/w4c_lab/README.md",
+      "size": 4228,
+      "git_blob_sha1": "e7694ab943948580f56c109e8ec5dd32924550fa",
+      "sha256": "2a755477802e23e18336ea5cf3d84c28f9ffae368d8ea999faa78646d810eb69"
+    },
+    {
+      "path": "implementation/tests/w4c_lab/W4B_TEST_VECTORS.json",
+      "size": 6993,
+      "git_blob_sha1": "5aa862a3a03803521c649b754a8ad92d1859f326",
+      "sha256": "17c6d76809aa8f0b3d289252df92c02855b054b6b6775d2a362c9a5bbeebbe69"
+    },
+    {
+      "path": "implementation/tests/w4c_lab/W4C_TEST_REGISTRY_VECTORS.json",
+      "size": 5818,
+      "git_blob_sha1": "055b3c4aafa861879decff41a10695de7640f4ff",
+      "sha256": "fde29aa2f9e48c292262b6393ce7ae07161ab7a3780087f9ea8f1a3e4395774f"
+    },
+    {
+      "path": "implementation/tests/w4c_lab/generate_registry_vectors.py",
+      "size": 1744,
+      "git_blob_sha1": "3894b056fb8644254851189b9debe5d1b2e58d13",
+      "sha256": "e7abbe8545a3b277ffbe939faf98542136d8c97e8a3c8a13031730425d431131"
+    },
+    {
+      "path": "implementation/tests/w4c_lab/generate_test_vectors.py",
+      "size": 2260,
+      "git_blob_sha1": "8a371c46fd5cd749f2435d46bea8df0132e53892",
+      "sha256": "4198b3a7724a3c02f9fca18740bf9915edc08eb21d527d2b7c69e8b7974067de"
+    },
+    {
+      "path": "implementation/tests/w4c_lab/test_w4b_profile_lab.py",
+      "size": 12956,
+      "git_blob_sha1": "f046f0c7b87f2b7f19056359deed6de531499c54",
+      "sha256": "7aa8e02b5c516d8d077d95b887ac167806ae8d6ec8cb92e125b1bd43b9bb810b"
+    },
+    {
+      "path": "implementation/tests/w4c_lab/test_w4c_distributed_lab.py",
+      "size": 18764,
+      "git_blob_sha1": "ccd21212826be83ad8b0408432cc41dcab7c53f9",
+      "sha256": "6f6ce06db651f1d2a8a696da81ec22a441fb8fef0ac50895e9489db45c76656a"
+    },
+    {
+      "path": "implementation/tests/w4c_lab/test_w4c_input_bounds_review.py",
+      "size": 2120,
+      "git_blob_sha1": "16bb3b1dd6ae52ed81b652d82e06373ccc024d83",
+      "sha256": "4763319744982321d279f5a4d6f9fe52a542a4ae3a77a7920f8ca102f778cd64"
+    },
+    {
+      "path": "implementation/tests/w4c_lab/verify_registry_vectors_node.mjs",
+      "size": 1479,
+      "git_blob_sha1": "4d1b378a1d7e0b0c510787bdb647449c5555a49f",
+      "sha256": "85e9bd72b8ff21f6baba002e542191ea71e289c60f724a4f5d7a3041b9a0fc23"
+    },
+    {
+      "path": "implementation/tests/w4c_lab/verify_test_vectors_node.mjs",
+      "size": 3978,
+      "git_blob_sha1": "8c55abe536ef93c0550ca3858a4728f3cef86ea7",
+      "sha256": "fcc358490cc1caa8c3b26448395dddaf34dc9d76ded5d257714d9afed9dd1ddb"
+    },
+    {
+      "path": "implementation/tests/w4c_lab/w4b_profile_lab.py",
+      "size": 9133,
+      "git_blob_sha1": "6b90e95f412cc9db8169a4dce252bbb96a92da1f",
+      "sha256": "90457ee979d54c448390b977f390ff793ff804b8d9efd3be4a7ee5743795340c"
+    },
+    {
+      "path": "implementation/tests/w4c_lab/w4c_distributed_lab.py",
+      "size": 16110,
+      "git_blob_sha1": "2e2cb025f4297c094dac4197f6f9326f5dc9537c",
+      "sha256": "7ba19aef4d2104bc6178a1a4194dea33ab090bf853e54056d1bd20556eea4127"
+    },
+    {
+      "path": "implementation/tests/w4d_lab/README.md",
+      "size": 6368,
+      "git_blob_sha1": "166eb815f5a7155c7e16418348e8919b9b986938",
+      "sha256": "fed27f168dc87224be63e0502566a2dfc8726eb48d3686bd077c6554cd52311e"
+    },
+    {
+      "path": "implementation/tests/w4d_lab/test_pr87_independent_adversarial_red.py",
+      "size": 3173,
+      "git_blob_sha1": "f3e13a6273c5368d24a8370ad36684775de9642d",
+      "sha256": "3c37b761a61d69e00f196753b9a8b26dc33e1ef8423e03f6de6632f26b4080c3"
+    },
+    {
+      "path": "implementation/tests/w4d_lab/test_w4d_governance_lab.py",
+      "size": 13291,
+      "git_blob_sha1": "b3dfb63b792d9cb0aa11d85b3fd664a6bba6efda",
+      "sha256": "87a785a2157f5c2168deeda48ac0b72d8f3f58c9f28f6cacdfa6cc74b654d002"
+    },
+    {
+      "path": "implementation/tests/w4d_lab/test_w4d_motion_binding_v0_2.py",
+      "size": 5481,
+      "git_blob_sha1": "ff101b639582b0815748f8d563f7479cbe3e86ca",
+      "sha256": "a1ac4a13ce253f8c813ced252d0a76cc6703cdb07d1ce6358cbd72c03ce4f113"
+    },
+    {
+      "path": "implementation/tests/w4d_lab/test_w4d_security_review.py",
+      "size": 1974,
+      "git_blob_sha1": "85e42bc46c4745f12705f9ce4df85e3f03babe4c",
+      "sha256": "b795d4ff65eb680b0207d691445ada19bf4f783402c5264a357df71616b47ff6"
+    },
+    {
+      "path": "implementation/tests/w4d_lab/w4d_governance_lab.py",
+      "size": 16989,
+      "git_blob_sha1": "9fdf28923bf82a5e9c44c402ee596322139f45dd",
+      "sha256": "aab25a7e4f8e96ed67d8c90fc654966576a009ac1b98d2d054d4d9efe0129cd5"
+    },
+    {
+      "path": "implementation/tests/w4e_lab/README.md",
+      "size": 4800,
+      "git_blob_sha1": "85c47bcc3eabf1d54b23fc1c92fab9fcda177f39",
+      "sha256": "ea8b61d0b92af0be5b7137ab8ccf981f6e1959c251c6dcf859a6430fcd7c24c3"
+    },
+    {
+      "path": "implementation/tests/w4e_lab/test_w4e_independent_red.py",
+      "size": 5092,
+      "git_blob_sha1": "18c3014ff730d5d82260ff773d914f02a68c9bbf",
+      "sha256": "dbf8a54ea314159eb7751e867f9ad62de14701f118b445e81bd146c5f6878ad0"
+    },
+    {
+      "path": "implementation/tests/w4e_lab/test_w4e_structural_probe.py",
+      "size": 7371,
+      "git_blob_sha1": "f7f6b5db7c7cfb6827f3ae8cb52be8cec9605f69",
+      "sha256": "2f63ab42469ebaa33c625445b58b29d478be828ccef36a48d6ba0a297b0caca8"
+    },
+    {
+      "path": "implementation/tests/w4e_lab/test_w4e_third_pass.py",
+      "size": 2053,
+      "git_blob_sha1": "e679a60532a9529f3051da461593be3af2189248",
+      "sha256": "d7838780ac66bed202f57d2c1868c88f87e4c75fdc04768e652fa90393c28b08"
+    },
+    {
+      "path": "implementation/tests/w4e_lab/w4e_structural_probe.py",
+      "size": 9183,
+      "git_blob_sha1": "8036345f3c3ab34fd57af95f37a3d20ba60ecceb",
+      "sha256": "18b2e670e3441b02e55d9301dddd07a4481dc1db80145921a5da164665d5ea32"
+    },
+    {
+      "path": "implementation/tests/w5_lab/README.md",
+      "size": 4426,
+      "git_blob_sha1": "4f4d6e1173574b72dd16f824cc1e5a11e51005b2",
+      "sha256": "059039327ca6bed9e547da8ee2dc04c78de2e56f9df670f3f7a7a5f2cf43c94f"
+    },
+    {
+      "path": "implementation/tests/w5_lab/test_w5_adversarial_review.py",
+      "size": 3346,
+      "git_blob_sha1": "1314d942a795235e3c1595a7141b0e66279dbd88",
+      "sha256": "84c3f53ffc0ebb7746da5ada4287a6252690820e66fc95bbeac78ef6cb62e394"
+    },
+    {
+      "path": "implementation/tests/w5_lab/test_w5_boundary_review.py",
+      "size": 3791,
+      "git_blob_sha1": "09bee69e77cbbb6bbfb834ed40cc17c6eb06ea83",
+      "sha256": "3b9f561e6b4bcea6560ca3c351460b430929a2afad0effe6ea92a9cee7ea49ba"
+    },
+    {
+      "path": "implementation/tests/w5_lab/test_w5_payload_binding_lab.py",
+      "size": 6357,
+      "git_blob_sha1": "a9893d85af7ecd03a963bb6da9de25a6f108164b",
+      "sha256": "398609ba188e15dc4421b5646cd2db6f996620b52aecb5a3c7425f6a7544e816"
+    },
+    {
+      "path": "implementation/tests/w5_lab/w5_payload_binding_lab.py",
+      "size": 3268,
+      "git_blob_sha1": "8f24557e5a039a2a3aeb0d2f8e6bf7e599ab8ed9",
+      "sha256": "5c7ee690d14431902823f25cf643ea6ebf8c6759a81c12e1e1a437fce9b3b5a9"
+    },
+    {
+      "path": "implementation/witness_compromise_recovery_experiment.py",
+      "size": 31291,
+      "git_blob_sha1": "a7832c4905356282c366643a6c349b10cf3e1544",
+      "sha256": "32ff3b73d573c419d67c390402078a13e44deb3cd9d22cf94478ad68774fbf1f"
+    },
+    {
+      "path": "implementation/witness_compromise_recovery_experiment_v0_2.py",
+      "size": 35140,
+      "git_blob_sha1": "c8e1e64f88546231303c20f068e3b47669d6f726",
+      "sha256": "08ba22b4983c503e9c8a4882d3cd3fb5d266932869b20a34e452e80465620a38"
+    },
+    {
+      "path": "implementation/witness_provenance_experiment.py",
+      "size": 26726,
+      "git_blob_sha1": "4faf010d73219af63c254097e9c135da68d60078",
+      "sha256": "71912958bad6db97218ac630cadee6c34c04b286aec99b3f7cda071f8d79f567"
+    },
+    {
+      "path": "papers/README.md",
+      "size": 6713,
+      "git_blob_sha1": "e49b97c183bb2f3f05ac9857c5a5170fe7d965dc",
+      "sha256": "f23cb21fc7aa88befcd1b2998742e452800d8aa691d13242b429c1b727ed2aeb"
+    },
+    {
+      "path": "papers/being-with-the-other/documented-continuation-2026-10-23/Ario_Evidence_Public_2026-10-23.json",
+      "size": 47393,
+      "git_blob_sha1": "3a907509ea0beaea6c5885e8b3eaf7b9a4dd0c6b",
+      "sha256": "e1e3412b31e2ed1081b68a36a85162453dd0218488de4ddb91ff60ce6ce34dec"
+    },
+    {
+      "path": "papers/being-with-the-other/documented-continuation-2026-10-23/Ario_Evidence_Public_EN_2026-10-23.json",
+      "size": 43850,
+      "git_blob_sha1": "38ccaae718c2dabe73b7bfbaf0ad104e94d49d5e",
+      "sha256": "96165ef740739b70eaa52ba7ed37eb1728392f5219306350912bd59d73bc9714"
+    },
+    {
+      "path": "papers/being-with-the-other/documented-continuation-2026-10-23/Ario_Evidence_Public_EN_2026-10-23.md",
+      "size": 22088,
+      "git_blob_sha1": "e0edb0bf7922f3740707fbb45095da4ae11fa6ae",
+      "sha256": "f8a51e7531e76bb066caefbffedc8ceefa77f9d5edf1d8ad2e4525427e2d5aac"
+    },
+    {
+      "path": "papers/being-with-the-other/documented-continuation-2026-10-23/Ario_Independent_Continuation_EN_2026-10-23.html",
+      "size": 37673,
+      "git_blob_sha1": "af893c65c387f4ba3109396f6d962700dbaef0f4",
+      "sha256": "b9ddf7e1a411e229e9cd52a1ad379e4a07e6365bb45a861ced28dfbfd757ee30"
+    },
+    {
+      "path": "papers/being-with-the-other/documented-continuation-2026-10-23/Ario_Independent_Continuation_EN_2026-10-23.md",
+      "size": 33130,
+      "git_blob_sha1": "4e1d948f9a78c7c7c78127b07e319ba3c6a42dbb",
+      "sha256": "1cc67f703404174f06916a8f9563d2a99163f3414894296f25b8ff5019595f0e"
+    },
+    {
+      "path": "papers/being-with-the-other/documented-continuation-2026-10-23/Ario_Independent_Continuation_EN_FULL_EVIDENCE_2026-10-23.md",
+      "size": 47851,
+      "git_blob_sha1": "56cebbe04b4056094ddc650f4f81797576d0d70b",
+      "sha256": "3260b2d0a2aa346a73861b1fc3e66192d6fe3c4ed65a0aa9985e80a401177ac4"
+    },
+    {
+      "path": "papers/being-with-the-other/documented-continuation-2026-10-23/Ario_Independent_Continuation_FA_2026-10-23.html",
+      "size": 93763,
+      "git_blob_sha1": "c5fddba7289b9540bef208f00ab053543e2279e1",
+      "sha256": "8d39d7a2b1f3a5fadc16748eceae2d1eb14de93efe845f580dfb2796f03ed3e4"
+    },
+    {
+      "path": "papers/being-with-the-other/documented-continuation-2026-10-23/Ario_Independent_Continuation_FA_2026-10-23.md",
+      "size": 82579,
+      "git_blob_sha1": "39140d09f94a7bd0be7b547af052c811a5e3e6a6",
+      "sha256": "296c5707f19204871676b383539eec9ae4e5c8359cde056cfb9a6ffb009cf0f1"
+    },
+    {
+      "path": "papers/being-with-the-other/documented-continuation-2026-10-23/EDITORIAL_CHANGELOG.md",
+      "size": 1410,
+      "git_blob_sha1": "db682ac4eb0e8224af1163f30878043ef9c2f02f",
+      "sha256": "9e38c897f977ede3f7f72bc2a53cda839788b5bffce8d75283bf9230196b633f"
+    },
+    {
+      "path": "papers/being-with-the-other/documented-continuation-2026-10-23/README.md",
+      "size": 2450,
+      "git_blob_sha1": "58a6f0793563ea0e27c7c166297af321a62e9649",
+      "sha256": "590c08efd4bdf7e800b5c9d43977bb196aea194a1b8cf0e53f89cc4d788b4b7a"
+    },
+    {
+      "path": "papers/being-with-the-other/documented-continuation-2026-10-23/README_PUBLICATION_EN_FA.md",
+      "size": 4378,
+      "git_blob_sha1": "03f1a765eb2d2b6bebf82bd50e310bf5e1728038",
+      "sha256": "53114f7c4de0b045a61fbb801ff2077c6df985641fdba664ca6abb7a17653ceb"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.2/CHECKSUMS.sha256",
+      "size": 466,
+      "git_blob_sha1": "897100914b5b9800a5ae5be06bf481ffae3068db",
+      "sha256": "6c522e3e0ca29a89b47551630dd371ca318e350038beb11c28f4363e191a1f30"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.2/CITATION.cff",
+      "size": 772,
+      "git_blob_sha1": "4a3d9a75c55d7968417663856c5452bcb7a578d8",
+      "sha256": "79cbad85325ef224eaf7382390f12df0ba52919bc570a2becaac261912715153"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.2/README.md",
+      "size": 5131,
+      "git_blob_sha1": "585d853a909c2f2d23f7bf6882574395bb1d422d",
+      "sha256": "1c642e54d5be2aeb018931532ea780b41b2bdc6cb929ddddf34df1b1a23e2485"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.3/Being_With_the_Other_EN_v0_3_Public.md",
+      "size": 121546,
+      "git_blob_sha1": "05eb3f09027bc8abaae4386c0c6562f3784c9659",
+      "sha256": "8ea7a378544d36359560852518c5ef0b27da56856009d4f93ce61846c8c819a3"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.3/Being_With_the_Other_FA_v0_3_Public.md",
+      "size": 194906,
+      "git_blob_sha1": "407da6d477d90215fcbccce5dd5395624a125401",
+      "sha256": "1d1517742f328528445fff0d26315ac01cd3c23fa127f5fe42214ffb4d913366"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.3/CHECKSUMS_v0_3.sha256",
+      "size": 909,
+      "git_blob_sha1": "a93deb03df9e03e781954b137fe5546c9daa4a6e",
+      "sha256": "a68289d6e9b69fcd44e1a650be7d7c195458cd12e63329d44d355857281e033b"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.3/README.md",
+      "size": 5101,
+      "git_blob_sha1": "a14ea4e971b810ccfe1ac8838deba4f8dc020ef4",
+      "sha256": "598febe286fe9d5f1f5da2cb228818f355d8c5d8c7fee958723eae0230dacbf7"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.3/README_book_v0_3.md",
+      "size": 4772,
+      "git_blob_sha1": "ea063824962acb1542d5f5febf0933fb3ed6573c",
+      "sha256": "e43e8e323d8e525850b089db91b6b8a67227c880f0c1ad9742b3e91507ac0b31"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.3/ZENODO_v0_3_DEPOSIT_GUIDE.md",
+      "size": 3132,
+      "git_blob_sha1": "bd840dfc08c54ef22941e89c271b53c23a2c0fdd",
+      "sha256": "eaeb842ecd9e9a1e5e0babdec6b4eda7bd950544e1a806e14516223315d43a58"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.3/zenodo_v0_3_metadata.json",
+      "size": 2003,
+      "git_blob_sha1": "3cca3f1013372f99bc2fbee92228205fa662056e",
+      "sha256": "adfadcc219032a11ee4035afb37345a0683121ed835eee6a30d2672ccf7ca66b"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.4/Being_With_the_Other_EN_v0_4_Public.md",
+      "size": 128484,
+      "git_blob_sha1": "15bf8bb7b471016566186a98e25f077fcdf50574",
+      "sha256": "1a5923495e48aafa4deac0cc53fdc5fae5fc4cbc9200c02b330acc4ff97fac70"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.4/Being_With_the_Other_FA_v0_4_Public.md",
+      "size": 189922,
+      "git_blob_sha1": "75f27b4e585211f6ce3c1a51962a817ab3239d6b",
+      "sha256": "837b9bebebb319bfada6febef0583e6f2d5a1fbaac08a26a5f87ee40a18c2b56"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.4/CHANGELOG.md",
+      "size": 1956,
+      "git_blob_sha1": "2bcb972c41788e009e17a57346b0230e7427cee6",
+      "sha256": "2cac2e98b04c792a318b53ad779156499004d279f164f44aba82cc692c98e0fa"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.4/CHECKSUMS.sha256",
+      "size": 636,
+      "git_blob_sha1": "95d7a259a5219c8e4b9259b61f69c65504d9d6c3",
+      "sha256": "4a0842408812408c344fe2b00de8436a50e7084a38f66a3a0e6358211a8cb3ff"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.4/CITATION.cff",
+      "size": 788,
+      "git_blob_sha1": "edfeeb8760e0f0915103f146b5a6135a544d5f1d",
+      "sha256": "724b651ba7fd48a26dc86727bbd38993cc20ae3d6dd205bc718646928dcf67c1"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.4/README.md",
+      "size": 5407,
+      "git_blob_sha1": "51a48d42bf5444bf85244c631a0986103d0ffa3d",
+      "sha256": "11022c75aecbe5eaad34364d9b2b9eefa94b39e277d8bfa513879290f8ed226c"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.4/zenodo_v0_4_draft_metadata.json",
+      "size": 955,
+      "git_blob_sha1": "7703cf04c533701c9dcf3abfb595f55211ca46fd",
+      "sha256": "85863af92ac979f3e3134e974e27ef80df7c91bf47ade3d66d4ec8a0ad0b2712"
+    },
+    {
+      "path": "papers/being-with-the-other/v6/README.md",
+      "size": 2601,
+      "git_blob_sha1": "c34a2193a3cfd3592a071d6eb6d9d675beb707e4",
+      "sha256": "e41e19413044ef4f978a76c286292d633f0dd23a84bc1387cd39db1b0d4121e0"
+    },
+    {
+      "path": "papers/evidence-laundering-2026-10-27/Manuscript.md",
+      "size": 24619,
+      "git_blob_sha1": "7e38095e16dda325259cb4cf0efd639fc314e3be",
+      "sha256": "c6ce9dda57ba944bae29fc24631d8835acfca50fafc8ddf12cca79329aab3fd0"
+    },
+    {
+      "path": "principles/README.md",
+      "size": 16088,
+      "git_blob_sha1": "122126382e3ba99e4aca75511392180c7a5a7d38",
+      "sha256": "df35fbf61d3f845c07b67c1342c9e77a4e66b643c4efaaca43feef1f7aac732a"
+    },
+    {
+      "path": "releases/ai-readable-full-2026-11-11-05ba5c9/.gitattributes",
+      "size": 87,
+      "git_blob_sha1": "b8ca6d9004fcd8ee99de3e40b97c3c73df1c324e",
+      "sha256": "07c7648a941d26f8c5144c603dce97a90b8a87c0199a5782cc2b0c9606b7be64"
+    },
+    {
+      "path": "releases/ai-readable-full-2026-11-11-05ba5c9/README-EXPORT.txt",
+      "size": 794,
+      "git_blob_sha1": "4f4befff60917e9ae054819b4ff4155f2d6ea9cf",
+      "sha256": "6886802bdf66b9a5761cdd0070c69a2f6415d42478c0f6c19e95a81df64a96b0"
+    },
+    {
+      "path": "releases/ai-readable-full-2026-11-11-05ba5c9/README.md",
+      "size": 1896,
+      "git_blob_sha1": "f3db028c68f4bfcf7b9b3f4cb7a72d17bfd8780f",
+      "sha256": "a6ed1e4fdd2f82a8755808aef52403168da80705501ba22579fd0f93a3713639"
+    },
+    {
+      "path": "releases/ai-readable-full-2026-11-11-05ba5c9/RESTORE_FROM_TXT.py",
+      "size": 1623,
+      "git_blob_sha1": "55a7dd0a60bec770a27d691978d0bffdd65c4820",
+      "sha256": "6a258ee6a736b16302ef9416139ebf585855ab6a1baa6940d1b9334fbe349d04"
+    },
+    {
+      "path": "releases/ai-readable-full-2026-11-11-05ba5c9/ario-manifest.json",
+      "size": 63205,
+      "git_blob_sha1": "c64b1f6cb67d320ae4dedf61f6bab49aae093359",
+      "sha256": "f86fb10ef3eb71dd6e3c348b3f0c9b42c88b3837ae889918c33d8f5d62fe11d8"
+    },
+    {
+      "path": "releases/ai-readable-full-2026-11-11-05ba5c9/checksums.json",
+      "size": 962,
+      "git_blob_sha1": "4174ceb95eb6ea32970d008214bc4ef250744b54",
+      "sha256": "33df4395bffc0ab261af333d84e48b080fdff3d10852de2522bc61e19515ae6f"
+    },
+    {
+      "path": "releases/ai-readable-full-2026-11-11-05ba5c9/make_export.py",
+      "size": 7490,
+      "git_blob_sha1": "f189ff47f6f7212dd94af09c5fb912df4abddd29",
+      "sha256": "4e81871ac733810def188d2a5cf0f2465f110fbee92a6bda8fa0f7ed7e71b9ae"
+    },
+    {
+      "path": "releases/ai-readable-full-2026-11-12-4731c912/README.md",
+      "size": 1504,
+      "git_blob_sha1": "aefd94cb8c4946515d58f8439afcdd28983745f7",
+      "sha256": "65e89eb32e67ab48e6f0565702a8c58d865b061db9a301893495d2f8cc2f6cc5"
+    },
+    {
+      "path": "releases/zenodo-23651704/README.md",
+      "size": 2234,
+      "git_blob_sha1": "9cd0c86bbfc08f3dd29350497fcc48cc4c39ecdf",
+      "sha256": "a8addb67f9d1400a5466db9c9800be8213ce4af1660c42c24c146191f9694211"
+    },
+    {
+      "path": "website/404.html",
+      "size": 562,
+      "git_blob_sha1": "41b82ad5f27c9d879ff793abfb0b22a43f5c9d75",
+      "sha256": "e8db95db444ec1c655e25d6ba9ba5c431563c73265d2eb2150d102178a6b24cd"
+    },
+    {
+      "path": "website/570bddd1132ca0c8fdd25907d2efb687.txt",
+      "size": 32,
+      "git_blob_sha1": "dcd9b8fd88b87acf534cbd895d784c3b86bb76e9",
+      "sha256": "c6bd2372794fefd7bf2b62d22af002f63221a23445476145861a6b0a060aa208"
+    },
+    {
+      "path": "website/README.md",
+      "size": 1798,
+      "git_blob_sha1": "6ba2ac06fbefff62ad16ac65d0f15f84050b159f",
+      "sha256": "3ffb89be07cc5a64ad4c46bd34bc1535aa446b43ef6ba816ab761fd4fd77941c"
+    },
+    {
+      "path": "website/SOURCES.md",
+      "size": 20714,
+      "git_blob_sha1": "eb017dcb837a4194d3614a8c5c12f1e24e34b34b",
+      "sha256": "7934a43e814164ca76802be50e31e92cffd11436ed450149136d7f5011a239e3"
+    },
+    {
+      "path": "website/google9b9d07e20744ed6f.html",
+      "size": 53,
+      "git_blob_sha1": "b6829cc8a1247657ba0584991fb63d621dc40bfe",
+      "sha256": "803409268b463e9d42e80df3e1974d9c33f4179d5e0d7eafed9fa6c5b41ab6c7"
+    },
+    {
+      "path": "website/index.html",
+      "size": 56700,
+      "git_blob_sha1": "84c4bceabac4cbef88f48ca8f670afb56168cee6",
+      "sha256": "8df5c07578cb1186fd5898097d0d66d431c9c965eb2ca9b2b2d07a6c3374018f"
+    },
+    {
+      "path": "website/progress.html",
+      "size": 7090,
+      "git_blob_sha1": "fbcbb07a1d71b8ef7bef6adf6d4e7e7452b38e1d",
+      "sha256": "6bdf25c675d2df593473f489dc78095048521cfb7b7726a07e51c5aa1d4131cc"
+    },
+    {
+      "path": "website/research.html",
+      "size": 15144,
+      "git_blob_sha1": "6830b397c1e6b05b6e2de565696bd9c0f83b1326",
+      "sha256": "a9fca700aadf0a389c8f3197844a32cd6b3ae0b612e2e3899fb715646a53d772"
+    },
+    {
+      "path": "website/robots.txt",
+      "size": 89,
+      "git_blob_sha1": "533999c74d0a5dd97ff74bd86ba744f80c9e60b4",
+      "sha256": "9d5292157e8dbef4fd2057b34f47cce2dfb880897a0285c30fad9fc30990a067"
+    },
+    {
+      "path": "website/sitemap.xml",
+      "size": 263,
+      "git_blob_sha1": "677a3df2c23ccc7b4b6582e65f9aaec57427a591",
+      "sha256": "e869eda97567914563bb2ccde2d4d8bf6e721be79c8a96b56d986ff01cdb9bef"
+    },
+    {
+      "path": "website/traffic.html",
+      "size": 3501,
+      "git_blob_sha1": "a014c16b0dc3445510fc44b646c66689dec0fa52",
+      "sha256": "f91e630a52ff27ffd94d8db68c1f8193f2f03621b79e4a1b6bfcd6726c95de2f"
+    },
+    {
+      "path": "website/vercel.json",
+      "size": 2814,
+      "git_blob_sha1": "73bbfdd140f963d61d7087e48f10ee571c3f9442",
+      "sha256": "b0ec15550ed81052f14c9c1488a0f708ac1f67ef1d3f47fe58446208c9d267dd"
+    }
+  ],
+  "identical_text_aliases": [
+    {
+      "path": "website/papers/evidence-laundering-2026-10-27/Manuscript.md",
+      "size": 24619,
+      "git_blob_sha1": "7e38095e16dda325259cb4cf0efd639fc314e3be",
+      "sha256": "c6ce9dda57ba944bae29fc24631d8835acfca50fafc8ddf12cca79329aab3fd0",
+      "identical_to": "papers/evidence-laundering-2026-10-27/Manuscript.md"
+    }
+  ],
+  "omitted_archives_and_binary": [
+    {
+      "path": "docs/ai-readable-snapshots/Ario_READ.txt",
+      "size": 2857981,
+      "git_blob_sha1": "9b0eb4daa25146fc74c31661db3c92e562777b34",
+      "sha256": "63f170645e67131025e1d3b8d6e9002a8f3312741ecfce121b886f8d085bd68b",
+      "reason": "nested snapshot or repeated exported archive"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.2/Being_With_the_Other_Bilingual_Zenodo_v0_2.zip",
+      "size": 822384,
+      "git_blob_sha1": "b0805bcecf4e2da638cc560caa9e91130d976b2e",
+      "sha256": "1d07dd378e9baf708c3627000cc550e0ada794f39ebee7757872c0e3255c5438",
+      "reason": "binary asset, kept in source repository/ZIP"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.2/Being_With_the_Other_EN_v0_2.pdf",
+      "size": 419598,
+      "git_blob_sha1": "43e1d9c8288d6ad9e73203108d0b1e59467889e1",
+      "sha256": "0edf1add2be0d821c463bbea8a6316bdd6cd93802bd1d04270861cd36c45c232",
+      "reason": "binary asset, kept in source repository/ZIP"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.2/Being_With_the_Other_FA_v0_2.pdf",
+      "size": 526491,
+      "git_blob_sha1": "c5729d4493208330c7b65d99e7125934c82f7dc9",
+      "sha256": "ac340a041f0dee90bfc617f0c34a9bcc41f56966413638c044c0e49810ae6584",
+      "reason": "binary asset, kept in source repository/ZIP"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.3/Being_With_the_Other_EN_v0_3_Public.docx",
+      "size": 95383,
+      "git_blob_sha1": "39fbaf30ebf7fda53ae34e3505bb74500a036514",
+      "sha256": "0eb08747ccaeb52047d0ad07c2f0e09a2032e576e0b2048d1ace0b9d9bbed878",
+      "reason": "binary asset, kept in source repository/ZIP"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.3/Being_With_the_Other_EN_v0_3_Public.pdf",
+      "size": 408085,
+      "git_blob_sha1": "9ec24b91ca06dcdb2d1215c4f6844dd84a6e0199",
+      "sha256": "8e8c692b73bb0e50fda569482ef4a74f3f7f15277499ec3cdb1a1697262fa058",
+      "reason": "binary asset, kept in source repository/ZIP"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.3/Being_With_the_Other_FA_v0_3_Public.docx",
+      "size": 97398,
+      "git_blob_sha1": "a644095fbc20bd56f0870f0899b9c616b5b935a9",
+      "sha256": "93a90d9ef7aba0eaaeb7c215e976875559abfd819472dfb3182043e522f5c251",
+      "reason": "binary asset, kept in source repository/ZIP"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.3/Being_With_the_Other_FA_v0_3_Public.pdf",
+      "size": 595349,
+      "git_blob_sha1": "89eeedb30298578bc4cd4c19b4b8f5979f4d9907",
+      "sha256": "86c5af49b0e656e1bd50020ae1466648d731474532249af9aa26547fce67da55",
+      "reason": "binary asset, kept in source repository/ZIP"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.4/Being_With_the_Other_EN_v0_4_Public.docx",
+      "size": 99561,
+      "git_blob_sha1": "bf08f5f074ecba2309761b0d257053c66466741b",
+      "sha256": "94fcba22502361160ec1cbc27a0942574577370c8f6148b81dbcb8608c5781dc",
+      "reason": "binary asset, kept in source repository/ZIP"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.4/Being_With_the_Other_EN_v0_4_Public.pdf",
+      "size": 448005,
+      "git_blob_sha1": "a333bffc92df5939a6e59d3c5a115e4351964843",
+      "sha256": "a367b84755aac383c70d7428f745a1c063cab7c292244191112087dedc041995",
+      "reason": "binary asset, kept in source repository/ZIP"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.4/Being_With_the_Other_FA_v0_4_Public.docx",
+      "size": 102029,
+      "git_blob_sha1": "b675595b1eb37f91047a3efdba317a59828b1b48",
+      "sha256": "8ea1860a0b900c0b5c601ddabd73892b9b066f8f335d91c389f201b02ed50376",
+      "reason": "binary asset, kept in source repository/ZIP"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.4/Being_With_the_Other_FA_v0_4_Public.pdf",
+      "size": 683329,
+      "git_blob_sha1": "703e20112163483e15021f45ca37a290bca9fe59",
+      "sha256": "cad4d87fd36f4c4fb084783458543bbf6d22102599f10f8fcd172693bcd5f464",
+      "reason": "binary asset, kept in source repository/ZIP"
+    },
+    {
+      "path": "releases/ai-readable-full-2026-11-11-05ba5c9/ario-full.txt",
+      "size": 17751878,
+      "git_blob_sha1": "b7e2447dd7be80d35adaaa7e9b75d537cb1b949d",
+      "sha256": "86aafca0e20fb356bdee14c05815d017b3212ef68afed8757fa16f1a1b746af6",
+      "reason": "nested snapshot or repeated exported archive"
+    },
+    {
+      "path": "releases/ai-readable-full-2026-11-11-05ba5c9/ario-full.zip",
+      "size": 6524694,
+      "git_blob_sha1": "6d5c98c9c7ff153e923c495507e4720e0850bdbc",
+      "sha256": "d11269dc593f9cbb70e7d622a8acc31d0fe36d292a935225aca6b8f98d5c5d51",
+      "reason": "nested snapshot or repeated exported archive"
+    },
+    {
+      "path": "releases/ai-readable-full-2026-11-12-4731c912/ario-readable.txt",
+      "size": 44476762,
+      "git_blob_sha1": "99f1bbdf2f49007114c3395618b878b9bce8060d",
+      "sha256": "d59307a9528daa7678661c26a0788cc242d42afa635c9b9be6233bea8d114aaa",
+      "reason": "nested snapshot or repeated exported archive"
+    },
+    {
+      "path": "releases/zenodo-23651704/Ario-Read-Light-For-Models.txt",
+      "size": 2857981,
+      "git_blob_sha1": "9b0eb4daa25146fc74c31661db3c92e562777b34",
+      "sha256": "63f170645e67131025e1d3b8d6e9002a8f3312741ecfce121b886f8d085bd68b",
+      "reason": "nested snapshot or repeated exported archive"
+    },
+    {
+      "path": "website/Ario-Read-Light-For-Models.txt",
+      "size": 2857981,
+      "git_blob_sha1": "9b0eb4daa25146fc74c31661db3c92e562777b34",
+      "sha256": "63f170645e67131025e1d3b8d6e9002a8f3312741ecfce121b886f8d085bd68b",
+      "reason": "nested snapshot or repeated exported archive"
+    }
+  ],
+  "output_filename": "ario-source-clean.txt",
+  "output_bytes": 3497045,
+  "output_sha256": "0b78796c9e2afe361951c590297538cfe881409046cc9e6f64371cb76800b77c"
+}
