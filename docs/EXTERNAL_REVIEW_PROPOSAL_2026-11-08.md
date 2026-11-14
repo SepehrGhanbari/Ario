@@ -30,22 +30,30 @@ Any sentence that cannot sit in this table should stay out of the first screen o
 
 Already documented in `docs/REPRODUCE_M0.md`. That file is the authority for the commands. Do not replace it with `python -m unittest discover`; the repository tests are pytest tests, and discover will not collect them. Pins named there include Python 3.13, `pytest==9.1.1`, and `cryptography==46.0.4`.
 
-Demo, from the repository root:
+First follow the environment setup in `docs/REPRODUCE_M0.md`, including its pinned dependencies. The commands below use the virtual-environment interpreter defined there: `$PYTHON` on Linux/macOS and `$python` in Windows PowerShell. Do not substitute a system-wide interpreter.
+
+Demo, from the repository root on Linux/macOS:
 
 ```bash
-python -B implementation/m0_reproducibility_demo.py
+"$PYTHON" -B implementation/m0_reproducibility_demo.py
 ```
 
-Regression, from `implementation/`:
+Demo, from the repository root on Windows PowerShell:
+
+```powershell
+& $python -B implementation/m0_reproducibility_demo.py
+```
+
+Regression, from `implementation/` on Linux/macOS:
 
 ```bash
-python -B -m pytest -p no:cacheprovider -q tests
+"$PYTHON" -B -m pytest -p no:cacheprovider -q tests
 ```
 
 Windows full suite, also from `implementation/`, because parameterized ids need the extra plugin:
 
 ```powershell
-py -3.13 -B -m pytest -p no:cacheprovider -p tests.test_m0_reproducibility_demo -q tests
+& $python -B -m pytest -p no:cacheprovider -p tests.test_m0_reproducibility_demo -q tests
 ```
 
 A later commit, not this one, should paste the exact stdout or a hash of the demo result for one named Git HEAD, after the command has actually been run. Exit 0 in one environment is not artifact truth.
@@ -57,7 +65,7 @@ If someone other than the author cannot get that output, auditability is still a
 These are proposed issue bodies, not issues opened by this pull request. Comment here if the cases are wrong, too weak, or already covered.
 
 1. **Schema boundary.** Supply one JSON audit request that the schema rejects but a careful reader thinks must be accepted, and one that the schema accepts but must be rejected. The interesting result is a disagreement about the boundary, not a green test.
-2. **Ledger prefix.** Freeze one shared JSONL prefix and two different tails. Say which head and which adapter version is being read. State what the observation adapter is allowed to say about each tail, and what it must not say about the shared prefix (it must not treat the prefix as proof of the tail).
+2. **Ledger prefix.** Freeze one shared JSONL prefix and two different tails, such that both complete files are valid ledgers (valid newline-terminated event envelopes, within the adapter's bounds). Record the exact Git HEAD and observation-adapter version. Run `observe_ledger` on each frozen file and record each returned `status`, whole-ledger `sha256`, and every `observations[].record_sha256` with its line number; an `UNKNOWN` response is not a successful observation. Independently compute SHA-256 of each complete file's raw bytes and of each raw line (including its newline), and compare them to the adapter's outputs for both the common prefix and the divergent tails. Record discrepancies rather than inferring custody or authenticity: a matching prefix neither proves either tail nor establishes historical truth.
 3. **Structural success, false content.** Construct an input on which the structural audit completes while the artifacts' content is false by the fixture's own declaration. Record the exact status string the engine returns, and separately record that the fixture declared the content false. Do not expect a structural checker to discover the falsehood. The finding, if any, is that the status string can be read as a truth judgment.
 
 Until someone who did not write the tests attempts these, there is no external review. Stars and the author's own regression suite do not substitute for that.
