@@ -109,19 +109,21 @@ def parse_candidates(result: object, ledger: Mapping[str, ArioRecord], *, k: int
                 anomalies.append("search_terminated_early")
         # Hits-total can be omitted by XERJ depending on query options. Its
         # 'gte' value is a lower bound, not an exact count.
-        if "total" in result["hits"]:
-            count = result["hits"]["total"]
-            if type(count) is int:
-                if count < len(hits):
-                    anomalies.append("contradictory_exact_hits_total")
-            elif type(count) is dict:
-                n, relation = count.get("value"), count.get("relation")
-                if (type(n) is not int or n < 0 or relation not in ("eq", "gte")):
-                    anomalies.append("malformed_hits_total")
-                elif relation == "eq" and n < len(hits):
-                    anomalies.append("contradictory_exact_hits_total")
-            else:
-                anomalies.append("malformed_hits_total")
+        # The only supported live wire profile is one unfiltered lexical
+        # first page (from=0, size=k) with explicit track_total_hits=true.
+        # Reject absent, integer and lower-bound totals; those can be valid
+        # for *other* XERJ request options, not this frozen experiment.
+        if type(shards) is dict and "skipped" not in shards:
+            anomalies.append("missing_skipped_shard_metadata")
+        count = result["hits"].get("total")
+        if type(count) is not dict:
+            anomalies.append("missing_or_unsupported_exact_hits_total")
+        else:
+            n, relation = count.get("value"), count.get("relation")
+            if type(n) is not int or n < 0 or relation != "eq":
+                anomalies.append("inexact_or_malformed_hits_total")
+            elif len(hits) != min(n, k):
+                anomalies.append("exact_first_page_count_mismatch")
     for rank, hit in enumerate(hits, 1):
         if not isinstance(hit, dict) or not isinstance(hit.get("_id"), str):
             anomalies.append("malformed_hit")
@@ -194,7 +196,8 @@ class XERJReadOnly:
             raise ValueError("bounded nonempty query required")
         if not 1 <= k <= 10:
             raise ValueError("invalid k")
-        payload = json.dumps({"size": k, "_source": False, "query": {"match": {"text": question}}},
+        payload = json.dumps({"size": k, "track_total_hits": True,
+                              "_source": False, "query": {"match": {"text": question}}},
                              separators=(",", ":")).encode("utf-8")
         # http.client uses NO HTTP proxy and does NOT follow redirects.
         conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=self.timeout)
