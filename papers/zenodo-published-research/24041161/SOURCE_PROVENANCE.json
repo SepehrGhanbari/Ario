@@ -1,0 +1,24 @@
+{
+  "source_doi": "10.5281/zenodo.24041161",
+  "title": "Independence Is Not Multiplicity: A Synthetic Witness-Provenance Study within Ario's Auditable Epistemic Framework",
+  "license": "cc-by-4.0",
+  "original": {
+    "original_zenodo_filename": "Ario_SSRN_Experimental_Preprint_v2.pdf",
+    "local_filename": "independence-is-not-multiplicity.pdf",
+    "size": 235614,
+    "md5": "b76d489122667c3bba4f0481c674bf40",
+    "sha256": "2398144dfae874761f1f5358ea7b9493f6f199f6af48019b36a12ffacbb3db9a",
+    "api_asset_url": "https://zenodo.org/api/records/24041161/files/Ario_SSRN_Experimental_Preprint_v2.pdf/content",
+    "checksum_verified": true
+  },
+  "extraction_quality": {
+    "pages": 8,
+    "text_chars": 30029,
+    "pages_with_over_80_chars": 8,
+    "near_blank_pages": [],
+    "persian_chars": 0,
+    "original_sha256": "2398144dfae874761f1f5358ea7b9493f6f199f6af48019b36a12ffacbb3db9a",
+    "page_1_text_excerpt_escaped": "Ghanbari  |  Experimental preprint  |  5 Nov 2026   \\u2022   1\\nIndependence Is Not Multiplicity: A Reproducible Sixteen-Scenario Study of Witness \\nProvenance in Audit Logs\\nSepehr Ghanbari\\nIndependent Resea"
+  },
+  "peer_review": "No independent peer review verified"
+}

@@ -12,9 +12,17 @@
 **Official website:** https://ario-research-independent.vercel.app/  
 **Public traffic dashboard / داشبورد عمومی ترافیک:** https://ario-public-traffic.vercel.app/ — dated aggregate clone/view counts, not unique people or verified adoption.  
 
-## Latest public materials / جدیدترین منابع آریو — 12 November 2026
+## Latest verified research corpus / کامل‌ترین بستهٔ پژوهشی — 14 November 2026
 
-**Newest matched source release** — pinned Git source 3d7708b1 (234 original tracked files audited): [complete TXT](https://ario-research-independent.vercel.app/downloads/Ario-Latest.txt) (3.74 MB, 213 full text/code files) · [clean ZIP](https://ario-research-independent.vercel.app/downloads/Ario-Latest.zip) (4.59 MB, 226 unique original files including published PDFs) · [SHA-256 and provenance](https://github.com/SepehrGhanbari/Ario/tree/ed740cb4dbebfde3ba89fcc554fcaaf674c4f2f0/releases/ai-source-2026-11-12-3d7708b1).
+**Newest release:** [Complete TXT (3.86 MB)](https://ario-research-independent.vercel.app/downloads/Ario-Latest.txt) · [Original PDF/source ZIP (16.87 MB)](https://ario-research-independent.vercel.app/downloads/Ario-Latest.zip) · [Dated TXT](https://ario-research-independent.vercel.app/downloads/Ario-Research-Complete-2026-11-14.txt) · [Dated ZIP](https://ario-research-independent.vercel.app/downloads/Ario-Research-Complete-2026-11-14.zip) · [Manifest, experiment coverage and SHA-256](https://github.com/SepehrGhanbari/Ario/tree/018fc52285c7c07c770e0894b734e7199f2110ac/releases/complete-research-2026-11-14-a39ac06e).
+
+Pinned Git source a39ac06e: 264 tracked paths checked; 230 full text/code files and 9 original binaries included, including full English/Persian book text layers and original illustrated PDFs, independent research papers, all 24 experiment and all 55 test files. Historical repository exports and superseded whole-book editions remain traceable in the source manifest.
+
+**Book provenance warning:** Zenodo record [Being With the Other](https://doi.org/10.5281/zenodo.23771218) calls itself Version 6; its deposited original PDF covers say Fifth Integrated Edition. The PDFs are retained unmodified and text has been extracted page-by-page, without inventing a different manuscript. [Published PDF originals and text extractions](https://github.com/SepehrGhanbari/Ario/tree/main/papers/being-with-the-other/v6/zenodo-published-originals).
+
+## Previous verified source release / انتشار پیشین — 12 November 2026
+
+**Previous matched source release** — pinned Git source 3d7708b1 (234 original tracked files audited): [complete TXT](https://ario-research-independent.vercel.app/downloads/Ario-Latest.txt) (3.74 MB, 213 full text/code files) · [clean ZIP](https://ario-research-independent.vercel.app/downloads/Ario-Latest.zip) (4.59 MB, 226 unique original files including published PDFs) · [SHA-256 and provenance](https://github.com/SepehrGhanbari/Ario/tree/ed740cb4dbebfde3ba89fcc554fcaaf674c4f2f0/releases/ai-source-2026-11-12-3d7708b1).
 
 **Latest ethics paper / مقالهٔ اخلاقی تازه:** [Creation Without Sovereignty](https://doi.org/10.5281/zenodo.24136175) (11 November 2026; not peer reviewed) · [English full text](https://github.com/SepehrGhanbari/Ario/blob/main/papers/creation-without-sovereignty/2026-11-11/paper/CREATION_WITHOUT_SOVEREIGNTY_EN_v0.1.md) · [متن کامل فارسی](https://github.com/SepehrGhanbari/Ario/blob/main/papers/creation-without-sovereignty/2026-11-11/paper/CREATION_WITHOUT_SOVEREIGNTY_FA_v0.1.md) · [English PDF](https://github.com/SepehrGhanbari/Ario/blob/main/papers/creation-without-sovereignty/2026-11-11/published/en.pdf) · [PDF فارسی](https://github.com/SepehrGhanbari/Ario/blob/main/papers/creation-without-sovereignty/2026-11-11/published/fa.pdf). Published PDF bytes remain unchanged; updated GitHub Markdown includes disclosed editorial clarifications.
 
