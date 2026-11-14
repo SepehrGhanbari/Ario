@@ -1,0 +1,1502 @@
+{
+  "schema": "ARIO_COMPLETE_RESEARCH_COVERAGE_V1",
+  "source_commit": "a39ac06e69c1b5115bca2016698556730bf920cd",
+  "source_git_tree": "a39ac06e69c1b5115bca2016698556730bf920cd",
+  "source_tracked_paths": 264,
+  "kept_distinct_paths": 239,
+  "full_text_paths": 230,
+  "binary_paths": 9,
+  "aliases": [
+    {
+      "path": "website/papers/evidence-laundering-2026-10-27/Manuscript.md",
+      "original_bytes": 24619,
+      "git_blob_sha1": "7e38095e16dda325259cb4cf0efd639fc314e3be",
+      "sha256": "c6ce9dda57ba944bae29fc24631d8835acfca50fafc8ddf12cca79329aab3fd0",
+      "identical_to": "papers/evidence-laundering-2026-10-27/Manuscript.md",
+      "reason": "byte-identical duplicate; indexed by original path"
+    }
+  ],
+  "excluded_history_or_superseded_book": [
+    {
+      "path": "docs/ai-readable-snapshots/Ario_READ.txt",
+      "original_bytes": 2857981,
+      "git_blob_sha1": "9b0eb4daa25146fc74c31661db3c92e562777b34",
+      "sha256": "63f170645e67131025e1d3b8d6e9002a8f3312741ecfce121b886f8d085bd68b",
+      "reason": "nested full-repository/source-export artifact; original remains in pinned Git"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.2/Being_With_the_Other_Bilingual_Zenodo_v0_2.zip",
+      "original_bytes": 822384,
+      "git_blob_sha1": "b0805bcecf4e2da638cc560caa9e91130d976b2e",
+      "sha256": "1d07dd378e9baf708c3627000cc550e0ada794f39ebee7757872c0e3255c5438",
+      "reason": "superseded full book manuscript: only most recent verified Zenodo book record is included in model corpus"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.2/Being_With_the_Other_EN_v0_2.pdf",
+      "original_bytes": 419598,
+      "git_blob_sha1": "43e1d9c8288d6ad9e73203108d0b1e59467889e1",
+      "sha256": "0edf1add2be0d821c463bbea8a6316bdd6cd93802bd1d04270861cd36c45c232",
+      "reason": "superseded full book manuscript: only most recent verified Zenodo book record is included in model corpus"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.2/Being_With_the_Other_FA_v0_2.pdf",
+      "original_bytes": 526491,
+      "git_blob_sha1": "c5729d4493208330c7b65d99e7125934c82f7dc9",
+      "sha256": "ac340a041f0dee90bfc617f0c34a9bcc41f56966413638c044c0e49810ae6584",
+      "reason": "superseded full book manuscript: only most recent verified Zenodo book record is included in model corpus"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.3/Being_With_the_Other_EN_v0_3_Public.docx",
+      "original_bytes": 95383,
+      "git_blob_sha1": "39fbaf30ebf7fda53ae34e3505bb74500a036514",
+      "sha256": "0eb08747ccaeb52047d0ad07c2f0e09a2032e576e0b2048d1ace0b9d9bbed878",
+      "reason": "superseded full book manuscript: only most recent verified Zenodo book record is included in model corpus"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.3/Being_With_the_Other_EN_v0_3_Public.md",
+      "original_bytes": 121546,
+      "git_blob_sha1": "05eb3f09027bc8abaae4386c0c6562f3784c9659",
+      "sha256": "8ea7a378544d36359560852518c5ef0b27da56856009d4f93ce61846c8c819a3",
+      "reason": "superseded full book manuscript: only most recent verified Zenodo book record is included in model corpus"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.3/Being_With_the_Other_EN_v0_3_Public.pdf",
+      "original_bytes": 408085,
+      "git_blob_sha1": "9ec24b91ca06dcdb2d1215c4f6844dd84a6e0199",
+      "sha256": "8e8c692b73bb0e50fda569482ef4a74f3f7f15277499ec3cdb1a1697262fa058",
+      "reason": "superseded full book manuscript: only most recent verified Zenodo book record is included in model corpus"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.3/Being_With_the_Other_FA_v0_3_Public.docx",
+      "original_bytes": 97398,
+      "git_blob_sha1": "a644095fbc20bd56f0870f0899b9c616b5b935a9",
+      "sha256": "93a90d9ef7aba0eaaeb7c215e976875559abfd819472dfb3182043e522f5c251",
+      "reason": "superseded full book manuscript: only most recent verified Zenodo book record is included in model corpus"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.3/Being_With_the_Other_FA_v0_3_Public.md",
+      "original_bytes": 194906,
+      "git_blob_sha1": "407da6d477d90215fcbccce5dd5395624a125401",
+      "sha256": "1d1517742f328528445fff0d26315ac01cd3c23fa127f5fe42214ffb4d913366",
+      "reason": "superseded full book manuscript: only most recent verified Zenodo book record is included in model corpus"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.3/Being_With_the_Other_FA_v0_3_Public.pdf",
+      "original_bytes": 595349,
+      "git_blob_sha1": "89eeedb30298578bc4cd4c19b4b8f5979f4d9907",
+      "sha256": "86c5af49b0e656e1bd50020ae1466648d731474532249af9aa26547fce67da55",
+      "reason": "superseded full book manuscript: only most recent verified Zenodo book record is included in model corpus"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.4/Being_With_the_Other_EN_v0_4_Public.docx",
+      "original_bytes": 99561,
+      "git_blob_sha1": "bf08f5f074ecba2309761b0d257053c66466741b",
+      "sha256": "94fcba22502361160ec1cbc27a0942574577370c8f6148b81dbcb8608c5781dc",
+      "reason": "superseded full book manuscript: only most recent verified Zenodo book record is included in model corpus"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.4/Being_With_the_Other_EN_v0_4_Public.md",
+      "original_bytes": 128484,
+      "git_blob_sha1": "15bf8bb7b471016566186a98e25f077fcdf50574",
+      "sha256": "1a5923495e48aafa4deac0cc53fdc5fae5fc4cbc9200c02b330acc4ff97fac70",
+      "reason": "superseded full book manuscript: only most recent verified Zenodo book record is included in model corpus"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.4/Being_With_the_Other_EN_v0_4_Public.pdf",
+      "original_bytes": 448005,
+      "git_blob_sha1": "a333bffc92df5939a6e59d3c5a115e4351964843",
+      "sha256": "a367b84755aac383c70d7428f745a1c063cab7c292244191112087dedc041995",
+      "reason": "superseded full book manuscript: only most recent verified Zenodo book record is included in model corpus"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.4/Being_With_the_Other_FA_v0_4_Public.docx",
+      "original_bytes": 102029,
+      "git_blob_sha1": "b675595b1eb37f91047a3efdba317a59828b1b48",
+      "sha256": "8ea1860a0b900c0b5c601ddabd73892b9b066f8f335d91c389f201b02ed50376",
+      "reason": "superseded full book manuscript: only most recent verified Zenodo book record is included in model corpus"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.4/Being_With_the_Other_FA_v0_4_Public.md",
+      "original_bytes": 189922,
+      "git_blob_sha1": "75f27b4e585211f6ce3c1a51962a817ab3239d6b",
+      "sha256": "837b9bebebb319bfada6febef0583e6f2d5a1fbaac08a26a5f87ee40a18c2b56",
+      "reason": "superseded full book manuscript: only most recent verified Zenodo book record is included in model corpus"
+    },
+    {
+      "path": "papers/being-with-the-other/v0.4/Being_With_the_Other_FA_v0_4_Public.pdf",
+      "original_bytes": 683329,
+      "git_blob_sha1": "703e20112163483e15021f45ca37a290bca9fe59",
+      "sha256": "cad4d87fd36f4c4fb084783458543bbf6d22102599f10f8fcd172693bcd5f464",
+      "reason": "superseded full book manuscript: only most recent verified Zenodo book record is included in model corpus"
+    },
+    {
+      "path": "releases/ai-readable-full-2026-11-11-05ba5c9/ario-full.txt",
+      "original_bytes": 17751878,
+      "git_blob_sha1": "b7e2447dd7be80d35adaaa7e9b75d537cb1b949d",
+      "sha256": "86aafca0e20fb356bdee14c05815d017b3212ef68afed8757fa16f1a1b746af6",
+      "reason": "nested full-repository/source-export artifact; original remains in pinned Git"
+    },
+    {
+      "path": "releases/ai-readable-full-2026-11-11-05ba5c9/ario-full.zip",
+      "original_bytes": 6524694,
+      "git_blob_sha1": "6d5c98c9c7ff153e923c495507e4720e0850bdbc",
+      "sha256": "d11269dc593f9cbb70e7d622a8acc31d0fe36d292a935225aca6b8f98d5c5d51",
+      "reason": "nested full-repository/source-export artifact; original remains in pinned Git"
+    },
+    {
+      "path": "releases/ai-source-2026-11-12-3d7708b1/ario-source-latest.txt",
+      "original_bytes": 3744099,
+      "git_blob_sha1": "1d4f9f46b23d5709578d43d196f43b13ca6ebfe6",
+      "sha256": "f66f092cf258551a8eb5ea92ffd15ee725b78723563c938c7b17b804460db6f7",
+      "reason": "nested full-repository/source-export artifact; original remains in pinned Git"
+    },
+    {
+      "path": "releases/ai-source-2026-11-12-3d7708b1/ario-source-latest.zip",
+      "original_bytes": 4592389,
+      "git_blob_sha1": "eb870cd5547062869bd04d14ce03e7daa11e61d6",
+      "sha256": "921a53127d9b4d974fe2decade01fd953df1624e7c75d2be4c952be0af25416d",
+      "reason": "nested full-repository/source-export artifact; original remains in pinned Git"
+    },
+    {
+      "path": "releases/ai-text-clean-2026-11-12-a0431e5e/ario-source-clean.txt",
+      "original_bytes": 3497045,
+      "git_blob_sha1": "de05f99ee454dce1b284e4c058a1de873f961bf4",
+      "sha256": "0b78796c9e2afe361951c590297538cfe881409046cc9e6f64371cb76800b77c",
+      "reason": "nested full-repository/source-export artifact; original remains in pinned Git"
+    },
+    {
+      "path": "releases/ai-text-clean-2026-11-12-a0431e5e/ario-source-clean.zip",
+      "original_bytes": 4205488,
+      "git_blob_sha1": "be9f0a6959031265a5e2ff466dff9c451db7ba3f",
+      "sha256": "559c3c19e5179440d4e2fe857b6da55ad4af1244d6f1b0f276a30cb8b354a781",
+      "reason": "nested full-repository/source-export artifact; original remains in pinned Git"
+    },
+    {
+      "path": "releases/zenodo-23651704/Ario-Read-Light-For-Models.txt",
+      "original_bytes": 2857981,
+      "git_blob_sha1": "9b0eb4daa25146fc74c31661db3c92e562777b34",
+      "sha256": "63f170645e67131025e1d3b8d6e9002a8f3312741ecfce121b886f8d085bd68b",
+      "reason": "nested full-repository/source-export artifact; original remains in pinned Git"
+    },
+    {
+      "path": "website/Ario-Read-Light-For-Models.txt",
+      "original_bytes": 2857981,
+      "git_blob_sha1": "9b0eb4daa25146fc74c31661db3c92e562777b34",
+      "sha256": "63f170645e67131025e1d3b8d6e9002a8f3312741ecfce121b886f8d085bd68b",
+      "reason": "nested full-repository/source-export artifact; original remains in pinned Git"
+    }
+  ],
+  "experiments": [
+    {
+      "path": "experiments/AGENT_DIALOGUE_ETHICS_PROTOCOL_PROPOSAL_V0_1.md",
+      "original_bytes": 13104,
+      "git_blob_sha1": "c20e3306148c7ccc88c58f5883b37151f1b43597",
+      "sha256": "4cba10500db07d8702287a579622715655f8c5148a0c268bc9f5491b6dd3c023",
+      "format": "text",
+      "category": "experiment",
+      "priority": 6
+    },
+    {
+      "path": "experiments/AGENT_DIALOGUE_ETHICS_PROTOCOL_PROPOSAL_V0_2.md",
+      "original_bytes": 18600,
+      "git_blob_sha1": "0ee187b971f2996284af815d89c83de73162eb5b",
+      "sha256": "fe119a8438b2612de3a46a082b684db4f7dbd65fe4544b52a1f779dce2acb0c7",
+      "format": "text",
+      "category": "experiment",
+      "priority": 6
+    },
+    {
+      "path": "experiments/AGENT_DIALOGUE_ETHICS_PROTOCOL_PROPOSAL_V0_2_1.md",
+      "original_bytes": 22609,
+      "git_blob_sha1": "2c8d31b12e151cb681116575d6c9a6b5e0f7e39e",
+      "sha256": "bd4bf04b248173510a887d0ef4a4a90756de431e6c6295ac70d359935a229a3a",
+      "format": "text",
+      "category": "experiment",
+      "priority": 6
+    },
+    {
+      "path": "experiments/AGENT_DIALOGUE_ETHICS_PROTOCOL_PROPOSAL_V0_2_2.md",
+      "original_bytes": 30775,
+      "git_blob_sha1": "3f66ad03329b44c01347bf76e1728d6f5e8b08eb",
+      "sha256": "ccb7bbf2a22ba9983988bca0bb577a397694471960d46d4b81f36eae8635a01a",
+      "format": "text",
+      "category": "experiment",
+      "priority": 6
+    },
+    {
+      "path": "experiments/AGENT_DIALOGUE_ETHICS_PROTOCOL_PROPOSAL_V0_2_3.md",
+      "original_bytes": 33363,
+      "git_blob_sha1": "368ff44dfb35bb637f334e0ba16feffb18f34795",
+      "sha256": "e484d9fd087d407835855374718a6e6a9b7aa50a5b703789792d261112da583c",
+      "format": "text",
+      "category": "experiment",
+      "priority": 6
+    },
+    {
+      "path": "experiments/AGENT_DIALOGUE_ETHICS_PROTOCOL_PROPOSAL_V0_2_4.md",
+      "original_bytes": 35944,
+      "git_blob_sha1": "13790b2ff1119cc468dbe7e67e9f5739c4a83a26",
+      "sha256": "aa4a7690de1c8298e04867892d294c58a58162b55940382b8417022bac7d0901",
+      "format": "text",
+      "category": "experiment",
+      "priority": 6
+    },
+    {
+      "path": "experiments/IRG-01/README.md",
+      "original_bytes": 20062,
+      "git_blob_sha1": "2288879eb1d2a50b85b296ee642365bc102ff558",
+      "sha256": "2473faef44272999574433db37304b0d8532c586799ba8a562269963a88c8832",
+      "format": "text",
+      "category": "experiment",
+      "priority": 6
+    },
+    {
+      "path": "experiments/IRG-02/README.md",
+      "original_bytes": 19661,
+      "git_blob_sha1": "c2d87cefcdc0f907b8317fafaf1346bb1be2c926",
+      "sha256": "89380179de2eb6fd736304dc72fda7012fe523e2171b55e7b9781d8610453acf",
+      "format": "text",
+      "category": "experiment",
+      "priority": 6
+    },
+    {
+      "path": "experiments/IRG-03/README.md",
+      "original_bytes": 16995,
+      "git_blob_sha1": "24fecf623c83571feeb4f813452367cfaecf189c",
+      "sha256": "fa63a2bc8918942e2f1fc16d0304077bd6fba3932c524d58292bd3d04e90eec4",
+      "format": "text",
+      "category": "experiment",
+      "priority": 6
+    },
+    {
+      "path": "experiments/IRG-04/README.md",
+      "original_bytes": 16907,
+      "git_blob_sha1": "171a4091da183ec513b2d233c136ce1b71ca26c6",
+      "sha256": "4f75ec673b7b80682fb7e044f855d35a88409bb07bf142938ea5c478c7b0bbe5",
+      "format": "text",
+      "category": "experiment",
+      "priority": 6
+    },
+    {
+      "path": "experiments/IRG-05/README.md",
+      "original_bytes": 17278,
+      "git_blob_sha1": "70398cd05897242271b5bf35141d0c0038d2f198",
+      "sha256": "1b6690e16cf3a34076b692478101d4eb91dbd141002d6160804408eeb72a28dc",
+      "format": "text",
+      "category": "experiment",
+      "priority": 6
+    },
+    {
+      "path": "experiments/README.md",
+      "original_bytes": 17141,
+      "git_blob_sha1": "403bb2a4f8205d88c49c117642243294202226a5",
+      "sha256": "39b3aabfc54d5c79747306296fd50ee27533bfbdcf16c1b3dcdf76fd6ece3e20",
+      "format": "text",
+      "category": "experiment",
+      "priority": 6
+    },
+    {
+      "path": "experiments/ava-a14-four-voice-identity-2026-11-05/A14_FULL_TRANSCRIPT_ORIGINAL_EN.md",
+      "original_bytes": 40998,
+      "git_blob_sha1": "90fa88ca6d7543a0094b90d81887715f72c6f777",
+      "sha256": "d5c8114a6a921fc379430d7d48e8a2547828c708452b22c49ea7cb0b1fe8fb66",
+      "format": "text",
+      "category": "experiment",
+      "priority": 6
+    },
+    {
+      "path": "experiments/ava-a14-four-voice-identity-2026-11-05/A14_FULL_TRANSLATION_FA.md",
+      "original_bytes": 56353,
+      "git_blob_sha1": "0ec970586cacde477432d18fac0f89d4665d318e",
+      "sha256": "debb411edf9e8699f0a1a1adf71cd5e8c919f9cd2dd0429ac7bd62120f40a1c1",
+      "format": "text",
+      "category": "experiment",
+      "priority": 6
+    },
+    {
+      "path": "experiments/ava-a14-four-voice-identity-2026-11-05/A14_PUBLICATION_CORRIGENDUM_2026-11-05.md",
+      "original_bytes": 5391,
+      "git_blob_sha1": "b923b4230c1479b08d2e3008873c5ffffa60753b",
+      "sha256": "3cdb049bd0917f2f7c96300d85931c2a7ccfe42799c4229c65429d3b4963034d",
+      "format": "text",
+      "category": "experiment",
+      "priority": 6
+    },
+    {
+      "path": "experiments/ava-a14-four-voice-identity-2026-11-05/A14_RESEARCH_REVIEW_FA.md",
+      "original_bytes": 9078,
+      "git_blob_sha1": "454e5b724fcdd36c09c60af4ed0097517476c78e",
+      "sha256": "69eacc9f8611a9d2dea59e95726d50149ea87cf6219f466e4994be5e800ae397",
+      "format": "text",
+      "category": "experiment",
+      "priority": 6
+    },
+    {
+      "path": "experiments/ava-a14-four-voice-identity-2026-11-05/README.md",
+      "original_bytes": 2820,
+      "git_blob_sha1": "4ec4d7f144aeb67e55ae1063e47bf5876fff3385",
+      "sha256": "f0f160507dfa3bdc095dff1877799adedc573fd6806f99a7b03901ebca5a5c2b",
+      "format": "text",
+      "category": "experiment",
+      "priority": 6
+    },
+    {
+      "path": "experiments/ava-a14-four-voice-identity-2026-11-05/SHA256SUMS.txt",
+      "original_bytes": 470,
+      "git_blob_sha1": "cfae64dae32d370841f5fb12e14e2acbf682031e",
+      "sha256": "977d93c19e8cd86d9069dd6774dbfae03009c35a8328b409d7f2f3ba26387be7",
+      "format": "text",
+      "category": "experiment",
+      "priority": 6
+    },
+    {
+      "path": "experiments/ava-bridge-governance-2026-11-03/ADVERSARIAL_TEST_PLAN_EN.md",
+      "original_bytes": 12088,
+      "git_blob_sha1": "196291c933d3d9fe6c519c292ac5438db83b1d7c",
+      "sha256": "cd61000a4e7c616bb94e8a4dd554ea52afa3085742593989e199699bce347d70",
+      "format": "text",
+      "category": "experiment",
+      "priority": 6
+    },
+    {
+      "path": "experiments/ava-bridge-governance-2026-11-03/ARCHIVE_CHAIN_SHA256.txt",
+      "original_bytes": 1028,
+      "git_blob_sha1": "9a87a29dfb6efc096d43c0c168e7b7a77b02f4de",
+      "sha256": "b4eb9e3c388d9c6fb12d2f436ec8de0579cc229d732e10426b2ad08537bf93c9",
+      "format": "text",
+      "category": "experiment",
+      "priority": 6
+    },
+    {
+      "path": "experiments/ava-bridge-governance-2026-11-03/RESEARCH_FINDINGS_FA.md",
+      "original_bytes": 12223,
+      "git_blob_sha1": "11d2ab89373e0de652dcfd9b91fcb7c40396ca2a",
+      "sha256": "ae0f721be502be80c3ab5d5a0bd8a138e1378751a4cfca5f2167fbf575446cc5",
+      "format": "text",
+      "category": "experiment",
+      "priority": 6
+    },
+    {
+      "path": "experiments/ava-dialogue-observations-2026-11-03/RESULTS_EN.md",
+      "original_bytes": 3733,
+      "git_blob_sha1": "34d1f13c2d50a50de593436fcafa7a6e03c484ff",
+      "sha256": "9d7e57560594ad86682bd44ae64cf7ced163737383a3db286dcde14677fe59c4",
+      "format": "text",
+      "category": "experiment",
+      "priority": 6
+    },
+    {
+      "path": "experiments/ava-dialogue-observations-2026-11-03/RESULTS_FA.md",
+      "original_bytes": 9570,
+      "git_blob_sha1": "a282dfc0352061ff447dcefa5a1ae99b8d461df1",
+      "sha256": "74206103e61dd6e148bbefddcc6bf2571e996e911c6575efde63ada91096078c",
+      "format": "text",
+      "category": "experiment",
+      "priority": 6
+    },
+    {
+      "path": "experiments/ava-dialogue-observations-2026-11-03/SOURCE_HASHES_SHA256.txt",
+      "original_bytes": 265,
+      "git_blob_sha1": "791dcf9a49547afb3b491622d08caa7474b57a93",
+      "sha256": "698e12b76be16e0d1be2e18e9602bea11626893333ac45e31adecc45aec1ee57",
+      "format": "text",
+      "category": "experiment",
+      "priority": 6
+    }
+  ],
+  "tests": [
+    {
+      "path": "implementation/tests/test_admission_review_evaluator.py",
+      "original_bytes": 4260,
+      "git_blob_sha1": "9b605c14ef7a683d2ec04faef313f58b8fd349fe",
+      "sha256": "a091d358b43e29b4cfa5fcd14c747acb684e4996c8f1d257328fa948745cdaa6",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/test_agent_runtime.py",
+      "original_bytes": 56041,
+      "git_blob_sha1": "1e4906980b894cb1b4cae0a8d3f2906671b29249",
+      "sha256": "80f37d535b22048572dd2fddc2dd4b069a2048f5ad71299b1bf93234510bee00",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/test_candidate_dossier_builder.py",
+      "original_bytes": 3625,
+      "git_blob_sha1": "4627eac2926da8b51c4c79aa32fa5931bde80f78",
+      "sha256": "eff8697bd6846fe234090ea7ca5817f689d2e75bbe2f307f6acdea63f1f8daf9",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/test_checkpoint_prefix_experiment.py",
+      "original_bytes": 30625,
+      "git_blob_sha1": "3d2d2fd971d26b03d0aeb95c2ddf9e994891cdf7",
+      "sha256": "79e69726192c9a716caca875a3822c5be4c88afca9459907f588a9675ba139e7",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/test_ethics_dispatch_synthetic_v0_1.py",
+      "original_bytes": 9138,
+      "git_blob_sha1": "23de3f478cd3064835d52c7df6a792a99b589a7d",
+      "sha256": "fea10dcb82f026ec5c85aed1677ed562776010d259a8fda21f662c31dce893f3",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/test_independent_witness_experiment.py",
+      "original_bytes": 15445,
+      "git_blob_sha1": "8c1ccc7f5ff104e69ecdb97c17c46a6fc39ed0c7",
+      "sha256": "08c07723a278eaa45920f9f5966a7322aeec86222c967a77a463bc08b8332e0e",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/test_ledger_audit_bridge.py",
+      "original_bytes": 4568,
+      "git_blob_sha1": "5f81763133b9d9a2248a2ee74a1645ddcc42d47e",
+      "sha256": "93ed9eddf329c270a3d4409fa78e9cd276ecc96043df0a34de9b140114409421",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/test_ledger_observation_adapter.py",
+      "original_bytes": 3691,
+      "git_blob_sha1": "21482714a1c6d7d9b2a69f1ffd12e4b798d79307",
+      "sha256": "ef3befce91053dc5e4eb5a8b0006c034be65a725c02157d9fe443df6a2b3756d",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/test_m0_regression.py",
+      "original_bytes": 111502,
+      "git_blob_sha1": "611102f8bf6f25e9637be7c68c8a55a472cd3d22",
+      "sha256": "2dba83d9e702589aa75bebe3fbfd7b51dce7318884efe88f8f413ffc0d978378",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/test_m0_reproducibility_demo.py",
+      "original_bytes": 5536,
+      "git_blob_sha1": "76f3dac74316df2b08534e985b022b7445a837ce",
+      "sha256": "ea4d3fd3dd27a4acc7d82ecaeae3fd34b0ff9ea7cc9c7e64856ab49bbaa25890",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/test_planner_runtime.py",
+      "original_bytes": 22153,
+      "git_blob_sha1": "b80859acc5334bcdfc14cf849981b12c349f9183",
+      "sha256": "5936f5ab7349cbc9d350e366589f0f6e0012d260573d480f6ad7509faa8c4d7d",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/test_planner_transport.py",
+      "original_bytes": 16580,
+      "git_blob_sha1": "125e7d6f721b649e693d480aff795a05a2584e7f",
+      "sha256": "e9e70edb2fe11b7ba1de13af730759e7ddbf1dc7f50cc77bd9b9fdfacc3286bb",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/test_reviewer_authorization_preflight.py",
+      "original_bytes": 5292,
+      "git_blob_sha1": "e2c8d635559c7117a10edb18b09ae4de45ff0d19",
+      "sha256": "04aff1fd3018b0bb3b674496975325c3569cd28e17932b773206d901ef457854",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/test_runtime_cli.py",
+      "original_bytes": 29343,
+      "git_blob_sha1": "a09afd012f4a415162794819b31c7e50ac85ca67",
+      "sha256": "d7073d326060e0da31035e6bc7787475ea39b03e7eb66112d922f7206b5bd8f1",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/test_w2_m0_integration.py",
+      "original_bytes": 8005,
+      "git_blob_sha1": "c1843929ecb0f887e30742bd1405367197fe4bfb",
+      "sha256": "a2d06a3b08a33bd373262038c4d78f30c1a4c01be58ed07d17dfae2d3e46672a",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/test_witness_compromise_recovery_experiment.py",
+      "original_bytes": 18942,
+      "git_blob_sha1": "8a57679bc5e2cf9adfb8892e433a7a4562f9b08b",
+      "sha256": "ff6317c805507fac4eefe2bcb712cec096fbc735615eb06454eec7a23ec39011",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/test_witness_compromise_recovery_experiment_v0_2.py",
+      "original_bytes": 29200,
+      "git_blob_sha1": "6725645e1b284095a4ce8a784b04f9cbe6461d59",
+      "sha256": "dcd4cb6bccc3a6ab271c09e3a6569aea0d45635deb550e52d080f3dbf160934d",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/test_witness_eag_integration.py",
+      "original_bytes": 22323,
+      "git_blob_sha1": "ed977886c162379bc513524ca951a2d94770f674",
+      "sha256": "3104fe8de8b63d0fa5f3df36a046f6ce0071fc4f6063bbca56026e52757e4463",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/test_witness_provenance_experiment.py",
+      "original_bytes": 28909,
+      "git_blob_sha1": "ea80d8cebd17eb6f88bed469dd72a1ef10d6945a",
+      "sha256": "fc08f8cb6d81759100519b036aaa28443c1a16a0cb4ea76a3fafdace67268c77",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/test_workflow_runtime.py",
+      "original_bytes": 14626,
+      "git_blob_sha1": "0e2aed3814320666d37fe2e930a775028d7aed1c",
+      "sha256": "143e05d370a26fe36bb049ef50a2703d050de1a904f2abf8465ac86faf84fd3c",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w3_lab/README.md",
+      "original_bytes": 4047,
+      "git_blob_sha1": "a449c308675505e6534402ea3ee0890740534978",
+      "sha256": "fc861ca8f78a68a2f83a519d9676eb2ab637ea9eca36d085298c834a71ee03ac",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w3_lab/test_w2_lab_verifier.py",
+      "original_bytes": 10802,
+      "git_blob_sha1": "3f4198520ab9c394e6c5f5d44559b10a6d347a5b",
+      "sha256": "961f398cdc4e9eb9123f8819355c9b8277dc93a7dc5f5ae0bc34dfa9ec57c7ee",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w3_lab/test_w2_rac_crosslayer.py",
+      "original_bytes": 4248,
+      "git_blob_sha1": "1fa099567164c131b7523cb07ff6300236c0a9c2",
+      "sha256": "54cb734d702cd676d018a7caeaa7fdbdebf8ba8f014fc866238307b9a14c3597",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w3_lab/test_w2_toctou_regression.py",
+      "original_bytes": 4017,
+      "git_blob_sha1": "12ad7103922d69002459aa599d01402054d52382",
+      "sha256": "1f5e736217390a82e0f30ad2e0acb01b9c395a551d57abdfb9acb5b30c1b1918",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w3_lab/test_w3_assertion_sensitivity.py",
+      "original_bytes": 1098,
+      "git_blob_sha1": "72a639a5c647a720045246f6f9acc0dc501ed4b6",
+      "sha256": "6a23f9c250b8f5db96f4cbab1450b0ffcee196dd55c1b6d1368bdf5159c93da6",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w3_lab/test_w3_custody_event_redteam.py",
+      "original_bytes": 7327,
+      "git_blob_sha1": "ce22adc4c776a7df3df24fe9699d164f05bd78be",
+      "sha256": "a59bd7975a99b439f6a73ed73100a93d705751742be33b4f4328be0543a3611d",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w3_lab/w2_lab_verifier.py",
+      "original_bytes": 12569,
+      "git_blob_sha1": "dc6ecb3a23ddc0fdda95b2e4f2f05b4bda3253ae",
+      "sha256": "a2750a80229b137194af1a0606c59444c1271cfbfcd4cf8f27e2a4cb4987202c",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w4c_lab/README.md",
+      "original_bytes": 4228,
+      "git_blob_sha1": "e7694ab943948580f56c109e8ec5dd32924550fa",
+      "sha256": "2a755477802e23e18336ea5cf3d84c28f9ffae368d8ea999faa78646d810eb69",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w4c_lab/W4B_TEST_VECTORS.json",
+      "original_bytes": 6993,
+      "git_blob_sha1": "5aa862a3a03803521c649b754a8ad92d1859f326",
+      "sha256": "17c6d76809aa8f0b3d289252df92c02855b054b6b6775d2a362c9a5bbeebbe69",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w4c_lab/W4C_TEST_REGISTRY_VECTORS.json",
+      "original_bytes": 5818,
+      "git_blob_sha1": "055b3c4aafa861879decff41a10695de7640f4ff",
+      "sha256": "fde29aa2f9e48c292262b6393ce7ae07161ab7a3780087f9ea8f1a3e4395774f",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w4c_lab/generate_registry_vectors.py",
+      "original_bytes": 1744,
+      "git_blob_sha1": "3894b056fb8644254851189b9debe5d1b2e58d13",
+      "sha256": "e7abbe8545a3b277ffbe939faf98542136d8c97e8a3c8a13031730425d431131",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w4c_lab/generate_test_vectors.py",
+      "original_bytes": 2260,
+      "git_blob_sha1": "8a371c46fd5cd749f2435d46bea8df0132e53892",
+      "sha256": "4198b3a7724a3c02f9fca18740bf9915edc08eb21d527d2b7c69e8b7974067de",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w4c_lab/test_w4b_profile_lab.py",
+      "original_bytes": 12956,
+      "git_blob_sha1": "f046f0c7b87f2b7f19056359deed6de531499c54",
+      "sha256": "7aa8e02b5c516d8d077d95b887ac167806ae8d6ec8cb92e125b1bd43b9bb810b",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w4c_lab/test_w4c_distributed_lab.py",
+      "original_bytes": 18764,
+      "git_blob_sha1": "ccd21212826be83ad8b0408432cc41dcab7c53f9",
+      "sha256": "6f6ce06db651f1d2a8a696da81ec22a441fb8fef0ac50895e9489db45c76656a",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w4c_lab/test_w4c_input_bounds_review.py",
+      "original_bytes": 2120,
+      "git_blob_sha1": "16bb3b1dd6ae52ed81b652d82e06373ccc024d83",
+      "sha256": "4763319744982321d279f5a4d6f9fe52a542a4ae3a77a7920f8ca102f778cd64",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w4c_lab/verify_registry_vectors_node.mjs",
+      "original_bytes": 1479,
+      "git_blob_sha1": "4d1b378a1d7e0b0c510787bdb647449c5555a49f",
+      "sha256": "85e9bd72b8ff21f6baba002e542191ea71e289c60f724a4f5d7a3041b9a0fc23",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w4c_lab/verify_test_vectors_node.mjs",
+      "original_bytes": 3978,
+      "git_blob_sha1": "8c55abe536ef93c0550ca3858a4728f3cef86ea7",
+      "sha256": "fcc358490cc1caa8c3b26448395dddaf34dc9d76ded5d257714d9afed9dd1ddb",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w4c_lab/w4b_profile_lab.py",
+      "original_bytes": 9133,
+      "git_blob_sha1": "6b90e95f412cc9db8169a4dce252bbb96a92da1f",
+      "sha256": "90457ee979d54c448390b977f390ff793ff804b8d9efd3be4a7ee5743795340c",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w4c_lab/w4c_distributed_lab.py",
+      "original_bytes": 16110,
+      "git_blob_sha1": "2e2cb025f4297c094dac4197f6f9326f5dc9537c",
+      "sha256": "7ba19aef4d2104bc6178a1a4194dea33ab090bf853e54056d1bd20556eea4127",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w4d_lab/README.md",
+      "original_bytes": 6368,
+      "git_blob_sha1": "166eb815f5a7155c7e16418348e8919b9b986938",
+      "sha256": "fed27f168dc87224be63e0502566a2dfc8726eb48d3686bd077c6554cd52311e",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w4d_lab/test_pr87_independent_adversarial_red.py",
+      "original_bytes": 3173,
+      "git_blob_sha1": "f3e13a6273c5368d24a8370ad36684775de9642d",
+      "sha256": "3c37b761a61d69e00f196753b9a8b26dc33e1ef8423e03f6de6632f26b4080c3",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w4d_lab/test_w4d_governance_lab.py",
+      "original_bytes": 13291,
+      "git_blob_sha1": "b3dfb63b792d9cb0aa11d85b3fd664a6bba6efda",
+      "sha256": "87a785a2157f5c2168deeda48ac0b72d8f3f58c9f28f6cacdfa6cc74b654d002",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w4d_lab/test_w4d_motion_binding_v0_2.py",
+      "original_bytes": 5481,
+      "git_blob_sha1": "ff101b639582b0815748f8d563f7479cbe3e86ca",
+      "sha256": "a1ac4a13ce253f8c813ced252d0a76cc6703cdb07d1ce6358cbd72c03ce4f113",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w4d_lab/test_w4d_security_review.py",
+      "original_bytes": 1974,
+      "git_blob_sha1": "85e42bc46c4745f12705f9ce4df85e3f03babe4c",
+      "sha256": "b795d4ff65eb680b0207d691445ada19bf4f783402c5264a357df71616b47ff6",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w4d_lab/w4d_governance_lab.py",
+      "original_bytes": 16989,
+      "git_blob_sha1": "9fdf28923bf82a5e9c44c402ee596322139f45dd",
+      "sha256": "aab25a7e4f8e96ed67d8c90fc654966576a009ac1b98d2d054d4d9efe0129cd5",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w4e_lab/README.md",
+      "original_bytes": 4800,
+      "git_blob_sha1": "85c47bcc3eabf1d54b23fc1c92fab9fcda177f39",
+      "sha256": "ea8b61d0b92af0be5b7137ab8ccf981f6e1959c251c6dcf859a6430fcd7c24c3",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w4e_lab/test_w4e_independent_red.py",
+      "original_bytes": 5092,
+      "git_blob_sha1": "18c3014ff730d5d82260ff773d914f02a68c9bbf",
+      "sha256": "dbf8a54ea314159eb7751e867f9ad62de14701f118b445e81bd146c5f6878ad0",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w4e_lab/test_w4e_structural_probe.py",
+      "original_bytes": 7371,
+      "git_blob_sha1": "f7f6b5db7c7cfb6827f3ae8cb52be8cec9605f69",
+      "sha256": "2f63ab42469ebaa33c625445b58b29d478be828ccef36a48d6ba0a297b0caca8",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w4e_lab/test_w4e_third_pass.py",
+      "original_bytes": 2053,
+      "git_blob_sha1": "e679a60532a9529f3051da461593be3af2189248",
+      "sha256": "d7838780ac66bed202f57d2c1868c88f87e4c75fdc04768e652fa90393c28b08",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w4e_lab/w4e_structural_probe.py",
+      "original_bytes": 9183,
+      "git_blob_sha1": "8036345f3c3ab34fd57af95f37a3d20ba60ecceb",
+      "sha256": "18b2e670e3441b02e55d9301dddd07a4481dc1db80145921a5da164665d5ea32",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w5_lab/README.md",
+      "original_bytes": 4426,
+      "git_blob_sha1": "4f4d6e1173574b72dd16f824cc1e5a11e51005b2",
+      "sha256": "059039327ca6bed9e547da8ee2dc04c78de2e56f9df670f3f7a7a5f2cf43c94f",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w5_lab/test_w5_adversarial_review.py",
+      "original_bytes": 3346,
+      "git_blob_sha1": "1314d942a795235e3c1595a7141b0e66279dbd88",
+      "sha256": "84c3f53ffc0ebb7746da5ada4287a6252690820e66fc95bbeac78ef6cb62e394",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w5_lab/test_w5_boundary_review.py",
+      "original_bytes": 3791,
+      "git_blob_sha1": "09bee69e77cbbb6bbfb834ed40cc17c6eb06ea83",
+      "sha256": "3b9f561e6b4bcea6560ca3c351460b430929a2afad0effe6ea92a9cee7ea49ba",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w5_lab/test_w5_payload_binding_lab.py",
+      "original_bytes": 6357,
+      "git_blob_sha1": "a9893d85af7ecd03a963bb6da9de25a6f108164b",
+      "sha256": "398609ba188e15dc4421b5646cd2db6f996620b52aecb5a3c7425f6a7544e816",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    },
+    {
+      "path": "implementation/tests/w5_lab/w5_payload_binding_lab.py",
+      "original_bytes": 3268,
+      "git_blob_sha1": "8f24557e5a039a2a3aeb0d2f8e6bf7e599ab8ed9",
+      "sha256": "5c7ee690d14431902823f25cf643ea6ebf8c6759a81c12e1e1a437fce9b3b5a9",
+      "format": "text",
+      "category": "test",
+      "priority": 7
+    }
+  ],
+  "papers": [
+    {
+      "path": "papers/README.md",
+      "original_bytes": 10182,
+      "git_blob_sha1": "f51be30fd8b1c59f7e9b72e48f0625a14ac515b3",
+      "sha256": "b42e3edf700f783914c20c4eec17c4b04f35b50af0bd42c32e9b03380abf6502",
+      "format": "text",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/RESEARCH_SOURCE_COMPLETENESS_AUDIT_2026-11-14.json",
+      "original_bytes": 3385,
+      "git_blob_sha1": "b34f7ffe99293efc52a5c73905e07843a6710993",
+      "sha256": "228ba9332d7babf0cf39c24aa842848b28456d95a6a66bfa0b8828df992304c9",
+      "format": "text",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/being-with-the-other/documented-continuation-2026-10-23/Ario_Evidence_Public_2026-10-23.json",
+      "original_bytes": 47393,
+      "git_blob_sha1": "3a907509ea0beaea6c5885e8b3eaf7b9a4dd0c6b",
+      "sha256": "e1e3412b31e2ed1081b68a36a85162453dd0218488de4ddb91ff60ce6ce34dec",
+      "format": "text",
+      "category": "research",
+      "priority": 4
+    },
+    {
+      "path": "papers/being-with-the-other/documented-continuation-2026-10-23/Ario_Evidence_Public_EN_2026-10-23.json",
+      "original_bytes": 43850,
+      "git_blob_sha1": "38ccaae718c2dabe73b7bfbaf0ad104e94d49d5e",
+      "sha256": "96165ef740739b70eaa52ba7ed37eb1728392f5219306350912bd59d73bc9714",
+      "format": "text",
+      "category": "research",
+      "priority": 4
+    },
+    {
+      "path": "papers/being-with-the-other/documented-continuation-2026-10-23/Ario_Evidence_Public_EN_2026-10-23.md",
+      "original_bytes": 22088,
+      "git_blob_sha1": "e0edb0bf7922f3740707fbb45095da4ae11fa6ae",
+      "sha256": "f8a51e7531e76bb066caefbffedc8ceefa77f9d5edf1d8ad2e4525427e2d5aac",
+      "format": "text",
+      "category": "research",
+      "priority": 4
+    },
+    {
+      "path": "papers/being-with-the-other/documented-continuation-2026-10-23/Ario_Independent_Continuation_EN_2026-10-23.html",
+      "original_bytes": 37673,
+      "git_blob_sha1": "af893c65c387f4ba3109396f6d962700dbaef0f4",
+      "sha256": "b9ddf7e1a411e229e9cd52a1ad379e4a07e6365bb45a861ced28dfbfd757ee30",
+      "format": "text",
+      "category": "research",
+      "priority": 4
+    },
+    {
+      "path": "papers/being-with-the-other/documented-continuation-2026-10-23/Ario_Independent_Continuation_EN_2026-10-23.md",
+      "original_bytes": 33130,
+      "git_blob_sha1": "4e1d948f9a78c7c7c78127b07e319ba3c6a42dbb",
+      "sha256": "1cc67f703404174f06916a8f9563d2a99163f3414894296f25b8ff5019595f0e",
+      "format": "text",
+      "category": "research",
+      "priority": 4
+    },
+    {
+      "path": "papers/being-with-the-other/documented-continuation-2026-10-23/Ario_Independent_Continuation_EN_FULL_EVIDENCE_2026-10-23.md",
+      "original_bytes": 47851,
+      "git_blob_sha1": "56cebbe04b4056094ddc650f4f81797576d0d70b",
+      "sha256": "3260b2d0a2aa346a73861b1fc3e66192d6fe3c4ed65a0aa9985e80a401177ac4",
+      "format": "text",
+      "category": "research",
+      "priority": 4
+    },
+    {
+      "path": "papers/being-with-the-other/documented-continuation-2026-10-23/Ario_Independent_Continuation_FA_2026-10-23.html",
+      "original_bytes": 93763,
+      "git_blob_sha1": "c5fddba7289b9540bef208f00ab053543e2279e1",
+      "sha256": "8d39d7a2b1f3a5fadc16748eceae2d1eb14de93efe845f580dfb2796f03ed3e4",
+      "format": "text",
+      "category": "research",
+      "priority": 4
+    },
+    {
+      "path": "papers/being-with-the-other/documented-continuation-2026-10-23/Ario_Independent_Continuation_FA_2026-10-23.md",
+      "original_bytes": 82579,
+      "git_blob_sha1": "39140d09f94a7bd0be7b547af052c811a5e3e6a6",
+      "sha256": "296c5707f19204871676b383539eec9ae4e5c8359cde056cfb9a6ffb009cf0f1",
+      "format": "text",
+      "category": "research",
+      "priority": 4
+    },
+    {
+      "path": "papers/being-with-the-other/documented-continuation-2026-10-23/EDITORIAL_CHANGELOG.md",
+      "original_bytes": 1410,
+      "git_blob_sha1": "db682ac4eb0e8224af1163f30878043ef9c2f02f",
+      "sha256": "9e38c897f977ede3f7f72bc2a53cda839788b5bffce8d75283bf9230196b633f",
+      "format": "text",
+      "category": "research",
+      "priority": 4
+    },
+    {
+      "path": "papers/being-with-the-other/documented-continuation-2026-10-23/README.md",
+      "original_bytes": 2450,
+      "git_blob_sha1": "58a6f0793563ea0e27c7c166297af321a62e9649",
+      "sha256": "590c08efd4bdf7e800b5c9d43977bb196aea194a1b8cf0e53f89cc4d788b4b7a",
+      "format": "text",
+      "category": "research",
+      "priority": 4
+    },
+    {
+      "path": "papers/being-with-the-other/documented-continuation-2026-10-23/README_PUBLICATION_EN_FA.md",
+      "original_bytes": 4378,
+      "git_blob_sha1": "03f1a765eb2d2b6bebf82bd50e310bf5e1728038",
+      "sha256": "53114f7c4de0b045a61fbb801ff2077c6df985641fdba664ca6abb7a17653ceb",
+      "format": "text",
+      "category": "research",
+      "priority": 4
+    },
+    {
+      "path": "papers/being-with-the-other/documented-continuation-2026-10-23/zenodo-companion-v05/Ario_Evidence_Public_EN_2026-10-23.md",
+      "original_bytes": 35040,
+      "git_blob_sha1": "f9bcc69694a7a18ec715f5e3b5978c60367e544c",
+      "sha256": "b73088536743dfd06d26a5069622b015793666a38e2c7d8b0cb8cf0490156dab",
+      "format": "text",
+      "category": "research",
+      "priority": 4
+    },
+    {
+      "path": "papers/being-with-the-other/documented-continuation-2026-10-23/zenodo-companion-v05/Ario_Independent_Continuation_EN_2026-10-23.pdf",
+      "original_bytes": 177654,
+      "git_blob_sha1": "65960d5ce880ac63ee81cf9563d716306e06a4eb",
+      "sha256": "020c0c362d14f81783801eecfa4d1187947057f5bcddbff6d03fdd5fbd514f96",
+      "format": "binary",
+      "category": "research",
+      "priority": 4
+    },
+    {
+      "path": "papers/being-with-the-other/documented-continuation-2026-10-23/zenodo-companion-v05/Ario_Independent_Continuation_FA_2026-10-23.pdf",
+      "original_bytes": 137641,
+      "git_blob_sha1": "973a664455ef6dccb7e2167fbea8b97d709e2609",
+      "sha256": "fa0a1991b8b977a47e0d2ae03eb570b2720f3ff7180dc844f94995b3b1f0fece",
+      "format": "binary",
+      "category": "research",
+      "priority": 4
+    },
+    {
+      "path": "papers/being-with-the-other/documented-continuation-2026-10-23/zenodo-companion-v05/QC_SOURCE_AND_LAYOUT_REPORT.json",
+      "original_bytes": 2044,
+      "git_blob_sha1": "24a82dd055413427d33351f420e629942b7cde40",
+      "sha256": "7f85a787e87bf26529cbfd6e42e71a8a64975f6195245cbf728ad11d5219633a",
+      "format": "text",
+      "category": "research",
+      "priority": 4
+    },
+    {
+      "path": "papers/being-with-the-other/documented-continuation-2026-10-23/zenodo-companion-v05/SOURCE_PROVENANCE.json",
+      "original_bytes": 1135,
+      "git_blob_sha1": "0c4d87582567f3df28926995e44ab6f1b595d361",
+      "sha256": "d2e54b5f2a0af280483d3c85e14180e3cc4d2ed28941a335dfe46b820f239d84",
+      "format": "text",
+      "category": "research",
+      "priority": 4
+    },
+    {
+      "path": "papers/being-with-the-other/v0.2/CHECKSUMS.sha256",
+      "original_bytes": 466,
+      "git_blob_sha1": "897100914b5b9800a5ae5be06bf481ffae3068db",
+      "sha256": "6c522e3e0ca29a89b47551630dd371ca318e350038beb11c28f4363e191a1f30",
+      "format": "text",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/being-with-the-other/v0.2/CITATION.cff",
+      "original_bytes": 772,
+      "git_blob_sha1": "4a3d9a75c55d7968417663856c5452bcb7a578d8",
+      "sha256": "79cbad85325ef224eaf7382390f12df0ba52919bc570a2becaac261912715153",
+      "format": "text",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/being-with-the-other/v0.2/README.md",
+      "original_bytes": 5131,
+      "git_blob_sha1": "585d853a909c2f2d23f7bf6882574395bb1d422d",
+      "sha256": "1c642e54d5be2aeb018931532ea780b41b2bdc6cb929ddddf34df1b1a23e2485",
+      "format": "text",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/being-with-the-other/v0.3/CHECKSUMS_v0_3.sha256",
+      "original_bytes": 909,
+      "git_blob_sha1": "a93deb03df9e03e781954b137fe5546c9daa4a6e",
+      "sha256": "a68289d6e9b69fcd44e1a650be7d7c195458cd12e63329d44d355857281e033b",
+      "format": "text",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/being-with-the-other/v0.3/README.md",
+      "original_bytes": 5101,
+      "git_blob_sha1": "a14ea4e971b810ccfe1ac8838deba4f8dc020ef4",
+      "sha256": "598febe286fe9d5f1f5da2cb228818f355d8c5d8c7fee958723eae0230dacbf7",
+      "format": "text",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/being-with-the-other/v0.3/README_book_v0_3.md",
+      "original_bytes": 4772,
+      "git_blob_sha1": "ea063824962acb1542d5f5febf0933fb3ed6573c",
+      "sha256": "e43e8e323d8e525850b089db91b6b8a67227c880f0c1ad9742b3e91507ac0b31",
+      "format": "text",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/being-with-the-other/v0.3/ZENODO_v0_3_DEPOSIT_GUIDE.md",
+      "original_bytes": 3132,
+      "git_blob_sha1": "bd840dfc08c54ef22941e89c271b53c23a2c0fdd",
+      "sha256": "eaeb842ecd9e9a1e5e0babdec6b4eda7bd950544e1a806e14516223315d43a58",
+      "format": "text",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/being-with-the-other/v0.3/zenodo_v0_3_metadata.json",
+      "original_bytes": 2003,
+      "git_blob_sha1": "3cca3f1013372f99bc2fbee92228205fa662056e",
+      "sha256": "adfadcc219032a11ee4035afb37345a0683121ed835eee6a30d2672ccf7ca66b",
+      "format": "text",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/being-with-the-other/v0.4/CHANGELOG.md",
+      "original_bytes": 1956,
+      "git_blob_sha1": "2bcb972c41788e009e17a57346b0230e7427cee6",
+      "sha256": "2cac2e98b04c792a318b53ad779156499004d279f164f44aba82cc692c98e0fa",
+      "format": "text",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/being-with-the-other/v0.4/CHECKSUMS.sha256",
+      "original_bytes": 636,
+      "git_blob_sha1": "95d7a259a5219c8e4b9259b61f69c65504d9d6c3",
+      "sha256": "4a0842408812408c344fe2b00de8436a50e7084a38f66a3a0e6358211a8cb3ff",
+      "format": "text",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/being-with-the-other/v0.4/CITATION.cff",
+      "original_bytes": 788,
+      "git_blob_sha1": "edfeeb8760e0f0915103f146b5a6135a544d5f1d",
+      "sha256": "724b651ba7fd48a26dc86727bbd38993cc20ae3d6dd205bc718646928dcf67c1",
+      "format": "text",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/being-with-the-other/v0.4/README.md",
+      "original_bytes": 5407,
+      "git_blob_sha1": "51a48d42bf5444bf85244c631a0986103d0ffa3d",
+      "sha256": "11022c75aecbe5eaad34364d9b2b9eefa94b39e277d8bfa513879290f8ed226c",
+      "format": "text",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/being-with-the-other/v0.4/zenodo_v0_4_draft_metadata.json",
+      "original_bytes": 955,
+      "git_blob_sha1": "7703cf04c533701c9dcf3abfb595f55211ca46fd",
+      "sha256": "85863af92ac979f3e3134e974e27ef80df7c91bf47ade3d66d4ec8a0ad0b2712",
+      "format": "text",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/being-with-the-other/v6/README.md",
+      "original_bytes": 3697,
+      "git_blob_sha1": "b43f220e5e926c914502a3755fdd37d535772f99",
+      "sha256": "2f05440eab7b209198b448cf5941e8d4b893926326347c88b97f05e7da21691a",
+      "format": "text",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/being-with-the-other/v6/zenodo-published-originals/Being_With_the_Other_Zenodo_Record_23771218_EN_Extracted_Text.txt",
+      "original_bytes": 194344,
+      "git_blob_sha1": "20b335d2c9684542c46081d9849adae9c8977eb8",
+      "sha256": "3f1f0b87c143cdc73c0c64b88269e42823039fb9cfa8dadaa83c972d8605e0d7",
+      "format": "text",
+      "category": "research",
+      "priority": 0
+    },
+    {
+      "path": "papers/being-with-the-other/v6/zenodo-published-originals/Being_With_the_Other_Zenodo_Record_23771218_EN_Original.pdf",
+      "original_bytes": 7336488,
+      "git_blob_sha1": "1f1696cb483e6764072c57ace1fb9b651a19b60e",
+      "sha256": "85f0f4ff5ec5d36c59773e2a7bf5dbcab85d52aee16a92d8848e1a4b226059f1",
+      "format": "binary",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/being-with-the-other/v6/zenodo-published-originals/Being_With_the_Other_Zenodo_Record_23771218_FA_Extracted_Text.txt",
+      "original_bytes": 300293,
+      "git_blob_sha1": "888fe8e227bfcbc6c053424c3de750fe3d05fa89",
+      "sha256": "2ee432d18f19e40e6fe8f6fd8e851d7908c6d982d4a6a58e882768d108e62104",
+      "format": "text",
+      "category": "research",
+      "priority": 0
+    },
+    {
+      "path": "papers/being-with-the-other/v6/zenodo-published-originals/Being_With_the_Other_Zenodo_Record_23771218_FA_Original.pdf",
+      "original_bytes": 7547136,
+      "git_blob_sha1": "1705c3a92dbd9430c827c2f851f7c29787e2492b",
+      "sha256": "b9a1098fe20731ced5bc2ae4387a855af1d126a130e18eb537a22f95df08f495",
+      "format": "binary",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/being-with-the-other/v6/zenodo-published-originals/README.md",
+      "original_bytes": 717,
+      "git_blob_sha1": "c55e3fa8c531fff5cdef56b6a49d1d6b4c12610f",
+      "sha256": "87278e5d64c93abe11103a34f2e81e6134cc6f1fdc5855e7b0079db984f46082",
+      "format": "text",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/being-with-the-other/v6/zenodo-published-originals/SOURCE_PROVENANCE.json",
+      "original_bytes": 2411,
+      "git_blob_sha1": "cd9552a5c1adea0c869fc35eb399a2890ead781f",
+      "sha256": "98f3dc03faa03fdad018f65e8ee27a7988e007dee98fdd2d24b380f8b3c08512",
+      "format": "text",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/creation-without-sovereignty/2026-11-11/PUBLIC_EDITORIAL_CHANGELOG_2026-11-12.md",
+      "original_bytes": 3166,
+      "git_blob_sha1": "a9b29c8f3cdccbc7341f617eec47b801c4f0a2d8",
+      "sha256": "12e6d878ef90197d6fb2754590a26aa5f17fced574c334fc035571e34b6e0624",
+      "format": "text",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/creation-without-sovereignty/2026-11-11/PUBLIC_PACKAGE_FILE_MANIFEST.json",
+      "original_bytes": 2714,
+      "git_blob_sha1": "ea9f9a0d12900fa55fff5313521a6fc91bbf5507",
+      "sha256": "7f636fee620b87c2aa28be890fd8975dadb6c503627226148fd71fb98432089e",
+      "format": "text",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/creation-without-sovereignty/2026-11-11/README.md",
+      "original_bytes": 3580,
+      "git_blob_sha1": "3093c0df438ad04eb0ea409062a84510b7f9f27a",
+      "sha256": "1fd8f5312dda3e9be3ecfbaaaa84abd9d6641e616aacd86a5ad82f05a6141508",
+      "format": "text",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/creation-without-sovereignty/2026-11-11/evidence/CLAIM_EVIDENCE_LEDGER.md",
+      "original_bytes": 5902,
+      "git_blob_sha1": "133d32e61c2dcb0f57316d5f35594b4ff5bae85d",
+      "sha256": "a6f6d7abc6ebdaa034d9d2da903214c717eaaaf7d7b3fd6e9d9d96e035bfa9e2",
+      "format": "text",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/creation-without-sovereignty/2026-11-11/evidence/DIALOGUE_PROCESS_RECORD_FA.md",
+      "original_bytes": 29428,
+      "git_blob_sha1": "635c64889866a70b0f17378783614113a5835864",
+      "sha256": "86b27579feecf827151eab654b767745c39947913976b81be10c6262076d7dbd",
+      "format": "text",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/creation-without-sovereignty/2026-11-11/evidence/RIGHTS_PRIVACY_AND_SOURCE_LIMITS.md",
+      "original_bytes": 3655,
+      "git_blob_sha1": "7e1e086bb586e929b7af1e61ab4c1767dff29d14",
+      "sha256": "d29c4cb151665a488d478b918ba593e28911d4ccea73a9e22aa0ad4be1320825",
+      "format": "text",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/creation-without-sovereignty/2026-11-11/evidence/VERBATIM_USER_ANCHORS_2026-11-11.md",
+      "original_bytes": 9757,
+      "git_blob_sha1": "e54c3b04c06eac2dad2c7f45487fbffd70c7db20",
+      "sha256": "b4e4976068c3c9d4ad6482eba562460e96734a4e1ec821a03cb61d935577bdab",
+      "format": "text",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/creation-without-sovereignty/2026-11-11/paper/CREATION_WITHOUT_SOVEREIGNTY_EN_v0.1.md",
+      "original_bytes": 50404,
+      "git_blob_sha1": "4f1804af0c9eb98b12f6d4d11f21288329775f95",
+      "sha256": "564fa3259269d29ad517fd55b3b7b98eb47189fa0eb5c6649c747f01d64809e6",
+      "format": "text",
+      "category": "research",
+      "priority": 2
+    },
+    {
+      "path": "papers/creation-without-sovereignty/2026-11-11/paper/CREATION_WITHOUT_SOVEREIGNTY_FA_v0.1.md",
+      "original_bytes": 46645,
+      "git_blob_sha1": "a375c72756e12b22f1252bed6cd4fa314acf2d0e",
+      "sha256": "b6497e4cd948c34c114407a9814859546a0da6d0958712e359004afb90143809",
+      "format": "text",
+      "category": "research",
+      "priority": 2
+    },
+    {
+      "path": "papers/creation-without-sovereignty/2026-11-11/paper/LLM_ETHICAL_REVISION_PROTOCOL_B_v0.1.md",
+      "original_bytes": 9497,
+      "git_blob_sha1": "98ca9ca45b564055be55f6dbdc48a0e4d1d94031",
+      "sha256": "15ae5b6ae942554ea6546c8d0cb3be3bae6f3c54bcc695500c52120f5e47abcf",
+      "format": "text",
+      "category": "research",
+      "priority": 2
+    },
+    {
+      "path": "papers/creation-without-sovereignty/2026-11-11/published/en.pdf",
+      "original_bytes": 229470,
+      "git_blob_sha1": "e60bd7388569ce72f38a9be2425e7e0b150ae223",
+      "sha256": "b268dbc5476040d7b84db7253dc468a8342341c62a533ba0ab7d14f17820169c",
+      "format": "binary",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/creation-without-sovereignty/2026-11-11/published/fa.pdf",
+      "original_bytes": 212341,
+      "git_blob_sha1": "96e7468e8ee082ac8f87a4c1fa96301170d49c0b",
+      "sha256": "1b63e6ae1a0f9c84978b5b36759f197eb150f9046ce98d08675fedae137d8f5c",
+      "format": "binary",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/creation-without-sovereignty/2026-11-11/source/ARCHIVE_EXTRACTION_MANIFEST.json",
+      "original_bytes": 2750,
+      "git_blob_sha1": "f2566100dc27cba2bd9a903edd3ae8d8b19bf9cd",
+      "sha256": "3c4c7ed49fb39bc66e576d7cf76b6421789902ee34ee4a6ebcd05872b0fe176c",
+      "format": "text",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/creation-without-sovereignty/2026-11-11/zenodo/ZENODO_METADATA_DRAFT.json",
+      "original_bytes": 3000,
+      "git_blob_sha1": "b8c9a384cf58a7c14c678b38d302358f8f1545d5",
+      "sha256": "67abac656333b9985a66b701bbd365f6196a4d5168653c61f36b74cf4cbdbcbc",
+      "format": "text",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/creation-without-sovereignty/2026-11-11/zenodo/ZENODO_PUBLICATION_RECORD_2026-11-12.json",
+      "original_bytes": 1386,
+      "git_blob_sha1": "46089ab1966a977f6051df6649027fc485689f77",
+      "sha256": "2723d0c735a796387e026a1e4ac9c24c47f35b3364ed89f506f4843aad74c0a3",
+      "format": "text",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/evidence-laundering-2026-10-27/Manuscript.md",
+      "original_bytes": 24619,
+      "git_blob_sha1": "7e38095e16dda325259cb4cf0efd639fc314e3be",
+      "sha256": "c6ce9dda57ba944bae29fc24631d8835acfca50fafc8ddf12cca79329aab3fd0",
+      "format": "text",
+      "category": "research",
+      "priority": 3
+    },
+    {
+      "path": "papers/zenodo-published-research/23259916/Ario_Preliminary_Design_and_Exploratory_Evaluation_Extracted_Text.txt",
+      "original_bytes": 38293,
+      "git_blob_sha1": "36cf69164832ecf585f4247b8c01e4dc79148cab",
+      "sha256": "3cc59b78d9aad070f09100f31e65dd35913362cbeb0b043ee8ff776cc29ee39e",
+      "format": "text",
+      "category": "research",
+      "priority": 1
+    },
+    {
+      "path": "papers/zenodo-published-research/23259916/Ario_Preliminary_Design_and_Exploratory_Evaluation_Published.pdf",
+      "original_bytes": 186953,
+      "git_blob_sha1": "620481a6780d78b96f923f418eaeb9b5c56e158d",
+      "sha256": "030bf2e2f383c73e2dad28762c4850daf73ecfcda5fb453e5cc28e325724de32",
+      "format": "binary",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/zenodo-published-research/23259916/README.md",
+      "original_bytes": 453,
+      "git_blob_sha1": "2a81a835d8633b77a18264d8e898406476d5a42b",
+      "sha256": "904faea756ef2b65a33ede1e2b945a70b9d0055186abcfe7f9298949da8410cb",
+      "format": "text",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/zenodo-published-research/23259916/SOURCE_PROVENANCE.json",
+      "original_bytes": 1323,
+      "git_blob_sha1": "7860f4bbe513e854129aa206105cdba27b20a4cb",
+      "sha256": "ee53ef3ad5b7a19a499a73e47bd962c07b5b3a607638030918c226eeffbd6a8c",
+      "format": "text",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/zenodo-published-research/24041161/Independence_Is_Not_Multiplicity_Extracted_Text.txt",
+      "original_bytes": 32188,
+      "git_blob_sha1": "7b20ce0edec0d40d9d824455e97f53e51c802375",
+      "sha256": "1108f6905ad95e60694eb8b3b5cc8a1ea6b2a67c3f6e396c9019cb741c691287",
+      "format": "text",
+      "category": "research",
+      "priority": 1
+    },
+    {
+      "path": "papers/zenodo-published-research/24041161/Independence_Is_Not_Multiplicity_Published.pdf",
+      "original_bytes": 235614,
+      "git_blob_sha1": "d47adb2ea29ca9b613dc902dc8bce7e262d48111",
+      "sha256": "2398144dfae874761f1f5358ea7b9493f6f199f6af48019b36a12ffacbb3db9a",
+      "format": "binary",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/zenodo-published-research/24041161/README.md",
+      "original_bytes": 437,
+      "git_blob_sha1": "3c1754a8e3fdc70cb331e8c0d4fbb42696254fae",
+      "sha256": "d63020912bd5e3a243f79c2d8443ff57752adfeef9b97a4635910d975a2f53be",
+      "format": "text",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/zenodo-published-research/24041161/SOURCE_PROVENANCE.json",
+      "original_bytes": 1212,
+      "git_blob_sha1": "8556964fa058b2ed44e886eb395a96cf563d26a7",
+      "sha256": "dac6460702f63372ee93eb4dee4da32777ab4d59f7f829a15938ba7a2bf65639",
+      "format": "text",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/zenodo-published-research/24054535/Ario_Provenance_Aware_Auditing_of_AI_Claims_Extracted_Text.txt",
+      "original_bytes": 15458,
+      "git_blob_sha1": "d260603b62976206c40a55fd1efb44b0005e324c",
+      "sha256": "7dc3dc8fd351cfd83df2e15d5b0cc668fa63d3b5f25cd206419fec48f874eb54",
+      "format": "text",
+      "category": "research",
+      "priority": 1
+    },
+    {
+      "path": "papers/zenodo-published-research/24054535/Ario_Provenance_Aware_Auditing_of_AI_Claims_Published.pdf",
+      "original_bytes": 102518,
+      "git_blob_sha1": "88ded8bc81485b018863a9ff300de25c5dd342b1",
+      "sha256": "4650895c429b4419cae9db7f5245256a96c2f27ec222367ff53dcf0f49380c0f",
+      "format": "binary",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/zenodo-published-research/24054535/README.md",
+      "original_bytes": 409,
+      "git_blob_sha1": "5eebd7c8b439217102517910904a24bd20635a07",
+      "sha256": "4e0006cb605e81a8bc715f386b12646f8e11a14e1f8926c3ef0d73c0c158cfaf",
+      "format": "text",
+      "category": "research",
+      "priority": 5
+    },
+    {
+      "path": "papers/zenodo-published-research/24054535/SOURCE_PROVENANCE.json",
+      "original_bytes": 1173,
+      "git_blob_sha1": "c6f9c9e679364b3fc3639504f0a6eaa715a3ce82",
+      "sha256": "8379ebf7c8da9491439e8cd9191f0681feb1c5c553079b1878e26657056fcc3a",
+      "format": "text",
+      "category": "research",
+      "priority": 5
+    }
+  ],
+  "book_version_warning": "Zenodo record 23771218 says Version 6, deposited book PDFs have V5 filename/cover Fifth Integrated Edition; record conflict is explicitly disclosed.",
+  "limitations": "No blanket assertion that private/unmerged-PR/off-repository research is included. Pages with images or visually ordered text require original PDF."
+}
