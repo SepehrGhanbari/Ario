@@ -7,7 +7,11 @@ import unittest
 from ario_xerj_readonly import ArioRecord, parse_candidates
 
 INDEX = "ario-r4-test"
-LEDGER = {"e1": ArioRecord.from_text("e1", "Dana prefers yarn to pnpm", root_label="LAB_R1")}
+LEDGER = {
+    "e1": ArioRecord.from_text("e1", "Dana prefers yarn to pnpm", root_label="LAB_R1"),
+    "e2": ArioRecord.from_text("e2", "Dana also likes Python", root_label="LAB_R1"),
+    "e3": ArioRecord.from_text("e3", "Dana also likes Rust", root_label="LAB_R1"),
+}
 
 
 def wire(hits=True, **patch):
@@ -26,8 +30,8 @@ def wire(hits=True, **patch):
     return res
 
 
-def run(resp, strict=True):
-    return parse_candidates(resp, LEDGER, k=2, expected_index=INDEX,
+def run(resp, strict=True, k=2):
+    return parse_candidates(resp, LEDGER, k=k, expected_index=INDEX,
                             require_completion_metadata=strict)
 
 
@@ -67,15 +71,52 @@ class R4StrictMetadataTests(unittest.TestCase):
                 self.assertEqual(result["distinct_root_labels"], [])
                 self.assertFalse(result["answer_authorized"])
 
-    def test_lower_bound_zero_with_positive_hit_is_not_exact_zero(self):
+    def test_lower_bound_zero_with_positive_hit_is_inexact_in_strict_profile(self):
         r=wire(hits={"hits":[{"_id":"e1","_index":INDEX}],
                      "total":{"value":0,"relation":"gte"}})
-        self.assertEqual(run(r)["status"], "CANDIDATES_ONLY")
+        self.assertEqual(run(r)["status"], "RETRIEVAL_INCOMPLETE")
+        # Legacy direct-fixture mode does not inspect completion metadata.
+        self.assertEqual(run(r, strict=False)["status"], "CANDIDATES_ONLY")
 
-    def test_total_can_be_missing_on_supported_wire(self):
+    def test_total_missing_cannot_prove_complete_first_page(self):
         r=wire()
         del r["hits"]["total"]
-        self.assertEqual(run(r)["status"], "CANDIDATES_ONLY")
+        self.assertEqual(run(r)["status"], "RETRIEVAL_INCOMPLETE")
+        self.assertEqual(run(r)["candidates"], [])
+
+    def test_exact_first_page_positive_pairs(self):
+        def hit(i): return {"_id":i,"_index":INDEX}
+        for k, n, ids in ((3,2,["e1","e2"]),(3,5,["e1","e2","e3"]),
+                          (3,0,[]),(3,3,["e1","e2","e3"])):
+            with self.subTest(k=k,n=n):
+                q=wire(hits={"hits":[hit(i) for i in ids],
+                             "total":{"value":n,"relation":"eq"}})
+                self.assertEqual(run(q,k=k)["status"],
+                                 "CANDIDATES_ONLY" if ids else "NO_HITS_UNKNOWN")
+
+    def test_exact_short_first_page_rejected_even_with_zero_hits(self):
+        for k,n,ids in ((3,2,["e1"]),(3,2,[]),(3,5,["e1","e2"]),
+                        (2,1,[]),(3,4,["e1","e2"])):
+            with self.subTest(k=k,n=n,ids=ids):
+                q=wire(hits={"hits":[{"_id":i,"_index":INDEX} for i in ids],
+                             "total":{"value":n,"relation":"eq"}})
+                x=run(q,k=k)
+                self.assertEqual(x["status"],"RETRIEVAL_INCOMPLETE")
+                self.assertEqual(x["candidates"],[])
+                self.assertEqual(x["distinct_root_labels"],[])
+                self.assertFalse(x["answer_authorized"])
+
+    def test_wrong_total_shape_and_skipped_presence_fail_closed(self):
+        for total in (-1,0,1,True,0.0,{"value":1,"relation":"gte"},
+                      {"value":0,"relation":"gte"},
+                      {"value":1,"relation":"bogus"}):
+            with self.subTest(total=total):
+                x=run(wire(hits={"hits":[{"_id":"e1","_index":INDEX}],"total":total}))
+                self.assertEqual(x["status"],"RETRIEVAL_INCOMPLETE")
+                self.assertEqual(x["candidates"],[])
+        missing=wire()
+        del missing["_shards"]["skipped"]
+        self.assertEqual(run(missing)["status"],"RETRIEVAL_INCOMPLETE")
 
     def test_legacy_direct_parser_mode_kept_separate(self):
         r=wire(_shards={"total":0,"successful":0,"failed":0})
