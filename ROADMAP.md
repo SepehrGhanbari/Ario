@@ -2,7 +2,11 @@
 
 **Farsi: [برنامه راهبردی پروژه آریو](#farsi)**
 
-This document outlines the vision, goals, and planned milestones for the **Ario - Auditable Epistemic Framework for AI** project.
+This document outlines the vision, goals, and proposed milestones for the **Ario - Auditable Epistemic Framework for AI** project.
+
+**Status — 14 November 2026:** Roadmap goals are proposals, not completed security controls or authority to merge, deploy, sign, or release. Current facts come from GitHub PRs, current source and active rulesets. The reference M0 engine is labeled `M0-1.2` in `docs/REPRODUCE_M0.md`; a possible project release tag is a separate, uncommitted decision.
+
+**وضعیت — ۱۴ نوامبر ۲۰۲۶:** هدف‌های این سند پیشنهادی‌اند و گواهی اجرای گیت امنیتی یا مجوز ادغام، استقرار، امضا و انتشار نیستند. واقعیت‌ها باید از PRها، کد و Rulesetهای جاری بررسی شوند. موتور مرجع M0 طبق `docs/REPRODUCE_M0.md` با برچسب `M0-1.2` مستند است؛ نسخهٔ انتشار احتمالی پروژه تصمیمی مستقل و هنوز تصویب‌نشده است.
 
 ---
 
@@ -22,12 +26,12 @@ To create a **world-class, auditable framework** for AI systems that can:
 - [x] **Core Architecture** - M0 engine with audit capabilities
 - [x] **Research Foundation** - Philosophical and technical papers
 - [x] **Bilingual Documentation** - English and Persian support
-- [x] **Test Suite** - Comprehensive test coverage
-- [x] **Governance Framework** - PR review evidence gate (PR #133)
+- [x] **Test Suite** - pytest regressions exist; quantitative test coverage has not been measured here.
+- [ ] **Independent review-evidence gate — NOT INSTALLED / HOLD** - PR #133 remains open and PR #151 remains draft; neither establishes a required independent-evidence check on `main`.
 
 ### 🚧 In Progress
-- [ ] **Public Demo** - Interactive explainer (PR #164)
-- [ ] **Governance Implementation** - Review evidence gate activation
+- [ ] **Public Demo** - Draft source PR #164 under `docs/`; not an established website deployment.
+- [ ] **Governance Implementation — HOLD** - Independently verify trustworthy check production, durable evidence custody, adversarial forgery/bypass and fail-closed repair, then obtain a separate authorized decision. The existing native approvals and `m0-regression` requirement are distinct.
 - [ ] **Ava Research** - Identity dialogue experiments (PR #134)
 - [ ] **Claude Integration** - Advisory review workflow (PR #162)
 - [ ] **Security Audit** - Ollama loopback investigation (Issue #163)
@@ -39,15 +43,16 @@ To create a **world-class, auditable framework** for AI systems that can:
 ### 📌 Q4 2026 (Current Quarter)
 
 #### High Priority
-- **Merge PR #133** - Activate governance framework
-- **Merge PR #164** - Deploy public demo
+- **Keep #133/#151 HOLD** - Validate independent check producer and evidence custody, spoof/bypass defense and safe repair; require explicit owner-authorized adoption before any activation. This roadmap creates no exception.
+- **Review and, when authorized, merge PR #164 source** - First resolve draft/accessibility issues.
+- **Deploy public demo separately** - Integrate reviewed `docs/` assets into the actual `website/` deployment path, test accessibility/security, and verify a real deployment; merge is not deployment.
 - **Resolve Issue #163** - Fix Ollama security concern
 - **Complete PR #134** - Finish Ava research experiments
 
 #### Medium Priority
 - **Improve Documentation** - Add CONTRIBUTING.md, ROADMAP.md, SECURITY.md
 - **Community Building** - Attract more contributors
-- **Test Coverage** - Increase to 90%+
+- **Test Coverage (aspirational)** - Define the measured code, denominator, exclusions and pinned optional `pytest-cov` run before establishing a baseline; 90%+ is a target, not a result.
 - **Performance Optimization** - Improve core engine speed
 
 #### Low Priority
@@ -58,7 +63,7 @@ To create a **world-class, auditable framework** for AI systems that can:
 ### 📌 Q1 2027
 
 #### Core Development
-- **M0 v1.0 Release** - Stable core engine
+- **Potential project release** - Decide a separate project release label after review; this does not change or replace the `M0-1.2` engine label.
 - **Evidence Admission** - Independent evidence provenance (Issue #81)
 - **Safety Framework** - RAAD-SAF implementation (Issue #82)
 
@@ -91,15 +96,15 @@ To create a **world-class, auditable framework** for AI systems that can:
 ### 🏆 Milestone 1: Core Stability (Q4 2026)
 - **Goal**: Stable M0 engine with governance
 - **Deliverables**:
-  - M0 engine v0.5
-  - Governance framework active
-  - Public demo deployed
-  - Security issues resolved
+  - Reproduce reference engine `M0-1.2` at a named Git SHA; do not imply an engine-version downgrade
+  - Independent review-evidence gate validated and separately authorized before any activation (currently HOLD)
+  - Review demo source and independently verify any website deployment
+  - Close security issues only after verified remediation
 
 ### 🏆 Milestone 2: First Release (Q1 2027)
 - **Goal**: First major public release
 - **Deliverables**:
-  - M0 v1.0.0
+  - Possible project release tag (name/date undecided; distinct from M0 engine rule version)
   - Complete documentation
   - Active community
   - Research papers published
@@ -117,7 +122,10 @@ To create a **world-class, auditable framework** for AI systems that can:
 ## 📊 Success Metrics
 
 ### Code Quality
-- [ ] Test coverage > 90%
+
+**Targets, not baselines.** Coverage should be computed only after pinning optional `pytest-cov` in the documented Python 3.13 virtual environment, defining measured files, line denominator and exclusions, and recording the command, report and Git SHA. This document claims no measured coverage percentage.
+
+- [ ] Aspirational measured line coverage > 90% (baseline UNKNOWN)
 - [ ] Zero critical bugs
 - [ ] All PRs reviewed within 48 hours
 - [ ] Documentation complete
@@ -163,11 +171,13 @@ To create a **world-class, auditable framework** for AI systems that can:
 - **GitHub**: [SepehrGhanbari/Ario](https://github.com/SepehrGhanbari/Ario)
 - **Website**: [ario-research-independent.vercel.app](https://ario-research-independent.vercel.app/)
 - **Issues**: [GitHub Issues](https://github.com/SepehrGhanbari/Ario/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/SepehrGhanbari/Ario/discussions)
+- **Public questions / پرسش و نقد عمومی**: [Issue #106](https://github.com/SepehrGhanbari/Ario/issues/106)
 
 ---
 
-# Farsi: برنامه راهبردی پروژه آریو
+# Farsi
+
+**برنامه راهبردی پروژه آریو**
 
 این سند **چشمانداز، اهداف و برنامه زمانی** پروژه **آریو - چارچوب معرفت‌شناسی قابل بررسی برای هوش مصنوعی** را شرح می‌دهد.
 
@@ -189,12 +199,12 @@ To create a **world-class, auditable framework** for AI systems that can:
 - [x] **معماری اصلی** - موتور M0 با قابلیت‌های بررسی
 - [x] **پایه تحقیقاتی** - مقالات فلسفی و فنی
 - [x] **مستندات دوزبانه** - پشتیبانی فارسی و انگلیسی
-- [x] **مجموعه تست** - پوشش تست جامع
-- [x] **چارچوب حکمرانی** - درگاه بررسی شواهد PR (PR #133)
+- [x] **مجموعه تست** - تست‌های pytest وجود دارند؛ درصد پوشش واقعی اینجا اندازه‌گیری نشده است.
+- [ ] **گیت مستقل شواهد بازبینی — نصب‌نشده / HOLD** - PR #133 هنوز باز و PR #151 پیش‌نویس است؛ گیت مستقل پیشنهادی Check الزامی روی `main` نیست.
 
 ### 🚧 در حال انجام
-- [ ] **دموی عمومی** - توضیح‌دهنده تعاملی (PR #164)
-- [ ] **پیاده‌سازی حکمرانی** - فعال‌سازی درگاه بررسی شواهد
+- [ ] **دموی عمومی** - سورس پیش‌نویس PR #164 در `docs/` است و استقرار سایت محسوب نمی‌شود.
+- [ ] **پیاده‌سازی حکمرانی — HOLD** - ناشر معتبر مستقل Check، نگهداری ماندگار شواهد، آزمون جعل/عبور و ترمیم fail-closed باید بررسی شوند و تصمیم مجاز جداگانه گرفته شود؛ تأییدهای معمول گیت‌هاب و `m0-regression` همان گیت مستقل نیستند.
 - [ ] **تحقیق Ava** - آزمایش‌های دیالوگ هویت (PR #134)
 - [ ] **یکپارچه‌سازی Claude** - جریان کار بررسی مشاوره‌ای (PR #162)
 - [ ] **بررسی امنیتی** - تحقیق درباره نگرانی امنیتی Ollama (Issue #163)
@@ -206,15 +216,16 @@ To create a **world-class, auditable framework** for AI systems that can:
 ### 📌 سه‌ماهه چهارم 2026 (سه‌ماهه جاری)
 
 #### اولویت بالا
-- **ادغام PR #133** - فعال‌سازی چارچوب حکمرانی
-- **ادغام PR #164** - استقرار دموی عمومی
+- **حفظ HOLD برای #133/#151** - بررسی ناشر مستقل Check، نگهداری شواهد، مقاومت در برابر جعل/عبور و ترمیم امن؛ فعال‌سازی فقط پس از تصمیم مجاز جداگانه. این سند استثنا نیست.
+- **بازبینی و سپس ادغام مجاز سورس PR #164** - ابتدا ایرادهای پیش‌نویس و دسترس‌پذیری رفع شوند.
+- **استقرار مستقل دموی عمومی** - فایل‌های بازبینی‌شدهٔ `docs/` را جدا به مسیر انتشار `website/` متصل و امنیت، دسترس‌پذیری و انتشار واقعی را بررسی کنید؛ مرج به‌تنهایی انتشار نیست.
 - **حل Issue #163** - رفع نگرانی امنیتی Ollama
 - **تکمیل PR #134** - اتمام آزمایش‌های تحقیقی Ava
 
 #### اولویت متوسط
 - **بهبود مستندات** - اضافه کردن CONTRIBUTING.md، ROADMAP.md، SECURITY.md
 - **ساخت جامعه** - جذب مشارکت‌کنندگان بیشتر
-- **پوشش تست** - افزایش به 90%+
+- **پوشش تست (آرمانی)** - پیش از اعلام خط‌پایه، فایل‌ها/مخرج/استثناها و اجرای پین‌شدهٔ `pytest-cov` را مشخص کنید؛ ۹۰٪+ هدف است، نه نتیجه.
 - **بهینه‌سازی عملکرد** - بهبود سرعت موتور اصلی
 
 #### اولویت پایین
@@ -225,7 +236,7 @@ To create a **world-class, auditable framework** for AI systems that can:
 ### 📌 سه‌ماهه اول 2027
 
 #### توسعه اصلی
-- **نسخه M0 1.0** - موتور اصلی پایدار
+- **انتشار احتمالی محصول** - برچسب جداگانهٔ نسخهٔ پروژه پس از بازبینی تعیین شود و با نسخهٔ موتور `M0-1.2` اشتباه نشود.
 - **پذیرش شواهد** - منشأ مستقل شواهد (Issue #81)
 - **چارچوب ایمنی** - پیاده‌سازی RAAD-SAF (Issue #82)
 
@@ -258,15 +269,15 @@ To create a **world-class, auditable framework** for AI systems that can:
 ### 🏆 نقطه عطف 1: پایداری اصلی (سه‌ماهه چهارم 2026)
 - **هدف**: موتور M0 پایدار با حکمرانی
 - **تحویل‌ها**:
-  - موتور M0 نسخه 0.5
-  - چارچوب حکمرانی فعال
-  - دموی عمومی استقرار یافته
-  - مسائل امنیتی حل شده
+  - بازتولید موتور مرجع `M0-1.2` با SHA مشخص؛ نه تنزل نسخهٔ موتور
+  - گیت مستقل شواهد فقط پس از اعتبارسنجی و مجوز جداگانه فعال شود (فعلاً HOLD)
+  - بازبینی سورس دمو و بررسی جداگانهٔ استقرار سایت
+  - بستن مسائل امنیتی تنها پس از اصلاح تأییدشده
 
 ### 🏆 نقطه عطف 2: اولین نسخه (سه‌ماهه اول 2027)
 - **هدف**: اولین نسخه عمومی اصلی
 - **تحویل‌ها**:
-  - M0 نسخه 1.0.0
+  - نسخهٔ احتمالی انتشار پروژه (شماره/تاریخ هنوز تعیین نشده؛ مستقل از نسخهٔ موتور M0)
   - مستندات کامل
   - جامعه فعال
   - مقالات تحقیقی منتشر شده
@@ -284,7 +295,10 @@ To create a **world-class, auditable framework** for AI systems that can:
 ## 📊 معیارهای موفقیت
 
 ### کیفیت کد
-- [ ] پوشش تست > 90%
+
+**هدف‌ها، نه خط‌پایهٔ سنجیده‌شده.** سنجش پوشش باید با نصب و پین `pytest-cov` اختیاری در محیط Python 3.13، تعریف فایل‌ها، خطوط مخرج و استثناها و ثبت فرمان، گزارش و SHA انجام شود. این سند درصد پوشش اندازه‌گیری‌شده ادعا نمی‌کند.
+
+- [ ] هدف آرمانی پوشش خطوط > ۹۰٪ (خط‌پایه UNKNOWN)
 - [ ] بدون باگ‌های بحرانی
 - [ ] بررسی تمام PRها در کمتر از 48 ساعت
 - [ ] مستندات کامل
@@ -330,4 +344,4 @@ To create a **world-class, auditable framework** for AI systems that can:
 - **GitHub**: [SepehrGhanbari/Ario](https://github.com/SepehrGhanbari/Ario)
 - **وب‌سایت**: [ario-research-independent.vercel.app](https://ario-research-independent.vercel.app/)
 - **Issues**: [GitHub Issues](https://github.com/SepehrGhanbari/Ario/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/SepehrGhanbari/Ario/discussions)
+- **Public questions / پرسش و نقد عمومی**: [Issue #106](https://github.com/SepehrGhanbari/Ario/issues/106)
