@@ -1,5 +1,26 @@
 # Ario Research Papers
 
+## Latest verified research-source completeness update (14 November 2026)
+
+For AI reading, the latest public-pinned TXT/ZIP release should include **the full
+publicly available research texts and all Git-tracked experiments and tests**,
+not merely paper titles, DOI metadata, or old snapshot URLs.
+
+- [Published Being With the Other book PDFs and page-labelled full-text extractions](being-with-the-other/v6/zenodo-published-originals/) (Zenodo DOI [23771218](https://doi.org/10.5281/zenodo.23771218), CC BY 4.0). **Caveat:** the record labels itself Version 6 while the original PDFs are internally titled Fifth Integrated Edition; see source audit. Older book versions should not be promoted as the latest reading text.
+- [Full preliminary framework study and original PDF](zenodo-published-research/23259916/) (DOI [23259916](https://doi.org/10.5281/zenodo.23259916)).
+- [Full witness-provenance study and original PDF](zenodo-published-research/24041161/) (DOI [24041161](https://doi.org/10.5281/zenodo.24041161)).
+- [Full provenance-aware auditing research and original PDF](zenodo-published-research/24054535/) (DOI [24054535](https://doi.org/10.5281/zenodo.24054535)).
+- [Supplementary original research-continuation PDFs and unique public evidence/QC](being-with-the-other/documented-continuation-2026-10-23/zenodo-companion-v05/) (DOI [23600820](https://doi.org/10.5281/zenodo.23600820)).
+- [Creation Without Sovereignty bilingual paper and original PDFs](creation-without-sovereignty/2026-11-11/) (DOI [24136175](https://doi.org/10.5281/zenodo.24136175)).
+- [Detailed scope, checksum and external-source limitations](RESEARCH_SOURCE_COMPLETENESS_AUDIT_2026-11-14.json).
+
+Each deposited original PDF has a separate machine-derived TXT for reading;
+the original PDFs remain authoritative for illustrations, page ordering and
+unselectable visual information. Distinct experiments and their previous
+iterations remain in the public source, even when a later paper synthesizes
+their results. A snapshot cannot automatically include unpublished work,
+private evidence or unmerged PR-only artifacts.
+
 ## SSRN approved publication — observed 13 November 2026
 
 - **Title:** Independence is not Multiplicity: A Reproducible Sixteen-scenario Study of Witness Provenance in Audit Logs
