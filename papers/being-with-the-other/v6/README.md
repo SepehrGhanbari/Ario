@@ -26,3 +26,23 @@ The DOI and publication were reported by the author. At this checkpoint, the liv
 Historical editions and DOI records remain separate and unchanged. Publication is not an independently peer-reviewed proof of artificial consciousness, personal continuity, or operational security of Ario.
 
 **No deployment, authority, trust gate or implementation behavior is implied or modified by this publication reference.**
+
+
+## Verified published originals (14 November 2026 audit)
+
+The Zenodo public record https://doi.org/10.5281/zenodo.23771218 was checked directly:
+two original PDF bytes are now preserved under
+[zenodo-published-originals](./zenodo-published-originals/), alongside
+complete page-by-page selectable-text extractions for AI readers.
+The originals contain 145 English and 154 Persian PDF pages; their byte sizes
+and both Zenodo MD5 checksums were verified. The originals retain all
+illustrations and document formatting; TXT extraction does **not** replicate
+figures, visuals or necessarily ideal reading order.
+
+**Unresolved publication-label discrepancy:** Zenodo calls the record
+Version 6, but the deposited PDF filenames contain V5 and their cover
+identifies the Fifth Integrated Edition. The original files are not changed
+or retitled internally. They must not be represented as a separately verified
+sixth-edition revision. See
+[verified source provenance](./zenodo-published-originals/SOURCE_PROVENANCE.json)
+for details. Other editions remain independently preserved in the Git repository.

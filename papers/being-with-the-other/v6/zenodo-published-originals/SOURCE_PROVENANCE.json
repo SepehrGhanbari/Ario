@@ -1,0 +1,55 @@
+{
+  "zenodo_doi": "10.5281/zenodo.23771218",
+  "zenodo_record_title": "Being With the Other — An Illustrated Philosophy of Consciousness, Conscience, and Coexistence (Version 6, Persian–English Edition)",
+  "zenodo_version_label": "Version 6",
+  "pdf_original_filenames_use": "V5",
+  "pdf_title_pages_use": "Fifth Integrated Edition / ویرایش یکپارچه پنجم",
+  "status": "UNRESOLVED_LABEL_CONFLICT: no separately authenticated sixth-edition PDF was found in source Git or checked local book filenames",
+  "originals": {
+    "en-book-v6.pdf": {
+      "original_zenodo_filename": "Being_With_the_Other_V5_Illustrated_EN_2026-10-29 (1).pdf",
+      "local_filename": "en-book-v6.pdf",
+      "size": 7336488,
+      "md5": "3e1d6b4426a6f0497867e2f08dea8ce7",
+      "sha256": "85f0f4ff5ec5d36c59773e2a7bf5dbcab85d52aee16a92d8848e1a4b226059f1",
+      "api_asset_url": "https://zenodo.org/api/records/23771218/files/Being_With_the_Other_V5_Illustrated_EN_2026-10-29%20(1).pdf/content",
+      "checksum_verified": true
+    },
+    "fa-book-v6.pdf": {
+      "original_zenodo_filename": "Being_With_the_Other_V5_Illustrated_FA_2026-10-29 (1).pdf",
+      "local_filename": "fa-book-v6.pdf",
+      "size": 7547136,
+      "md5": "15d35bfefd6e65bc5bfdc386ee104b67",
+      "sha256": "b9a1098fe20731ced5bc2ae4387a855af1d126a130e18eb537a22f95df08f495",
+      "api_asset_url": "https://zenodo.org/api/records/23771218/files/Being_With_the_Other_V5_Illustrated_FA_2026-10-29%20(1).pdf/content",
+      "checksum_verified": true
+    }
+  },
+  "text_extraction_quality": {
+    "en-book-v6.pdf": {
+      "pages": 145,
+      "text_chars": 165820,
+      "pages_with_over_80_chars": 140,
+      "near_blank_pages": [
+        1,
+        145
+      ],
+      "persian_chars": 553,
+      "original_sha256": "85f0f4ff5ec5d36c59773e2a7bf5dbcab85d52aee16a92d8848e1a4b226059f1",
+      "page_1_text_excerpt_escaped": ""
+    },
+    "fa-book-v6.pdf": {
+      "pages": 154,
+      "text_chars": 161173,
+      "pages_with_over_80_chars": 148,
+      "near_blank_pages": [
+        1,
+        154
+      ],
+      "persian_chars": 110292,
+      "original_sha256": "b9a1098fe20731ced5bc2ae4387a855af1d126a130e18eb537a22f95df08f495",
+      "page_1_text_excerpt_escaped": ""
+    }
+  },
+  "limitations": "The selectable text layer is extracted page-by-page; original illustrations and visual-only pages are available only in the PDF originals."
+}
