@@ -14,6 +14,8 @@
 
 ## Latest verified research corpus / کامل‌ترین بستهٔ پژوهشی — 14 November 2026
 
+**Zenodo official archive / آرشیو رسمی:** [DOI 10.5281/zenodo.24230572](https://doi.org/10.5281/zenodo.24230572) — v19, Dataset, published 14 November 2026. Four deposited assets match the archived Git originals; source commit a39ac06e69c1b5115bca2016698556730bf920cd. This DOI links to the same source snapshot, not a new separately validated study.
+
 **Newest release:** [Complete TXT (3.86 MB)](https://ario-research-independent.vercel.app/downloads/Ario-Latest.txt) · [Original PDF/source ZIP (16.87 MB)](https://ario-research-independent.vercel.app/downloads/Ario-Latest.zip) · [Dated TXT](https://ario-research-independent.vercel.app/downloads/Ario-Research-Complete-2026-11-14.txt) · [Dated ZIP](https://ario-research-independent.vercel.app/downloads/Ario-Research-Complete-2026-11-14.zip) · [Manifest, experiment coverage and SHA-256](https://github.com/SepehrGhanbari/Ario/tree/018fc52285c7c07c770e0894b734e7199f2110ac/releases/complete-research-2026-11-14-a39ac06e).
 
 Pinned Git source a39ac06e: 264 tracked paths checked; 230 full text/code files and 9 original binaries included, including full English/Persian book text layers and original illustrated PDFs, independent research papers, all 24 experiment and all 55 test files. Historical repository exports and superseded whole-book editions remain traceable in the source manifest.
