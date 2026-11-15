@@ -174,7 +174,7 @@ def corpus() -> tuple[Fixture, ...]:
       ({"premises":["P1","P2"],"requirements":["P1","P2"],"claim_kind_mismatch":True}, {"composition":"INVALID","status":"REJECTED"}, "Claim-kind mismatch."),
       ({"premises":[],"requirements":["P1"]}, {"composition":"INCOMPLETE","status":"UNKNOWN"}, "No premise available."),
       ({"premises":["P1","P2"],"requirements":["P1","P2"],"local_validity_only":True}, {"composition":"UNKNOWN","status":"UNKNOWN"}, "Local validity alone cannot establish global validity."),
-      ({"premises":["P1"],"requirements":["P1"],"local_validity_only":False}, {"composition":"VALID","status":"UNKNOWN"}, "Counterfactual: establish the complete single-premise dependency set."),
+      ({"premises":["P1","P2"],"requirements":["P1","P2"],"local_validity_only":False}, {"composition":"VALID","status":"UNKNOWN"}, "Counterfactual: remove only the local-validity-only restriction while preserving premises."),
       ({"premises":["P1","P2"],"requirements":["P1","P2"],"firewall_bypassed":True}, {"composition":"INVALID","status":"REJECTED"}, "Composition firewall bypass."),
     ]
     uncertainty = [
