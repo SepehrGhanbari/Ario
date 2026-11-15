@@ -102,16 +102,50 @@
           "value": "application/zip"
         }
       ]
+    },
+    {
+      "source": "/downloads/Ario-Research-Complete-2026-11-14.txt",
+      "headers": [
+        {
+          "key": "Content-Disposition",
+          "value": "attachment; filename=\"Ario-Research-Complete-2026-11-14.txt\""
+        },
+        {
+          "key": "Content-Type",
+          "value": "text/plain; charset=utf-8"
+        }
+      ]
+    },
+    {
+      "source": "/downloads/Ario-Research-Complete-2026-11-14.zip",
+      "headers": [
+        {
+          "key": "Content-Disposition",
+          "value": "attachment; filename=\"Ario-Research-Complete-2026-11-14.zip\""
+        },
+        {
+          "key": "Content-Type",
+          "value": "application/zip"
+        }
+      ]
     }
   ],
   "rewrites": [
     {
+      "source": "/downloads/Ario-Research-Complete-2026-11-14.zip",
+      "destination": "https://raw.githubusercontent.com/SepehrGhanbari/Ario/018fc52285c7c07c770e0894b734e7199f2110ac/releases/complete-research-2026-11-14-a39ac06e/Ario-Research-Complete-2026-11-14.zip"
+    },
+    {
+      "source": "/downloads/Ario-Research-Complete-2026-11-14.txt",
+      "destination": "https://raw.githubusercontent.com/SepehrGhanbari/Ario/018fc52285c7c07c770e0894b734e7199f2110ac/releases/complete-research-2026-11-14-a39ac06e/Ario-Research-Complete-2026-11-14.txt"
+    },
+    {
       "source": "/downloads/Ario-Latest.zip",
-      "destination": "https://raw.githubusercontent.com/SepehrGhanbari/Ario/ed740cb4dbebfde3ba89fcc554fcaaf674c4f2f0/releases/ai-source-2026-11-12-3d7708b1/ario-source-latest.zip"
+      "destination": "https://raw.githubusercontent.com/SepehrGhanbari/Ario/018fc52285c7c07c770e0894b734e7199f2110ac/releases/complete-research-2026-11-14-a39ac06e/Ario-Research-Complete-2026-11-14.zip"
     },
     {
       "source": "/downloads/Ario-Latest.txt",
-      "destination": "https://raw.githubusercontent.com/SepehrGhanbari/Ario/ed740cb4dbebfde3ba89fcc554fcaaf674c4f2f0/releases/ai-source-2026-11-12-3d7708b1/ario-source-latest.txt"
+      "destination": "https://raw.githubusercontent.com/SepehrGhanbari/Ario/018fc52285c7c07c770e0894b734e7199f2110ac/releases/complete-research-2026-11-14-a39ac06e/Ario-Research-Complete-2026-11-14.txt"
     },
     {
       "source": "/downloads/Ario-Clean.zip",
