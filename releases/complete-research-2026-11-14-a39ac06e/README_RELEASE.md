@@ -1,5 +1,13 @@
 # Ario — Complete Verified Research Corpus (14 November 2026)
 
+## Published Zenodo record (linked 15 November 2026)
+
+- Record DOI: https://doi.org/10.5281/zenodo.24230572
+- Zenodo version: v19; publication date: 14 November 2026; Dataset, Open
+- Zenodo filename mapping: Ario-Latest (1).txt corresponds to Ario-Research-Complete-2026-11-14.txt; Ario-Latest (1).zip corresponds to Ario-Research-Complete-2026-11-14.zip. SOURCE_MANIFEST.json and SHA256SUMS.txt retain their names.
+- All four Zenodo MD5 checksums and byte sizes were checked against the original Git blobs. File-by-file result: ZENODO_PUBLICATION_RECORD_24230572.json in this directory.
+- Pinned TXT and ZIP files remain unchanged: DOI metadata is added only to this surrounding documentation, not embedded recursively into the source snapshot.
+
 The primary TXT and ZIP are two complementary views of the exact same pinned source:
 
 - GitHub source commit: a39ac06e69c1b5115bca2016698556730bf920cd

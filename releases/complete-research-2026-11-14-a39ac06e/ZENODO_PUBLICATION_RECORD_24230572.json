@@ -1,0 +1,52 @@
+{
+  "record_id": 24230572,
+  "doi": "10.5281/zenodo.24230572",
+  "url": "https://doi.org/10.5281/zenodo.24230572",
+  "title": "Ario - Complete Verified Research Corpus: Full Books, Experiments, Papers, and AI-Readable TXT/ZIP Archive (14 November 2026)",
+  "zenodo_version": "v19",
+  "publication_date": "2026-11-14",
+  "access": "open",
+  "type": "dataset",
+  "git_source_commit": "a39ac06e69c1b5115bca2016698556730bf920cd",
+  "verifying_git_commit": "248dee898e53951e85ef20db1a89ecad5318350d",
+  "date_verified": "2026-11-15",
+  "files": [
+    {
+      "zenodo_filename": "Ario-Latest (1).zip",
+      "github_filename": "Ario-Research-Complete-2026-11-14.zip",
+      "bytes": 16873717,
+      "zenodo_md5": "46a3933ba9c4f9dd948a02dda6d98f30",
+      "github_git_md5": "46a3933ba9c4f9dd948a02dda6d98f30",
+      "github_git_sha256": "400d4b1e2dd9ec86a498f78c22ce8db961e2bae0d427bb2f5857f08b06a1a05a",
+      "exact_content_match": true
+    },
+    {
+      "zenodo_filename": "Ario-Latest (1).txt",
+      "github_filename": "Ario-Research-Complete-2026-11-14.txt",
+      "bytes": 3861208,
+      "zenodo_md5": "40f072c39f31b451c095df2eb5db5196",
+      "github_git_md5": "40f072c39f31b451c095df2eb5db5196",
+      "github_git_sha256": "96a6a140f4caf28afd13f1ca8a349ba8efded9b45a3bc1c27d9a38fa33b65fb2",
+      "exact_content_match": true
+    },
+    {
+      "zenodo_filename": "SOURCE_MANIFEST.json",
+      "github_filename": "SOURCE_MANIFEST.json",
+      "bytes": 107330,
+      "zenodo_md5": "ba1ec6d2c0d06de4512542a730fa86fb",
+      "github_git_md5": "ba1ec6d2c0d06de4512542a730fa86fb",
+      "github_git_sha256": "379658ce13074c324699a00518fbd55dc9bc3ff87ff06157e0416c8224060288",
+      "exact_content_match": true
+    },
+    {
+      "zenodo_filename": "SHA256SUMS.txt",
+      "github_filename": "SHA256SUMS.txt",
+      "bytes": 208,
+      "zenodo_md5": "5aeb050614e3253ffbfadf46dc216ccc",
+      "github_git_md5": "5aeb050614e3253ffbfadf46dc216ccc",
+      "github_git_sha256": "dc86f91ec87ab297a5baeff063d2f21f144e1195a9d8f430e36708555fbbe46f",
+      "exact_content_match": true
+    }
+  ],
+  "scope_note": "All four files match the original committed Git byte streams by MD5 and size, including different Zenodo filenames for ZIP and TXT. This sidecar metadata was added after the pinned TXT/ZIP exports and does not alter them."
+}
