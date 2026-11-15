@@ -85,3 +85,11 @@ def test_comparison_report_contains_no_composite_ranking():
     assert "overall_score" not in report
     assert "composite_score" not in report
     assert any("No aggregate/composite leaderboard score" in item for item in report["non_claims"])
+
+
+def test_macro_f1_discloses_class_support_and_exclusions():
+    report = build_report()
+    majority = report["methods"]["majority_vote"]["metrics"]["claim_disposition"]
+    assert majority["per_class"]["REJECTED"]["support"] == 0
+    assert "REJECTED" in majority["classes_excluded_for_zero_support"]
+    assert majority["macro_f1_classes_included"] == 4
