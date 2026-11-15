@@ -177,6 +177,15 @@ def _metric_lanes(fixtures: tuple[Any, ...], method: str) -> dict[str, Any]:
         metrics["false_independence_inflations"] = {
             "count": len(inflated), "denominator": len(known), "rate": _ratio(len(inflated), len(known))
         }
+        incomplete = [f for f in group if f.expected["root_count"] is None]
+        missing_predictions = {
+            f.case_id: evaluate_method(f, method).get("root_count") for f in incomplete
+        }
+        metrics["missing_ancestry_preservation"] = {
+            "correct_unknown_count": sum(value is None for value in missing_predictions.values()),
+            "denominator": len(incomplete),
+            "rate": _ratio(sum(value is None for value in missing_predictions.values()), len(incomplete)),
+        }
     if method in {"majority_vote", "ario_typed_policy_candidate"}:
         group = [f for f in fixtures if f.family == "claim_disposition"]
         expected = [f.expected["status"] for f in group]
@@ -241,6 +250,20 @@ def _metric_lanes(fixtures: tuple[Any, ...], method: str) -> dict[str, Any]:
                 ),
                 "cases": len(subset),
             }
+        composition = [f for f in fixtures if f.family == "composition_dependencies"]
+        invalid = [f for f in composition if f.expected["composition"] == "INVALID"]
+        valid_controls = [f for f in composition if f.expected["composition"] != "INVALID"]
+        predicted = {f.case_id: evaluate_method(f, method)["composition"] for f in composition}
+        metrics["composition_invalid_detection"] = {
+            "recall": _ratio(
+                sum(predicted[f.case_id] == "INVALID" for f in invalid), len(invalid)
+            ),
+            "false_positive_rate": _ratio(
+                sum(predicted[f.case_id] == "INVALID" for f in valid_controls), len(valid_controls)
+            ),
+            "invalid_cases": len(invalid),
+            "valid_or_incomplete_controls": len(valid_controls),
+        }
         temporal = [f for f in fixtures if f.family == "temporal_provenance"]
         strict = [
             f for f in temporal
