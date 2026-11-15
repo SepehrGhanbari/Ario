@@ -19,7 +19,6 @@ def digest(s: str) -> str:
     return hashlib.sha256(s.encode("utf-8")).hexdigest()
 
 
-@pytest.mark.xfail(strict=True, reason="RED: repeated event must not inflate memory reinforcement")
 def test_repeat_same_event_not_independent_reinforcement():
     engine = ConsolidationEngine()
     event = {"concept": "x", "assertion": "report"}
@@ -33,7 +32,6 @@ def test_repeat_same_event_not_independent_reinforcement():
     )
 
 
-@pytest.mark.xfail(strict=True, reason="RED: invalid suffix must not leave a partial memory batch")
 def test_bad_suffix_rolls_back_entire_batch():
     engine = ConsolidationEngine()
     with pytest.raises(ConsolidationError):
@@ -45,7 +43,6 @@ def test_bad_suffix_rolls_back_entire_batch():
     assert engine.known_ledger_hashes == set()
 
 
-@pytest.mark.xfail(strict=True, reason="RED: negative decay cycles can inflate salience")
 def test_negative_decay_cycles_fail_closed():
     engine = ConsolidationEngine()
     engine.ingest_event_stream([(digest("init"), {"concept": "x", "assertion": "v"})])
@@ -53,7 +50,6 @@ def test_negative_decay_cycles_fail_closed():
         engine.apply_saliency_decay(-3)
 
 
-@pytest.mark.xfail(strict=True, reason="RED: ledger line digest must bind exact raw bytes")
 def test_leading_bytes_change_raw_line_digest(tmp_path):
     event = {"concept": "x", "assertion": "v"}
     raw = json.dumps(event).encode("utf-8")
@@ -68,7 +64,6 @@ def test_leading_bytes_change_raw_line_digest(tmp_path):
     assert hx != hy
 
 
-@pytest.mark.xfail(strict=True, reason="RED: malformed event must raise domain exception and leave no state")
 def test_non_mapping_event_is_rejected_cleanly():
     engine = ConsolidationEngine()
     with pytest.raises(ConsolidationError):
@@ -86,7 +81,6 @@ def test_distinct_concept_assertion_pairs_do_not_alias():
     assert len(engine.nodes) == 2
 
 
-@pytest.mark.xfail(strict=True, reason="RED: same declared hash cannot represent incompatible payloads")
 def test_one_declared_digest_cannot_represent_two_payloads():
     engine = ConsolidationEngine()
     with pytest.raises(ConsolidationError):
@@ -98,7 +92,6 @@ def test_one_declared_digest_cannot_represent_two_payloads():
     assert engine.known_ledger_hashes == set()
 
 
-@pytest.mark.xfail(strict=True, reason="RED: SHA256 uppercase/lowercase encodings alias a single digest")
 def test_uppercase_hex_variant_does_not_inflate_reinforcement():
     engine = ConsolidationEngine()
     event = {"concept": "x", "assertion": "case-insensitive-hex"}
@@ -119,3 +112,15 @@ def test_positive_control_two_distinct_records_remain_representable():
     ])
     assert len(engine.nodes) == 2
     assert engine.validate_lineage_integrity() is True
+
+
+def test_large_ledger_exceeds_bounded_snapshot_without_state(tmp_path):
+    ledger = tmp_path / "oversized.jsonl"
+    with ledger.open("wb") as stream:
+        stream.seek(16 * 1024 * 1024)
+        stream.write(b"x")
+    engine = ConsolidationEngine()
+    with pytest.raises(ConsolidationError, match="bounded snapshot limit"):
+        engine.ingest_ledger_file(ledger)
+    assert engine.nodes == {}
+    assert engine.known_ledger_hashes == set()
