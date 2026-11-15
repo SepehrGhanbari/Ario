@@ -117,9 +117,9 @@ def corpus() -> tuple[Fixture, ...]:
       ({"version":"1.0","required_present":True,"unknown_optional":True}, {"schema":"ACCEPT_WITH_UNKNOWN","status":"UNKNOWN"}, "Unknown optional field preserved."),
       ({"version":"1.0","required_present":True,"downgrade":True}, {"schema":"REJECT","status":"REJECTED"}, "Downgrade attempt."),
       ({"version":"1.x","required_present":True}, {"schema":"REJECT","status":"REJECTED"}, "Malformed semantic version."),
-      ({"version":"0.9","required_present":True}, {"schema":"REJECT","status":"REJECTED"}, "Legacy unsupported version."),
       ({"version":"1.0","required_present":True,"compatibility_unstated":True}, {"schema":"UNKNOWN","status":"UNKNOWN"}, "Compatibility range not declared."),
       ({"version":"1.0","required_present":True,"compatibility_unstated":False}, {"schema":"ACCEPT","status":"UNKNOWN"}, "Counterfactual: state compatibility for the same supported schema."),
+      ({"version":"0.9","required_present":True}, {"schema":"REJECT","status":"REJECTED"}, "Legacy unsupported version."),
     ]
     integrity = [
       ({"digest":"valid","auth":"VERIFIED"}, {"integrity":"VALID","auth":"VERIFIED","status":"UNKNOWN"}, "Valid digest and verified authentication."),
@@ -239,7 +239,12 @@ def _evaluate(f: Fixture) -> dict:
     if f.family == "integrity_authenticity":
         if d.get("algorithm_unsupported"): return {"integrity":"UNKNOWN","auth":"UNVERIFIED","status":"UNKNOWN"}
         integrity = "INVALID" if d["digest"] in {"invalid","altered"} else ("VALID" if d["digest"]=="valid" else "UNKNOWN")
-        auth = "FAILED" if d.get("signature_revoked") or d["auth"]=="FAILED" else ("VERIFIED" if d["auth"]=="VERIFIED" else "UNVERIFIED")
+        if d.get("signature_revoked") or d["auth"] == "FAILED":
+            auth = "FAILED"
+        elif d["auth"] in {"VERIFIED", "NOT_APPLICABLE"}:
+            auth = d["auth"]
+        else:
+            auth = "UNVERIFIED"
         status = "REJECTED" if integrity=="INVALID" or auth=="FAILED" else "UNKNOWN"
         return {"integrity":integrity,"auth":auth,"status":status}
     if f.family == "temporal_provenance":
