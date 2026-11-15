@@ -25,6 +25,16 @@ class ConsolidationError(ValueError):
     pass
 
 
+def _reject_duplicate_object_keys(pairs):
+    """Preserve audit interpretability by rejecting ambiguous JSON object keys."""
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ConsolidationError(f"duplicate JSON key: {key}")
+        result[key] = value
+    return result
+
+
 class NodeEpistemicStatus(str, Enum):
     ACCEPTED = "ACCEPTED"  # LEGACY: structural ingestion ONLY, not truth
     CONTESTED = "CONTESTED"
@@ -52,6 +62,8 @@ class SemanticNode:
             raise ConsolidationError("concept must be non-empty")
         if not self.assertion or not self.assertion.strip():
             raise ConsolidationError("assertion must be non-empty")
+        if not isinstance(self.source_event_hashes, tuple):
+            raise ConsolidationError("T-CONS-01: source_event_hashes must be an immutable tuple")
         if not self.source_event_hashes:
             raise ConsolidationError("T-CONS-01: source_event_hashes must contain at least one source event hash")
         for h in self.source_event_hashes:
@@ -61,6 +73,8 @@ class SemanticNode:
             raise ConsolidationError("saliency_score must be between 0.0 and 1.0")
         if self.reinforcement_count < 1:
             raise ConsolidationError("reinforcement_count must be at least 1")
+        if self.falsification_condition is not None and not isinstance(self.falsification_condition, str):
+            raise ConsolidationError("falsification_condition must be a string or None")
 
 
 @dataclasses.dataclass(frozen=True)
@@ -125,7 +139,7 @@ class ConsolidationEngine:
                     continue
                 h = hashlib.sha256(raw_line).hexdigest()
                 try:
-                    event = json.loads(raw_line.decode("utf-8"))
+                    event = json.loads(raw_line.decode("utf-8"), object_pairs_hook=_reject_duplicate_object_keys)
                 except (UnicodeDecodeError, json.JSONDecodeError) as exc:
                     raise ConsolidationError(f"corrupt ledger JSON on line {line_no}") from exc
                 if not isinstance(event, dict):
