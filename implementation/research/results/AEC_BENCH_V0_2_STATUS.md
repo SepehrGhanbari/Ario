@@ -1,6 +1,6 @@
 # AEC-Bench v0.2 — Execution status
 
-**State:** IMPLEMENTATION COMMITTED; CI EXECUTION NOT YET VERIFIED.
+**State:** IMPLEMENTATION COMMITTED; CI EXECUTION NOT YET VERIFIED.\n**Inspected head:** `dba181e5c0cc31a06ce467d0dd14b4f1741a0cd2`.\n**Observed check state:** GitHub combined commit status reported Vercel `pending`; the connected workflow-run listing returned no run for this SHA. Therefore pytest/Actions execution is still NOT VERIFIED.
 
 - Version: AEC-Bench-0.2
 - Public development corpus: 120 deterministic synthetic fixtures
