@@ -297,21 +297,24 @@ def score() -> dict:
     by_family = {}
     for family in FAMILIES:
         group = [x for x in results if x["family"] == family]
-        by_family[family] = {"cases":len(group),"matches":sum(x["match"] for x in group)}
+        by_family[family] = {
+            "cases": len(group),
+            "matches": sum(x["match"] for x in group),
+            "fixture_contract_conformance": sum(x["match"] for x in group) / len(group),
+        }
     return {
         "benchmark": VERSION,
         "corpus_kind": "SYNTHETIC_DETERMINISTIC_PUBLIC_DEVELOPMENT",
         "case_count": len(fixtures),
         "family_count": len(FAMILIES),
         "policy_identity": "AEC_BENCH_FIXTURE_REFERENCE_EVALUATOR_NOT_ARIO_RUNTIME",
-        "overall_fixture_matches": sum(x["match"] for x in results),
-        "overall_fixture_accuracy": sum(x["match"] for x in results)/len(results),
         "by_family": by_family,
         "cases": results,
         "limitations": [
             "All fixtures and oracle labels are synthetic and author-defined.",
             "The reference evaluator is not an Ario runtime call or external-system adapter.",
-            "Fixture-match accuracy measures implementation against this authored fixture contract only.",
+            "Per-family fixture-contract conformance measures this evaluator against author-defined labels only; it is not a research performance metric.",
+            "No aggregate or composite benchmark score is produced.",
             "No real-world source independence, authenticity, truth, model behavior, security, privacy, or superiority is established.",
             "No hidden evaluation set is included in this public corpus.",
         ],
