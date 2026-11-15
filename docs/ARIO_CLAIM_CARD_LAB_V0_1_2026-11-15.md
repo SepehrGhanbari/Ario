@@ -67,3 +67,54 @@ These are **design expectations for the temporal gate only**, not expected globa
 3. Require both false-affirmation and abstention/coverage metrics under fixed independent labels. Neither “all UNKNOWN” nor consensus between models wins by itself.
 4. Never merge or activate [#133](https://github.com/SepehrGhanbari/Ario/pull/133), [#151](https://github.com/SepehrGhanbari/Ario/pull/151), Draft [#178](https://github.com/SepehrGhanbari/Ario/pull/178), Draft [#185](https://github.com/SepehrGhanbari/Ario/pull/185), or Draft [#199](https://github.com/SepehrGhanbari/Ario/pull/199) solely because these cards exist.
 5. **Publication of this document has no runtime, signer, witness, trust, DOI-accuracy, evidence-admission, benchmark-performance, or policy activation effects.** The first independent confirmatory results remain to be collected and may be negative.
+
+## G. Dated toy-oracle negative and correction — 2026-11-15
+
+**Do not conflate this with a TB-004 implementation test.** After this *proposed* document was first committed as `1eb0595acfc2576199d9aed1f6df04814da2d2f3`, an author-controlled **V8 JavaScript toy decision function** was run on its twelve I01–I12 rows: 12/12 matched the author's own expected labels. A separate **zero-relevant-report** input then returned **`TEMPORAL_CLEARED`**. **NEGATIVE / FAIL:** the toy oracle vacuously approved a capture with no applicable reports. This finding remains recorded; it is **not an observed Ario bug**.
+
+**Correction (not erasure):** require nonempty relevant-report set before considering bounds: when none exist return `UNKNOWN_NO_RELEVANT`. A fresh author-written **Python 3 toy oracle** was then executed **in an isolated local container**: **12/12 proposed table rows plus 4/4 adversarial checks PASS** (zero relevant, equal-boundary capture, invalid window and empty incident ID). Neither original nor corrected toy evaluates Ario source; both use author-written labels. The first 12/12 alone demonstrably failed to cover a safety edge case.
+
+**Reproducer for the corrected toy logic (single standalone Python process; zero external imports):**
+
+```python
+def temporal(reports, capture=10):
+    relevant = [r for r in reports if r[3] is True]
+    if not relevant:
+        return "UNKNOWN_NO_RELEVANT"
+    if any(not isinstance(r[0], str) or not r[0] for r in relevant):
+        return "UNKNOWN_UNBOUND"
+    groups = {}
+    for incident, lo, hi, _ in relevant:
+        if type(lo) is not int or type(hi) is not int or lo > hi:
+            return "UNKNOWN_INVALID"
+        low, high = groups.get(incident, (float("-inf"), float("inf")))
+        groups[incident] = (max(low, lo), min(high, hi))
+    if any(low > high for low, high in groups.values()):
+        return "UNKNOWN_CONTRADICTORY"
+    return ("TEMPORAL_CLEARED"
+            if all(low > capture for low, _ in groups.values())
+            else "NOT_CLEARED")
+
+rows = [
+    ("I01", [("I1",5,30,True),("I1",20,25,True)], "TEMPORAL_CLEARED"),
+    ("I02", [("I1",5,30,True),("I2",20,25,True)], "NOT_CLEARED"),
+    ("I03", [(None,5,30,True),(None,20,25,True)], "UNKNOWN_UNBOUND"),
+    ("I04", [("I1",5,8,True),("I1",20,25,True)], "UNKNOWN_CONTRADICTORY"),
+    ("I05", [("I1",5,8,True),("I2",20,25,True)], "NOT_CLEARED"),
+    ("I06", [("I1",5,8,True),("I2",20,25,True)], "NOT_CLEARED"),
+    ("I07", [("I1",5,15,True),("I1",10,25,True)], "NOT_CLEARED"),
+    ("I08", [("I1",12,20,True),("I1",15,18,True)], "TEMPORAL_CLEARED"),
+    ("I09", [("I1",5,15,True),("I1",10,25,True),("I1",20,30,True)], "UNKNOWN_CONTRADICTORY"),
+    ("I10", [("I1",5,30,True),("I1",20,25,True)], "TEMPORAL_CLEARED"),
+    ("I11", [("I1",5,30,True),("I1",5,30,True)], "NOT_CLEARED"),
+    ("I12", [("I1",20,25,True),("I2",2,8,False)], "TEMPORAL_CLEARED"),
+]
+assert all(temporal(r) == expected for _, r, expected in rows)
+assert temporal([("I1",20,25,False)]) == "UNKNOWN_NO_RELEVANT"
+assert temporal([("I1",10,20,True)]) == "NOT_CLEARED"
+assert temporal([("I1",25,20,True)]) == "UNKNOWN_INVALID"
+assert temporal([("",20,25,True)]) == "UNKNOWN_UNBOUND"
+print("PASS: 12/12 proposed + 4/4 negative controls (toy, not Ario)")
+```
+
+**Remaining defects / independence limits:** the toy still **trusts** a caller-supplied `relevant` flag and incident IDs; a lying caller or excluded relevant report can falsify the conclusion. It also does not implement provenance authentication, source-version binding, missing targeted incidents, holder custody, trust, or signed evidence admission. Thus the toy's *self-consistency*, even after correction, is **not** a safety or correctness certificate. Genuine incident-binding semantics and independent holdouts remain `UNKNOWN / NOT_RUN`.
