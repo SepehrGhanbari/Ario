@@ -1,0 +1,3 @@
+# Keep the single research letter's exact LF bytes on all Git platforms.
+# This avoids silent CRLF conversion invalidating LETTER_SHA256 on Windows.
+ARIO_IDENTITY_INTERIM_FINDINGS_LETTER_FA_2026-11-03.md text eol=lf
