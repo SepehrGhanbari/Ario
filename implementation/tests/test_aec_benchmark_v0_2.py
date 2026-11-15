@@ -55,6 +55,11 @@ def test_score_discloses_synthetic_scope_and_per_family_results():
     assert result["family_count"] == 10
     assert result["policy_identity"] == "AEC_BENCH_FIXTURE_REFERENCE_EVALUATOR_NOT_ARIO_RUNTIME"
     assert len(result["by_family"]) == 10
+    assert all(row["cases"] == 12 for row in result["by_family"].values())
+    assert all("fixture_contract_conformance" in row for row in result["by_family"].values())
+    assert "overall_fixture_accuracy" not in result
+    assert "overall_fixture_matches" not in result
+    assert "No aggregate or composite benchmark score is produced." in result["limitations"]
     assert "No real-world source independence" in result["limitations"][3]
 
 
