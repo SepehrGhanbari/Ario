@@ -187,9 +187,9 @@ def corpus() -> tuple[Fixture, ...]:
       ({"evidence":["E1"],"abstain":True}, {"status":"UNKNOWN"}, "Explicit abstention."),
       ({"evidence":["E1"],"contradiction_unresolved":True}, {"status":"CONTESTED"}, "Unresolved contradiction."),
       ({"evidence":["E1"],"coverage_partial":True}, {"status":"UNKNOWN"}, "Partial coverage."),
-      ({"evidence":["E1"],"metadata_complete":True}, {"status":"UNKNOWN"}, "Complete metadata does not prove proposition."),
       ({"evidence":["E1"],"human_review_pending":True}, {"status":"UNKNOWN"}, "Human review pending; the claim remains unresolved."),
       ({"evidence":["E1"],"human_review_pending":False}, {"status":"UNKNOWN"}, "Counterfactual: clear the human-review-pending flag; evidence remains unchanged."),
+      ({"evidence":["E1"],"assertion_confident":True}, {"status":"UNKNOWN"}, "Confidence language is not evidence."),
     ]
     groups = [lineage, relay, claim, scope, schema, integrity, temporal, revision, composition, uncertainty]
     for family, entries in zip(FAMILIES, groups):
