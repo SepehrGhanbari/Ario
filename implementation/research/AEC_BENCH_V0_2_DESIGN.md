@@ -27,7 +27,7 @@ Use 10 orthogonal failure families × 12 variants = 120 deterministic cases. Eac
 - 3 positive/control cases;
 - 3 negative/adversarial cases;
 - 3 boundary/partial-information cases;
-- 3 paired counterfactual cases differing in exactly one controlled feature.
+- 3 counterfactual-design cases: one matched pair (two fixtures differing in exactly one controlled input field) plus one supplemental control.
 
 | Family | Cases | Required variation |
 |---|---:|---|
