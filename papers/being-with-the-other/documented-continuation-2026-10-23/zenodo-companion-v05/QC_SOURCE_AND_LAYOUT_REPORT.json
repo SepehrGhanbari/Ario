@@ -1,0 +1,63 @@
+{
+  "edition": "2026-10-23 bilingual documented continuation",
+  "repository": "SepehrGhanbari/Ario",
+  "commit": "5b6ad86b5693f8f4486991b2520f13ecd28783a0",
+  "git_blob_source_matches": {
+    "Ario_Independent_Continuation_FA_2026-10-23.md": {
+      "git_blob_sha1": "39140d09f94a7bd0be7b547af052c811a5e3e6a6",
+      "status": "EXACT_BYTE_MATCH"
+    },
+    "Ario_Independent_Continuation_EN_2026-10-23.md": {
+      "git_blob_sha1": "4e1d948f9a78c7c7c78127b07e319ba3c6a42dbb",
+      "status": "EXACT_BYTE_MATCH"
+    },
+    "Ario_Evidence_Public_2026-10-23.json": {
+      "git_blob_sha1": "3a907509ea0beaea6c5885e8b3eaf7b9a4dd0c6b",
+      "status": "EXACT_BYTE_MATCH"
+    },
+    "Ario_Evidence_Public_EN_2026-10-23.json": {
+      "git_blob_sha1": "38ccaae718c2dabe73b7bfbaf0ad104e94d49d5e",
+      "status": "EXACT_BYTE_MATCH"
+    }
+  },
+  "narrative_chapters": {
+    "FA": 11,
+    "EN": 11
+  },
+  "historical_evidence": 54,
+  "additional_references": 6,
+  "english_evidence_rows": 60,
+  "pdf_quality": {
+    "FA": {
+      "pages": 28,
+      "bytes": 137641,
+      "min_extracted_text_chars_per_page": 433,
+      "rendered_pages_sampled": [
+        1,
+        8,
+        17,
+        28
+      ]
+    },
+    "EN": {
+      "pages": 13,
+      "bytes": 177654,
+      "min_extracted_text_chars_per_page": 916,
+      "rendered_pages_sampled": [
+        1,
+        6,
+        13
+      ]
+    }
+  },
+  "privacy_regex_scan": "No email addresses or credential-formatted strings observed in public Markdown, JSON, HTML; exclusion text referring to private dream is allowed, not content. Regex is not proof of zero privacy risks.",
+  "known_limitations": [
+    "Full ChatGPT history not available",
+    "M12-M13 partial provenance",
+    "5223 vs 5212 count discrepancy not resolved",
+    "H01-H06 adversarial evidence retained",
+    "No scientific proof of AI consciousness or actual infinitely many created worlds"
+  ],
+  "zenodo": "NOT_DEPOSITED; no new DOI registered",
+  "publication_destination": "GitHub content confirmed in main; Zenodo not deposited"
+}
