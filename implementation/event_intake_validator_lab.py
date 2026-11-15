@@ -10,6 +10,8 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import os
+import stat
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -221,10 +223,26 @@ def inspect_jsonl_file(
     if not isinstance(limits, IntakeLimits):
         raise TypeError("limits must be IntakeLimits")
     target = Path(path)
-    if target.is_symlink():
-        return _stop(_new_report("READ_ONLY_FILE"), "SYMLINK_REFUSED")
     try:
-        with target.open("rb") as handle:
+        # File metadata access may itself raise PermissionError (OSError).
+        if target.is_symlink():
+            return _stop(_new_report("READ_ONLY_FILE"), "SYMLINK_REFUSED")
+        if not stat.S_ISREG(target.stat().st_mode):
+            return _stop(_new_report("READ_ONLY_FILE"), "NON_REGULAR_SOURCE")
+
+        # On POSIX, a nonblocking, no-follow descriptor prevents an on-path
+        # FIFO from blocking if the file type changes after the stat() check.
+        # On other platforms, best-effort preflight and fstat() still apply.
+        flags = os.O_RDONLY | getattr(os, "O_BINARY", 0)
+        if os.name == "posix":
+            flags |= (
+                getattr(os, "O_NONBLOCK", 0)
+                | getattr(os, "O_NOFOLLOW", 0)
+                | getattr(os, "O_CLOEXEC", 0)
+            )
+        with os.fdopen(os.open(target, flags), "rb") as handle:
+            if not stat.S_ISREG(os.fstat(handle.fileno()).st_mode):
+                return _stop(_new_report("READ_ONLY_FILE"), "NON_REGULAR_SOURCE")
             data = handle.read(limits.max_ledger_bytes + 1)
     except (OSError, ValueError):
         return _stop(_new_report("READ_ONLY_FILE"), "FILE_READ_FAILED")
