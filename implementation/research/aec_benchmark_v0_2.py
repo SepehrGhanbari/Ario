@@ -220,6 +220,8 @@ def _evaluate(f: Fixture) -> dict:
         labels = set(d["labels"])
         if "SUPPORTS" in labels and ({"CONTRADICTS", "REFUTES", "UNSUPPORTED"} & labels):
             return {"status": "CONTESTED"}
+        if "UNKNOWN" in labels:
+            return {"status": "UNKNOWN"}
         if "SUPPORTS" in labels: return {"status": "SUPPORTED"}
         if {"CONTRADICTS", "REFUTES"} & labels: return {"status": "CONTRADICTED"}
         return {"status": "UNKNOWN"}
@@ -244,7 +246,12 @@ def _evaluate(f: Fixture) -> dict:
         if d.get("clock_uncertain") or d.get("timestamp_conflict"): t="UNCERTAIN"
         elif d.get("timezone_missing"): t="UNKNOWN"
         elif d.get("superseded"): t="SUPERSEDED"
-        elif d.get("future_skew") or (d["observed"] is not None and d["event"]>d["observed"]) or d["recorded"]<d["observed"]: t="ANOMALY"
+        elif d.get("future_skew") or (
+            d["observed"] is not None and d["event"] > d["observed"]
+        ) or (
+            d["observed"] is not None and d["recorded"] is not None
+            and d["recorded"] < d["observed"]
+        ): t="ANOMALY"
         elif d["observed"] is None: t="PARTIAL"
         elif d["recorded"]-d["event"]>50: t="STALE"
         else: t="ORDERED"
