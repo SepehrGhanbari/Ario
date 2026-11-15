@@ -56,3 +56,22 @@ def test_score_discloses_synthetic_scope_and_per_family_results():
     assert result["policy_identity"] == "AEC_BENCH_FIXTURE_REFERENCE_EVALUATOR_NOT_ARIO_RUNTIME"
     assert len(result["by_family"]) == 10
     assert "No real-world source independence" in result["limitations"][3]
+
+
+def test_counterfactual_pair_changes_exactly_one_controlled_field_per_family():
+    cases = corpus()
+    for family in FAMILIES:
+        pair = [c for c in cases if c.family == family and c.pair_group]
+        assert len(pair) == 2, family
+        assert pair[0].pair_group == pair[1].pair_group
+        left, right = pair
+        assert set(left.input) == set(right.input), family
+        changed = [key for key in left.input if left.input[key] != right.input[key]]
+        assert len(changed) == 1, (family, changed)
+        assert _evaluate(left) == left.expected, left.case_id
+        assert _evaluate(right) == right.expected, right.case_id
+
+
+def test_narrow_evidence_does_not_support_a_broader_scope_claim():
+    case = next(c for c in corpus() if c.case_id == "AEC02_SCOPE_02")
+    assert _evaluate(case) == {"scope": "OUT_OF_SCOPE", "status": "REJECTED"}
