@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Ario Explainer — Synthetic Teaching Demo</title>
 <style>
-:root{--ink:#22303c;--paper:#f6f4ee;--card:#ffffff;--line:#d9d3c5;--accent:#0e6b5c;--warn:#9c4a1e;--mut:#6d7680;}
+:root{--ink:#22303c;--paper:#f6f4ee;--card:#ffffff;--line:#d9d3c5;--accent:#0e6b5c;--warn:#9c4a1e;--mut:#555f69;}
 *{box-sizing:border-box}
 body{margin:0;background:var(--paper);color:var(--ink);line-height:1.85;font-family:"Segoe UI",Tahoma,system-ui,sans-serif}
 .wrap{max-width:880px;margin:0 auto;padding:0 18px}
@@ -31,7 +31,8 @@ h2{margin:0 0 14px;font-size:1.2rem;color:var(--accent)}
 .opts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .opts button{font:inherit;font-size:.9rem;border:1px solid var(--accent);background:#fff;color:var(--accent);border-radius:8px;padding:8px 12px;cursor:pointer}
 .opts button:hover{background:#eef6f4}
-.feedback{margin-top:10px;padding:10px 12px;border-radius:8px;font-size:.9rem;display:none}
+.feedback{margin-top:10px;padding:10px 12px;border-radius:8px;font-size:.9rem}
+.feedback:empty{margin:0;padding:0}
 .feedback.ok{background:#eaf5ee;border:1px solid #b6d9c2;display:block}
 .feedback.no{background:#faecea;border:1px solid #e3c0bc;display:block}
 .rev-controls{display:flex;gap:10px;margin:10px 0}
@@ -40,9 +41,11 @@ h2{margin:0 0 14px;font-size:1.2rem;color:var(--accent)}
 .log{border:1px dashed var(--line);border-radius:10px;padding:14px}
 .log-entry{padding:10px 12px;border-radius:8px;margin:6px 0;background:#fbfaf6}
 .log-entry .meta{font-size:.78rem;color:var(--mut);display:block}
-.log-entry.struck{text-decoration:line-through;opacity:.75}
+.log-entry.struck{text-decoration:line-through;color:#515a62}
 .log-entry.new{border-right:3px solid var(--accent)}
 .note{color:var(--warn);font-size:.9rem}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+button:focus-visible,a:focus-visible{outline:3px solid #b15e24;outline-offset:3px}
 footer{border-top:1px solid var(--line);padding:20px 0;font-size:.85rem;color:var(--mut)}
 footer a{color:var(--accent)}
 </style>
@@ -92,7 +95,7 @@ var T = {
     legendH: "وضعیت‌های معرفتی",
     scenH: "سه مثال تعاملی",
     revH: "اصلاح ≠ پاک‌کردن",
-    revP: "وقتی یک ورودی اشتباه از آب درمی‌آید، آریو به‌جای پاک‌کردنش، اصلاحش را کنارِ همان ورودی با تاریخ و منشأ ثبت می‌کند. هر دو حالت را ببین:",
+    revP: "در این مثال ساختگی، اصلاحِ یک ورودی اشتباه کنارِ متن قبلی با تاریخ و منشأ ثبت می‌شود؛ نه اینکه گذشته پاک شود. هر دو حالت را ببین:",
     eraseBtn: "حالت «پاک‌کردن»",
     reviseBtn: "حالت «اصلاح»",
     principles: [
@@ -103,8 +106,8 @@ var T = {
     states: [
       { t: "UNKNOWN", d: "نه تأیید، نه رد. یک حکمِ معتبر است، نه شکستِ ممیزی." },
       { t: "UNSUPPORTED", d: "ادعایی که شاهد مستقلی برایش ثبت نشده است." },
-      { t: "CONTRADICTED", d: "شواهد پذیرفته‌شده با هم نمی‌خوانند." },
-      { t: "CONTESTED", d: "شواهد معتبر به دو نتیجه‌ی متضاد اشاره می‌کنند." },
+      { t: "CONTRADICTED", d: "شواهد پذیرفته‌شده با خودِ ادعا در تعارض‌اند." },
+      { t: "CONTESTED", d: "شواهد یا تفسیرهای مهم به‌طور معناداری محل اختلاف‌اند." },
       { t: "REVISED", d: "این ورودی اصلاح شده و نسخه‌ی قبلی حفظ شده است." }
     ],
     scenarios: [
@@ -156,9 +159,10 @@ var T = {
       { note: "پیش از این چه بود؟ چه‌وقت تغییر کرد؟ چه‌کسی اصلاحش کرد؟ — نمی‌دانیم. ردپا پاک شده است." }
     ],
     reviseView: [
-      { txt: "اجازه: دستیار می‌تواند ایمیل ارسال کند.", meta: "ثبت اولیه — ۳ آبان · منشأ: گفتگوی دستیار و کاربر", struck: true },
-      { txt: "اجازه: فقط پیش‌نویس آماده شود.", meta: "REVISED — ۳ آبان، پس از اصلاح کاربر · ورودی قبلی حفظ شد", struck: false }
+      { txt: "اجازه: دستیار می‌تواند ایمیل ارسال کند.", meta: "ثبت اولیه — ۱۲ آبان ۱۴۰۵ · منشأ: گفتگوی دستیار و کاربر", struck: true },
+      { txt: "اجازه: فقط پیش‌نویس آماده شود.", meta: "REVISED — ۱۲ آبان ۱۴۰۵، پس از اصلاح کاربر · ورودی قبلی حفظ شد", struck: false }
     ],
+    oldRecordLabel: "نسخهٔ قبلی — اصلاح‌شده و برای ممیزی حفظ شده",
     footer: 'این صفحه دموی آموزشیِ مستقل و آفلاین است؛ موتور M0 نیست و حکم‌های آن برچسبِ دست‌سازِ آموزشی‌اند، نه خروجی موتور. همه‌ی داده‌ها ساختگی‌اند. — <a href="https://github.com/SepehrGhanbari/Ario" rel="noopener">مخزن آریو</a> · <a href="https://github.com/SepehrGhanbari/Ario/issues/104" rel="noopener">ایشو #104</a> · پروژه با مجوز MIT.'
   },
   en: {
@@ -170,7 +174,7 @@ var T = {
     legendH: "Epistemic states",
     scenH: "Three interactive examples",
     revH: "Revision ≠ erasure",
-    revP: "When an entry turns out to be wrong, Ario records the correction next to the original entry, with date and provenance, instead of deleting it. Compare both modes:",
+    revP: "In this fictional example, a correction is recorded alongside the original entry, with date and provenance, rather than erasing the past. Compare both modes:",
     eraseBtn: "\"Erase\" mode",
     reviseBtn: "\"Revise\" mode",
     principles: [
@@ -181,8 +185,8 @@ var T = {
     states: [
       { t: "UNKNOWN", d: "Neither confirmed nor refuted. A valid verdict, not an audit failure." },
       { t: "UNSUPPORTED", d: "A claim for which no independent evidence is recorded." },
-      { t: "CONTRADICTED", d: "Accepted evidence items are inconsistent with each other." },
-      { t: "CONTESTED", d: "Valid evidence points to two opposing conclusions." },
+      { t: "CONTRADICTED", d: "Accepted evidence conflicts with the claim." },
+      { t: "CONTESTED", d: "Material evidence or its interpretation is disputed." },
       { t: "REVISED", d: "This entry was corrected; the previous version is preserved." }
     ],
     scenarios: [
@@ -237,11 +241,14 @@ var T = {
       { txt: "Permission: the assistant may send emails.", meta: "Initial entry — Nov 3 · origin: assistant–user conversation", struck: true },
       { txt: "Permission: prepare drafts only.", meta: "REVISED — Nov 3, after user correction · previous entry preserved", struck: false }
     ],
+    oldRecordLabel: "Superseded version — retained for audit history",
     footer: 'This page is a standalone offline teaching demo; it is not the M0 engine, and its verdict labels are hand-authored teaching labels, not engine output. All data is synthetic. — <a href="https://github.com/SepehrGhanbari/Ario" rel="noopener">Ario repository</a> · <a href="https://github.com/SepehrGhanbari/Ario/issues/104" rel="noopener">Issue #104</a> · Project under the MIT license.'
   }
 };
 
 var lang = "fa";
+var revMode = "revise";
+var selectedAnswers = [null, null, null];
 
 function el(tag, cls) {
   var e = document.createElement(tag);
@@ -290,7 +297,7 @@ function render() {
 
   var sl = document.getElementById("scen-list");
   sl.textContent = "";
-  t.scenarios.forEach(function (sc) {
+  t.scenarios.forEach(function (sc, scenarioIndex) {
     var card = el("div", "scen");
     card.appendChild(txt(el("h3"), sc.h));
     sc.steps.forEach(function (st) {
@@ -303,11 +310,19 @@ function render() {
     card.appendChild(txt(el("p"), sc.q));
     var opts = el("div", "opts");
     var fb = el("div", "feedback");
-    sc.opts.forEach(function (o) {
+    fb.setAttribute("role", "status");
+    fb.setAttribute("aria-live", "polite");
+    fb.setAttribute("aria-atomic", "true");
+    sc.opts.forEach(function (o, answerIndex) {
       var b = el("button");
       b.type = "button";
       txt(b, o.l);
+      b.setAttribute("aria-pressed", selectedAnswers[scenarioIndex] === answerIndex ? "true" : "false");
       b.addEventListener("click", function () {
+        selectedAnswers[scenarioIndex] = answerIndex;
+        opts.querySelectorAll("button").forEach(function (choice, choiceIndex) {
+          choice.setAttribute("aria-pressed", choiceIndex === answerIndex ? "true" : "false");
+        });
         fb.className = o.ok ? "feedback ok" : "feedback no";
         fb.textContent = (o.ok ? "✓ " : "✗ ") + o.f;
       });
@@ -315,17 +330,22 @@ function render() {
     });
     card.appendChild(opts);
     card.appendChild(fb);
+    if (selectedAnswers[scenarioIndex] !== null) {
+      var priorAnswer = sc.opts[selectedAnswers[scenarioIndex]];
+      fb.className = priorAnswer.ok ? "feedback ok" : "feedback no";
+      fb.textContent = (priorAnswer.ok ? "✓ " : "✗ ") + priorAnswer.f;
+    }
     sl.appendChild(card);
   });
 
-  showRevise();
+  renderRev(revMode);
 
   var f = document.getElementById("footer");
   f.innerHTML = t.footer;
 }
 
-var revMode = "revise";
 function renderRev(mode) {
+  revMode = mode;
   var t = T[lang];
   var v = document.getElementById("rev-view");
   v.textContent = "";
@@ -336,6 +356,9 @@ function renderRev(mode) {
       v.appendChild(n);
     } else {
       var d = el("div", "log-entry" + (e.struck ? " struck" : " new"));
+      if (e.struck) {
+        d.appendChild(txt(el("span", "sr-only"), t.oldRecordLabel + ". "));
+      }
       d.appendChild(txt(el("span", "meta"), e.meta));
       d.appendChild(document.createTextNode(e.txt));
       v.appendChild(d);
@@ -343,6 +366,8 @@ function renderRev(mode) {
   });
   document.getElementById("revEraseBtn").className = (mode === "erase") ? "active" : "";
   document.getElementById("revReviseBtn").className = (mode === "revise") ? "active" : "";
+  document.getElementById("revEraseBtn").setAttribute("aria-pressed", mode === "erase" ? "true" : "false");
+  document.getElementById("revReviseBtn").setAttribute("aria-pressed", mode === "revise" ? "true" : "false");
 }
 function showErase() { renderRev("erase"); }
 function showRevise() { renderRev("revise"); }
