@@ -20,6 +20,16 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 
+# Candidate-only budgets, aligned with the existing ledger observation adapter's
+# nominal event/line limits. They are NOT approved production thresholds.
+MAX_MEMORY_BATCH_EVENTS = 5000
+MAX_MEMORY_STORED_HASHES = 5000
+MAX_MEMORY_EVENT_BYTES = 64 * 1024
+MAX_MEMORY_BATCH_BYTES = 8 * 1024 * 1024
+RECORD_DIGEST_SCHEME = "raw_line_sha256_v0_2"
+LEGACY_RECORD_DIGEST_SCHEME = "legacy_trimmed_sha256_v0_1"
+
+
 class ConsolidationError(ValueError):
     """Raised when consolidation violates an epistemic or schema invariant."""
     pass
@@ -133,10 +143,14 @@ class ConsolidationEngine:
                 snapshot = stream.read(max_ledger_bytes + 1)
             if len(snapshot) > max_ledger_bytes:
                 raise ConsolidationError("ledger exceeds 16 MiB bounded snapshot limit")
+            # Completed JSONL records must end in LF (CRLF is allowed).
+            # The independent ledger_observation_adapter also requires LF.
+            if snapshot and not snapshot.endswith(b"\n"):
+                raise ConsolidationError("incomplete JSONL line: missing final LF")
             events = []
             for line_no, raw_line in enumerate(snapshot.splitlines(keepends=True), start=1):
                 if not raw_line.strip():
-                    continue
+                    raise ConsolidationError(f"invalid blank JSONL record on line {line_no}")
                 h = hashlib.sha256(raw_line).hexdigest()
                 try:
                     event = json.loads(raw_line.decode("utf-8"), object_pairs_hook=_reject_duplicate_object_keys)
@@ -154,8 +168,10 @@ class ConsolidationEngine:
         return self.ingest_event_stream(events)
 
     def ingest_event_stream(self, events: Iterable[Tuple[str, Dict[str, Any]]]) -> int:
-        """Atomically ingest caller-declared digest/event pairs.
+        """Atomically ingest caller-declared digest/event pairs with budgets.
 
+        Per-call event/serialized-byte limits and a lifetime stored-hash cap
+        are candidate limits, NOT proof of bounded CPU or process memory.
         Streamed digests are NOT independently authenticated or byte verified.
         """
         old_nodes = self._nodes.copy()
@@ -163,8 +179,11 @@ class ConsolidationEngine:
         old_hashes = self._ledger_hashes.copy()
         old_payloads = self._declared_hash_payloads.copy()
         count = 0
+        total_event_bytes = 0
         try:
             for item in events:
+                if count >= MAX_MEMORY_BATCH_EVENTS:
+                    raise ConsolidationError("memory stream event-count limit exceeded")
                 if not isinstance(item, (list, tuple)) or len(item) != 2:
                     raise ConsolidationError("event item must be (hash, event) pair")
                 h, ev = item
@@ -175,7 +194,15 @@ class ConsolidationEngine:
                 h = h.lower()  # uppercase/lowercase hex encode the SAME digest
                 canonical = json.dumps(ev, sort_keys=True, ensure_ascii=False,
                                        separators=(",", ":"), allow_nan=False)
-                fingerprint = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+                encoded = canonical.encode("utf-8")
+                if len(encoded) > MAX_MEMORY_EVENT_BYTES:
+                    raise ConsolidationError("memory event serialized-size limit exceeded")
+                total_event_bytes += len(encoded)
+                if total_event_bytes > MAX_MEMORY_BATCH_BYTES:
+                    raise ConsolidationError("memory batch serialized-size limit exceeded")
+                if h not in self._ledger_hashes and len(self._ledger_hashes) >= MAX_MEMORY_STORED_HASHES:
+                    raise ConsolidationError("memory retained-event limit exceeded")
+                fingerprint = hashlib.sha256(encoded).hexdigest()
                 if h in self._declared_hash_payloads and self._declared_hash_payloads[h] != fingerprint:
                     raise ConsolidationError("declared hash is reused for a different payload")
                 self._declared_hash_payloads[h] = fingerprint
