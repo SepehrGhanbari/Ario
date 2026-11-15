@@ -546,5 +546,57 @@ class RunnerTests(unittest.TestCase):
 
 
 
+
+class StopAmbiguousFollowupTests(unittest.TestCase):
+    """Two independently discovered RED cases; no live provider calls."""
+
+    def test_stop_reply_crash_window_rejects_extension_without_write(self):
+        import contextlib
+        import io
+        temp, ledger = seeded(goal=1)
+        with temp:
+            ledger.add("ATTEMPT", attempt_seq=1, speaker="A", expected_turn=1)
+            ledger.add("REPLY", attempt_seq=1, speaker="A", turn=1,
+                       content="[[END_DIALOGUE]]")
+            original = ledger.path.read_bytes()
+            with contextlib.redirect_stderr(io.StringIO()):
+                status = exp.main([
+                    "--run-dir", str(ledger.folder),
+                    "--letter", str(Path(__file__).with_name(
+                        "ARIO_IDENTITY_INTERIM_FINDINGS_LETTER_FA_2026-11-03.md")),
+                    "--extend", "1",
+                ])
+            self.assertEqual(status, 2)
+            self.assertEqual(ledger.path.read_bytes(), original)
+            self.assertFalse(exp.Ledger(ledger.folder).items("EXTEND"))
+
+    def test_valid_looking_reply_with_missing_provider_id_is_review_hold(self):
+        for invalid_id in (None, "", "  ", 123, True):
+            with self.subTest(invalid_id=invalid_id):
+                temp, ledger = seeded(goal=1)
+                with temp:
+                    calls = []
+                    def provider(_payload, _secret):
+                        calls.append(1)
+                        reply = {"model": exp.MODEL, "choices": [
+                            {"message": {"content": "Synthetic reply"},
+                             "finish_reason": "stop"}]}
+                        if invalid_id is not None:
+                            reply["id"] = invalid_id
+                        return reply
+                    self.assertEqual(
+                        exp.run(ledger, LETTER, "synthetic-local", provider),
+                        "PAUSED_INVALID_RESPONSE",
+                    )
+                    self.assertEqual(calls, [1])
+                    self.assertFalse(ledger.items("REPLY"))
+                    pause = ledger.items("PAUSE")[-1]["data"]
+                    self.assertEqual(pause["status"], "PAUSED_FOR_REVIEW")
+                    self.assertEqual(pause["reason"], "MISSING_OR_INVALID_PROVIDER_RESPONSE_ID")
+                    with self.assertRaisesRegex(exp.Hold, "REVIEW"):
+                        exp.run(exp.Ledger(ledger.folder), LETTER, "synthetic-local", provider)
+                    self.assertEqual(calls, [1])
+
+
 if __name__ == "__main__":
     unittest.main()

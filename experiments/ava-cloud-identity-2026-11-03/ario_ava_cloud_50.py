@@ -366,18 +366,13 @@ def init_run(ledger: Ledger, letter: str, letter_sha: str, prior: list[dict],
                privacy="LETTER_ONLY_PLUS_AUTHORIZED_RELAY; NO_PRIVATE_CHATGPT_ARCHIVE")
 
 
-def run(ledger: Ledger, letter: str, key: str | None,
-        transport=send, max_new_calls: int | None = None,
-        writer_lock: ExclusiveRunLock | None = None) -> str:
-    init, previous = current(ledger)
-    if init.get("protocol") != PROTOCOL or init.get("model") != MODEL or sha(letter.encode("utf-8")) != init.get("letter_sha256"):
-        raise Hold("SEED_OR_PROTOCOL_CHANGED")
-    base = init["baseline_count"]
-    target = init["target_new_messages"]
-    exts = ledger.items("EXTEND")
-    for e in exts:
-        target += e["data"]["additional"]
-    achieved = len(previous) - base
+def ensure_safe_resume(ledger: Ledger) -> None:
+    """Reject unsafe resume or extension before any ledger mutation.
+
+    This protects the crash window after a persisted REPLY containing a
+    voluntary stop and ambiguous provider attempts/PAUSE states.
+    It checks local structural history; it is not provider reconciliation.
+    """
     # Crash after an intent cannot be assumed to have been a failed provider request.
     for intent in ledger.items("ATTEMPT"):
         req_id = intent["data"]["attempt_seq"]
@@ -399,6 +394,20 @@ def run(ledger: Ledger, letter: str, key: str | None,
         # A crash after REPLY but before VOLUNTARY_STOP may leave a stop
         # request persisted without its separate stop event.
         raise Hold("PREVIOUS_STOP_MARKER_REQUIRES_REVIEW")
+
+def run(ledger: Ledger, letter: str, key: str | None,
+        transport=send, max_new_calls: int | None = None,
+        writer_lock: ExclusiveRunLock | None = None) -> str:
+    init, previous = current(ledger)
+    if init.get("protocol") != PROTOCOL or init.get("model") != MODEL or sha(letter.encode("utf-8")) != init.get("letter_sha256"):
+        raise Hold("SEED_OR_PROTOCOL_CHANGED")
+    base = init["baseline_count"]
+    target = init["target_new_messages"]
+    exts = ledger.items("EXTEND")
+    for e in exts:
+        target += e["data"]["additional"]
+    achieved = len(previous) - base
+    ensure_safe_resume(ledger)
     # Never report a completed window while a persisted stop, pause or
     # unresolved dispatch still needs review after a crash.
     if achieved >= target:
@@ -477,9 +486,17 @@ def run(ledger: Ledger, letter: str, key: str | None,
                        content_sha256=sha(content.encode()) if isinstance(content, str) else None,
                        status="PAUSED_FOR_REVIEW")
             return "PAUSED_INCOMPLETE_OR_MODEL_MISMATCH"
+        response_id = raw.get("id")
+        if not isinstance(response_id, str) or not response_id.strip():
+            # A valid-looking message with no provider request identifier
+            # cannot be counted as a corroborated provider reply.
+            ledger.add("PAUSE", attempt_seq=attempt_seq,
+                       reason="MISSING_OR_INVALID_PROVIDER_RESPONSE_ID",
+                       status="PAUSED_FOR_REVIEW")
+            return "PAUSED_INVALID_RESPONSE"
         ledger.add("REPLY", attempt_seq=attempt_seq, speaker=who, turn=len(previous) + 1,
                    content=content, finish_reason=finish, returned_model=returned_model,
-                   response_id=raw.get("id"), usage=raw.get("usage"),
+                   response_id=response_id, usage=raw.get("usage"),
                    provider=raw.get("provider"), raw_response_sha256=sha(canonical(raw)),
                    raw_response=raw)
         previous.append({"turn": len(previous) + 1, "speaker": who, "content": content})
@@ -540,6 +557,7 @@ def main_locked(args, ledger: Ledger, letter: str, writer_lock=None) -> int:
             if args.new or args.import_legacy:
                 raise Hold("RUN_ALREADY_INITIALIZED_NO_REIMPORT")
         if args.extend:
+            ensure_safe_resume(ledger)  # Veto all unsafe state before EXTEND append.
             if not 1 <= args.extend <= 500:
                 raise Hold("INVALID_EXTENSION")
             init, replies = current(ledger)
