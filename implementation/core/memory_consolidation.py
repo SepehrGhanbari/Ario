@@ -1,10 +1,11 @@
 """Ario Cognitive Memory: Episodic-to-Semantic Systems Consolidation Engine.
 
-Implements biological systems consolidation (Complementary Learning Systems)
-over Ario's append-only episodic ledgers without violating epistemic invariants:
-- Memory != Truth: Consolidated semantic assertions remain auditable claims.
-- Claim != Proof: Semantic nodes must cite cryptographic hashes of raw events.
-- Revision != Erasure: Raw episodic ledger is strictly immutable.
+Implements a bounded episodic-to-assertion index inspired by CLS;
+it does NOT simulate biological consolidation or authenticate sources.
+- Memory != Truth: an ingested assertion is not a verified fact.
+- Claim != Proof: local byte hashes and caller-declared digests do not
+  establish external authenticity or independent evidence.
+- Revision != Erasure: ingestion does not edit input-ledger bytes.
 """
 
 from __future__ import annotations
@@ -25,7 +26,7 @@ class ConsolidationError(ValueError):
 
 
 class NodeEpistemicStatus(str, Enum):
-    ACCEPTED = "ACCEPTED"
+    ACCEPTED = "ACCEPTED"  # LEGACY: structural ingestion ONLY, not truth
     CONTESTED = "CONTESTED"
     UNSUPPORTED = "UNSUPPORTED"
     REVISED = "REVISED"
@@ -90,6 +91,7 @@ class ConsolidationEngine:
         self._nodes: Dict[str, SemanticNode] = {}
         self._links: List[CausalLink] = []
         self._ledger_hashes: Set[str] = set()
+        self._declared_hash_payloads: Dict[str, str] = {}
 
     @property
     def nodes(self) -> Dict[str, SemanticNode]:
@@ -104,43 +106,76 @@ class ConsolidationEngine:
         return set(self._ledger_hashes)
 
     def ingest_ledger_file(self, ledger_path: Path) -> int:
-        """Ingest raw ledger JSONL without modifying or truncating the file."""
+        """Read one bounded byte snapshot; never write to the input ledger.
+
+        SHA-256 binds exact raw line bytes, not source authenticity or custody.
+        A second local read detects some concurrent edits, not future tampering.
+        """
         if not ledger_path.exists():
             raise ConsolidationError(f"ledger path does not exist: {ledger_path}")
-
-        initial_size = ledger_path.stat().st_size
-        events = []
-        with open(ledger_path, "rb") as f:
-            for line_no, raw_line in enumerate(f, start=1):
-                clean_line = raw_line.strip()
-                if not clean_line:
+        try:
+            max_ledger_bytes = 16 * 1024 * 1024
+            with ledger_path.open("rb") as stream:
+                snapshot = stream.read(max_ledger_bytes + 1)
+            if len(snapshot) > max_ledger_bytes:
+                raise ConsolidationError("ledger exceeds 16 MiB bounded snapshot limit")
+            events = []
+            for line_no, raw_line in enumerate(snapshot.splitlines(keepends=True), start=1):
+                if not raw_line.strip():
                     continue
-                line_hash = hashlib.sha256(clean_line).hexdigest()
+                h = hashlib.sha256(raw_line).hexdigest()
                 try:
-                    event = json.loads(clean_line.decode("utf-8"))
-                except Exception as exc:
+                    event = json.loads(raw_line.decode("utf-8"))
+                except (UnicodeDecodeError, json.JSONDecodeError) as exc:
                     raise ConsolidationError(f"corrupt ledger JSON on line {line_no}") from exc
-                events.append((line_hash, event))
-
-        # Invariant T-CONS-02 check: Verify file was not mutated or truncated during read
-        after_size = ledger_path.stat().st_size
-        if after_size < initial_size:
-            raise ConsolidationError("T-CONS-02: Non-Erasure violation: ledger size decreased during ingestion")
-
-        for h, ev in events:
-            self._ledger_hashes.add(h)
-            self._process_raw_event(h, ev)
-
-        return len(events)
+                if not isinstance(event, dict):
+                    raise ConsolidationError(f"invalid ledger event type on line {line_no}")
+                events.append((h, event))
+            with ledger_path.open("rb") as stream:
+                compared = stream.read(max_ledger_bytes + 1)
+            if compared != snapshot:
+                raise ConsolidationError("T-CONS-02: ledger changed during ingestion")
+        except OSError as exc:
+            raise ConsolidationError("ledger could not be read consistently") from exc
+        return self.ingest_event_stream(events)
 
     def ingest_event_stream(self, events: Iterable[Tuple[str, Dict[str, Any]]]) -> int:
+        """Atomically ingest caller-declared digest/event pairs.
+
+        Streamed digests are NOT independently authenticated or byte verified.
+        """
+        old_nodes = self._nodes.copy()
+        old_links = self._links.copy()
+        old_hashes = self._ledger_hashes.copy()
+        old_payloads = self._declared_hash_payloads.copy()
         count = 0
-        for h, ev in events:
-            if not isinstance(h, str) or len(h) != 64:
-                raise ConsolidationError(f"invalid event sha256 hash: {h}")
-            self._ledger_hashes.add(h)
-            self._process_raw_event(h, ev)
-            count += 1
+        try:
+            for item in events:
+                if not isinstance(item, (list, tuple)) or len(item) != 2:
+                    raise ConsolidationError("event item must be (hash, event) pair")
+                h, ev = item
+                if not isinstance(h, str) or len(h) != 64 or any(ch not in "0123456789abcdef" for ch in h.lower()):
+                    raise ConsolidationError(f"invalid event sha256 hash: {h}")
+                if not isinstance(ev, dict):
+                    raise ConsolidationError("event payload must be a JSON object")
+                h = h.lower()  # uppercase/lowercase hex encode the SAME digest
+                canonical = json.dumps(ev, sort_keys=True, ensure_ascii=False,
+                                       separators=(",", ":"), allow_nan=False)
+                fingerprint = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+                if h in self._declared_hash_payloads and self._declared_hash_payloads[h] != fingerprint:
+                    raise ConsolidationError("declared hash is reused for a different payload")
+                self._declared_hash_payloads[h] = fingerprint
+                self._ledger_hashes.add(h)
+                self._process_raw_event(h, ev)
+                count += 1
+        except Exception as exc:
+            self._nodes = old_nodes
+            self._links = old_links
+            self._ledger_hashes = old_hashes
+            self._declared_hash_payloads = old_payloads
+            if isinstance(exc, ConsolidationError):
+                raise
+            raise ConsolidationError("batch ingestion aborted without committing partial state") from exc
         return count
 
     def _process_raw_event(self, event_hash: str, event: Dict[str, Any]) -> None:
@@ -151,7 +186,10 @@ class ConsolidationEngine:
             # Nothing to consolidate from an empty event assertion
             return
 
+        # Legacy IDs are deliberately preserved; collision/migration is HOLD #216.
         node_id = f"SEM-{hashlib.sha256((concept + ':' + assertion).encode('utf-8')).hexdigest()[:16]}"
+        if node_id in self._nodes and event_hash in self._nodes[node_id].source_event_hashes:
+            return  # repeated event is not new evidence or reinforcement
         now_iso = datetime.now(timezone.utc).isoformat()
 
         # Check for contradiction with existing nodes (Invariant T-CONS-03)
@@ -197,7 +235,9 @@ class ConsolidationEngine:
             )
 
     def apply_saliency_decay(self, cycles: int = 1) -> None:
-        """Apply biological forgetting / power-law decay to operational retrieval indices."""
+        """Apply exponential *operational salience* decay, not biological forgetting."""
+        if type(cycles) is not int or cycles < 0:
+            raise ConsolidationError("decay cycles must be a non-negative integer")
         for node_id, node in list(self._nodes.items()):
             decay_factor = (1.0 - self.decay_rate) ** cycles
             new_score = max(0.0, node.saliency_score * decay_factor)
