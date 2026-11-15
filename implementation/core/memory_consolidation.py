@@ -148,7 +148,11 @@ class ConsolidationEngine:
             if snapshot and not snapshot.endswith(b"\n"):
                 raise ConsolidationError("incomplete JSONL line: missing final LF")
             events = []
-            for line_no, raw_line in enumerate(snapshot.splitlines(keepends=True), start=1):
+            # JSONL uses LF record boundaries only. bytes.splitlines() also splits
+            # on bare CR and other control bytes, which can falsely admit two
+            # records separated by a non-JSONL delimiter (review of #229).
+            for line_no, chunk in enumerate(snapshot.split(b"\n")[:-1], start=1):
+                raw_line = chunk + b"\n"  # preserve exact source bytes for SHA-256
                 if not raw_line.strip():
                     raise ConsolidationError(f"invalid blank JSONL record on line {line_no}")
                 h = hashlib.sha256(raw_line).hexdigest()
