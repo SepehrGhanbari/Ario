@@ -125,53 +125,62 @@ def compare_snapshot(
         )
         legacy = isolated_old_function("snapshot-only")
         strict = strict_lab_module.inspect_jsonl_bytes(raw)
-        if not isinstance(legacy, dict) or not isinstance(strict, dict):
+        if type(legacy) is not dict or type(strict) is not dict:
             result["reason_code"] = "UNEXPECTED_PARSER_RESULT"
             return result
         if path.open_count != 1:
             result["reason_code"] = "SNAPSHOT_READ_COUNT_MISMATCH"
             return result
-    except Exception:
-        # Deliberately do not disclose source data or exception text/paths.
-        result["reason_code"] = "COMPARATOR_EXECUTION_ERROR"
-        return result
-
-    old_status = legacy.get("status")
-    new_status = strict.get("status")
-    result["legacy_status"] = old_status if old_status in ("OBSERVED", "UNKNOWN") else "UNKNOWN"
-    result["candidate_status"] = new_status if new_status in ("OBSERVED", "UNKNOWN") else "UNKNOWN"
-    reason = strict.get("reason_code")
-    if reason is None:
-        result["candidate_reason_code"] = None
-    elif type(reason) is str and reason in _ALLOWED_CANDIDATE_REASON_CODES:
-        result["candidate_reason_code"] = reason
-    else:
-        # Caller-supplied parser messages may contain the original private
-        # event bytes. Never echo unrecognized reason strings or objects.
-        result["candidate_reason_code"] = "UNRECOGNIZED_CANDIDATE_REASON"
-        result["reason_code"] = "UNRECOGNIZED_CANDIDATE_REASON"
-        return result
-    if result["legacy_status"] != old_status or result["candidate_status"] != new_status:
-        result["reason_code"] = "UNRECOGNIZED_PARSER_STATUS"
-        return result
-    if old_status == "OBSERVED" and new_status == "OBSERVED":
-        digest = hashlib.sha256(raw).hexdigest()
-        old_count = legacy.get("event_count")
-        strict_count = strict.get("eligible_records")
-        if (type(old_count) is not int or type(strict_count) is not int
-                or old_count < 1 or strict_count < 1
-                or legacy.get("sha256") != digest
-                or strict.get("file_sha256") != digest
-                or old_count != strict_count):
-            result["reason_code"] = "ACCEPTED_DIGEST_OR_COUNT_MISMATCH"
+        old_status = legacy.get("status")
+        new_status = strict.get("status")
+        if (type(old_status) is not str or type(new_status) is not str
+                or old_status not in ("OBSERVED", "UNKNOWN")
+                or new_status not in ("OBSERVED", "UNKNOWN")):
+            result["reason_code"] = "UNRECOGNIZED_PARSER_STATUS"
             return result
-        result["comparison"] = "AGREE_OBSERVED"
-        result["legacy_record_count"] = legacy["event_count"]
-        result["candidate_eligible_records"] = strict["eligible_records"]
-        if include_digest:
-            result["snapshot_sha256"] = digest
-    elif old_status == "UNKNOWN" and new_status == "UNKNOWN":
-        result["comparison"] = "AGREE_UNKNOWN"  # only top-level status agreed
-    else:
-        result["comparison"] = "DISAGREE"
-    return result
+        result["legacy_status"] = old_status
+        result["candidate_status"] = new_status
+        reason = strict.get("reason_code")
+        if reason is None:
+            result["candidate_reason_code"] = None
+        elif type(reason) is str and reason in _ALLOWED_CANDIDATE_REASON_CODES:
+            result["candidate_reason_code"] = reason
+        else:
+            # Caller-supplied parser messages may contain the original private
+            # event bytes. Never echo unrecognized reason strings or objects.
+            result["candidate_reason_code"] = "UNRECOGNIZED_CANDIDATE_REASON"
+            result["reason_code"] = "UNRECOGNIZED_CANDIDATE_REASON"
+            return result
+        if result["legacy_status"] != old_status or result["candidate_status"] != new_status:
+            result["reason_code"] = "UNRECOGNIZED_PARSER_STATUS"
+            return result
+        if old_status == "OBSERVED" and new_status == "OBSERVED":
+            digest = hashlib.sha256(raw).hexdigest()
+            old_count = legacy.get("event_count")
+            strict_count = strict.get("eligible_records")
+            old_digest = legacy.get("sha256")
+            strict_digest = strict.get("file_sha256")
+            if (type(old_count) is not int or type(strict_count) is not int
+                    or old_count < 1 or strict_count < 1
+                    or type(old_digest) is not str or type(strict_digest) is not str
+                    or old_digest != digest or strict_digest != digest
+                    or old_count != strict_count):
+                result["reason_code"] = "ACCEPTED_DIGEST_OR_COUNT_MISMATCH"
+                return result
+            result["comparison"] = "AGREE_OBSERVED"
+            # Only copy already checked integers, not re-read untrusted mappings.
+            result["legacy_record_count"] = old_count
+            result["candidate_eligible_records"] = strict_count
+            if include_digest:
+                result["snapshot_sha256"] = digest
+        elif old_status == "UNKNOWN" and new_status == "UNKNOWN":
+            result["comparison"] = "AGREE_UNKNOWN"  # only top-level status agreed
+        else:
+            result["comparison"] = "DISAGREE"
+        return result
+    except Exception:
+        # A parser or hostile result may raise during status/metadata access.
+        # Return a fresh safe report; never echo raw exception text or source.
+        safe = _fresh_report(len(raw))
+        safe["reason_code"] = "COMPARATOR_EXECUTION_ERROR"
+        return safe
