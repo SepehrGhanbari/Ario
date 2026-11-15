@@ -202,7 +202,7 @@ def _evaluate(f: Fixture) -> dict:
     """Reference policy evaluator for fixture-level invariants; not Ario runtime."""
     d = f.input
     if f.family == "lineage_dependence":
-        if d.get("unresolved_parent") or d.get("edge_missing") or d.get("one_root_hidden"):
+        if d.get("unresolved_parent") or d.get("edge_missing") or d.get("one_root_hidden") or any(not values for values in d["roots"].values()):
             return {"root_count": None, "status": "UNKNOWN"}
         roots = {root for values in d["roots"].values() for root in values}
         if d.get("declared_shared_ancestor"):
