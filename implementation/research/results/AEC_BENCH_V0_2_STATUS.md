@@ -17,7 +17,7 @@ The runner creates a public synthetic corpus, evaluates fixture-level reference 
 
 - GitHub Actions result for the current PR head: NOT VERIFIED.
 - Independent oracle review: NOT RUN.
-- PROV-O, TMS/ATMS, RAG, EviGuard or DerivAudit adapters: NOT IMPLEMENTED / NOT RUN.
+- PROV Python and LTMS adapter source modules have been added under `implementation/research/aec_bench_v0_2_adapters/`; their optional runtime dependencies are pinned in `requirements-adapters.txt`. Their external-library tests are NOT YET VERIFIED.\n- PROV adapter is limited to provenance representation/interchange. LTMS adapter is limited to simple assumption/dependency and retraction cases; complex cases are explicitly NOT_COMPARABLE.\n- EviGuard industrial evidence-grounding target: PAPER_ONLY / REPRODUCIBLE_CODE_NOT_LOCATED in this check. EviGuard cross-modal safety-unlearning repository: NOT COMPARABLE. DerivAudit: NOT LOCATED / NOT RUN.
 - Independent validation split: NOT CREATED.
 - Hidden-set evaluation: NOT CREATED / NOT RUN.
 - Real-world provenance, authenticity, truth, security, privacy, model behavior, or comparative superiority: NOT EVALUATED.
@@ -28,7 +28,7 @@ From the `implementation` directory:
 
 ```bash
 python -m research.aec_benchmark_v0_2 --output research/results/aec_bench_v0_2_development.json
-python -m pytest tests/test_aec_benchmark_v0_2.py
+python -m pytest tests/test_aec_benchmark_v0_2.py\n\n# Optional external adapters (Python >= 3.11):\npython -m pip install -r research/aec_bench_v0_2_adapters/requirements-adapters.txt\npython -m pytest tests/test_aec_bench_v0_2.py tests/test_aec_bench_v0_2_adapters.py
 ```
 
 Record the exact head SHA, workflow run URL, Python version, test counts, and raw JSON artifact only after the corresponding run is observed. Do not copy fixture-match accuracy into a scientific performance claim; it measures conformance to the author-defined synthetic contract only.
