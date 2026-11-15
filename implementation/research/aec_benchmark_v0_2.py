@@ -131,7 +131,7 @@ def corpus() -> tuple[Fixture, ...]:
       ({"digest":"altered","auth":"VERIFIED"}, {"integrity":"INVALID","auth":"VERIFIED","status":"REJECTED"}, "Altered payload."),
       ({"digest":"valid","auth":"UNKNOWN_KEY"}, {"integrity":"VALID","auth":"UNVERIFIED","status":"UNKNOWN"}, "Unknown signing key."),
       ({"digest":"valid","auth":"VERIFIED","signature_revoked":True}, {"integrity":"VALID","auth":"FAILED","status":"REJECTED"}, "Revoked signing authority."),
-      ({"digest":"valid","auth":"VERIFIED","algorithm_unsupported":True}, {"integrity":"UNKNOWN","auth":"UNVERIFIED","status":"UNKNOWN"}, "Unsupported digest algorithm."),
+      ({"digest":"valid","auth":"UNVERIFIED","algorithm_unsupported":True}, {"integrity":"UNKNOWN","auth":"UNVERIFIED","status":"UNKNOWN"}, "Unsupported digest algorithm."),
       ({"digest":"valid","auth":"UNVERIFIED","algorithm_unsupported":False}, {"integrity":"VALID","auth":"UNVERIFIED","status":"UNKNOWN"}, "Counterfactual: use a supported digest algorithm."),
       ({"digest":"valid","auth":"VERIFIED","content_semantics_unchecked":True}, {"integrity":"VALID","auth":"VERIFIED","status":"UNKNOWN"}, "Authenticated content is not automatically true."),
     ]
