@@ -60,7 +60,7 @@ def test_score_discloses_synthetic_scope_and_per_family_results():
     assert "overall_fixture_accuracy" not in result
     assert "overall_fixture_matches" not in result
     assert "No aggregate or composite benchmark score is produced." in result["limitations"]
-    assert "No real-world source independence" in result["limitations"][3]
+    assert any("No real-world source independence" in item for item in result["limitations"])
 
 
 def test_counterfactual_pair_changes_exactly_one_controlled_field_per_family():
