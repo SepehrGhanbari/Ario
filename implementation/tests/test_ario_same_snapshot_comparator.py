@@ -133,5 +133,28 @@ class ComparatorTests(unittest.TestCase):
         self.assertNotIn("PRIVATE COUNT", json.dumps(report))
 
 
+    def test_missing_negative_boolean_and_zero_counts_fail_closed(self):
+        # The pinned real observer/lab never issue OBSERVED for an empty ledger.
+        # In this research comparator, a zero OBSERVED count is contradictory.
+        for invalid_count in (None, -1, True, 0):
+            with self.subTest(count=invalid_count):
+                def fake_observer(path):
+                    with Path(path).open("rb") as stream:
+                        raw = stream.read()
+                    return {"status": "OBSERVED",
+                            "sha256": hashlib.sha256(raw).hexdigest(),
+                            "event_count": invalid_count}
+                self.legacy.observe_ledger = fake_observer
+                self.strict.inspect_jsonl_bytes = lambda raw: {
+                    "status": "OBSERVED",
+                    "file_sha256": hashlib.sha256(raw).hexdigest(),
+                    "eligible_records": invalid_count}
+                result = self.call()
+                self.assertEqual(result["comparison"], "UNKNOWN_COMPARISON")
+                self.assertEqual(result["reason_code"], "ACCEPTED_DIGEST_OR_COUNT_MISMATCH")
+                self.assertIsNone(result["legacy_record_count"])
+                self.assertIsNone(result["candidate_eligible_records"])
+
+
 if __name__ == "__main__":
     unittest.main()
