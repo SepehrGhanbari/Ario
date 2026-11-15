@@ -51,10 +51,6 @@ def _semantic_node(source_event_hashes, falsification_condition=None):
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="RED F1a: mutable falsification_condition aliases into frozen node",
-)
 def test_mutable_falsification_condition_must_fail_closed():
     engine = ConsolidationEngine()
     with pytest.raises(ConsolidationError):
@@ -71,19 +67,11 @@ def test_mutable_falsification_condition_must_fail_closed():
     assert engine.nodes == {}
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="RED F1b: mutable source-event-hash list bypasses frozen dataclass",
-)
 def test_mutable_source_hash_list_must_fail_closed():
     with pytest.raises(ConsolidationError):
         _semantic_node([_sha(b"source")], "A falsifier")
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="RED F2a: duplicate root JSON keys silently overwrite earlier value",
-)
 def test_duplicate_json_key_is_rejected():
     ledger = _MemoryPath(
         b'{"concept":"auth","assertion":"ALLOW","assertion":"DENY"}\n'
@@ -95,10 +83,6 @@ def test_duplicate_json_key_is_rejected():
     assert engine.known_ledger_hashes == set()
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="RED F2b: nested duplicate JSON keys are also ambiguous",
-)
 def test_nested_duplicate_json_key_is_rejected():
     ledger = _MemoryPath(
         b'{"concept":"auth","assertion":"A","meta":{"source":"A","source":"B"}}\n'
@@ -122,3 +106,9 @@ def test_control_immutable_semantic_node_is_valid():
     node = _semantic_node((_sha(b"source"),), "Counterexample")
     assert node.source_event_hashes == (_sha(b"source"),)
     assert node.falsification_condition == "Counterexample"
+
+def test_control_unique_nested_json_keys_are_accepted():
+    raw = b'{"concept":"auth","assertion":"A","meta":{"source":"A","peer":"B"}}\\n'
+    engine = ConsolidationEngine()
+    assert engine.ingest_ledger_file(_MemoryPath(raw)) == 1
+    assert next(iter(engine.nodes.values())).source_event_hashes == (_sha(raw),)
