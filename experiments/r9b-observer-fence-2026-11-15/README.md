@@ -28,6 +28,8 @@ Only synthetic `RESEARCH_VIEW` operations may be written to the *local scratch* 
 
 **An epoch CAS is serialized with RESERVE in the same observer SQLite transaction**. The R9-A attack in which a direct authenticated observer CAS occurs *between a HEAD read and an effect write* is rejected in R9-B: if the CAS wins first, the RESERVE cannot match the observer head; if the RESERVE wins first, the CAS cannot proceed while it remains `PREPARED`. This is a **source-scoped protocol result**, not a remote distributed transaction or a guarantee under a compromised observer administrator.
 
+**After the initial R9-B draft, an additional failure was reproduced:** a second HMAC-authenticated client could forge `FINALIZE` for the victim's pending reservation using the predictable receipt and known operation ID, then allow CAS ahead of a still-running local effect. This is a real *protocol-level* negative, separate from the stronger same-admin rollback. Initial commit `2c718a87264faef5eb6166d0f3911212074904ad` retains the vulnerable source and the initial 19-test report. In the corrected revision, each RESERVE generates a fresh 256-bit random bearer token, stores only its SHA-256 digest in the observer, returns the token only to the reserving caller, and requires it in FINALIZE. B20 rejects missing/wrong tokens even when the other client possesses the shared test HMAC key. **The same administrator can still extract the token, impersonate a caller or overwrite both databases.** This is not an independent authority or protection against a compromised observer host.
+
 `RESERVE` also denies a simultaneous second reservation. The local SQLite `BEGIN IMMEDIATE` serializes cooperating local writers. Identical `op_id` retries after a fully completed local+observer operation return the stored receipt without a second local row. Different payloads with a recycled ID are denied.
 
 ### Crash and uncertainty rules: prefer HOLD to false affirmation
@@ -47,7 +49,7 @@ Only synthetic `RESEARCH_VIEW` operations may be written to the *local scratch* 
 5. **Threat boundary:** The toy HMAC key, local SQLite files, socket and test process permissions are all under the same administrative control. Root can manipulate source, key, process, DB history and publication. Neither Git history nor this README proves that it did not.
 6. **Evidence boundary:** `M0 PASS`, XERJ search IDs, a matching hash, prior model consensus and a green test do not mean data is true or independently witnessed.
 
-## Research-only 19 control cases
+## Research-only 20 control cases (including post-review B20)
 
 | Case | Input/target | Observed category to check |
 |---|---|---|
@@ -63,6 +65,7 @@ Only synthetic `RESEARCH_VIEW` operations may be written to the *local scratch* 
 | B17 | Restore **both** DBs under one admin | **NEGATIVE_CAPABILITY** — old epoch reused |
 | B18 | Privileged CAS precisely **after HEAD, before RESERVE** | RESERVE fails; no stale effect |
 | B19 | Replay an identical authenticated observer nonce | Rejected |
+| B20 | Other authenticated client attempts to finalize victim reservation without its fresh token | Missing/wrong token rejected; pending fence preserved |
 
 All test fixtures, oracle expectations and labels were authored by the same developer. They are *development controls*, not blinded independent reproducibility. B17's expected test `ok` proves an **attack still succeeds**.
 

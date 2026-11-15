@@ -53,3 +53,40 @@ Run-local SHA-256 (the exact GitHub Git blob hashes will be recorded on the PR a
 - `README.md` → `029a4beb2c769267b47398a3582e74b8d67a6f29d03c733556c5bc8be3ab5fbd`
 
 No raw test log has been included in the Git PR because its run environment labels are disposable; raw logs and a manifest are retained in the accompanying standalone ZIP. This markdown file itself is the issue-visible reproducibility summary, not an externally authenticated witness record.
+
+---
+
+## Dated corrective addendum — 2026-11-15, after first PR draft (NOT an erasure)
+
+**Previous section records the first published source commit `2c718a87264faef5eb6166d0f3911212074904ad`: 19/19 author-written outcomes; it does NOT describe the latest corrected program.** It was subsequently defeated by an additional adversarial control. The first code version and initial report remain recoverable in Git commit history and the first archive (SHA-256 `4e627f3f653433c9953813f5f2a2315d37556549edafd248c7fc6f72f1be2605`).
+
+### NEW actual negative: cross-client forged FINALIZE
+
+From the **exact original** module bytes (SHA-256 `1bf5297b8934c3b60a5cc8adc057bd89037d4247dd405d1158c3ff97693350b1`) extracted from the original ZIP, a real separate observer process was started on Linux. Client A placed a pending `RESERVE` for `victim-reported`, without making any local effect. A different `ObserverClient` instance using the **same test HMAC key** submitted an invented `FINALIZE` containing the publicly derivable intent fingerprint and receipt. The observer returned `{"completed":"victim-reported"}`. A direct epoch CAS then advanced the observer from E1 to E2, while the victim effect had **not** been inserted.
+
+**Classification:** `NEGATIVE_CAPABILITY / OBSERVED_PROTOCOL_FLAW` in initial R9-B. A HMAC key shared with clients is not proof the client finishing a reservation is the one that created it. This resurrects a stale-effect race despite the originally successful 19 tests. Raw repro (including observed fields, original source SHA and ZIP digest) is retained in the `red_forged_finalize_prepatch.log` file of the updated standalone ZIP. These two delimiters are editorial markers, not literal file content.
+
+### Correction / additional non-retroactive control B20
+
+The observer now generates a **new 256-bit random lease token** for each accepted `RESERVE`, stores only SHA-256 of the token in its own SQLite reservation, and requires the original token in the subsequent `FINALIZE`. The test caller holds the token transiently in memory; it is not persisted in the local effects database. A separate authenticated client that knows the shared HMAC key and deterministic fingerprint/receipt **cannot finalize the victim's reservation without that token** in the tested protocol. Absent and incorrect tokens are denied; while the pending reservation remains outstanding, CAS continues to fail. Crash before FINALIZE leaves the reservation pending; recovery remains manual/unimplemented.
+
+**Actually executed correction:** Linux Python 3.13.5, exact updated source and tests, `python3 -B -m unittest -v test_r9b_fenced_sink.py` → **20 tests / 20 expected outcomes / 0 failed in 85.157 s**; raw `full_20_run.log` exit 0. Test B20 explicitly exercises missing token, wrong token and attempted CAS with pending reservation. The original B17 shared-admin rollback is **still a successful attack** (test passes by expecting insecurity). The original network/external sink and independently administered custodian are **still absent**.
+
+New file SHA-256:
+- `r9b_fenced_sink.py`: `af8b10306691ad7eae2aa52fd2d96439c648309291148a24e5c9c126e1c79f18`
+- `test_r9b_fenced_sink.py`: `5305e137dde183fdd7ff31c3be87ade9fa3f31ea2a85ca78c83514d042a957d7`
+- `README.md`: `513c58da96046145724b12c48968a63c77a2f908f45ad5c4f248990db068f446`
+
+**Remaining authority gap:** the same administrator can read the observer's key/database, obtain the reservation token, impersonate either client, or replace both local histories. Another authenticated client can also create its *own* reservation and then falsely finalize that reservation without proving any local effect; the observer does not independently check local SQLite reality. Accordingly this correction is **cross-client reservation-token binding in an honest observer process**, not independent custody, real external exactly-once, proof of honesty, or authorization to admit evidence. All authority claims stay `UNKNOWN/NO_GO` pending independently controlled witnesses and destination-side conditional action.
+
+### Final exact-source reproduction after the corrective edit
+
+The corrected version was copied into a **new, uniquely named disposable source directory**, rather than relying on previously exported attachment snapshots. A second complete execution of **that exact final source and tests** was performed on Linux/Python 3.13.5: `python3 -B -m unittest -v test_r9b_fenced_sink.py` → **20/20 tests, 89.645 s, exit code 0**. The raw log is `final_20_run.log` in the updated evidence ZIP. This replaces neither the historical 19/19 source version nor the earlier failed forged-FINALIZE observation.
+
+The final Git blob source candidates were directly checked from their exact bytes before publication:
+
+- Corrected `r9b_fenced_sink.py` SHA-256 `af8b10306691ad7eae2aa52fd2d96439c648309291148a24e5c9c126e1c79f18`, Git blob SHA-1 `da3b481678ad5570b727c5b13ccbf98cb72a3a8a`.
+- Corrected `test_r9b_fenced_sink.py` SHA-256 `b26809ac463dea8f3d8242ffbab086b093c7a70ae38f1f2afbf57a5a5787bffd`, Git blob SHA-1 `096e6d94f4bf548a2fddb0db2a1e81ceb7a73f58`.
+- Updated `README.md` SHA-256 `513c58da96046145724b12c48968a63c77a2f908f45ad5c4f248990db068f446`.
+
+**In-scope positive:** an unprivileged (token-uninformed) HMAC-possessing client cannot finalize another test client's reservation through the tested honest-observer protocol. **In-scope negative:** single-admin rollback B17 still succeeds; a root capable of stealing the token or modifying the DB is **not** prevented, nor is an authenticated client prevented from falsely finalizing *its own* reservation. No independent witness or production effect has been proven.

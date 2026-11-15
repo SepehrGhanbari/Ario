@@ -278,6 +278,30 @@ class R9BRealProcessTests(unittest.TestCase):
         self.assertFalse(failure["ok"])
         self.assertEqual(failure["reason"], "REPLAYED_NONCE")
 
+    def test_20_shared_HMAC_cannot_finalize_another_reservation_without_token(self):
+        # PRE-FIX negative: second authenticated client could forge FINALIZE
+        # using deterministic receipt; now a fresh reservation bearer is required.
+        ticket = self.ticket(op="victim-uncommitted")
+        fingerprint = digest("R9B-INTENT", ticket)
+        first = ObserverClient(self.sock, self.key)
+        other = ObserverClient(self.sock, self.key)
+        got = first.call("RESERVE", seq=1, head_hash=self.e1,
+                         op_id=ticket["op_id"], fingerprint=fingerprint)
+        self.assertEqual(got["reserved"], ticket["op_id"])
+        self.assertEqual(len(got["lease_token"]), 64)
+        forged_receipt = digest("R9B-LOCAL-EFFECT", ticket["op_id"], fingerprint)
+        with self.assertRaisesRegex(Hold, "OBSERVER_INVALID_FIELDS"):
+            other.call("FINALIZE", op_id=ticket["op_id"], fingerprint=fingerprint,
+                       receipt=forged_receipt)
+        with self.assertRaisesRegex(Hold, "OBSERVER_WRONG_RESERVATION_TOKEN"):
+            other.call("FINALIZE", op_id=ticket["op_id"], fingerprint=fingerprint,
+                       lease_token="0" * 64, receipt=forged_receipt)
+        self.assertEqual(self.pending(), 1)
+        with self.assertRaisesRegex(Hold, "OBSERVER_PENDING_EFFECT_FENCE"):
+            other.call("CAS", seq=1, head_hash=self.e1,
+                       next_hash=digest("unauthorized-epoch-upshift"))
+        self.assertEqual(self.count(), 0)
+
     def test_17_same_admin_rolls_back_both_databases_NEGATIVE_CAPABILITY(self):
         before_local, before_observer = self.home / "before-local.db", self.home / "before-observer.db"
         shutil.copy2(self.sink, before_local)

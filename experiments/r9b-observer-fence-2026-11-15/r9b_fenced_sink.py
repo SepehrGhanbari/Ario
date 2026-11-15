@@ -99,7 +99,7 @@ class ObserverServer:
             raise Hold("INVALID_EPHEMERAL_KEY")
         with database(db_file) as db:
             db.execute("CREATE TABLE IF NOT EXISTS head(seq INTEGER PRIMARY KEY, hash TEXT NOT NULL)")
-            db.execute("CREATE TABLE IF NOT EXISTS reservations(op_id TEXT PRIMARY KEY, seq INTEGER NOT NULL, head_hash TEXT NOT NULL, fingerprint TEXT NOT NULL, status TEXT NOT NULL, receipt TEXT)")
+            db.execute("CREATE TABLE IF NOT EXISTS reservations(op_id TEXT PRIMARY KEY, seq INTEGER NOT NULL, head_hash TEXT NOT NULL, fingerprint TEXT NOT NULL, token_digest TEXT NOT NULL, status TEXT NOT NULL, receipt TEXT)")
             db.execute("CREATE TABLE IF NOT EXISTS nonces(nonce TEXT PRIMARY KEY)")
             if not db.execute("SELECT seq FROM head").fetchone():
                 db.execute("INSERT INTO head(seq,hash) VALUES (0,?)", (GENESIS,))
@@ -117,7 +117,7 @@ class ObserverServer:
             "HEAD": {"format", "nonce", "op"},
             "CAS": {"format", "nonce", "op", "seq", "head_hash", "next_hash"},
             "RESERVE": {"format", "nonce", "op", "seq", "head_hash", "op_id", "fingerprint"},
-            "FINALIZE": {"format", "nonce", "op", "op_id", "fingerprint", "receipt"},
+            "FINALIZE": {"format", "nonce", "op", "op_id", "fingerprint", "lease_token", "receipt"},
         }
         if op not in fields or set(body) != fields[op]:
             raise Hold("INVALID_FIELDS")
@@ -152,16 +152,26 @@ class ObserverServer:
                     raise Hold("STALE_OBSERVER_HEAD")
                 if db.execute("SELECT 1 FROM reservations WHERE op_id=?", (body["op_id"],)).fetchone():
                     raise Hold("OP_ALREADY_RESERVED")
-                db.execute("INSERT INTO reservations VALUES (?,?,?,?,?,NULL)",
-                           (body["op_id"], body["seq"], body["head_hash"], body["fingerprint"], "PREPARED"))
-                result = {"reserved": body["op_id"]}
+                # The shared RPC HMAC key only identifies a permitted test caller.
+                # A separate unpredictable per-reservation bearer prevents another
+                # HMAC-possessing client from clearing *this* caller's reservation.
+                token = secrets.token_hex(32)
+                token_digest = hashlib.sha256(token.encode("ascii")).hexdigest()
+                db.execute("INSERT INTO reservations VALUES (?,?,?,?,?,?,NULL)",
+                           (body["op_id"], body["seq"], body["head_hash"], body["fingerprint"],
+                            token_digest, "PREPARED"))
+                result = {"reserved": body["op_id"], "lease_token": token}
             else:  # FINALIZE; cannot cancel without independently justified recovery
                 if (not isinstance(body["op_id"], str) or not ID.fullmatch(body["op_id"])
-                        or not valid_hash(body["fingerprint"]) or not valid_hash(body["receipt"])):
+                        or not valid_hash(body["fingerprint"]) or not valid_hash(body["receipt"])
+                        or not valid_hash(body["lease_token"])):
                     raise Hold("BAD_FINALIZE_FIELDS")
-                record = db.execute("SELECT fingerprint,status,receipt FROM reservations WHERE op_id=?", (body["op_id"],)).fetchone()
-                if not record or record[0] != body["fingerprint"] or record[1] != "PREPARED":
+                record = db.execute("SELECT fingerprint,token_digest,status,receipt FROM reservations WHERE op_id=?", (body["op_id"],)).fetchone()
+                if not record or record[0] != body["fingerprint"] or record[2] != "PREPARED":
                     raise Hold("NO_MATCHING_PENDING_RESERVATION")
+                challenge = hashlib.sha256(body["lease_token"].encode("ascii")).hexdigest()
+                if not hmac.compare_digest(record[1], challenge):
+                    raise Hold("WRONG_RESERVATION_TOKEN")
                 # The observer does not validate actual external side effects.
                 db.execute("UPDATE reservations SET status='COMPLETE',receipt=? WHERE op_id=?", (body["receipt"], body["op_id"]))
                 result = {"completed": body["op_id"]}
@@ -299,8 +309,13 @@ class ConditionalSink:
                 return {"status": "DUPLICATE_NO_EFFECT", "receipt": prev[1]}
             # Observer reserve is a durable fence on *all API-level epoch CAS*.
             # An externally submitted CAS between HEAD and RESERVE fails RESERVE.
-            self.observer.call("RESERVE", seq=seq, head_hash=head_hash,
-                               op_id=ticket["op_id"], fingerprint=fingerprint)
+            reservation = self.observer.call("RESERVE", seq=seq, head_hash=head_hash,
+                                             op_id=ticket["op_id"], fingerprint=fingerprint)
+            if (set(reservation) != {"reserved", "lease_token"}
+                    or reservation["reserved"] != ticket["op_id"]
+                    or not valid_hash(reservation["lease_token"])):
+                raise Hold("MALFORMED_RESERVATION_RECEIPT")
+            lease_token = reservation["lease_token"]
             if crash_after_reserve:
                 os._exit(77)
             receipt = digest("R9B-LOCAL-EFFECT", ticket["op_id"], fingerprint)
@@ -310,8 +325,8 @@ class ConditionalSink:
         if crash_after_local:
             os._exit(78)
         try:
-            self.observer.call("FINALIZE", op_id=ticket["op_id"],
-                               fingerprint=fingerprint, receipt=receipt)
+            self.observer.call("FINALIZE", op_id=ticket["op_id"], fingerprint=fingerprint,
+                               lease_token=lease_token, receipt=receipt)
         except Hold as exc:
             # Local row may exist. Never claim a finalized/e2e effect.
             return {"status": "HOLD_UNCERTAIN_LOCAL_EFFECT", "reason": str(exc)}
