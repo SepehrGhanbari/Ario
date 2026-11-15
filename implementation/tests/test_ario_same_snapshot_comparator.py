@@ -101,5 +101,37 @@ class ComparatorTests(unittest.TestCase):
         self.assertNotIn("private goal", json.dumps(a))
 
 
+    def test_untrusted_candidate_reason_never_echoes_source(self):
+        private = b'{"goal":"PRIVATE VALUE"}\n'
+        self.strict.inspect_jsonl_bytes = lambda raw: {
+            "status": "UNKNOWN", "reason_code": "untrusted debug: " + raw.decode()
+        }
+        report = self.call(private)
+        self.assertEqual(report["comparison"], "UNKNOWN_COMPARISON")
+        self.assertEqual(report["reason_code"], "UNRECOGNIZED_CANDIDATE_REASON")
+        self.assertNotIn("PRIVATE VALUE", json.dumps(report))
+
+    def test_known_structural_reason_remains_available(self):
+        report = self.call(b"STRICT_ONLY\n")
+        self.assertEqual(report["comparison"], "DISAGREE")
+        self.assertEqual(report["candidate_reason_code"], "SCHEMA_REJECTED")
+
+    def test_malformed_success_counts_cannot_echo_private_content(self):
+        def legacy_count(path):
+            import hashlib
+            with Path(path).open("rb") as stream:
+                raw = stream.read()
+            return {"status": "OBSERVED", "sha256": hashlib.sha256(raw).hexdigest(),
+                    "event_count": "PRIVATE COUNT"}
+        self.legacy.observe_ledger = legacy_count
+        self.strict.inspect_jsonl_bytes = lambda raw: {
+            "status": "OBSERVED", "file_sha256": hashlib.sha256(raw).hexdigest(),
+            "eligible_records": "PRIVATE COUNT"}
+        report = self.call()
+        self.assertEqual(report["comparison"], "UNKNOWN_COMPARISON")
+        self.assertEqual(report["reason_code"], "ACCEPTED_DIGEST_OR_COUNT_MISMATCH")
+        self.assertNotIn("PRIVATE COUNT", json.dumps(report))
+
+
 if __name__ == "__main__":
     unittest.main()
