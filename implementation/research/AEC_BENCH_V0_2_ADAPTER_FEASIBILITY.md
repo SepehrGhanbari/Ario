@@ -13,7 +13,7 @@ This register distinguishes a paper, a code repository, and an executable benchm
 - License: MIT
 - Runtime declared by project: Python >= 3.11
 - Relevant capabilities: PROV-DM objects; PROV-N, PROV-JSON, PROV-JSONLD, PROV-XML and PROV-O serialization; derivation, attribution and graph conversion.
-- Proposed adapter task: map typed fixture lineage into PROV entities, activities, agents and derivation relations; round-trip serialization; report mapping losses and missing relations.
+- Source adapter added: `implementation/research/aec_bench_v0_2_adapters/prov_adapter.py`. It maps lineage fixtures into PROV entities, agents, attribution and derivation relations, and includes a PROV-N round-trip check.\n- Adapter runtime tests: NOT YET VERIFIED; the optional dependency is pinned separately.
 
 **Boundary:** PROV is a provenance data model and implementation library. It does not authenticate source roots, decide whether claims are true, or supply Ario's claim-disposition policy. A successful serialization/round trip is a lineage-representation result only.
 
@@ -27,7 +27,7 @@ Sources: [project README](https://github.com/trungdong/prov/blob/6b432eda5cfa41a
 - License: MIT
 - Runtime declared by project: Python >= 3.10
 - Relevant capabilities: assumption enable/retract, Boolean constraint propagation, justifications, dependency-directed backtracking, and explanation of derived beliefs.
-- Proposed adapter task: map fixture premises to assumptions and justifications; measure whether dependent conclusions become unknown after an assumption is retracted; exercise contradictory premises and explanation traces.
+- Source adapter added: `implementation/research/aec_bench_v0_2_adapters/ltms_adapter.py`. It maps simple conjunction-of-premises cases and includes an assumption-retraction probe. Complex scope, time, shared-dependency and composition-firewall cases are explicitly returned as NOT_COMPARABLE.\n- Adapter runtime tests: NOT YET VERIFIED; the optional dependency is pinned to the inspected Git commit.
 
 **Boundary:** this is an LTMS/JTMS-oriented implementation, not a general implementation of every ATMS variant. It is suitable for bounded truth-maintenance comparisons, not a substitute for a provenance data model or for verifying external source authenticity.
 
@@ -80,8 +80,8 @@ A package that serializes PROV records, an LTMS that maintains assumptions, and 
 
 | Target | Public code located | Fit to AEC | Status |
 |---|---|---|---|
-| PROV Python 3.3.0 | Yes | Provenance representation/interchange | Adapter candidate; not yet run |
-| LTMS Python 0.1.0 | Yes | Belief dependency/retraction | Adapter candidate; not yet run |
+| PROV Python 3.3.0 | Yes | Provenance representation/interchange | Adapter source added; external runtime not verified |
+| LTMS Python 0.1.0 | Yes | Belief dependency/retraction | Adapter source added; external runtime not verified |
 | EviGuard industrial evidence grounding | No reproducible code located in this check | High conceptual relevance | Paper only; not run |
 | EviGuard cross-modal unlearning | Yes | Different problem | Not comparable |
 | DerivAudit | No matching public target located | Unknown | Not run |
