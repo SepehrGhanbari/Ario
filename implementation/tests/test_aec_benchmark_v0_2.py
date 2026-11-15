@@ -75,3 +75,20 @@ def test_counterfactual_pair_changes_exactly_one_controlled_field_per_family():
 def test_narrow_evidence_does_not_support_a_broader_scope_claim():
     case = next(c for c in corpus() if c.case_id == "AEC02_SCOPE_02")
     assert _evaluate(case) == {"scope": "OUT_OF_SCOPE", "status": "REJECTED"}
+
+
+def test_missing_root_ancestry_remains_unknown():
+    case = next(c for c in corpus() if c.case_id == "AEC02_LINEAGE_DEPENDENCE_05")
+    assert _evaluate(case) == {"root_count": None, "status": "UNKNOWN"}
+
+
+def test_each_family_has_three_controls_adversaries_and_boundaries():
+    cases = corpus()
+    expected = {
+        "positive_control", "positive_control_b", "positive_control_c",
+        "adversarial", "adversarial_b", "adversarial_c",
+        "boundary", "boundary_b", "boundary_c",
+    }
+    for family in FAMILIES:
+        variants = {c.variant for c in cases if c.family == family}
+        assert expected.issubset(variants), family
