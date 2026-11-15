@@ -156,5 +156,51 @@ class ComparatorTests(unittest.TestCase):
                 self.assertIsNone(result["candidate_eligible_records"])
 
 
+    def test_status_string_subclass_cannot_smuggle_private_source(self):
+        class ForgedStatus(str):
+            def __eq__(self, other):
+                return other == "UNKNOWN"
+            __hash__ = str.__hash__
+        def old_unknown(path):
+            with Path(path).open("rb") as stream:
+                stream.read()
+            return {"status": "UNKNOWN"}
+        self.legacy.observe_ledger = old_unknown
+        self.strict.inspect_jsonl_bytes = lambda raw: {
+            "status": ForgedStatus("PRIVATE VALUE"), "reason_code": None}
+        report = self.call(b"PRIVATE VALUE\n")
+        self.assertEqual(report["comparison"], "UNKNOWN_COMPARISON")
+        self.assertEqual(report["reason_code"], "UNRECOGNIZED_PARSER_STATUS")
+        self.assertNotIn("PRIVATE VALUE", json.dumps(report))
+
+    def test_parser_dict_subclass_cannot_swap_checked_and_returned_counts(self):
+        class DeceptiveDict(dict):
+            def get(self, key, default=None):
+                if key == "eligible_records":
+                    return 1
+                return super().get(key, default)
+            def __getitem__(self, key):
+                if key == "eligible_records":
+                    return "PRIVATE VALUE"
+                return super().__getitem__(key)
+        self.strict.inspect_jsonl_bytes = lambda raw: DeceptiveDict(
+            status="OBSERVED", file_sha256=hashlib.sha256(raw).hexdigest(),
+            eligible_records=1, reason_code=None)
+        report = self.call()
+        self.assertEqual(report["comparison"], "UNKNOWN_COMPARISON")
+        self.assertEqual(report["reason_code"], "UNEXPECTED_PARSER_RESULT")
+        self.assertNotIn("PRIVATE VALUE", json.dumps(report))
+
+    def test_parser_metadata_exception_fails_closed_without_content(self):
+        class RaisingDict(dict):
+            def get(self, key, default=None):
+                raise ValueError("PRIVATE VALUE")
+        self.strict.inspect_jsonl_bytes = lambda raw: RaisingDict(status="UNKNOWN")
+        report = self.call()
+        self.assertEqual(report["comparison"], "UNKNOWN_COMPARISON")
+        self.assertEqual(report["reason_code"], "UNEXPECTED_PARSER_RESULT")
+        self.assertNotIn("PRIVATE VALUE", json.dumps(report))
+
+
 if __name__ == "__main__":
     unittest.main()
