@@ -92,3 +92,22 @@ def test_each_family_has_three_controls_adversaries_and_boundaries():
     for family in FAMILIES:
         variants = {c.variant for c in cases if c.family == family}
         assert expected.issubset(variants), family
+
+
+def test_support_plus_unknown_does_not_promote_claim():
+    case = next(c for c in corpus() if c.case_id == "AEC02_CLAIM_DISPOSITION_04")
+    assert _evaluate(case) == {"status": "UNKNOWN"}
+
+
+def test_missing_observation_timestamp_is_partial_not_exception():
+    case = next(c for c in corpus() if c.case_id == "AEC02_TEMPORAL_PROVENANCE_03")
+    assert _evaluate(case) == {"temporal": "PARTIAL", "status": "UNKNOWN"}
+
+
+def test_schema_counterfactual_pair_changes_only_compatibility_declaration():
+    cases = [c for c in corpus() if c.family == "schema_version" and c.pair_group]
+    assert len(cases) == 2
+    first, second = cases
+    assert set(first.input) == set(second.input)
+    changed = [key for key in first.input if first.input[key] != second.input[key]]
+    assert changed == ["compatibility_unstated"]
