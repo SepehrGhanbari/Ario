@@ -19,6 +19,22 @@ from typing import Any
 COMPARATOR_VERSION = "ario_same_snapshot_research_v0_1"
 DEFAULT_MAX_SNAPSHOT_BYTES = 8 * 1024 * 1024
 
+# A versioned, source-content-free reason vocabulary. Arbitrary strings from
+# caller-supplied parser objects are not safe to echo in a diagnostic report.
+_ALLOWED_CANDIDATE_REASON_CODES = frozenset({
+    "SCHEMA_REJECTED",  # synthetic legacy unit-test fixture
+    "LEDGER_SIZE_LIMIT", "EMPTY_LEDGER", "EVENT_COUNT_LIMIT",
+    "LINE_SIZE_LIMIT", "INCOMPLETE_JSONL_RECORD", "EMPTY_JSONL_RECORD",
+    "JSON_DUPLICATE_KEY", "JSON_NONFINITE_CONSTANT", "INVALID_UTF8",
+    "INVALID_JSON", "NOT_JSON_OBJECT", "MISSING_EVENT_KIND",
+    "UNSUPPORTED_EVENT_KIND", "MISSING_OR_INVALID_TIMESTAMP",
+    "MISSING_OR_INVALID_TASK_ID", "MISSING_OR_INVALID_GOAL",
+    "MISSING_OR_INVALID_STEP_ID", "MISSING_OR_INVALID_STATUS",
+    "MISSING_OR_INVALID_CRITERION_ID", "MISSING_OR_INVALID_WORKFLOW_ID",
+    "MISSING_OR_INVALID_STAGE_ID", "SYMLINK_REFUSED", "NON_REGULAR_SOURCE",
+    "FILE_READ_FAILED",
+})
+
 
 class _SnapshotPath:
     """Pure read-only, in-memory stand-in for legacy observer Path."""
@@ -125,14 +141,28 @@ def compare_snapshot(
     result["legacy_status"] = old_status if old_status in ("OBSERVED", "UNKNOWN") else "UNKNOWN"
     result["candidate_status"] = new_status if new_status in ("OBSERVED", "UNKNOWN") else "UNKNOWN"
     reason = strict.get("reason_code")
-    result["candidate_reason_code"] = reason if isinstance(reason, str) else None
+    if reason is None:
+        result["candidate_reason_code"] = None
+    elif type(reason) is str and reason in _ALLOWED_CANDIDATE_REASON_CODES:
+        result["candidate_reason_code"] = reason
+    else:
+        # Caller-supplied parser messages may contain the original private
+        # event bytes. Never echo unrecognized reason strings or objects.
+        result["candidate_reason_code"] = "UNRECOGNIZED_CANDIDATE_REASON"
+        result["reason_code"] = "UNRECOGNIZED_CANDIDATE_REASON"
+        return result
     if result["legacy_status"] != old_status or result["candidate_status"] != new_status:
         result["reason_code"] = "UNRECOGNIZED_PARSER_STATUS"
         return result
     if old_status == "OBSERVED" and new_status == "OBSERVED":
         digest = hashlib.sha256(raw).hexdigest()
-        if (legacy.get("sha256") != digest or strict.get("file_sha256") != digest
-                or legacy.get("event_count") != strict.get("eligible_records")):
+        old_count = legacy.get("event_count")
+        strict_count = strict.get("eligible_records")
+        if (type(old_count) is not int or type(strict_count) is not int
+                or old_count < 1 or strict_count < 1
+                or legacy.get("sha256") != digest
+                or strict.get("file_sha256") != digest
+                or old_count != strict_count):
             result["reason_code"] = "ACCEPTED_DIGEST_OR_COUNT_MISMATCH"
             return result
         result["comparison"] = "AGREE_OBSERVED"
