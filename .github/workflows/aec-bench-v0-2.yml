@@ -48,3 +48,12 @@ jobs:
           python -m pip freeze
       - name: Run AEC-Bench v0.2 and adapter tests
         run: python -m pytest -q tests/test_aec_benchmark_v0_2.py tests/test_aec_bench_v0_2_adapters.py
+      - name: Generate public fixture-contract report
+        run: python -m research.aec_benchmark_v0_2 --output research/results/aec_bench_v0_2_development.json
+      - name: Upload public fixture-contract report
+        uses: actions/upload-artifact@v4
+        with:
+          name: aec-bench-v0.2-fixture-contract-${{ github.sha }}
+          path: implementation/research/results/aec_bench_v0_2_development.json
+          if-no-files-found: error
+          retention-days: 90
