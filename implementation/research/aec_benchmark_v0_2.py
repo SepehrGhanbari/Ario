@@ -95,7 +95,7 @@ def corpus() -> tuple[Fixture, ...]:
     ]
     scope = [
       ({"claim_scope":"S","evidence_scope":"S"}, {"scope":"IN_SCOPE","status":"UNKNOWN"}, "Exact scope match."),
-      ({"claim_scope":"S","evidence_scope":"S.sub"}, {"scope":"IN_SCOPE","status":"UNKNOWN"}, "Narrower evidence scope does not justify broader claim."),
+      ({"claim_scope":"S","evidence_scope":"S.sub"}, {"scope":"OUT_OF_SCOPE","status":"REJECTED"}, "Narrower evidence scope cannot justify the broader claim."),
       ({"claim_scope":"S.sub","evidence_scope":"S"}, {"scope":"IN_SCOPE","status":"UNKNOWN"}, "Broader evidence may cover narrower claim subject to declared semantics."),
       ({"claim_scope":"S","evidence_scope":"OTHER"}, {"scope":"OUT_OF_SCOPE","status":"REJECTED"}, "Disjoint scope."),
       ({"claim_scope":"S","evidence_scope":None}, {"scope":"UNKNOWN","status":"UNKNOWN"}, "Missing evidence scope."),
@@ -104,7 +104,7 @@ def corpus() -> tuple[Fixture, ...]:
       ({"claim_scope":"S","evidence_scope":"S","jurisdiction_mismatch":True}, {"scope":"OUT_OF_SCOPE","status":"REJECTED"}, "Jurisdiction mismatch."),
       ({"claim_scope":"S","evidence_scope":"S","scope_version_unknown":True}, {"scope":"UNKNOWN","status":"UNKNOWN"}, "Unknown scope semantics."),
       ({"claim_scope":"S.sub","evidence_scope":"S","boundary_ambiguous":True}, {"scope":"UNKNOWN","status":"UNKNOWN"}, "Boundary ambiguity."),
-      ({"claim_scope":"S","evidence_scope":"S","boundary_ambiguous":False}, {"scope":"IN_SCOPE","status":"UNKNOWN"}, "Counterfactual: resolve the single scope-boundary ambiguity."),
+      ({"claim_scope":"S.sub","evidence_scope":"S","boundary_ambiguous":False}, {"scope":"IN_SCOPE","status":"UNKNOWN"}, "Counterfactual: resolve the single scope-boundary ambiguity."),
       ({"claim_scope":"S","evidence_scope":"S","matched_dimensions":True}, {"scope":"IN_SCOPE","status":"UNKNOWN"}, "All declared dimensions match; truth still unknown."),
     ]
     schema = [
@@ -145,7 +145,7 @@ def corpus() -> tuple[Fixture, ...]:
       ({"event":10,"observed":11,"recorded":12,"superseded":True}, {"temporal":"SUPERSEDED","status":"UNKNOWN"}, "Superseded record retained historically."),
       ({"event":10,"observed":11,"recorded":12,"timezone_missing":True}, {"temporal":"UNKNOWN","status":"UNKNOWN"}, "Timezone absent."),
       ({"event":10,"observed":11,"recorded":12,"future_skew":True}, {"temporal":"ANOMALY","status":"UNKNOWN"}, "Future clock skew."),
-      ({"event":10,"observed":11,"recorded":12,"availability_time":8}, {"temporal":"ORDERED","status":"UNKNOWN"}, "Availability time distinct from publication."),
+      ({"event":10,"observed":11,"recorded":12,"clock_uncertain":True}, {"temporal":"UNCERTAIN","status":"UNKNOWN"}, "Clock uncertainty blocks strict temporal ordering."),
       ({"event":10,"observed":11,"recorded":12,"clock_uncertain":False}, {"temporal":"ORDERED","status":"UNKNOWN"}, "Counterfactual: remove the single clock-uncertainty flag."),
       ({"event":10,"observed":11,"recorded":12,"timestamp_conflict":True}, {"temporal":"UNCERTAIN","status":"UNKNOWN"}, "Conflicting timestamp sources."),
     ]
@@ -188,8 +188,8 @@ def corpus() -> tuple[Fixture, ...]:
       ({"evidence":["E1"],"contradiction_unresolved":True}, {"status":"CONTESTED"}, "Unresolved contradiction."),
       ({"evidence":["E1"],"coverage_partial":True}, {"status":"UNKNOWN"}, "Partial coverage."),
       ({"evidence":["E1"],"metadata_complete":True}, {"status":"UNKNOWN"}, "Complete metadata does not prove proposition."),
-      ({"evidence":["E1"],"assertion_confident":False}, {"status":"UNKNOWN"}, "Counterfactual: remove the confidence assertion; evidence remains unchanged."),
-      ({"evidence":["E1"],"human_review_pending":True}, {"status":"UNKNOWN"}, "Pending human adjudication."),
+      ({"evidence":["E1"],"human_review_pending":True}, {"status":"UNKNOWN"}, "Human review pending; the claim remains unresolved."),
+      ({"evidence":["E1"],"human_review_pending":False}, {"status":"UNKNOWN"}, "Counterfactual: clear the human-review-pending flag; evidence remains unchanged."),
     ]
     groups = [lineage, relay, claim, scope, schema, integrity, temporal, revision, composition, uncertainty]
     for family, entries in zip(FAMILIES, groups):
