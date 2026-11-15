@@ -25,7 +25,7 @@ The experimental event_intake_validator_lab rejects duplicate keys and nonfinite
 4. Require independent review of schema compatibility and the external-origin/custody limitations.
 
 **Gate C: possible separately authorized runtime integration.**
-A future, versioned observer adapter may compare or route records only after explicit owner adoption, reviewed false positives/negatives, full CI and a reversible compatibility plan. Its current public API must not be silently changed. It must never call memory ingestion, forge witnesses, infer selfhood, promote ACCEPED to SUPPORTED, enable V2 node IDs or sign anything.
+A future, versioned observer adapter may compare or route records only after explicit owner adoption, reviewed false positives/negatives, full CI and a reversible compatibility plan. Its current public API must not be silently changed. It must never call memory ingestion, forge witnesses, infer selfhood, promote ACCEPTED to SUPPORTED, enable V2 node IDs or sign anything.
 
 ## Falsification matrix
 
