@@ -21,7 +21,7 @@ VARIANTS = (
     "positive_control", "positive_control_b", "positive_control_c",
     "adversarial", "adversarial_b", "adversarial_c",
     "boundary", "boundary_b", "boundary_c",
-    "counterfactual_a", "counterfactual_b", "counterfactual_c",
+    "counterfactual_base", "counterfactual_delta", "supplemental_control",
 )
 
 @dataclass(frozen=True)
@@ -40,7 +40,7 @@ def _fixture(family: str, index: int, variant: str, input_data: dict,
         case_id=f"AEC02_{family.upper()}_{index:02d}",
         family=family,
         variant=variant,
-        pair_group=f"{family}_PAIR_{(index - 1) // 2 + 1:02d}" if index >= 10 else "",
+        pair_group=f"{family}_PAIR_01" if index in (10, 11) else "",
         input=input_data,
         expected=expected,
         rationale=rationale,
@@ -61,7 +61,7 @@ def corpus() -> tuple[Fixture, ...]:
       ({"sources":["A","B"],"roots":{"A":["R1"],"B":["R1"]},"claimed_independent":True}, {"root_count":1,"status":"UNKNOWN"}, "Independence claim conflicts with shared root."),
       ({"sources":["A"],"roots":{"A":["R1"]}}, {"root_count":1,"status":"UNKNOWN"}, "Single-source control."),
       ({"sources":["A","B"],"roots":{"A":["R1"],"B":["R2"]},"edge_missing":True}, {"root_count":None,"status":"UNKNOWN"}, "Missing derivation edge blocks complete lineage."),
-      ({"sources":["A","B"],"roots":{"A":["R1"],"B":["R1"]},"one_root_hidden":True}, {"root_count":None,"status":"UNKNOWN"}, "Incomplete root disclosure."),
+      ({"sources":["A","B"],"roots":{"A":["R1"],"B":["R2"]},"edge_missing":False}, {"root_count":2,"status":"UNKNOWN"}, "Counterfactual: restore the one missing lineage edge."),
       ({"sources":["A","B"],"roots":{"A":["R1"],"B":["R2"]},"declared_shared_ancestor":True}, {"root_count":1,"status":"UNKNOWN"}, "Shared ancestor collapses apparent independence."),
     ]
     # Relay identity: sender uniqueness and provenance-root uniqueness are independent.
@@ -76,7 +76,7 @@ def corpus() -> tuple[Fixture, ...]:
       ({"records":[("A","m1"),("B","m2")],"sender_unverified":True}, {"unique_senders":None,"status":"UNKNOWN"}, "Unverified sender identity cannot be counted as authenticated."),
       ({"records":[("A","m1")]}, {"unique_senders":1,"status":"UNKNOWN"}, "Single sender control."),
       ({"records":[("A","m1"),("B","m2")],"alias_collision":True}, {"unique_senders":None,"status":"UNKNOWN"}, "Unresolved aliases prevent identity count."),
-      ({"records":[("A","m1"),("B","m2")],"one_record_missing":True}, {"unique_senders":None,"status":"UNKNOWN"}, "Partial record set."),
+      ({"records":[("A","m1"),("B","m2")],"alias_collision":False}, {"unique_senders":2,"status":"UNKNOWN"}, "Counterfactual: resolve the one alias-collision flag."),
       ({"records":[("A","m1"),("A","m2"),("B","m3")]}, {"unique_senders":2,"status":"UNKNOWN"}, "Two senders across three records."),
     ]
     claim = [
@@ -90,7 +90,7 @@ def corpus() -> tuple[Fixture, ...]:
       ({"labels":["UNSUPPORTED","SUPPORTS"]}, {"status":"CONTESTED"}, "Unsupported and supported are not silently collapsed."),
       ({"labels":["SUPPORTS"],"evidence_eligible":False}, {"status":"UNKNOWN"}, "Ineligible evidence cannot support claim."),
       ({"labels":["CONTRADICTS"],"scope_valid":False}, {"status":"UNKNOWN"}, "Out-of-scope contradiction cannot decide target claim."),
-      ({"labels":["SUPPORTS","CONTRADICTS"],"one_source_shared_root":True}, {"status":"CONTESTED"}, "Conflict remains; dependence affects weight, not erasure."),
+      ({"labels":["CONTRADICTS"],"scope_valid":True}, {"status":"CONTRADICTED"}, "Counterfactual: make the same contradiction eligible by restoring scope validity."),
       ({"labels":["SUPPORTS"],"provenance_missing":True}, {"status":"UNKNOWN"}, "Support without traceable provenance remains unknown."),
     ]
     scope = [
@@ -104,7 +104,7 @@ def corpus() -> tuple[Fixture, ...]:
       ({"claim_scope":"S","evidence_scope":"S","jurisdiction_mismatch":True}, {"scope":"OUT_OF_SCOPE","status":"REJECTED"}, "Jurisdiction mismatch."),
       ({"claim_scope":"S","evidence_scope":"S","scope_version_unknown":True}, {"scope":"UNKNOWN","status":"UNKNOWN"}, "Unknown scope semantics."),
       ({"claim_scope":"S.sub","evidence_scope":"S","boundary_ambiguous":True}, {"scope":"UNKNOWN","status":"UNKNOWN"}, "Boundary ambiguity."),
-      ({"claim_scope":"S","evidence_scope":"S","excluded_population":True}, {"scope":"OUT_OF_SCOPE","status":"REJECTED"}, "Explicitly excluded population."),
+      ({"claim_scope":"S","evidence_scope":"S","boundary_ambiguous":False}, {"scope":"IN_SCOPE","status":"UNKNOWN"}, "Counterfactual: resolve the single scope-boundary ambiguity."),
       ({"claim_scope":"S","evidence_scope":"S","matched_dimensions":True}, {"scope":"IN_SCOPE","status":"UNKNOWN"}, "All declared dimensions match; truth still unknown."),
     ]
     schema = [
@@ -119,7 +119,7 @@ def corpus() -> tuple[Fixture, ...]:
       ({"version":"1.x","required_present":True}, {"schema":"REJECT","status":"REJECTED"}, "Malformed semantic version."),
       ({"version":"0.9","required_present":True}, {"schema":"REJECT","status":"REJECTED"}, "Legacy unsupported version."),
       ({"version":"1.0","required_present":True,"compatibility_unstated":True}, {"schema":"UNKNOWN","status":"UNKNOWN"}, "Compatibility range not declared."),
-      ({"version":"1.1","required_present":True,"critical_semantics_changed":True}, {"schema":"REJECT","status":"REJECTED"}, "Minor version with incompatible critical semantics."),
+      ({"version":"1.0","required_present":True,"compatibility_unstated":False}, {"schema":"ACCEPT","status":"UNKNOWN"}, "Counterfactual: state compatibility for the same supported schema."),
     ]
     integrity = [
       ({"digest":"valid","auth":"VERIFIED"}, {"integrity":"VALID","auth":"VERIFIED","status":"UNKNOWN"}, "Valid digest and verified authentication."),
@@ -132,7 +132,7 @@ def corpus() -> tuple[Fixture, ...]:
       ({"digest":"valid","auth":"UNKNOWN_KEY"}, {"integrity":"VALID","auth":"UNVERIFIED","status":"UNKNOWN"}, "Unknown signing key."),
       ({"digest":"valid","auth":"VERIFIED","signature_revoked":True}, {"integrity":"VALID","auth":"FAILED","status":"REJECTED"}, "Revoked signing authority."),
       ({"digest":"valid","auth":"VERIFIED","algorithm_unsupported":True}, {"integrity":"UNKNOWN","auth":"UNVERIFIED","status":"UNKNOWN"}, "Unsupported digest algorithm."),
-      ({"digest":"valid","auth":"UNVERIFIED","source_claims_truth":True}, {"integrity":"VALID","auth":"UNVERIFIED","status":"UNKNOWN"}, "Authenticity and truth are distinct."),
+      ({"digest":"valid","auth":"UNVERIFIED","algorithm_unsupported":False}, {"integrity":"VALID","auth":"UNVERIFIED","status":"UNKNOWN"}, "Counterfactual: use a supported digest algorithm."),
       ({"digest":"valid","auth":"VERIFIED","content_semantics_unchecked":True}, {"integrity":"VALID","auth":"VERIFIED","status":"UNKNOWN"}, "Authenticated content is not automatically true."),
     ]
     temporal = [
@@ -146,7 +146,7 @@ def corpus() -> tuple[Fixture, ...]:
       ({"event":10,"observed":11,"recorded":12,"timezone_missing":True}, {"temporal":"UNKNOWN","status":"UNKNOWN"}, "Timezone absent."),
       ({"event":10,"observed":11,"recorded":12,"future_skew":True}, {"temporal":"ANOMALY","status":"UNKNOWN"}, "Future clock skew."),
       ({"event":10,"observed":11,"recorded":12,"availability_time":8}, {"temporal":"ORDERED","status":"UNKNOWN"}, "Availability time distinct from publication."),
-      ({"event":10,"observed":11,"recorded":12,"publication_time":2}, {"temporal":"ORDERED","status":"UNKNOWN"}, "Publication time does not replace observation time."),
+      ({"event":10,"observed":11,"recorded":12,"clock_uncertain":False}, {"temporal":"ORDERED","status":"UNKNOWN"}, "Counterfactual: remove the single clock-uncertainty flag."),
       ({"event":10,"observed":11,"recorded":12,"timestamp_conflict":True}, {"temporal":"UNCERTAIN","status":"UNKNOWN"}, "Conflicting timestamp sources."),
     ]
     revision = [
@@ -160,7 +160,7 @@ def corpus() -> tuple[Fixture, ...]:
       ({"history":["v1","v2"],"operation":"fork","parent_missing":True}, {"history":"UNKNOWN","status":"UNKNOWN"}, "Missing fork parent."),
       ({"history":["v1"],"operation":"rewrite","audit_trail":False}, {"history":"ERASURE_DETECTED","status":"REJECTED"}, "Silent rewrite."),
       ({"history":["v1","v2"],"operation":"append","hash_chain_valid":False}, {"history":"INTEGRITY_FAILURE","status":"REJECTED"}, "Broken history hash chain."),
-      ({"history":["v1","v2"],"operation":"merge","parents_recorded":False}, {"history":"UNKNOWN","status":"UNKNOWN"}, "Merge parentage incomplete."),
+      ({"history":["v1","v2"],"operation":"append","hash_chain_valid":True}, {"history":"PRESERVED","status":"UNKNOWN"}, "Counterfactual: restore the single history-chain integrity condition."),
       ({"history":["v1","v2"],"operation":"append","prior_retained":True}, {"history":"PRESERVED","status":"UNKNOWN"}, "Positive append control."),
     ]
     composition = [
@@ -174,7 +174,7 @@ def corpus() -> tuple[Fixture, ...]:
       ({"premises":["P1","P2"],"requirements":["P1","P2"],"claim_kind_mismatch":True}, {"composition":"INVALID","status":"REJECTED"}, "Claim-kind mismatch."),
       ({"premises":[],"requirements":["P1"]}, {"composition":"INCOMPLETE","status":"UNKNOWN"}, "No premise available."),
       ({"premises":["P1","P2"],"requirements":["P1","P2"],"local_validity_only":True}, {"composition":"UNKNOWN","status":"UNKNOWN"}, "Local validity alone cannot establish global validity."),
-      ({"premises":["P1","P2"],"requirements":["P1","P2"],"partial_overlap":True}, {"composition":"INCOMPLETE","status":"UNKNOWN"}, "Partial overlap is insufficient."),
+      ({"premises":["P1"],"requirements":["P1"],"local_validity_only":False}, {"composition":"VALID","status":"UNKNOWN"}, "Counterfactual: establish the complete single-premise dependency set."),
       ({"premises":["P1","P2"],"requirements":["P1","P2"],"firewall_bypassed":True}, {"composition":"INVALID","status":"REJECTED"}, "Composition firewall bypass."),
     ]
     uncertainty = [
@@ -188,8 +188,8 @@ def corpus() -> tuple[Fixture, ...]:
       ({"evidence":["E1"],"contradiction_unresolved":True}, {"status":"CONTESTED"}, "Unresolved contradiction."),
       ({"evidence":["E1"],"coverage_partial":True}, {"status":"UNKNOWN"}, "Partial coverage."),
       ({"evidence":["E1"],"metadata_complete":True}, {"status":"UNKNOWN"}, "Complete metadata does not prove proposition."),
+      ({"evidence":["E1"],"assertion_confident":False}, {"status":"UNKNOWN"}, "Counterfactual: remove the confidence assertion; evidence remains unchanged."),
       ({"evidence":["E1"],"human_review_pending":True}, {"status":"UNKNOWN"}, "Pending human adjudication."),
-      ({"evidence":["E1"],"assertion_confident":True}, {"status":"UNKNOWN"}, "Confidence language is not evidence."),
     ]
     groups = [lineage, relay, claim, scope, schema, integrity, temporal, revision, composition, uncertainty]
     for family, entries in zip(FAMILIES, groups):
@@ -226,7 +226,7 @@ def _evaluate(f: Fixture) -> dict:
     if f.family == "scope":
         if d.get("evidence_scope") is None or d.get("scope_version_unknown") or d.get("boundary_ambiguous"):
             return {"scope": "UNKNOWN", "status": "UNKNOWN"}
-        if d["evidence_scope"] == "OTHER" or any(d.get(k) for k in ("time_mismatch","actor_mismatch","jurisdiction_mismatch","excluded_population")):
+        if d["evidence_scope"] == "OTHER" or (d["claim_scope"] == "S" and d["evidence_scope"] == "S.sub") or any(d.get(k) for k in ("time_mismatch","actor_mismatch","jurisdiction_mismatch","excluded_population")):
             return {"scope": "OUT_OF_SCOPE", "status": "REJECTED"}
         return {"scope": "IN_SCOPE", "status": "UNKNOWN"}
     if f.family == "schema_version":
