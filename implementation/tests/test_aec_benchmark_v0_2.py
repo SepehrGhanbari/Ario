@@ -111,3 +111,11 @@ def test_schema_counterfactual_pair_changes_only_compatibility_declaration():
     assert set(first.input) == set(second.input)
     changed = [key for key in first.input if first.input[key] != second.input[key]]
     assert changed == ["compatibility_unstated"]
+
+
+def test_not_applicable_authentication_is_not_relabelled_unverified():
+    case = next(c for c in corpus() if c.case_id == "AEC02_INTEGRITY_AUTHENTICITY_06")
+    result = _evaluate(case)
+    assert result["integrity"] == "VALID"
+    assert result["auth"] == "NOT_APPLICABLE"
+    assert result["status"] == "UNKNOWN"
