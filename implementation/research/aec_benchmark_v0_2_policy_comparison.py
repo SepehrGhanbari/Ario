@@ -116,7 +116,13 @@ def _confusion(expected: list[str], observed: list[str], labels: tuple[str, ...]
             if precision is not None and recall is not None and precision + recall > 0
             else (0.0 if precision == 0 or recall == 0 else None)
         )
-        per_class[label] = {"precision": precision, "recall": recall, "f1": f1}
+        support = tp + fn
+        per_class[label] = {
+            "support": support,
+            "precision": precision,
+            "recall": recall,
+            "f1": f1,
+        }
         if f1 is not None:
             f1_values.append(f1)
     return {
@@ -124,6 +130,10 @@ def _confusion(expected: list[str], observed: list[str], labels: tuple[str, ...]
         "confusion_matrix_actual_by_predicted": matrix,
         "per_class": per_class,
         "macro_f1": _ratio(sum(f1_values), len(f1_values)),
+        "macro_f1_classes_included": len(f1_values),
+        "classes_excluded_for_zero_support": [
+            label for label in labels if per_class[label]["support"] == 0
+        ],
     }
 
 
