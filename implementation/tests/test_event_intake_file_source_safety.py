@@ -25,10 +25,6 @@ def _valid_line() -> bytes:
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="RED: Path.is_symlink PermissionError escapes instead of reporting UNKNOWN",
-)
 def test_metadata_permission_error_is_reported_not_raised(tmp_path, monkeypatch):
     target = tmp_path / "not-readable.jsonl"
     original = Path.is_symlink
@@ -46,10 +42,6 @@ def test_metadata_permission_error_is_reported_not_raised(tmp_path, monkeypatch)
     assert report["file_sha256"] is None
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="RED: a directory is not a valid regular JSONL file source",
-)
 def test_directory_is_reported_as_nonregular_source(tmp_path):
     report = inspect_jsonl_file(tmp_path)
     assert report["status"] == "UNKNOWN"
@@ -59,10 +51,6 @@ def test_directory_is_reported_as_nonregular_source(tmp_path):
 
 @pytest.mark.skipif(os.name != "posix" or not hasattr(os, "mkfifo"),
                     reason="requires POSIX mkfifo")
-@pytest.mark.xfail(
-    strict=True,
-    reason="RED: opening FIFO without O_NONBLOCK can block indefinitely",
-)
 def test_posix_fifo_without_writer_returns_bounded_failure(tmp_path):
     fifo = tmp_path / "no_writer.fifo"
     os.mkfifo(fifo)
