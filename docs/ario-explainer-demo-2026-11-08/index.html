@@ -44,6 +44,8 @@ h2{margin:0 0 14px;font-size:1.2rem;color:var(--accent)}
 .log-entry.struck{text-decoration:line-through;color:#515a62}
 .log-entry.new{border-right:3px solid var(--accent)}
 .note{color:var(--warn);font-size:.9rem}
+.evidence-result{background:#edf4f6;border:1px solid #b7cfd4;border-radius:10px;padding:12px 14px;min-height:3.5rem}
+.evidence-result strong{display:block;margin-bottom:4px}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 button:focus-visible,a:focus-visible{outline:3px solid #b15e24;outline-offset:3px}
 footer{border-top:1px solid var(--line);padding:20px 0;font-size:.85rem;color:var(--mut)}
@@ -80,6 +82,17 @@ footer a{color:var(--accent)}
       <button id="revReviseBtn" type="button"></button>
     </div>
     <div class="log" id="rev-view"></div>
+  </section>
+  <section class="card" aria-labelledby="evidence-h">
+    <h2 id="evidence-h"></h2>
+    <p id="evidence-p"></p>
+    <div class="step"><span class="lbl" id="evidence-claim-label"></span><span id="evidence-claim"></span></div>
+    <div class="step"><span class="lbl" id="evidence-record-label"></span><span id="evidence-record"></span></div>
+    <div class="rev-controls">
+      <button id="evidenceAcceptedBtn" type="button"></button>
+      <button id="evidenceDisputedBtn" type="button"></button>
+    </div>
+    <div id="evidence-output" class="evidence-result" role="status" aria-live="polite" aria-atomic="true"></div>
   </section>
 </main>
 <footer><div class="wrap" id="footer"></div></footer>
@@ -163,6 +176,17 @@ var T = {
       { txt: "اجازه: فقط پیش‌نویس آماده شود.", meta: "REVISED — ۱۲ آبان ۱۴۰۵، پس از اصلاح کاربر · ورودی قبلی حفظ شد", struck: false }
     ],
     oldRecordLabel: "نسخهٔ قبلی — اصلاح‌شده و برای ممیزی حفظ شده",
+    evidenceH: "حالت جدید: آزمون اختلافِ شاهد",
+    evidenceP: "آزمون دوحالته با داده‌های کاملاً ساختگی. فرض کنید ثبتِ مخالف دقیقاً دربارهٔ همان درخواست و همان زمان است. وضعیتِ پذیرش این ثبت را تغییر دهید و خروجی آموزشی را مقایسه کنید.",
+    evidenceClaimLabel: "ادعا",
+    evidenceClaim: "درخواست فرضی REQ-204 در ساعت ۱۰:۱۵ پذیرفته شد.",
+    evidenceRecordLabel: "ثبتِ مخالف (ساختگی)",
+    evidenceRecord: "ثبتِ منتسب به سامانهٔ مستقل: همان درخواست REQ-204 در ساعت ۱۰:۱۵ رد شده است.",
+    evidenceAcceptedBtn: "شاهدِ مستقل پذیرفته شده",
+    evidenceDisputedBtn: "اعتبار شاهد هنوز محل اختلاف است",
+    evidenceAcceptedResult: "CONTRADICTED — اگر اصالت، استقلال و ارتباط این ثبت با همان درخواست و زمان احراز و پذیرفته شده باشد، ثبتِ رد شدن با ادعای پذیرفته‌شدن ناسازگار است.",
+    evidenceDisputedResult: "CONTESTED — اگر اصالت یا تفسیرِ ثبت مخالف هنوز به‌طور معناداری محل اختلاف است، نباید از آن ردِ قطعی ادعا را نتیجه بگیریم. اختلافِ شاهد/تفسیر باز می‌ماند.",
+    evidenceCaveat: "این برچسب‌ها پاسخ‌های ازپیش‌نوشته‌شدهٔ آموزشی‌اند، نه خروجی اجرای موتور M0.",
     footer: 'این صفحه دموی آموزشیِ مستقل و آفلاین است؛ موتور M0 نیست و حکم‌های آن برچسبِ دست‌سازِ آموزشی‌اند، نه خروجی موتور. همه‌ی داده‌ها ساختگی‌اند. — <a href="https://github.com/SepehrGhanbari/Ario" rel="noopener">مخزن آریو</a> · <a href="https://github.com/SepehrGhanbari/Ario/issues/104" rel="noopener">ایشو #104</a> · پروژه با مجوز MIT.'
   },
   en: {
@@ -242,12 +266,24 @@ var T = {
       { txt: "Permission: prepare drafts only.", meta: "REVISED — Nov 3, after user correction · previous entry preserved", struck: false }
     ],
     oldRecordLabel: "Superseded version — retained for audit history",
+    evidenceH: "New mode: disputed-evidence test",
+    evidenceP: "Two-mode exercise with entirely fictional records. Assume the opposing record refers to exactly the same request and time. Change whether that evidence is accepted and compare the teaching output.",
+    evidenceClaimLabel: "CLAIM",
+    evidenceClaim: "Fictional request REQ-204 was approved at 10:15.",
+    evidenceRecordLabel: "OPPOSING RECORD (SYNTHETIC)",
+    evidenceRecord: "A record attributed to a separate system says that the same request REQ-204 was rejected at 10:15.",
+    evidenceAcceptedBtn: "Independent opposing record accepted",
+    evidenceDisputedBtn: "Record authenticity still disputed",
+    evidenceAcceptedResult: "CONTRADICTED — If the record is authenticated, independently sourced, and accepted as referring to the same request and time, rejection conflicts with the approval claim.",
+    evidenceDisputedResult: "CONTESTED — If the opposing record's authenticity or interpretation remains materially disputed, it cannot justify conclusively rejecting the claim. The evidence dispute remains open.",
+    evidenceCaveat: "These are prewritten teaching labels, not outputs from the M0 engine.",
     footer: 'This page is a standalone offline teaching demo; it is not the M0 engine, and its verdict labels are hand-authored teaching labels, not engine output. All data is synthetic. — <a href="https://github.com/SepehrGhanbari/Ario" rel="noopener">Ario repository</a> · <a href="https://github.com/SepehrGhanbari/Ario/issues/104" rel="noopener">Issue #104</a> · Project under the MIT license.'
   }
 };
 
 var lang = "fa";
 var revMode = "revise";
+var evidenceMode = "accepted";
 var selectedAnswers = [null, null, null];
 
 function el(tag, cls) {
@@ -339,6 +375,15 @@ function render() {
   });
 
   renderRev(revMode);
+  txt(document.getElementById("evidence-h"), t.evidenceH);
+  txt(document.getElementById("evidence-p"), t.evidenceP);
+  txt(document.getElementById("evidence-claim-label"), t.evidenceClaimLabel);
+  txt(document.getElementById("evidence-claim"), t.evidenceClaim);
+  txt(document.getElementById("evidence-record-label"), t.evidenceRecordLabel);
+  txt(document.getElementById("evidence-record"), t.evidenceRecord);
+  txt(document.getElementById("evidenceAcceptedBtn"), t.evidenceAcceptedBtn);
+  txt(document.getElementById("evidenceDisputedBtn"), t.evidenceDisputedBtn);
+  renderEvidence(evidenceMode);
 
   var f = document.getElementById("footer");
   f.innerHTML = t.footer;
@@ -372,12 +417,34 @@ function renderRev(mode) {
 function showErase() { renderRev("erase"); }
 function showRevise() { renderRev("revise"); }
 
+function renderEvidence(mode) {
+  if (mode !== "accepted" && mode !== "disputed") { throw new Error("Invalid evidence mode"); }
+  evidenceMode = mode;
+  var t = T[lang];
+  var accepted = mode === "accepted";
+  var a = document.getElementById("evidenceAcceptedBtn");
+  var d = document.getElementById("evidenceDisputedBtn");
+  a.className = accepted ? "active" : "";
+  d.className = accepted ? "" : "active";
+  a.setAttribute("aria-pressed", accepted ? "true" : "false");
+  d.setAttribute("aria-pressed", accepted ? "false" : "true");
+  var output = document.getElementById("evidence-output");
+  output.textContent = "";
+  var title = txt(el("strong"), accepted ? "CONTRADICTED" : "CONTESTED");
+  var explanation = accepted ? t.evidenceAcceptedResult : t.evidenceDisputedResult;
+  output.appendChild(title);
+  output.appendChild(txt(el("span"), explanation.replace(/^(CONTRADICTED|CONTESTED) — /, "")));
+  output.appendChild(txt(el("p"), t.evidenceCaveat));
+}
+
 document.getElementById("langBtn").addEventListener("click", function () {
   lang = (lang === "fa") ? "en" : "fa";
   render();
 });
 document.getElementById("revEraseBtn").addEventListener("click", showErase);
 document.getElementById("revReviseBtn").addEventListener("click", showRevise);
+document.getElementById("evidenceAcceptedBtn").addEventListener("click", function () { renderEvidence("accepted"); });
+document.getElementById("evidenceDisputedBtn").addEventListener("click", function () { renderEvidence("disputed"); });
 
 render();
 </script>
