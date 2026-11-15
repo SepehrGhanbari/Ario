@@ -108,7 +108,7 @@ def test_control_immutable_semantic_node_is_valid():
     assert node.falsification_condition == "Counterexample"
 
 def test_control_unique_nested_json_keys_are_accepted():
-    raw = b'{"concept":"auth","assertion":"A","meta":{"source":"A","peer":"B"}}\\n'
+    raw = b'{"concept":"auth","assertion":"A","meta":{"source":"A","peer":"B"}}\n'
     engine = ConsolidationEngine()
     assert engine.ingest_ledger_file(_MemoryPath(raw)) == 1
     assert next(iter(engine.nodes.values())).source_event_hashes == (_sha(raw),)
