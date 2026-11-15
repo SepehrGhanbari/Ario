@@ -1,447 +1,159 @@
-# 🔒 Security Policy
+# Ario Security Policy / سیاست امنیتی آریو
 
-**Farsi: [سیاست امنیتی](#farsi)**
+**Scope:** Maintained open-source repository `SepehrGhanbari/Ario`. This is a responsible-disclosure and deployment-safety guide, **not** a certification, a cryptographic trust anchor, or authorization to admit evidence. Last source review: 2026-11-15.
 
-This document outlines the security policies and procedures for the **Ario - Auditable Epistemic Framework for AI** project.
+**فارسی:** [بخش فارسی](#farsi)
 
----
+## Reporting a security issue
 
-## 📋 Security Philosophy
+**Do not post exploits, private keys, credentials, personal data or nonpublic vulnerabilities in a public GitHub issue.**
 
-Ario takes security seriously. As a framework for auditable AI systems, we recognize that:
-- **Security is foundational** to trust and reliability
-- **Transparency is essential** for accountability
-- **Defense in depth** provides robust protection
-- **Continuous improvement** is necessary in a changing threat landscape
+Send a private report to **[sepehr.ghanbari@proton.me](mailto:sepehr.ghanbari@proton.me)**, subject prefix `[SECURITY]`. Include affected version or commit, minimal reproduction, observed and expected behavior, impact, and safe contact details. Avoid transmitting secrets unless a separately authenticated encrypted channel has been established. No verified public PGP key is specified in this policy.
 
----
+The current project is maintained by one person. Acknowledgement, triage and a potential fix are handled **as capacity permits**, without a guaranteed response deadline, staffed security team, SLA or embargo. Reporters and maintainer should coordinate public disclosure when possible. For an exposed live endpoint, the operator must apply local containment without assuming the issue will be fixed immediately.
 
-## 🚨 Reporting Security Issues
+## What is and is not protected
 
-### If You Discover a Vulnerability
+| Component / claim | Verified bounded behavior and operational limit |
+|---|---|
+| Ordinary task agent (`implementation/ario_agent.py`) | Appends **plain JSONL** task events and checks record format and duplicate task IDs. These checks do **not** cryptographically detect malicious rewriting of the entire ledger. Do not call it immutable or universally tamper-evident. |
+| CLI access control | Runs under the invoking operating-system account. **No built-in app login, RBAC or session manager** in the ordinary agent CLI; file permissions and process isolation are deployment responsibilities. |
+| File observations and storage | Agent read operations can record file content or derived observations in **unencrypted JSONL**. Protect sensitive data using OS permissions and separately configured disk/storage encryption. Encryption-at-rest is **not** built in to that ledger. |
+| Local Ollama planner | Numeric loopback validation, no ambient proxy and redirect refusal are implemented for the bounded planner. Planning context still travels over **plain HTTP on loopback**. Loopback is **not TLS encryption**. Never expose this endpoint to an untrusted network. |
+| SHA-256 and research integrity checks | Some research components hash **specific declared bytes**. A matching hash does not establish source independence, truth, universal record integrity, or an external custody guarantee. |
+| M0 / CLI structural `PASS` | Structural test or audit success **does not** authorize evidence admission, model truth or independent witness status. Preserve the original result's limitation fields and provenance. |
+| Authentication and encryption for other services | Must be verified **per component and deployment**, not assumed from the existence of a library, cloud platform, or policy. |
+| Log retention / incident recovery | No global promise that every action is logged, that all logs resist a privileged writer, or that every retention/rollback policy is enforced. Backups are useful but not proof of survival or integrity. |
 
-**DO NOT** create a public GitHub issue. Instead:
+**Status of the old local planner report:** [Issue #163](https://github.com/SepehrGhanbari/Ario/issues/163) was closed on 2026-11-15 following merged [PR #177](https://github.com/SepehrGhanbari/Ario/pull/177). Its tests support a *bounded local transport fix*, not blanket safety of other network setups.
 
-1. **Email**: Send details to [sepehr.ghanbari@proton.me](mailto:sepehr.ghanbari@proton.me)
-2. **Subject**: Use prefix `[SECURITY]` in the subject line
-3. **Include**:
-   - Detailed description of the vulnerability
-   - Steps to reproduce
-   - Potential impact
-   - Suggested mitigation (if any)
+## Contributor and deployment precautions
 
-### Response Process
+- **Validate input for its intended domain, then encode at the output boundary.** Removing whitespace is not an XSS sanitizer. For untrusted text in HTML use DOM `textContent` or context-appropriate escaping; attribute, URL and JavaScript contexts require additional validation.
+- **Do not commit secrets or private records.** Apply least privilege, keep dependencies reviewed, and isolate test and production credentials.
+- **Treat test failures and UNKNOWN as reportable outcomes.** Neither CI green nor model agreement is an authority for publication, evidence admission or identity.
+- **Do not publicly expose local Ollama, task-agent write controls, unreviewed experiment servers, or log directories.** For services exposed over a network use independently configured authentication and TLS.
+- **Consider external encrypted storage, independently controlled history and periodic restore tests** for deployments handling sensitive data. Do not claim these controls are provided by this repository unless demonstrated.
 
-1. **Acknowledgment**: You will receive a response within 48 hours
-2. **Triage**: Our security team will assess the issue
-3. **Remediation**: We will develop and test a fix
-4. **Disclosure**: Coordinated disclosure with proper credit
+Example — **HTML text context only**, using Python standard library:
 
-### Timeline
+~~~python
+import html
 
-| Severity | Response Time | Fix Time |
-|----------|---------------|----------|
-| Critical | 24 hours | 7 days |
-| High | 48 hours | 14 days |
-| Medium | 72 hours | 30 days |
-| Low | 1 week | Next release |
+MAX_LENGTH = 4096
 
----
-
-## 🛡️ Security Best Practices
-
-### For Contributors
-
-#### Code Security
-- **Input Validation**: Always validate and sanitize user input
-- **Dependency Security**: Keep dependencies updated
-- **Secrets Management**: Never commit secrets to version control
-- **Error Handling**: Don't expose sensitive information in errors
-- **Logging**: Be careful with sensitive data in logs
-
-#### Secure Coding Guidelines
-```python
-# ✅ DO:
 def process_input(user_input: str) -> str:
-    # Validate input type
     if not isinstance(user_input, str):
         raise ValueError("Invalid input type")
-    
-    # Sanitize input
-    sanitized = user_input.strip()
-    
-    # Validate length
-    if len(sanitized) > MAX_LENGTH:
+    trimmed = user_input.strip()  # Trimming is NOT XSS protection.
+    if len(trimmed) > MAX_LENGTH:
         raise ValueError("Input too long")
-    
-    return sanitized
+    return trimmed
 
-# ❌ DON'T:
-def unsafe_process(user_input: str) -> str:
-    # No validation
-    return user_input  # XSS vulnerability!
-```
+def encode_html_text(user_input: str) -> str:
+    return html.escape(process_input(user_input), quote=True)
+~~~
 
-### For Users
+This does **not** make arbitrary HTML, URL, JavaScript, CSS or attribute interpolation safe. Use the output-context-specific API and checks.
 
-#### Deployment Security
-- **Network Isolation**: Run Ario in isolated networks
-- **Access Control**: Limit access to sensitive endpoints
-- **Monitoring**: Monitor system logs for suspicious activity
-- **Updates**: Keep Ario and dependencies updated
-- **Backups**: Regularly backup critical data
+## Review and tool status
 
-#### Configuration Security
-- Use strong, unique passwords
-- Enable two-factor authentication
-- Rotate API keys regularly
-- Limit permissions (principle of least privilege)
-- Use HTTPS for all communications
+GitHub checks and comments are useful but **not** a universal security audit. Some PRs have owner-directed admissions rather than independent human approvals. A green CodeRabbit status is not equivalent to closing its inline findings, and repository rules do not guarantee independent assessment of every change.
 
----
+| Item | Status as verified for this document |
+|---|---|
+| Project CI and bounded tests | Recorded on specific commits; not a security certification |
+| Independent approval for every PR | **Not established** |
+| Dependabot configuration | **Not verified**; no `.github/dependabot.yml` in the inspected tree |
+| GitHub secret-scanning configuration | **Not verified** from repository source |
+| Security testing | **Partial**, only when exact test/run evidence is supplied |
+| Independent penetration test | **Not verified** |
+| Owner/Genesis cryptographic signer | **NOT_ACTIVATED** per [GOVERNANCE.md](./GOVERNANCE.md) |
 
-## 🔍 Security Features
+Developers may use Bandit, Semgrep, dependency auditing, OWASP guidance and other tools, but mentioning them is **not** evidence they were executed. Report exact command, tool version, commit and results, including failures.
 
-### Built-in Protections
+Security documentation itself does **not** change license rights, branch protection, governance, keys, trust or runtime behavior. See [GOVERNANCE.md](./GOVERNANCE.md) and [AGENTS.md](./AGENTS.md).
 
-1. **Evidence Integrity**
-   - SHA-256 hashing for all evidence
-   - Immutable audit trails
-   - Cryptographic verification
+## References
 
-2. **Access Control**
-   - Role-based permissions
-   - Authentication required
-   - Session management
-
-3. **Data Protection**
-   - Encryption at rest
-   - Encryption in transit
-   - Data minimization
-
-4. **Audit Logging**
-   - All actions logged
-   - Tamper-evident logs
-   - Retention policies
-
-### Security Review Process
-
-All code changes go through:
-1. **Automated Scanning**: Static analysis tools
-2. **Manual Review**: Security-focused code review
-3. **Dependency Check**: Vulnerability scanning
-4. **Testing**: Security test cases
-
----
-
-## 📊 Known Security Considerations
-
-### Current Security Posture
-
-| Area | Status | Notes |
-|------|--------|-------|
-| Code Review | ✅ Active | All PRs reviewed |
-| Dependency Scanning | ✅ Active | Using Dependabot |
-| Secret Scanning | ✅ Active | GitHub secret scanning |
-| Vulnerability Disclosure | ✅ Active | Coordinated disclosure |
-| Security Testing | ⚠️ Partial | Need more security tests |
-| Penetration Testing | ❌ Not Started | Future consideration |
-
-### Open Security Issues
-
-- **Issue #163**: Ollama loopback planner proxy concern
-  - Status: Under investigation
-  - Severity: High
-  - Action: Disable Ollama integration until resolved
-
----
-
-## 🛠️ Security Tools
-
-### Recommended Tools
-
-1. **Static Analysis**
-   - `bandit` - Python security linter
-   - `safety` - Dependency vulnerability checker
-   - `semgrep` - Custom security rules
-
-2. **Dynamic Analysis**
-   - `OWASP ZAP` - Web application security scanner
-   - `Burp Suite` - Web vulnerability scanner
-
-3. **Monitoring**
-   - `Sentry` - Error tracking
-   - `Datadog` - System monitoring
-   - Custom logging
-
-### Usage Examples
-
-```bash
-# Install security tools
-pip install bandit safety semgrep
-
-# Run security checks
-bandit -r implementation/
-safety check
-semgrep --config=auto implementation/
-```
-
----
-
-## 🎓 Security Resources
-
-### Learning Materials
 - [OWASP Top 10](https://owasp.org/www-project-top-ten/)
 - [CWE Top 25](https://cwe.mitre.org/top25/)
-- [Python Security](https://wiki.python.org/moin/Security)
-
-### Security Checklists
-- [ ] Input validation implemented
-- [ ] Output encoding applied
-- [ ] Authentication required
-- [ ] Authorization checks in place
-- [ ] Error messages don't leak information
-- [ ] Logging doesn't contain sensitive data
-- [ ] Dependencies are up to date
-- [ ] Secrets are properly protected
+- [GitHub repository](https://github.com/SepehrGhanbari/Ario)
 
 ---
 
-## 📞 Security Contacts
-
-| Role | Contact | PGP Key |
-|------|---------|---------|
-| Security Lead | sepehr.ghanbari@proton.me | Available on request |
-| Project Owner | sepehr.ghanbari@proton.me | Available on request |
-
----
-
-## ✅ Security Acknowledgements
-
-We would like to acknowledge the following individuals and organizations for their security contributions:
-
-- [List will be populated as contributions are received]
-
----
+<a id="farsi"></a>
 
 # Farsi: سیاست امنیتی
 
-این سند **سیاست‌ها و رویه‌های امنیتی** پروژه **آریو - چارچوب معرفت‌شناسی قابل بررسی برای هوش مصنوعی** را شرح می‌دهد.
+**دامنه:** مخزن متن‌باز رسمی آریو. این سند راهنمای گزارش مسئولانه و احتیاط‌های استقرار است؛ **گواهی امنیت، ریشهٔ اعتماد رمزنگاری‌شده یا مجوز پذیرش شاهد نیست**.
 
----
+## گزارش آسیب‌پذیری
 
-## 📋 فلسفه امنیتی
+**اطلاعات محرمانه، کلید، رمز، دادهٔ شخصی و جزئیات بهره‌برداری از آسیب‌پذیریِ غیردرخشده را در ایشوی عمومی ننویسید.**
 
-آریو امنیت را بسیار جدی می‌گیرد. به عنوان یک چارچوب برای سیستم‌های هوش مصنوعی قابل بررسی، ما تشخیص می‌دهیم که:
-- **امنیت پایه و اساس** اعتماد و قابلیت اطمینان است
-- **شفافیت ضروری** برای مسئولیت‌پذیری است
-- **دفاع در عمق** حفاظت قوی فراهم می‌کند
-- **بهبود مستمر** در چشم‌انداز تهدیدات در حال تغییر ضروری است
+گزارش خصوصی را به **[sepehr.ghanbari@proton.me](mailto:sepehr.ghanbari@proton.me)** با پیشوند موضوع `[SECURITY]` بفرستید. نسخه یا کامیت آسیب‌دیده، روش بازتولید کم‌خطر، رفتار مشاهده‌شده، اثر و راه تماس را مشخص کنید. بدون کانال رمزنگاری‌شده و تأییدشده، خودِ رمز یا کلید خصوصی را نفرستید. کلید عمومی PGP تأییدشده‌ای در این سند معرفی نشده است.
 
----
+پروژه فعلاً **یک نگهدارنده** دارد. دریافت، بررسی و رفع مشکل در حد توان انجام می‌شود؛ **مهلت پاسخ، رفع خطا، تیم دائمی امنیت یا SLA تضمین نمی‌شود**. افشای عمومی را در صورت امکان با گزارش‌دهنده هماهنگ می‌کنیم. استقراردهنده باید خطر فوری را در سامانهٔ خودش مهار کند.
 
-## 🚨 گزارش مسائل امنیتی
+## حفاظت‌های موجود و محدودیت‌ها
 
-### اگر آسیب‌پذیری کشف کردید
+| بخش | رفتار محدود و مرز ادعا |
+|---|---|
+| عامل معمولی `ario_agent.py` | رویدادها را در **JSONL ساده** ثبت می‌کند و قالب رکورد و تکرار شناسهٔ کار را بررسی می‌کند. این حفاظت، تغییرِ عمدی تمام دفتر توسط نویسندهٔ فایل را رمزنگارانه کشف نمی‌کند؛ دفتر **تغییرناپذیر یا ضد دستکاری کامل نیست**. |
+| دسترسی CLI | با حساب فراخوانِ سیستم‌عامل اجرا می‌شود؛ **ورود برنامه‌ای، RBAC و مدیریت جلسهٔ داخلی ندارد**. مجوز فایل‌ها و جداسازی فرایند به استقرار بستگی دارد. |
+| محتوای فایل و ذخیره‌سازی | عامل می‌تواند محتوای فایل یا مشاهدهٔ مشتق‌شده را در دفتر **JSONL بدون رمزنگاری سطح برنامه** ثبت کند. برای دادهٔ حساس باید مجوز سیستم‌عامل و رمزنگاری جداگانهٔ فضای ذخیره‌سازی به‌کار رود. |
+| برنامه‌ریز Ollama | مقصد loopback را اعتبارسنجی می‌کند، پروکسی محیط و ریدایرکت را کنار می‌گذارد ولی داده را با **HTTP ساده روی loopback** می‌فرستد؛ loopback معادل TLS نیست. |
+| SHA-256 و بررسی‌های پژوهشی | تطبیق هشِ **بایت‌های مشخص**، حقیقت، استقلال شاهد یا نگهداری بیرونی را ثابت نمی‌کند. |
+| `PASS` ساختاری M0/CLI | به‌تنهایی پذیرش شاهد، صحت ادعا یا اختیار یک بازبین مستقل را مجاز نمی‌کند. |
+| امنیت مؤلفه‌های دیگر | احراز هویت، TLS و ذخیره‌سازی امن باید **برای هر مؤلفه و استقرار جداگانه** بررسی شود. |
+| لاگ و بازیابی | ثبت همهٔ اقدامات، ضد دستکاری بودن تمام لاگ‌ها و اجرای سیاست نگهداری سراسری تضمین نشده است. پشتیبان‌گیری به‌تنهایی شاهد صحت نیست. |
 
-**ایجاد issue عمومی در GitHub نکنید**. در عوض:
+[ایشوی #163](https://github.com/SepehrGhanbari/Ario/issues/163) مربوط به پروکسی Ollama در ۱۵ نوامبر ۲۰۲۶ پس از ادغام [PR #177](https://github.com/SepehrGhanbari/Ario/pull/177) بسته شد. این یک اصلاح محدودِ انتقال محلی است، نه تضمین امنیت همهٔ شبکه‌ها.
 
-1. **ایمیل**: جزئیات را به [sepehr.ghanbari@proton.me](mailto:sepehr.ghanbari@proton.me) ارسال کنید
-2. **موضوع**: از پیشوند `[SECURITY]` در موضوع استفاده کنید
-3. **شامل**:
-   - توضیح دقیق آسیب‌پذیری
-   - مراحل تکرار
-   - تأثیر بالقوه
-   - اقدامات تخفیف پیشنهاد شده (اگر وجود داشته باشد)
+## احتیاط‌های برنامه‌نویسی و استقرار
 
-### فرآیند پاسخ
+- **ورودی را اعتبارسنجی و هنگام خروجی، متناسب با محل استفاده کدگذاری کنید.** `strip()` صرفاً فاصله‌ها را حذف می‌کند و مانع XSS نیست. برای درج متن نامطمئن در DOM از `textContent` یا کدگذاری مناسب استفاده کنید؛ URL و JavaScript قواعد اضافی دارند.
+- **کلید و اطلاعات محرمانه را در Git ثبت نکنید**؛ اصل حداقل دسترسی و جدایی محیط آزمایش و تولید را رعایت کنید.
+- **شکست آزمون و UNKNOWN را نگه دارید.** سبزشدن CI یا توافق چند مدل مجوز پذیرش شاهد یا اثبات حقیقت نیست.
+- سرویس Ollama، ابزارهای نوشتن عامل، سرورهای آزمایشی و دفترهای ثبت را روی اینترنت عمومی قرار ندهید. سرویس بیرونی به TLS و احراز هویت مستقل نیاز دارد.
+- برای دادهٔ حساس از ذخیره‌سازی رمزنگاری‌شدهٔ بیرونی، تاریخچهٔ مستقل و تست بازگردانی کمک بگیرید؛ **این‌ها قابلیتِ اثبات‌شدهٔ خودکارِ آریو نیستند**.
 
-1. **تأیید دریافت**: ظرف 48 ساعت پاسخ دریافت خواهید کرد
-2. ** اولویت‌بندی**: تیم امنیتی ما مسئله را ارزیابی خواهد کرد
-3. **راهکار**: ما یک اصلاح توسعه و تست خواهیم کرد
-4. **افشا**: افشای هماهنگ با اعتبار مناسب
+مثال زیر فقط کدگذاری **متن HTML** را نشان می‌دهد، نه پاک‌سازی همه‌منظوره:
 
-### جدول زمانی
+~~~python
+import html
 
-| شدت | زمان پاسخ | زمان اصلاح |
-|------|------------|------------|
-| بحرانی | 24 ساعت | 7 روز |
-| بالا | 48 ساعت | 14 روز |
-| متوسط | 72 ساعت | 30 روز |
-| پایین | 1 هفته | نسخه بعدی |
+MAX_LENGTH = 4096
 
----
-
-## 🛡️ بهترین روش‌های امنیتی
-
-### برای مشارکت‌کنندگان
-
-#### امنیت کد
-- **اعتبارسنجی ورودی**: همیشه ورودی کاربر را اعتبارسنجی و تمیز کنید
-- **امنیت واسطه‌ها**: واسطه‌ها را به‌روز نگه دارید
-- **مدیریت اسرار**: هرگز اسرار را در کنترل نسخه commit نکنید
-- **مدیریت خطاها**: اطلاعات حساس را در خطاها افشا نکنید
-- **لاگ‌گیری**: در لاگ‌ها با داده‌های حساس مراقب باشید
-
-#### راهنمای کدنویسی امن
-```python
-# ✅ انجام دهید:
 def process_input(user_input: str) -> str:
-    # اعتبارسنجی نوع ورودی
     if not isinstance(user_input, str):
         raise ValueError("نوع ورودی نامعتبر")
-    
-    # تمیز کردن ورودی
-    sanitized = user_input.strip()
-    
-    # اعتبارسنجی طول
-    if len(sanitized) > MAX_LENGTH:
+    trimmed = user_input.strip()  # حذف فاصله‌ها مانع XSS نیست.
+    if len(trimmed) > MAX_LENGTH:
         raise ValueError("ورودی بسیار طولانی")
-    
-    return sanitized
+    return trimmed
 
-# ❌ انجام ندهید:
-def unsafe_process(user_input: str) -> str:
-    # بدون اعتبارسنجی
-    return user_input  # آسیب‌پذیری XSS!
-```
+def encode_html_text(user_input: str) -> str:
+    return html.escape(process_input(user_input), quote=True)
+~~~
 
-### برای کاربران
+برای HTML به‌شکل markup، ویژگی‌ها، URL، JavaScript و CSS باید از راهکار مخصوص همان زمینه استفاده شود.
 
-#### امنیت استقرار
-- **ایزولاسیون شبکه**: آریو را در شبکه‌های ایزوله اجرا کنید
-- **کنترل دسترسی**: دسترسی به endpoints حساس را محدود کنید
-- **مانیتورینگ**: لاگ‌های سیستم را برای فعالیت‌های مشکوک نظارت کنید
-- **به‌روزرسانی**: آریو و واسطه‌ها را به‌روز نگه دارید
-- **پشتیبان‌گیری**: به طور منظم از داده‌های حیاتی پشتیبان تهیه کنید
+## وضعیت بازبینی و ابزارها
 
-#### امنیت تنظیمات
-- از رمزهای عبور قوی و منحصر به فرد استفاده کنید
-- احراز هویت دو عاملی را فعال کنید
-- به طور منظم کلیدهای API را چرخش دهید
-- مجوزها را محدود کنید (اصل حداقل دسترسی)
-- از HTTPS برای تمام ارتباطات استفاده کنید
+وجود CI و نظر خرگوشک **ممیزی امنیتی مستقل همگانی نیست**. استثنای ثبت‌شدهٔ مالک به‌معنی تأیید بازبین مستقل نیست؛ سبزبودن CodeRabbit Check هم شش گفت‌وگوی باز را به‌طور خودکار حل نمی‌کند.
 
----
+| مورد | وضعیت مستند |
+|---|---|
+| CI و تست‌های محدود | فقط در همان کامیت و محیط گزارش‌شده معتبر |
+| تأیید مستقل تمام PRها | **اثبات نشده** |
+| پیکربندی Dependabot | **تأییدنشده**؛ فایل `.github/dependabot.yml` دیده نشد |
+| اسکن اسرار GitHub | **تأییدنشده**؛ تنظیمات حساب در این سند بررسی نشده |
+| تست‌های امنیتی | **جزئی**؛ شواهد هر اجرا باید جداگانه ثبت شود |
+| تست نفوذ مستقل | **تأییدنشده** |
+| امضای رمزنگاری‌شدهٔ رسمی مالک | طبق [GOVERNANCE.md](./GOVERNANCE.md) **فعال نشده** |
 
-## 🔍 ویژگی‌های امنیتی
+استفاده از Bandit، Semgrep، OWASP و ابزارهای مشابه پیشنهاد می‌شود؛ نام بردن ابزار به‌معنی اجرای آن نیست. نسخه، دستور، کامیت، خروجی و نتایج منفی را ثبت کنید.
 
-### حفاظت‌های داخلی
-
-1. **یکپارچگی شواهد**
-   - هش SHA-256 برای تمام شواهد
-   - مسیرهای بررسی غیرقابل تغییر
-   - تأیید cryptographic
-
-2. **کنترل دسترسی**
-   - مجوزهای مبتنی بر نقش
-   - احراز هویت مورد نیاز
-   - مدیریت جلسه
-
-3. **حفظ داده‌ها**
-   - رمزنگاری در حالت استراحت
-   - رمزنگاری در حین انتقال
-   - حداقل‌سازی داده‌ها
-
-4. **لاگ‌گیری بررسی**
-   - تمام اقدامات لاگ می‌شوند
-   - لاگ‌های ضد دستکاری
-   - سیاست‌های نگهداری
-
-### فرآیند بررسی امنیتی
-
-تمام تغییرات کد از طریق این مراحل می‌گذرانند:
-1. **اسکن خودکار**: ابزارهای تحلیل استاتیک
-2. **بررسی دستی**: بررسی کد با تمرکز امنیتی
-3. **بررسی واسطه‌ها**: اسکن آسیب‌پذیری
-4. **تست**: موارد تست امنیتی
-
----
-
-## 📊 ملاحظات امنیتی شناخته شده
-
-### وضعیت امنیتی فعلی
-
-| حوزه | وضعیت | یادداشت‌ها |
-|------|--------|------------|
-| بررسی کد | ✅ فعال | تمام PRها بررسی می‌شوند |
-| اسکن واسطه‌ها | ✅ فعال | استفاده از Dependabot |
-| اسکن اسرار | ✅ فعال | اسکن اسرار GitHub |
-| افشای آسیب‌پذیری | ✅ فعال | افشای هماهنگ |
-| تست امنیتی | ⚠️ جزئی | نیاز به تست‌های امنیتی بیشتر |
-| تست نفوذ | ❌ شروع نشده | در نظر برای آینده |
-
-### مسائل امنیتی باز
-
-- **Issue #163**: نگرانی proxy در برنامه‌ریز loopback Ollama
-  - وضعیت: در حال بررسی
-  - شدت: بالا
-  - اقدام: غیرفعال کردن یکپارچه‌سازی Ollama تا زمان حل
-
----
-
-## 🛠️ ابزارهای امنیتی
-
-### ابزارهای توصیه شده
-
-1. **تجزیه و تحلیل استاتیک**
-   - `bandit` - لینتر امنیتی Python
-   - `safety` - چک کننده آسیب‌پذیری واسطه‌ها
-   - `semgrep` - قوانین امنیتی سفارشی
-
-2. **تجزیه و تحلیل دینامیک**
-   - `OWASP ZAP` - اسکنر امنیت برنامه‌های وب
-   - `Burp Suite` - اسکنر آسیب‌پذیری وب
-
-3. **مانیتورینگ**
-   - `Sentry` - ردیابی خطاها
-   - `Datadog` - مانیتورینگ سیستم
-   - لاگ‌گیری سفارشی
-
-### مثال‌های استفاده
-
-```bash
-# نصب ابزارهای امنیتی
-pip install bandit safety semgrep
-
-# اجرا کردن چک‌های امنیتی
-bandit -r implementation/
-safety check
-semgrep --config=auto implementation/
-```
-
----
-
-## 🎓 منابع امنیتی
-
-### مواد آموزشی
-- [OWASP Top 10](https://owasp.org/www-project-top-ten/)
-- [CWE Top 25](https://cwe.mitre.org/top25/)
-- [امنیت Python](https://wiki.python.org/moin/Security)
-
-### چک‌لیست‌های امنیتی
-- [ ] اعتبارسنجی ورودی پیاده‌سازی شده
-- [ ] کدگذاری خروجی اعمال شده
-- [ ] احراز هویت مورد نیاز است
-- [ ] بررسی‌های مجوز در جای خود هستند
-- [ ] پیام‌های خطا اطلاعات را افشا نمی‌کنند
-- [ ] لاگ‌ها حاوی داده‌های حساس نیستند
-- [ ] واسطه‌ها به‌روز هستند
-- [ ] اسرار به درستی محافظت می‌شوند
-
----
-
-## 📞 تماس‌های امنیتی
-
-| نقش | تماس | کلید PGP |
-|------|-------|----------|
-| سرپرست امنیت | sepehr.ghanbari@proton.me | در صورت درخواست |
-| مالک پروژه | sepehr.ghanbari@proton.me | در صورت درخواست |
-
----
-
-## ✅ تشکرهای امنیتی
-
-ما می‌خواهیم از افراد و سازمان‌های زیر به خاطر مشارکت‌های امنیتی‌شان تشکر کنیم:
-
-- [لیست با دریافت مشارکت‌ها پر خواهد شد]
+این سند به‌تنهایی مجوز MIT، قوانین شاخه، کلیدها، اختیار حاکمیتی یا رفتار runtime را تغییر نمی‌دهد. [GOVERNANCE.md](./GOVERNANCE.md) و [AGENTS.md](./AGENTS.md) را ببینید.
