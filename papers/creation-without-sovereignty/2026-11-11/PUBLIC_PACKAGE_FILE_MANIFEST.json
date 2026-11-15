@@ -1,0 +1,69 @@
+{
+  "format": "PUBLIC_PACKAGE_FILE_MANIFEST_V2",
+  "date": "2026-11-12",
+  "doi": "10.5281/zenodo.24136175",
+  "status": "AUTHOR_PUBLISHED_WORKING_PAPER_NOT_PEER_REVIEWED",
+  "source": "GitHub PR #181, archived v0.1 Zenodo 2026-11-11",
+  "self_hash_excluded": true,
+  "file_count_excluding_self": 14,
+  "excluded_external_asset": "notes.zip (available only on Zenodo; not re-uploaded)",
+  "source_privacy": "Private conversation transcript not distributed; public selection reproduction INCOMPLETE",
+  "files": {
+    "evidence/CLAIM_EVIDENCE_LEDGER.md": {
+      "bytes": 5939,
+      "sha256": "4c62576c6cbab478ab0ca11feb153d585bc9b2fdf4bcd4dd2830a5401a97b0d9"
+    },
+    "evidence/DIALOGUE_PROCESS_RECORD_FA.md": {
+      "bytes": 29428,
+      "sha256": "86b27579feecf827151eab654b767745c39947913976b81be10c6262076d7dbd"
+    },
+    "evidence/RIGHTS_PRIVACY_AND_SOURCE_LIMITS.md": {
+      "bytes": 3693,
+      "sha256": "133f3b776b0581ef6398c30668dd60573ce4c87e169c05c64fd75fdfe048c0c4"
+    },
+    "evidence/VERBATIM_USER_ANCHORS_2026-11-11.md": {
+      "bytes": 9757,
+      "sha256": "b4e4976068c3c9d4ad6482eba562460e96734a4e1ec821a03cb61d935577bdab"
+    },
+    "paper/CREATION_WITHOUT_SOVEREIGNTY_EN_v0.1.md": {
+      "bytes": 50404,
+      "sha256": "564fa3259269d29ad517fd55b3b7b98eb47189fa0eb5c6649c747f01d64809e6"
+    },
+    "paper/CREATION_WITHOUT_SOVEREIGNTY_FA_v0.1.md": {
+      "bytes": 46645,
+      "sha256": "b6497e4cd948c34c114407a9814859546a0da6d0958712e359004afb90143809"
+    },
+    "paper/LLM_ETHICAL_REVISION_PROTOCOL_B_v0.1.md": {
+      "bytes": 9569,
+      "sha256": "e519f0784e56ae2ba86284adf816e61b9b828dcd190cee4431191515e4891d9c"
+    },
+    "PUBLIC_EDITORIAL_CHANGELOG_2026-11-12.md": {
+      "bytes": 3166,
+      "sha256": "12e6d878ef90197d6fb2754590a26aa5f17fced574c334fc035571e34b6e0624"
+    },
+    "published/en.pdf": {
+      "bytes": 229470,
+      "sha256": "b268dbc5476040d7b84db7253dc468a8342341c62a533ba0ab7d14f17820169c"
+    },
+    "published/fa.pdf": {
+      "bytes": 212341,
+      "sha256": "1b63e6ae1a0f9c84978b5b36759f197eb150f9046ce98d08675fedae137d8f5c"
+    },
+    "README.md": {
+      "bytes": 3580,
+      "sha256": "1fd8f5312dda3e9be3ecfbaaaa84abd9d6641e616aacd86a5ad82f05a6141508"
+    },
+    "source/ARCHIVE_EXTRACTION_MANIFEST.json": {
+      "bytes": 2750,
+      "sha256": "3c4c7ed49fb39bc66e576d7cf76b6421789902ee34ee4a6ebcd05872b0fe176c"
+    },
+    "zenodo/ZENODO_METADATA_DRAFT.json": {
+      "bytes": 3035,
+      "sha256": "26be0005fecfe85e51dd4cfafa0144ecadf0fb7e2962ff6623fd395cbd21884f"
+    },
+    "zenodo/ZENODO_PUBLICATION_RECORD_2026-11-12.json": {
+      "bytes": 1386,
+      "sha256": "2723d0c735a796387e026a1e4ac9c24c47f35b3364ed89f506f4843aad74c0a3"
+    }
+  }
+}

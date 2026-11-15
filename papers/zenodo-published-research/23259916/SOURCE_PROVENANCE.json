@@ -1,0 +1,24 @@
+{
+  "source_doi": "10.5281/zenodo.23259916",
+  "title": "Preliminary Design and Exploratory Evaluation-Ario: Toward an Auditable Framework for Epistemic Integrity, Memory, and AI Identity",
+  "license": "cc-by-4.0",
+  "original": {
+    "original_zenodo_filename": "Preliminary Design and Exploratory Evaluation.pdf",
+    "local_filename": "preliminary-framework.pdf",
+    "size": 186953,
+    "md5": "4bdcc44d638e53d723e9e966f7396d38",
+    "sha256": "030bf2e2f383c73e2dad28762c4850daf73ecfcda5fb453e5cc28e325724de32",
+    "api_asset_url": "https://zenodo.org/api/records/23259916/files/Preliminary%20Design%20and%20Exploratory%20Evaluation.pdf/content",
+    "checksum_verified": true
+  },
+  "extraction_quality": {
+    "pages": 14,
+    "text_chars": 35098,
+    "pages_with_over_80_chars": 14,
+    "near_blank_pages": [],
+    "persian_chars": 0,
+    "original_sha256": "030bf2e2f383c73e2dad28762c4850daf73ecfcda5fb453e5cc28e325724de32",
+    "page_1_text_excerpt_escaped": "#\\n \\nArio:\\n \\nToward\\n \\nan\\n \\nAuditable\\n \\nFramework\\n \\nfor\\n \\nEpistemic\\n \\nIntegrity,\\n \\nMemory,\\n \\nand\\n \\nAI\\n \\nIdentity\\n \\n \\n##\\n \\nA\\n \\nPreliminary\\n \\nDesign\\n \\nand\\n \\nExploratory\\n \\nEvaluation\\n \\nReport\\n \\n \\n**Author:"
+  },
+  "peer_review": "No independent peer review verified"
+}
