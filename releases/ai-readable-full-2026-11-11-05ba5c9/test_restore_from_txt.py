@@ -41,4 +41,7 @@ class Tests(unittest.TestCase):
   self.dst.mkdir();(self.dst/"keep").write_text("safe");self.src.write_bytes(snap([("a",b"x")]))
   with self.assertRaises(SnapshotError):restore(self.src,self.dst)
   self.assertEqual((self.dst/"keep").read_text(),"safe")
+ def test_payload_hash_tampering(self):
+  data=snap([("a",b"x")]).replace(b'"sha256":"',b'"sha256":"f')
+  self.bad(data)
 if __name__=="__main__":unittest.main()
