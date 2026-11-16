@@ -37,7 +37,7 @@ def restore(src,dst):
    if not h["tracked_files"].isdigit() or not h["tracked_bytes"].isdigit(): raise SnapshotError("invalid counts")
    expected_n,expected_b=int(h["tracked_files"]),int(h["tracked_bytes"])
    if expected_n>1000000 or expected_b>2**50: raise SnapshotError("snapshot exceeds limits")
-   seen=set(); folded=set(); n=total=0
+   seen=set(); folded=set(); all_parents=set(); folded_components={}; n=total=0
    while True:
     line=f.readline()
     if not line: raise SnapshotError("missing footer")
@@ -54,8 +54,16 @@ def restore(src,dst):
     keys={"path","mode","git_blob_sha1","sha256","bytes","encoding","payload_bytes"}
     if not isinstance(e,dict) or not keys<=e.keys(): raise SnapshotError("incomplete record")
     p=safe(e["path"]); name=p.as_posix()
-    if name in seen or name.casefold() in folded: raise SnapshotError("duplicate/case collision")
+    if name in seen or name in all_parents or name.casefold() in folded: raise SnapshotError("duplicate, case collision, or file/directory conflict")
+    parts=p.parts
+    for i in range(1,len(parts)+1):
+     prefix="/".join(parts[:i]); key=prefix.casefold()
+     previous=folded_components.get(key)
+     if previous is not None and previous!=prefix: raise SnapshotError("case-colliding path component")
+     folded_components[key]=prefix
+     if i<len(parts) and prefix in seen: raise SnapshotError("file/directory path conflict")
     seen.add(name); folded.add(name.casefold())
+    for i in range(1,len(parts)): all_parents.add("/".join(parts[:i]))
     if e["mode"] not in ("100644","100755","120000"): raise SnapshotError("unsupported Git mode")
     for k in ("bytes","payload_bytes"):
      if not isinstance(e[k],int) or isinstance(e[k],bool) or e[k]<0: raise SnapshotError("invalid byte count")
