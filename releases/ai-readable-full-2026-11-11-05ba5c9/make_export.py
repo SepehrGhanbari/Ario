@@ -16,7 +16,8 @@ for item in g("ls-tree","-r","-z","--full-tree","HEAD").split(b"\x00"):
  if typ!="blob":raise ValueError(("Unsupported object type",typ,path))
  name=path.decode("utf-8","surrogateescape")
  p=pathlib.PurePosixPath(name)
- if p.is_absolute() or ".." in p.parts or "\\" in name:raise ValueError("unsafe path")
+ wp=pathlib.PureWindowsPath(name)
+ if p.is_absolute() or wp.drive or wp.root or wp.is_absolute() or ".." in p.parts or "\\" in name or any(part.endswith((".", " ")) or ":" in part for part in p.parts):raise ValueError("unsafe or non-portable path")
  raw=g("cat-file","blob",oid)
  if hashlib.sha1(b"blob "+str(len(raw)).encode()+b"\0"+raw).hexdigest()!=oid:raise ValueError("git sha mismatch")
  try:
@@ -44,41 +45,7 @@ Verify every SHA256 in the manifest. This snapshot is pinned, not live HEAD.
 To reconstruct the TXT, use RESTORE_FROM_TXT.py enclosed in ZIP.
 """
 (OUT/"README-EXPORT.txt").write_text(guide,encoding="utf-8",newline="\n")
-restore=String = r'''#!/usr/bin/env python3
-import sys,json,base64,hashlib,pathlib
-def restore(input_path,output_path):
- dst=pathlib.Path(output_path)
- if dst.exists() and any(dst.iterdir()):raise ValueError("Output directory is not empty")
- dst.mkdir(parents=True,exist_ok=True)
- seen=set();count=0
- with open(input_path,"rb") as f:
-  while True:
-   line=f.readline()
-   if not line:raise ValueError("Missing ARIO_BEGIN")
-   if line==b"@@ARIO_BEGIN\n":break
-  while True:
-   line=f.readline()
-   if line.startswith(b"@@ARIO_COMPLETE "):break
-   if not line.startswith(b"@@ARIO_FILE "):raise ValueError("Bad record boundary")
-   e=json.loads(line[len(b"@@ARIO_FILE "):])
-   path=pathlib.PurePosixPath(e["path"])
-   if path.is_absolute() or ".." in path.parts or str(path) in seen:raise ValueError("Unsafe or duplicate path")
-   seen.add(str(path))
-   blob=f.read(e["payload_bytes"])
-   if len(blob)!=e["payload_bytes"]:raise ValueError("Truncated payload")
-   if f.readline()!=b"\n" or f.readline()!=b"@@ARIO_END\n":raise ValueError("Bad record ending")
-   raw=blob if e["encoding"]=="raw-utf8" else base64.b64decode(blob)
-   if len(raw)!=e["bytes"] or hashlib.sha256(raw).hexdigest()!=e["sha256"]:raise ValueError("Hash mismatch: "+str(path))
-   target=dst.joinpath(*path.parts)
-   target.parent.mkdir(parents=True,exist_ok=True)
-   target.write_bytes(raw)
-   count+=1
-  if f.read():raise ValueError("Unexpected trailing TXT bytes")
- print("Restored",count,"tracked Git blobs")
-if __name__=="__main__":
- if len(sys.argv)!=3:raise SystemExit("Usage: python RESTORE_FROM_TXT.py ario-full.txt output-directory")
- restore(sys.argv[1],sys.argv[2])
-'''
+restore=(R/"RESTORE_FROM_TXT_HARDENED.py").read_text(encoding="utf-8")
 (OUT/"RESTORE_FROM_TXT.py").write_text(restore,encoding="utf-8",newline="\n")
 txt=OUT/"ario-full.txt"
 with open(txt,"wb") as f:
@@ -88,7 +55,7 @@ with open(txt,"wb") as f:
   f.write(b"@@ARIO_FILE "+json.dumps({**e,"payload_bytes":len(payload)},ensure_ascii=True,sort_keys=True,separators=(",",":")).encode("ascii")+b"\n")
   f.write(payload)
   f.write(b"\n@@ARIO_END\n")
- f.write((f"@@ARIO_COMPLETE files={len(rec)} commit={sha}\n").encode())
+ f.write((f"@@ARIO_COMPLETE files={len(rec)} commit={sha} tree={tree} tracked_bytes={manifest['tracked_bytes']} manifest_sha256={hash256(m)}\n").encode())
 def info(path,mode):
  z=zipfile.ZipInfo(path,(2026,11,11,0,0,0))
  z.create_system=3
@@ -98,7 +65,7 @@ def info(path,mode):
 zp=OUT/"ario-full.zip"
 with zipfile.ZipFile(zp,"w",compression=zipfile.ZIP_DEFLATED,compresslevel=9,allowZip64=True) as z:
  for e,raw in rec:z.writestr(info("ARIO_SOURCE/"+e["path"],e["mode"]),raw)
- for x in ["ario-manifest.json","README-EXPORT.txt","RESTORE_FROM_TXT.py"]:z.write(OUT/x,"EXPORT_META/"+x)
+ for x in ["ario-manifest.json","README-EXPORT.txt","RESTORE_FROM_TXT.py"]:z.writestr(info("EXPORT_META/"+x,"100644"),(OUT/x).read_bytes())
 # Full archive verification against original Git blobs, not just ZIP CRC.
 with zipfile.ZipFile(zp) as z:
  assert z.testzip() is None
@@ -119,7 +86,7 @@ with open(txt,"rb") as f:
   assert f.readline()==b"\n" and f.readline()==b"@@ARIO_END\n"
   restored=payload if obj["encoding"]=="raw-utf8" else base64.b64decode(payload)
   assert restored==raw and hash256(restored)==obj["sha256"],e["path"]
- assert f.readline()==(f"@@ARIO_COMPLETE files={len(rec)} commit={sha}\n").encode()
+ assert f.readline()==(f"@@ARIO_COMPLETE files={len(rec)} commit={sha} tree={tree} tracked_bytes={manifest['tracked_bytes']} manifest_sha256={hash256(m)}\n").encode()
  assert f.read()==b""
 cs={"commit":sha,"git_tree":tree,"tracked_files":len(rec),"tracked_bytes":manifest["tracked_bytes"],"verification":"PASS: ZIP and TXT independently reconstructed all Git blobs and matched source SHA1/SHA256."}
 for x in ["ario-full.zip","ario-full.txt","ario-manifest.json","README-EXPORT.txt","RESTORE_FROM_TXT.py"]:
