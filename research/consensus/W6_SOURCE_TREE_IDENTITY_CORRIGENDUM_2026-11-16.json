@@ -1,0 +1,52 @@
+{
+  "schema": "ARIO_W6_NONMUTATING_RELEASE_TREE_IDENTITY_CORRIGENDUM_V1",
+  "date": "2026-11-16",
+  "status": "SOURCE_PINNED_REPRODUCED_TREE_METADATA_ONLY_FAIL",
+  "scope": "Historical source Git object identity and release JSON per-file path/blob/size audit. No repackaging or modification of historical release files.",
+  "repository": "SepehrGhanbari/Ario",
+  "release_source_commit": "a39ac06e69c1b5115bca2016698556730bf920cd",
+  "actual_source_git_tree_sha": "16f0c24c0a1e027a6b9086320464f9653a841e22",
+  "wrong_legacy_value": "a39ac06e69c1b5115bca2016698556730bf920cd",
+  "legacy_fields_to_correct_in_future_version": [
+    "releases/complete-research-2026-11-14-a39ac06e/SOURCE_MANIFEST.json#source_tree_sha",
+    "releases/complete-research-2026-11-14-a39ac06e/RESEARCH_AND_EXPERIMENT_COVERAGE.json#source_git_tree"
+  ],
+  "original_manifest_git_blob_sha1": "0f508a4c92b8c37fdb3ae680a78a24ec5bac66d2",
+  "original_coverage_git_blob_sha1": "da384eedaaa087bbb057382521d1714a2d621a38",
+  "checks": {
+    "source_tree_recursive_api_truncated": false,
+    "actual_git_blob_entries": 264,
+    "manifest_paths_total": 264,
+    "included": 239,
+    "alias": 1,
+    "excluded": 24,
+    "missing_source_paths": 0,
+    "extra_manifest_paths": 0,
+    "duplicate_manifest_paths": 0,
+    "git_blob_sha1_mismatches": 0,
+    "git_blob_size_mismatches": 0,
+    "alias_target_blob_mismatches": 0,
+    "bad_tree_identity_fields": 2,
+    "isolated_python_cli_exit_code": 2,
+    "isolated_synthetic_metamorphic_cases": 6,
+    "metamorphic_suite_exit_code": 0
+  },
+  "current_path_checks_are_not": {
+    "verified_zip_txt_payload_sha256": true,
+    "real_world_publication_authenticity": true,
+    "independent_external_custody_or_trust": true
+  },
+  "controls": [
+    "original published metadata => expected TREE_METADATA_ONLY_FAIL",
+    "only 2 in-memory fields replaced with actual Git tree SHA => PASS",
+    "tampered Git blob SHA => FAIL",
+    "omitted manifest path => FAIL",
+    "truncated Git tree response => FAIL",
+    "changed recorded byte size => FAIL"
+  ],
+  "remedy": "Keep published original files, release ZIP/TXT and DOI unchanged. Publish an append-only corrigendum and add a typed commit_sha/tree_sha validation gate before any next versioned export.",
+  "experiment_code": [
+    "research/consensus/w6_verify_research_release_git_ids.py",
+    "research/consensus/test_w6_manifest_ids.py"
+  ]
+}
