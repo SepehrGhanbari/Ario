@@ -18,6 +18,7 @@
 ## End-to-end artifact verification
 - Generator uses the pinned release source commit `05ba5c960aaea96fc6bb80504b53b4d47e7d42f5`.
 - Generator validates ZIP and TXT content; hardened consumer restores TXT; independent verifier compares every restored path and byte sequence against Git blob objects.
+- GitHub Actions run #45 additionally passed the review-baseline snapshot roundtrip: 280 Git blobs / 94,812,023 bytes, exact paths and bytes, executable modes checked.
 - GitHub Actions run #51 passed 10/10 jobs: restore matrix (Ubuntu/Windows × Python 3.11/3.12), manifest builder matrix (same), and generator roundtrip on Ubuntu and Windows.
 - Run #51 predates the latest additional path-validation regression cases; a follow-up run is pending.
 
