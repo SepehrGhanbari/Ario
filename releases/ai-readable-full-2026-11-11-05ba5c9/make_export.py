@@ -18,8 +18,15 @@ for item in g("ls-tree","-r","-z","--full-tree","HEAD").split(b"\x00"):
  p=pathlib.PurePosixPath(name)
  wp=pathlib.PureWindowsPath(name)
  if p.is_absolute() or wp.drive or wp.root or wp.is_absolute() or ".." in p.parts or p.as_posix()!=name or "\\" in name or any(part.endswith((".", " ")) or ":" in part or part.split(".",1)[0].upper() in RESERVED for part in p.parts):raise ValueError("unsafe or non-portable path")
- if name in seen_paths or name.casefold() in folded_paths:raise ValueError("duplicate or case-colliding path")
+ if name in seen_paths or name in all_parents or name.casefold() in folded_paths:raise ValueError("duplicate, case-colliding, or file/directory-conflicting path")
+ parts=p.parts
+ for i in range(1,len(parts)+1):
+  prefix="/".join(parts[:i]);key=prefix.casefold();previous=folded_components.get(key)
+  if previous is not None and previous!=prefix:raise ValueError("case-colliding path component")
+  folded_components[key]=prefix
+  if i<len(parts) and prefix in seen_paths:raise ValueError("file/directory path conflict")
  seen_paths.add(name);folded_paths.add(name.casefold())
+ for i in range(1,len(parts)):all_parents.add("/".join(parts[:i]))
  raw=g("cat-file","blob",oid)
  if hashlib.sha1(b"blob "+str(len(raw)).encode()+b"\0"+raw).hexdigest()!=oid:raise ValueError("git sha mismatch")
  try:
