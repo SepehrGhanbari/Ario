@@ -9,6 +9,8 @@ assert re.fullmatch("[0-9a-f]{40}",sha)
 tree=g("rev-parse","HEAD^{tree}").decode().strip()
 date=g("show","-s","--format=%cI","HEAD").decode().strip()
 rec=[]
+RESERVED={"CON","PRN","AUX","NUL","CONIN$","CONOUT$","COM¹","COM²","COM³","LPT¹","LPT²","LPT³",*(f"COM{i}" for i in range(1,10)),*(f"LPT{i}" for i in range(1,10))}
+seen_paths=set(); folded_paths=set(); all_parents=set(); folded_components={}
 for item in g("ls-tree","-r","-z","--full-tree","HEAD").split(b"\x00"):
  if not item:continue
  h,path=item.split(b"\t",1)
