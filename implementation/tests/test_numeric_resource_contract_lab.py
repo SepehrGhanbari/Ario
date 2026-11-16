@@ -43,7 +43,7 @@ def test_valid_json_integer_over_runtime_ceiling_is_versioned_resource(digits):
     assert baseline["reason_code"] == "INVALID_JSON"  # existing, unchanged
     assert versioned["status"] == "UNKNOWN"
     assert versioned["reason_code"] == "NUMERIC_RESOURCE_LIMIT"
-    assert versioned["legacy_lab_reason"] == "INVALID_JSON"
+    assert versioned["existing_lab_reason"] == "INVALID_JSON"
     assert versioned["resource_records"] == 1
     assert hashlib.sha256(raw).hexdigest() == digest
     _safe(versioned)
@@ -55,7 +55,7 @@ def test_valid_integers_at_or_below_cap_are_not_reclassified(digits):
     result = diagnose_numeric_resource_bytes(raw)
     assert result["status"] == "NO_NUMERIC_RESOURCE_OBSERVED"
     assert result["reason_code"] is None
-    assert result["legacy_lab_status"] == "OBSERVED"
+    assert result["existing_lab_status"] == "OBSERVED"
     _safe(result)
 
 
@@ -68,7 +68,7 @@ def test_explicit_new_policy_can_be_lower_than_legacy_without_rewriting(token):
         raw, limits=NumericResourceLimits(max_integer_digits=20))
     assert result["status"] == "UNKNOWN"
     assert result["reason_code"] == "NUMERIC_RESOURCE_LIMIT"
-    assert result["legacy_lab_status"] == "OBSERVED"
+    assert result["existing_lab_status"] == "OBSERVED"
     assert result["history_mutation"] == "NONE"
     assert old_lab.inspect_jsonl_bytes(raw) == before
 
