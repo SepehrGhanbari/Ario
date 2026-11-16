@@ -54,11 +54,18 @@ Every TXT record is length-framed, so an accidental delimiter within source cont
 No files are omitted or summarized; duplicate tracked paths are intentionally retained.
 Neither format includes .git history, untracked local files, or off-repo resources.
 Verify every SHA256 in the manifest. This snapshot is pinned, not live HEAD.
-To reconstruct the TXT, use RESTORE_FROM_TXT.py enclosed in ZIP.
+To reconstruct the TXT, use RESTORE_FROM_TXT.py in the NEW candidate ZIP.
+The historical ZIP is unchanged and may contain an older unsafe restore script.
+Independently obtain the expected manifest SHA-256 from a trusted OUT-OF-BAND source.
+Then verify the candidate TXT against the candidate manifest and that external pin:
+  python VERIFY_PINNED_MANIFEST.py --txt ario-full.txt --manifest ario-manifest.json --expected-manifest-sha256 PIN
+A hash appearing only in the downloaded package is not an independent trust anchor.
+Even a match does not establish the publisher's identity without trustworthy pin custody.
 """
 (OUT/"README-EXPORT.txt").write_text(guide,encoding="utf-8",newline="\n")
 restore=(R/"RESTORE_FROM_TXT_HARDENED.py").read_text(encoding="utf-8")
 (OUT/"RESTORE_FROM_TXT.py").write_text(restore,encoding="utf-8",newline="\n")
+(OUT/"VERIFY_PINNED_MANIFEST.py").write_bytes((R/"verify_pinned_manifest.py").read_bytes())
 txt=OUT/"ario-full.txt"
 with open(txt,"wb") as f:
  f.write((f"ARIO_FULL_TEXT_EXPORT_V1\nrepo=https://github.com/SepehrGhanbari/Ario\ncommit={sha}\ntree={tree}\ntracked_files={len(rec)}\ntracked_bytes={manifest['tracked_bytes']}\nmanifest_sha256={hash256(m)}\nraw-utf8 records preserve exact bytes; other records Base64 encode exact bytes.\nEach record's payload_bytes gives the exact length. One separator newline follows.\n@@ARIO_BEGIN\n").encode())
@@ -77,7 +84,7 @@ def info(path,mode):
 zp=OUT/"ario-full.zip"
 with zipfile.ZipFile(zp,"w",compression=zipfile.ZIP_DEFLATED,compresslevel=9,allowZip64=True) as z:
  for e,raw in rec:z.writestr(info("ARIO_SOURCE/"+e["path"],e["mode"]),raw)
- for x in ["ario-manifest.json","README-EXPORT.txt","RESTORE_FROM_TXT.py"]:z.writestr(info("EXPORT_META/"+x,"100644"),(OUT/x).read_bytes())
+ for x in ["ario-manifest.json","README-EXPORT.txt","RESTORE_FROM_TXT.py","VERIFY_PINNED_MANIFEST.py"]:z.writestr(info("EXPORT_META/"+x,"100644"),(OUT/x).read_bytes())
 # Full archive verification against original Git blobs, not just ZIP CRC.
 with zipfile.ZipFile(zp) as z:
  assert z.testzip() is None
@@ -108,7 +115,7 @@ restore(txt,restored_root)
 for e,raw in rec:
  assert (restored_root/e["path"]).read_bytes()==raw,e["path"]
 cs={"commit":sha,"git_tree":tree,"tracked_files":len(rec),"tracked_bytes":manifest["tracked_bytes"],"verification":"PASS: ZIP and TXT independently reconstructed all Git blobs and matched source SHA1/SHA256."}
-for x in ["ario-full.zip","ario-full.txt","ario-manifest.json","README-EXPORT.txt","RESTORE_FROM_TXT.py"]:
+for x in ["ario-full.zip","ario-full.txt","ario-manifest.json","README-EXPORT.txt","RESTORE_FROM_TXT.py","VERIFY_PINNED_MANIFEST.py"]:
  b=(OUT/x).read_bytes();cs[x]={"bytes":len(b),"sha256":hash256(b)}
 (OUT/"checksums.json").write_text(json.dumps(cs,indent=2)+"\n",encoding="utf-8",newline="\n")
 print(json.dumps(cs,indent=2))

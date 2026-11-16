@@ -53,3 +53,12 @@
 - **Conservative candidate policy:** preserve each original path spelling and bytes, but compare full paths *and all directory components* by `NFC(casefold(path))` for collision rejection. Apply exactly the same check in generator and restore consumer; do not silently normalize or merge files.
 - **Windows local GREEN:** `python -B -m unittest -q test_restore_from_txt.py test_make_export_path_policy.py`: **48 tests OK / 2 POSIX-only skips** (46 PASS). Added two NFC-collision rejection controls and one positive distinct-name control for the consumer; generator's new POSIX-only Git fixture checks rejection of same-NFC source names. `unicode_path_probe.py` formerly accepted two files; now rejects them before publication.
 - **Linux/POSIX generator fixture execution and exact-head pinned artifact roundtrip must be confirmed in GitHub Actions**. No macOS CI coverage; this policy prevents the known constructed alias but does not prove universal filesystem portability.
+
+## Independently pinned manifest negative test and release decision
+
+- Independent verifier verify_pinned_manifest.py does NOT import/call the restore consumer. It parses TXT records, checks payloads against a separately supplied manifest, and requires an explicit expected SHA-256. Scoped output: PINNED_MANIFEST_AND_SOURCE_BYTES_MATCH; PIN_CUSTODY_NOT_VERIFIED.
+- Deliberately forged self-consistent TXT+manifest passes structural restore but fails verification against the ORIGINAL supplied pin. Changing the pin to the attacker's newly computed value would pass; external anchor custody therefore remains unresolved.
+- Historical checksums.json has manifest SHA f86fb10ef3eb71dd6e3c348b3f0c9b42c88b3837ae889918c33d8f5d62fe11d8. CI uses this as a deterministic regression pin; it is not independent publication authority.
+- The new generator includes the verifier and warnings in the newly built candidate ZIP; the historical checked-in RESTORE_FROM_TXT.py and old distributed files remain deliberately unchanged.
+- GitHub Actions candidate artifact name: ario-05ba5c9-restore-review-candidate-unpublished.
+- See RESTORE_PUBLICATION_DECISION_V0_1.md for no-overwrite release policy, reviewer gate and publication HOLD.

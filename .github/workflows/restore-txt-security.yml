@@ -18,7 +18,7 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Run isolated restore security tests
         working-directory: releases/ai-readable-full-2026-11-11-05ba5c9
-        run: python -m unittest -v test_restore_from_txt.py test_make_export_path_policy.py
+        run: python -m unittest -v test_restore_from_txt.py test_make_export_path_policy.py test_verify_pinned_manifest.py
 
   manifest-tests:
     strategy:
@@ -70,6 +70,12 @@ jobs:
           python releases/ai-readable-full-2026-11-11-05ba5c9/RESTORE_FROM_TXT_HARDENED.py
           releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/ario-full.txt
           "${{ runner.temp }}/ario-restored"
+      - name: Independently verify TXT against pinned manifest bytes
+        run: >-
+          python releases/ai-readable-full-2026-11-11-05ba5c9/verify_pinned_manifest.py
+          --txt releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/ario-full.txt
+          --manifest releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/ario-manifest.json
+          --expected-manifest-sha256 f86fb10ef3eb71dd6e3c348b3f0c9b42c88b3837ae889918c33d8f5d62fe11d8
       - name: Compare restored files to pinned Git blobs
         run: >-
           python papers/creation-without-sovereignty/2026-11-11/verify_snapshot_roundtrip.py
@@ -79,9 +85,10 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v4
         with:
-          name: ario-pinned-release-roundtrip
+          name: ario-05ba5c9-restore-review-candidate-unpublished
           path: |
             releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/ario-full.zip
             releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/ario-full.txt
             releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/ario-manifest.json
             releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/checksums.json
+            releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/VERIFY_PINNED_MANIFEST.py
