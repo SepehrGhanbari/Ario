@@ -1,7 +1,8 @@
-"""Candidate RED controls for the unadopted Ario strict JSONL intake lab.
+"""RED history and GREEN regressions for Ario's experimental JSONL intake.
 
-The first three probes are strict XFAIL until the separate parser change.
-Only synthetic JSONL is used. No memory, evidence, source data or keys changed.
+The initial RED commit a92e240 kept three strict XFAIL cases. The current
+candidate rejects exponent overflow and all final-head tests are normal tests.
+Synthetic JSONL only; no durable memory or evidence authority is exercised.
 """
 import pytest
 import event_intake_validator_lab as intake_lab
