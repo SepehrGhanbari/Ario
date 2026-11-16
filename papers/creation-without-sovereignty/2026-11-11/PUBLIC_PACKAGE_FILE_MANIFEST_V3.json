@@ -44,7 +44,7 @@
       "git_blob_v3": {
         "bytes": 3000,
         "git_blob_sha1": "b8c9a384cf58a7c14c678b38d302358f8f1545d5",
-        "sha256": "67abac656333b9985a66b701bbd365f6196a4d5168653c61f36f74cf4cbdbcbc"
+        "sha256": "67abac656333b9985a66b701bbd365f6196a4d5168653c61f36b74cf4cbdbcbc"
       },
       "path": "zenodo/ZENODO_METADATA_DRAFT.json",
       "previous_v2": {
@@ -120,7 +120,7 @@
     "zenodo/ZENODO_METADATA_DRAFT.json": {
       "bytes": 3000,
       "git_blob_sha1": "b8c9a384cf58a7c14c678b38d302358f8f1545d5",
-      "sha256": "67abac656333b9985a66b701bbd365f6196a4d5168653c61f36f74cf4cbdbcbc"
+      "sha256": "67abac656333b9985a66b701bbd365f6196a4d5168653c61f36b74cf4cbdbcbc"
     },
     "zenodo/ZENODO_PUBLICATION_RECORD_2026-11-12.json": {
       "bytes": 1386,
