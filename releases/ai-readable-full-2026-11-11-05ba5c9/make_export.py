@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import subprocess, json, hashlib, base64, pathlib, re, zipfile
+import subprocess, json, hashlib, base64, pathlib, re, zipfile, sys
 R=pathlib.Path(__file__).resolve().parent
 SRC=R/"source"; OUT=R/"artifacts"; OUT.mkdir(exist_ok=True)
 def g(*args):return subprocess.check_output(["git","-C",str(SRC),*args])
@@ -88,8 +88,15 @@ with open(txt,"rb") as f:
   assert restored==raw and hash256(restored)==obj["sha256"],e["path"]
  assert f.readline()==(f"@@ARIO_COMPLETE files={len(rec)} commit={sha} tree={tree} tracked_bytes={manifest['tracked_bytes']} manifest_sha256={hash256(m)}\n").encode()
  assert f.read()==b""
+# Exercise the actual published restore consumer, independently of the TXT parser above.
+sys.path.insert(0,str(R))
+from RESTORE_FROM_TXT_HARDENED import restore
+restored_root=OUT/"restored-from-txt"
+restore(txt,restored_root)
+for e,raw in rec:
+ assert (restored_root/e["path"]).read_bytes()==raw,e["path"]
 cs={"commit":sha,"git_tree":tree,"tracked_files":len(rec),"tracked_bytes":manifest["tracked_bytes"],"verification":"PASS: ZIP and TXT independently reconstructed all Git blobs and matched source SHA1/SHA256."}
 for x in ["ario-full.zip","ario-full.txt","ario-manifest.json","README-EXPORT.txt","RESTORE_FROM_TXT.py"]:
  b=(OUT/x).read_bytes();cs[x]={"bytes":len(b),"sha256":hash256(b)}
-(OUT/"checksums.json").write_text(json.dumps(cs,indent=2)+"\n",encoding="utf-8")
+(OUT/"checksums.json").write_text(json.dumps(cs,indent=2)+"\n",encoding="utf-8",newline="\n")
 print(json.dumps(cs,indent=2))
