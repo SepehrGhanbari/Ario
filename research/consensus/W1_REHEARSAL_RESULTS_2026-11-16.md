@@ -13,6 +13,7 @@ This report was added after an actual local execution against Ario's pinned, unm
 - **Environment:** Windows desktop test host, Python 3.13 via `py -3.13 -B`; disposable `Ario/research-scratch/W1-20261116-r1` folder. No modifications to installed Ario sources, production state, keys or trust configuration.
 - **Command:** `py -3.13 -B w1_hidden_dependency_rehearsal.py --source-file witness_provenance_experiment_pinned.py --output w1_report.json` with paths resolved inside isolated scratch.
 - **Actual observed exit:** `W1_EXIT_CODE=0`. The runner wrote `w1_report.json`; SHA-256 reported by `Get-FileHash`: `cb69fef21df52f41a04a9631a9b9c89e3bfe7968389f400876b28e69a4cf5888`.
+- **Published per-case artifact:** [W1_REHEARSAL_ROWS_2026-11-16.csv](W1_REHEARSAL_ROWS_2026-11-16.csv) (80 observed records; CSV contains observed status and latent-world labels, NOT independent adjudication).
 - **Result artifact CSV:** 81 lines (header + 80 cases); SHA-256 of the initial locally exported Windows CSV `2a53d7642c343dfb8273c1592144120179fa4b72529ce9129b657245a9f4b0cc`. A published CSV, if present, may normalize line endings and thus have a distinct file SHA; compare **content fields**, not naive CRLF/LF hashes.
 - **Self-check:** 80 uniquely identified cases spanning **eight logical families** with ten seed/ordering variants per family. Ten variants of one design are not ten independent trials.
 
