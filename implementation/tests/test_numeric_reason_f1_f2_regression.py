@@ -23,7 +23,6 @@ def _check_epistemic_firewall(result):
     assert result["history_mutation"] == "NONE"
 
 
-@pytest.mark.xfail(strict=True, reason="RED F1: existing strict lab runs before custom caps")
 @pytest.mark.parametrize("raw,limit,reason", [
     (_record(), side.NumericResourceLimits(max_line_bytes=16), "LINE_SIZE_LIMIT"),
     (_record() * 2, side.NumericResourceLimits(max_records=1), "EVENT_COUNT_LIMIT"),
