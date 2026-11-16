@@ -128,3 +128,27 @@ python -c "import json; from pathlib import Path; from research.aec_bench_v0_2_a
 ```
 
 The exact-head CI evidence above applies to source/test head `052f8a518352d147cb8cc31fd5ae8d2255c51ac2`. Subsequent code changes require fresh CI; this record does not automatically validate future revisions.
+
+
+## 8. Independent oracle-review package — latest head
+
+**Package state:** prepared and committed; independent adjudication has **NOT RUN**.
+
+- Protocol: `implementation/research/AEC_BENCH_V0_2_INDEPENDENT_REVIEW_PROTOCOL.md`
+- Exporter: `implementation/research/export_aec_bench_v0_2_review_packet.py`
+- Test: `implementation/tests/test_aec_bench_v0_2_review_packet.py`
+- Latest tested head: `f3eab39883d6709775732bfff40ff78ab7b8d721`
+- Latest [AEC-Bench workflow #52](https://github.com/SepehrGhanbari/Ario/actions/runs/43915549574): **SUCCESS**, **37 passed**; generated the label-stripped JSON and CSV adjudication template and uploaded them with the three benchmark reports.
+- Latest [Implementation Regression #1629](https://github.com/SepehrGhanbari/Ario/actions/runs/43915549637): Ubuntu **1210 passed, 4 skipped, 121 subtests passed**; Windows advisory **1210 passed, 4 skipped, 121 subtests passed**. Both jobs SUCCESS.
+- Latest artifact ID: `14249776774`
+- [Download latest benchmark and reviewer packet artifact](https://github.com/SepehrGhanbari/Ario/actions/runs/43915549574/artifacts/14249776774)
+- Artifact SHA-256: `cc99154e05ceb99fc02a6e724c2a2fb89847f381071483dc10cab29d2016f15e`
+- Artifact expires 2027-02-14.
+
+### Blinding limitation
+
+The JSON packet omits expected labels and rationales, but the repository is public and contains the oracle-bearing generator. Therefore blinding is **procedural only**, not technically enforced. A genuinely access-controlled blind review requires a separate custodian to distribute the input-only snapshot and withhold oracle-bearing files until timestamped first-pass decisions are received. The public packet is not a hidden test set.
+
+### Reviewer governance
+
+The protocol asks for at least two independent first-pass reviewers, conflict/prior-exposure/LLM-use disclosure, preserved original judgments, explicit per-case rationale, counterfactual pair checks, and a third reviewer for material disagreements. No reviewer has yet been recruited or has submitted a judgment.
