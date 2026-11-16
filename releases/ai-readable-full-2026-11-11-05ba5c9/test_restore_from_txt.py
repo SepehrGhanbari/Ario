@@ -21,7 +21,7 @@ class Tests(unittest.TestCase):
  def bad(self,data):
   self.src.write_bytes(data)
   with self.assertRaises(SnapshotError):restore(self.src,self.dst)
-  self.assertFalse(self.dst.exists())
+  self.assertFalse(self.dst.exists())\n  self.assertEqual(list(self.d.glob(".out.stage-*")),[])
  def test_valid_text_and_binary(self):
   self.src.write_bytes(snap([("a",b"hello"),("b/c",b"\0\xff")]))
   self.assertEqual(restore(self.src,self.dst),2);self.assertEqual((self.dst/"b/c").read_bytes(),b"\0\xff")
@@ -44,4 +44,15 @@ class Tests(unittest.TestCase):
  def test_payload_hash_tampering(self):
   data=snap([("a",b"x")]).replace(b'"sha256":"',b'"sha256":"f')
   self.bad(data)
+ def test_noncanonical_dot_path(self):self.bad(snap([("./a",b"x")]))
+ def test_repeated_separator(self):self.bad(snap([("a//b",b"x")]))
+ def test_windows_console_device(self):self.bad(snap([("dir/CONIN$",b"x")]))
+ def test_windows_superscript_device(self):self.bad(snap([("COM¹.txt",b"x")]))
+ def test_invalid_surrogate_path(self):self.bad(snap([("\\udcff",b"x")]))
+ def test_header_count_mismatch(self):self.bad(snap([("a",b"x")],hc=2))
+ def test_footer_manifest_mismatch(self):self.bad(snap([("a",b"x")],fm="d"*64))
+ def test_partial_record_failure_cleans_stage(self):
+  data=snap([("first",b"x"),("second",b"y")]).replace(hashlib.sha256(b"y").hexdigest().encode(),b"f"*64)
+  self.bad(data)
+ def test_trailing_dot_path(self):self.bad(snap([("file.",b"x")]))
 if __name__=="__main__":unittest.main()
