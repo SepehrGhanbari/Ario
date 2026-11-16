@@ -5,7 +5,9 @@ def test_blinded_packet_contains_all_public_fixtures_without_oracle_fields():
     packet = build_blinded_packet()
     assert packet["case_count"] == 120
     assert packet["not_hidden"] is True
-    assert packet["packet_kind"] == "PUBLIC_DEVELOPMENT_FIXTURES_BLINDED_TO_EXPECTED_LABELS"
+    assert packet["packet_kind"] == "PUBLIC_DEVELOPMENT_FIXTURES_LABEL_STRIPPED"
+    assert packet["blinding_strength"] == "PROCEDURAL_ONLY_SOURCE_ORACLE_IS_PUBLIC"
+    assert "cannot technically prevent" in packet["blinding_limitation"]
     assert len(packet["cases"]) == 120
     for case in packet["cases"]:
         assert "expected" not in case
