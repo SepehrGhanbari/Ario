@@ -128,8 +128,8 @@ def diagnose_numeric_resource_bytes(
         "status": "UNKNOWN",
         "reason_code": None,
         "proposed_numeric_reason": None,
-        "legacy_lab_status": "NOT_CHECKED",
-        "legacy_lab_reason": None,
+        "existing_lab_status": "NOT_CHECKED",
+        "existing_lab_reason": None,
         "source_authenticity": "UNKNOWN",
         "assessment": "NOT_ASSESSED",
         "memory_mutation": "NONE",
@@ -148,8 +148,8 @@ def diagnose_numeric_resource_bytes(
     # The existing lab is consulted without altering it. Its interpretation
     # remains historical research behavior, not an accepted versioned policy.
     old_lab = inspect_jsonl_bytes(raw)
-    result["legacy_lab_status"] = old_lab["status"]
-    result["legacy_lab_reason"] = old_lab["reason_code"]
+    result["existing_lab_status"] = old_lab["status"]
+    result["existing_lab_reason"] = old_lab["reason_code"]
 
     stream = io.BytesIO(raw)
     while True:
