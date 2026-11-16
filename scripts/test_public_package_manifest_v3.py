@@ -9,9 +9,9 @@ class ManifestV3Tests(unittest.TestCase):
         subprocess.check_call(["git","-C",str(self.repo),"config","user.email","test@example.invalid"])
         subprocess.check_call(["git","-C",str(self.repo),"config","user.name","Manifest Test"])
         self.pkg=self.repo/"package"; (self.pkg/"docs").mkdir(parents=True)
-        raw=b"line one\\nline two\\n"
+        raw=b"line one\nline two\n"
         (self.pkg/"docs"/"sample.md").write_bytes(raw)
-        crlf=raw.replace(b"\\n",b"\\r\\n")
+        crlf=raw.replace(b"\n",b"\r\n")
         v2={"format":"PUBLIC_PACKAGE_FILE_MANIFEST_V2","file_count_excluding_self":1,"files":{"docs/sample.md":{"bytes":len(crlf),"sha256":hashlib.sha256(crlf).hexdigest()}},"source":"test"}
         self.v2=self.pkg/"PUBLIC_PACKAGE_FILE_MANIFEST.json"; self.v2.write_text(json.dumps(v2),encoding="utf-8")
         subprocess.check_call(["git","-C",str(self.repo),"add","."])
