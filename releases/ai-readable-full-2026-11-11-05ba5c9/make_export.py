@@ -19,7 +19,7 @@ for item in g("ls-tree","-r","-z","--full-tree","HEAD").split(b"\x00"):
  name=path.decode("utf-8","strict")
  p=pathlib.PurePosixPath(name)
  wp=pathlib.PureWindowsPath(name)
- if p.is_absolute() or wp.drive or wp.root or wp.is_absolute() or ".." in p.parts or p.as_posix()!=name or "\\" in name or any(part.endswith((".", " ")) or ":" in part or part.split(".",1)[0].upper() in RESERVED for part in p.parts):raise ValueError("unsafe or non-portable path")
+ if p.is_absolute() or wp.drive or wp.root or wp.is_absolute() or ".." in p.parts or p.as_posix()!=name or "\\" in name or any(part.endswith((".", " ")) or ":" in part or part.split(".",1)[0].upper() in RESERVED or any(ord(ch)<32 or ch in '<>"|?*' for ch in part) for part in p.parts):raise ValueError("unsafe or non-portable path")
  if name in seen_paths or name in all_parents or name.casefold() in folded_paths:raise ValueError("duplicate, case-colliding, or file/directory-conflicting path")
  parts=p.parts
  for i in range(1,len(parts)+1):
