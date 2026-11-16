@@ -15,7 +15,7 @@ The reviewer assesses whether each fixture is:
 
 This is **oracle adjudication**, not an evaluation of Ario's implementation and not a competition between systems. Reviewers must not execute or inspect candidate policy outputs before submitting their independent labels.
 
-The public 120-case corpus remains a development set. Blinding its expected labels does not make it a hidden test set, validation set, or independent sample.
+The public 120-case corpus remains a development set. The exporter creates a **label-stripped input packet**, but the repository itself is public and contains the authored expected labels and rationales. Therefore this is only procedural blinding: it cannot technically prevent a reviewer from inspecting the public source. Reviewers must disclose prior access and agree not to inspect oracle-bearing files before first-pass submission. For strict blinding, a separate custodian must distribute a controlled input-only snapshot and keep oracle files inaccessible until submissions are timestamped. Label stripping does not make this a hidden test set, validation set, or independent sample.
 
 ## 2. Reviewer independence and conflict disclosure
 
@@ -33,8 +33,8 @@ Target: at least two reviewers working independently before seeing one another's
 ## 3. Blinded review workflow
 
 1. Freeze the exact repository commit, protocol, fixture generator, and environment. Record all SHAs.
-2. Generate the input-only packet with `python -m research.export_aec_bench_v0_2_review_packet --output research/review_packet`.
-3. Give each reviewer the protocol and the blinded JSON/CSV only. Do not give expected labels, oracle rationales, policy comparison output, or candidate source code until the reviewer has submitted and timestamped their first-pass decisions.
+2. Generate the input-only (label-stripped) packet with `python -m research.export_aec_bench_v0_2_review_packet --output research/review_packet`.
+3. A custodian should distribute the protocol and label-stripped JSON/CSV only. Because the public repository contains oracle-bearing source, reviewers must not inspect those files before first-pass submission; this is a trust-based restriction, not technical access control. Do not provide expected labels, oracle rationales, policy comparison output, or candidate source code until first-pass decisions are timestamped.
 4. Reviewers independently assign a disposition and rationale for every case. They may choose **UNDER-SPECIFIED / NOT ADJUDICABLE** rather than guess.
 5. Reviewers separately inspect counterfactual pair groups. Confirm the intended single-variable change by comparing the input objects; if more than one semantic variable changes, flag the pair.
 6. After first-pass submission, disclose the expected labels and oracle rationales. Reviewers mark each as AGREE, DISAGREE, or NEEDS_PROTOCOL_CLARIFICATION and explain why.
