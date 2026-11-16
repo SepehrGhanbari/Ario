@@ -7,8 +7,9 @@ RES={"CON","PRN","AUX","NUL","CONIN$","CONOUT$","COM¹","COM²","COM³","LPT¹",
 class SnapshotError(ValueError): pass
 def blobsha(b): return hashlib.sha1(b"blob "+str(len(b)).encode()+b"\0"+b).hexdigest()
 def safe(s):
- if not isinstance(s,str) or not s or "\\" in s or "\0" in s: raise SnapshotError("invalid path")
+ if not isinstance(s,str) or not s or "\\" in s or "\0" in s or any(0xD800 <= ord(ch) <= 0xDFFF for ch in s): raise SnapshotError("invalid path")
  p=pathlib.PurePosixPath(s); w=pathlib.PureWindowsPath(s)
+ if p.as_posix()!=s: raise SnapshotError("non-canonical path")
  if p.is_absolute() or w.drive or w.root or w.is_absolute() or ".." in p.parts: raise SnapshotError("absolute or escaping path")
  for x in p.parts:
   if x in ("",".","..") or x.endswith(("."," ")) or ":" in x or x.split(".",1)[0].upper() in RES: raise SnapshotError("non-portable path")
