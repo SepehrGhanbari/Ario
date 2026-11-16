@@ -47,40 +47,6 @@ jobs:
       - name: Verify committed V3 against exact Git blob bytes
         run: python -c "import pathlib,subprocess; a=pathlib.Path('manifest-v3.generated.json').read_bytes(); b=subprocess.check_output(['git','show','HEAD:papers/creation-without-sovereignty/2026-11-11/PUBLIC_PACKAGE_FILE_MANIFEST_V3.json']); assert a==b, 'V3 differs from deterministic Git-blob rebuild'"
 
-  snapshot-roundtrip:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Checkout pinned source repository into generator input
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ github.repository }}
-          ref: 2e7f83c6c7518012bed7fedfb12103ce9b7222ea
-          path: releases/ai-readable-full-2026-11-11-05ba5c9/source
-          fetch-depth: 1
-      - name: Generate TXT and ZIP from pinned Git blobs
-        working-directory: releases/ai-readable-full-2026-11-11-05ba5c9
-        run: python make_export.py
-      - name: Restore TXT with hardened consumer
-        working-directory: releases/ai-readable-full-2026-11-11-05ba5c9
-        run: python RESTORE_FROM_TXT_HARDENED.py artifacts/ario-full.txt "${{ runner.temp }}/ario-restored"
-      - name: Independently compare restored bytes to pinned Git blobs
-        run: python papers/creation-without-sovereignty/2026-11-11/verify_snapshot_roundtrip.py --source releases/ai-readable-full-2026-11-11-05ba5c9/source --restored "${{ runner.temp }}/ario-restored"
-      - name: Upload generated artifacts and manifest candidate
-        uses: actions/upload-artifact@v4
-        with:
-          name: ario-roundtrip-and-manifest-v3-candidate
-          path: |
-            releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/ario-full.zip
-            releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/ario-full.txt
-            releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/ario-manifest.json
-            releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/checksums.json
-
   generator-roundtrip:
     strategy:
       fail-fast: false
@@ -98,5 +64,25 @@ jobs:
         run: git clone --no-local . releases/ai-readable-full-2026-11-11-05ba5c9/source
       - name: Checkout release source commit
         run: git -C releases/ai-readable-full-2026-11-11-05ba5c9/source checkout 05ba5c960aaea96fc6bb80504b53b4d47e7d42f5
-      - name: Build ZIP and TXT and run independent restore roundtrip
+      - name: Build ZIP and TXT
         run: python releases/ai-readable-full-2026-11-11-05ba5c9/make_export.py
+      - name: Restore TXT with hardened consumer
+        run: >-
+          python releases/ai-readable-full-2026-11-11-05ba5c9/RESTORE_FROM_TXT_HARDENED.py
+          releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/ario-full.txt
+          "${{ runner.temp }}/ario-restored"
+      - name: Compare restored files to pinned Git blobs
+        run: >-
+          python papers/creation-without-sovereignty/2026-11-11/verify_snapshot_roundtrip.py
+          --source releases/ai-readable-full-2026-11-11-05ba5c9/source
+          --restored "${{ runner.temp }}/ario-restored"
+      - name: Upload generated release artifacts
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ario-pinned-release-roundtrip
+          path: |
+            releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/ario-full.zip
+            releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/ario-full.txt
+            releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/ario-manifest.json
+            releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/checksums.json
