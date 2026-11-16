@@ -1,6 +1,7 @@
 name: Public Package Manifest V3
 on:
   pull_request:
+    types: [opened, synchronize, reopened, edited]
   push:
 permissions:
   contents: read
