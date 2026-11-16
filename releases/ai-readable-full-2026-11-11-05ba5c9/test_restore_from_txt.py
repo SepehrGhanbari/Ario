@@ -55,4 +55,7 @@ class Tests(unittest.TestCase):
   data=snap([("first",b"x"),("second",b"y")]).replace(hashlib.sha256(b"y").hexdigest().encode(),b"f"*64)
   self.bad(data)
  def test_trailing_dot_path(self):self.bad(snap([("file.",b"x")]))
+ def test_case_colliding_directory_components(self):self.bad(snap([("Dir/a",b"x"),("dir/b",b"y")]))
+ def test_file_directory_conflict_parent_first(self):self.bad(snap([("a",b"x"),("a/b",b"y")]))
+ def test_file_directory_conflict_child_first(self):self.bad(snap([("a/b",b"y"),("a",b"x")]))
 if __name__=="__main__":unittest.main()
