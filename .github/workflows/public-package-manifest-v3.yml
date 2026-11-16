@@ -28,5 +28,5 @@ jobs:
           --manifest-v2 papers/creation-without-sovereignty/2026-11-11/PUBLIC_PACKAGE_FILE_MANIFEST.json
           --ref 2e7f83c6c7518012bed7fedfb12103ce9b7222ea
           --output manifest-v3.generated.json
-      - name: Verify committed V3 is byte-for-byte reproducible
-        run: python -c "from pathlib import Path; assert Path('manifest-v3.generated.json').read_bytes() == Path('papers/creation-without-sovereignty/2026-11-11/PUBLIC_PACKAGE_FILE_MANIFEST_V3.json').read_bytes(), 'V3 differs from deterministic Git-blob rebuild'"
+      - name: Diagnose and verify committed V3 reproducibility
+        run: python -c "from pathlib import Path; a=Path('manifest-v3.generated.json').read_bytes(); b=Path('papers/creation-without-sovereignty/2026-11-11/PUBLIC_PACKAGE_FILE_MANIFEST_V3.json').read_bytes(); i=next((i for i,(x,y) in enumerate(zip(a,b)) if x!=y),min(len(a),len(b))); print('offset',i,'generated',repr(a[i:i+180]),'committed',repr(b[i:i+180]),'sizes',len(a),len(b)); assert a==b, 'V3 differs from deterministic Git-blob rebuild'"
