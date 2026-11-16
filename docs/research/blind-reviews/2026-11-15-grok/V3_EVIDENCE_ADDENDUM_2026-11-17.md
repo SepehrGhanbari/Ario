@@ -4,7 +4,7 @@
 
 ## Exact newly supplied source bytes
 
-- User-provided `Ario-patch-v3.zip`: 287,xxx bytes (do **not** infer precise bytes from rounded UI output); **SHA-256 `e828904a5264e31283deb7b64b196d3c06f4a0290e07da3e2357d45a9250ebf4`**. Source ZIP retained in original user attachment; NOT a published repository release.
+- User-provided `Ario-patch-v3.zip`: **287,455 bytes** (measured directly from the uploaded ZIP; not inferred from UI rounding); **SHA-256 `e828904a5264e31283deb7b64b196d3c06f4a0290e07da3e2357d45a9250ebf4`**. Source ZIP retained in original user attachment; NOT a published repository release.
 - User-provided `PATCH_v3.diff`: **4,154 bytes**, SHA-256 `d3d8a4507f3b99a2a8294d229dcfe9eeb0608330190aba246dc68f325926dac2`, Git blob SHA-1 `099de9ef60cdf8f6bd414d9ed620cc4ea4ba6103`. [Exact raw mixed-line-ending patch](./materials/PATCH_v3.diff) is now in this archival PR.
 - User-provided final `test_review_regressions_2026_11_15 (2).py`: **13,225 bytes**, SHA-256 `c8367332f54b5d436a3d7da6e0708775d9808ef04977b62d5a8235203abc08ab`, Git blob `879d00c6fce591c52b801628c7af689cad4c2e49`. Exact bytes exist in engineering Draft #254 at `implementation/tests/test_review_regressions_2026_11_15.py`.
 - ZIP and standalone final test bytes are **identical** for the new test path.
