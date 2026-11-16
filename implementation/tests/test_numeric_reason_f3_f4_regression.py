@@ -55,7 +55,6 @@ def test_f3_old_nonnumeric_resource_gate_has_precedence(source, limits, old_reas
     _no_promotion(report)
 
 
-@pytest.mark.xfail(strict=True, reason="F4 RED: readline cannot convert 2**100 to index-sized integer")
 @pytest.mark.parametrize("value,expected_status,expected_reason", [
     (b"25", "NO_NUMERIC_RESOURCE_OBSERVED", None),
     (b"9" * 4301, "UNKNOWN", "NUMERIC_RESOURCE_LIMIT"),
