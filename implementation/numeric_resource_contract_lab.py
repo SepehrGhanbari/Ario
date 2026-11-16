@@ -145,12 +145,10 @@ def diagnose_numeric_resource_bytes(
         result["reason_code"] = "EMPTY_LEDGER"
         return result
 
-    # The existing lab is consulted without altering it. Its interpretation
-    # remains historical research behavior, not an accepted versioned policy.
-    old_lab = inspect_jsonl_bytes(raw)
-    result["existing_lab_status"] = old_lab["status"]
-    result["existing_lab_reason"] = old_lab["reason_code"]
-
+    # Pass 1 — honor all configured framing, line and event limits BEFORE
+    # invoking the old parser. This pass never retains or exports source text.
+    # In an early rejection, the older parser was NOT run by this diagnostic;
+    # its actual historical results, if any, must never be invented.
     stream = io.BytesIO(raw)
     while True:
         line = stream.readline(limits.max_line_bytes + 1)
@@ -170,6 +168,17 @@ def diagnose_numeric_resource_bytes(
             result["reason_code"] = "EMPTY_JSONL_RECORD"
             return result
 
+    # Pass 2 — consult the exact original parser only after bounded framing
+    # has succeeded. All records are then parsed from the same caller bytes.
+    old_lab = inspect_jsonl_bytes(raw)
+    result["existing_lab_status"] = old_lab["status"]
+    result["existing_lab_reason"] = old_lab["reason_code"]
+
+    stream.seek(0)
+    while True:
+        line = stream.readline(limits.max_line_bytes + 1)
+        if not line:
+            break
         outcome = _diagnose_line(line, limits)
         if outcome == "OTHER_INVALID_OR_UNSUPPORTED":
             # Do not label a malformed record "valid JSON exceeding budget"
