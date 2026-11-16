@@ -12,7 +12,9 @@ def safe(s):
  if p.as_posix()!=s: raise SnapshotError("non-canonical path")
  if p.is_absolute() or w.drive or w.root or w.is_absolute() or ".." in p.parts: raise SnapshotError("absolute or escaping path")
  for x in p.parts:
-  if x in ("",".","..") or x.endswith(("."," ")) or ":" in x or x.split(".",1)[0].upper() in RES: raise SnapshotError("non-portable path")
+  if (x in ("",".","..") or x.endswith(("."," ")) or ":" in x
+      or any(ord(c)<32 or c in '<>"|?*' for c in x)
+      or x.split(".",1)[0].upper() in RES): raise SnapshotError("non-portable path")
  return p
 def restore(src,dst):
  dst=pathlib.Path(dst).absolute()
@@ -84,7 +86,7 @@ def restore(src,dst):
     if e["mode"]=="100755": target.chmod(target.stat().st_mode|stat.S_IXUSR|stat.S_IXGRP|stat.S_IXOTH)
     # Symlink blobs remain regular files; never create links from untrusted data.
     total+=len(raw); n+=1
-  os.replace(stage,dst); done=True; print(f"RESTORE_VERIFIED: {n} records at {dst}"); return n
+  os.replace(stage,dst); done=True; print(f"RESTORE_STRUCTURAL_PASS_AUTHENTICITY_UNKNOWN: {n} records at {dst}"); return n
  finally:
   if not done and stage.exists(): shutil.rmtree(stage,ignore_errors=True)
 def main():

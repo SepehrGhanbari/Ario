@@ -1,4 +1,4 @@
-import base64,hashlib,json,pathlib,tempfile,unittest
+import base64,contextlib,hashlib,io,json,pathlib,tempfile,unittest
 from RESTORE_FROM_TXT_HARDENED import restore,SnapshotError
 def sha(b): return hashlib.sha1(b"blob "+str(len(b)).encode()+b"\0"+b).hexdigest()
 def snap(rows,**bad):
@@ -49,6 +49,15 @@ class Tests(unittest.TestCase):
  def test_repeated_separator(self):self.bad(snap([("a//b",b"x")]))
  def test_windows_console_device(self):self.bad(snap([("dir/CONIN$",b"x")]))
  def test_windows_superscript_device(self):self.bad(snap([("COM¹.txt",b"x")]))
+ def test_windows_invalid_filename_characters(self):
+  for name in ('a?b','a|b','a<b','a>b','a"b','a*b','a'+chr(1)+'b'):
+   with self.subTest(path=repr(name)): self.bad(snap([(name,b"x")]))
+ def test_success_does_not_claim_source_authenticity(self):
+  self.src.write_bytes(snap([("safe.txt",b"x")]))
+  captured=io.StringIO()
+  with contextlib.redirect_stdout(captured): self.assertEqual(restore(self.src,self.dst),1)
+  self.assertIn("RESTORE_STRUCTURAL_PASS_AUTHENTICITY_UNKNOWN",captured.getvalue())
+
  def test_invalid_surrogate_path(self):self.bad(snap([("\udcff",b"x")]))
  def test_header_count_mismatch(self):self.bad(snap([("a",b"x")],hc=2))
  def test_footer_manifest_mismatch(self):self.bad(snap([("a",b"x")],fm="d"*64))
