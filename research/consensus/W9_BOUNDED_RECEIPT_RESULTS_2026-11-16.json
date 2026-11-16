@@ -1,0 +1,138 @@
+{
+  "all_memory_admissions": 0,
+  "case_count": 26,
+  "controls": [
+    {
+      "id": "P01_present_supported",
+      "reason": "EXACT_TOY_PREDICATE_IN_SELF_REPORTED_BYTES",
+      "relation": "DECLARED_MATCH"
+    },
+    {
+      "id": "P02_absent_supported",
+      "reason": "EXACT_TOY_PREDICATE_IN_SELF_REPORTED_BYTES",
+      "relation": "DECLARED_MATCH"
+    },
+    {
+      "id": "N03_contradictory_stdout",
+      "reason": "EXACT_TOY_PREDICATE_CONTRADICTED",
+      "relation": "DECLARED_CONTRADICTION"
+    },
+    {
+      "id": "N04_cross_target",
+      "reason": "SCOPE_TARGET_OR_TIME_MISMATCH",
+      "relation": "UNKNOWN"
+    },
+    {
+      "id": "N05_cross_principal",
+      "reason": "SCOPE_TARGET_OR_TIME_MISMATCH",
+      "relation": "UNKNOWN"
+    },
+    {
+      "id": "N06_time_stale",
+      "reason": "SCOPE_TARGET_OR_TIME_MISMATCH",
+      "relation": "UNKNOWN"
+    },
+    {
+      "id": "N07_empty_stdout",
+      "reason": "EMPTY_OUTPUT",
+      "relation": "UNKNOWN"
+    },
+    {
+      "id": "N08_unparseable",
+      "reason": "INVALID_OR_DUPLICATE_JSON",
+      "relation": "UNKNOWN"
+    },
+    {
+      "id": "N09_duplicate_json_keys",
+      "reason": "INVALID_OR_DUPLICATE_JSON",
+      "relation": "UNKNOWN"
+    },
+    {
+      "id": "N10_wrong_present_type",
+      "reason": "BAD_PRESENT_TYPE",
+      "relation": "UNKNOWN"
+    },
+    {
+      "id": "N11_missing_schema",
+      "reason": "UNKNOWN_OBSERVATION_SCHEMA",
+      "relation": "UNKNOWN"
+    },
+    {
+      "id": "N12_nonzero_exit",
+      "reason": "REPORTED_TOOL_FAILURE",
+      "relation": "UNKNOWN"
+    },
+    {
+      "id": "N13_self_digest_tamper",
+      "reason": "SELF_REPORTED_DIGEST_MISMATCH",
+      "relation": "UNKNOWN"
+    },
+    {
+      "id": "N14_bad_lock_digest",
+      "reason": "SELF_REPORTED_DIGEST_MISMATCH",
+      "relation": "UNKNOWN"
+    },
+    {
+      "id": "N15_multi_receipt_conflict",
+      "reason": "SELF_REPORTED_SOURCES_DISAGREE",
+      "relation": "DECLARED_CONFLICT"
+    },
+    {
+      "id": "N16_duplicate_receipt_id",
+      "reason": "DUPLICATE_OR_INVALID_ID",
+      "relation": "UNKNOWN"
+    },
+    {
+      "id": "N17_same_receipt_twice",
+      "reason": "DUPLICATE_OR_INVALID_ID",
+      "relation": "UNKNOWN"
+    },
+    {
+      "id": "N18_unicode_exactness",
+      "reason": "SCOPE_TARGET_OR_TIME_MISMATCH",
+      "relation": "UNKNOWN"
+    },
+    {
+      "id": "N19_unknown_predicate",
+      "reason": "UNSUPPORTED_CLAIM",
+      "relation": "UNKNOWN"
+    },
+    {
+      "id": "N20_oversize",
+      "reason": "RESOURCE_LIMIT",
+      "relation": "UNKNOWN"
+    },
+    {
+      "id": "N21_nonfinite_json",
+      "reason": "INVALID_OR_DUPLICATE_JSON",
+      "relation": "UNKNOWN"
+    },
+    {
+      "id": "N22_boolean_exit_code",
+      "reason": "BAD_TOOL_OR_EXIT_TYPE",
+      "relation": "UNKNOWN"
+    },
+    {
+      "id": "N23_mismatched_tool",
+      "reason": "BAD_TOOL_OR_EXIT_TYPE",
+      "relation": "UNKNOWN"
+    },
+    {
+      "id": "N24_claim_missing_scope",
+      "reason": "UNSUPPORTED_CLAIM",
+      "relation": "UNKNOWN"
+    },
+    {
+      "id": "P25_two_matching_declared_sources",
+      "reason": "EXACT_TOY_PREDICATE_IN_SELF_REPORTED_BYTES",
+      "relation": "DECLARED_MATCH"
+    },
+    {
+      "id": "N26_no_receipts",
+      "reason": "RECEIPT_COUNT",
+      "relation": "UNKNOWN"
+    }
+  ],
+  "source_independence": "NOT_ESTABLISHED",
+  "status": "ALL_HAND_DESIGNED_EXPECTATIONS_MATCHED"
+}
