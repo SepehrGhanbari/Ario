@@ -1,0 +1,32 @@
+name: Public Package Manifest V3
+on:
+  pull_request:
+  push:
+permissions:
+  contents: read
+jobs:
+  manifest-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-2022]
+        python: ["3.11", "3.12"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Run manifest builder unit tests
+        run: python -m unittest discover -s scripts -p test_public_package_manifest_v3.py -v
+      - name: Rebuild V3 from pinned Git blobs
+        run: >-
+          python scripts/build_public_package_manifest_v3.py
+          --repo .
+          --manifest-v2 papers/creation-without-sovereignty/2026-11-11/PUBLIC_PACKAGE_FILE_MANIFEST.json
+          --ref 2e7f83c6c7518012bed7fedfb12103ce9b7222ea
+          --output manifest-v3.generated.json
+      - name: Verify committed V3 is byte-for-byte reproducible
+        run: python -c "from pathlib import Path; assert Path('manifest-v3.generated.json').read_bytes() == Path('papers/creation-without-sovereignty/2026-11-11/PUBLIC_PACKAGE_FILE_MANIFEST_V3.json').read_bytes(), 'V3 differs from deterministic Git-blob rebuild'"
