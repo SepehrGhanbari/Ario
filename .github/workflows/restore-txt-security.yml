@@ -80,3 +80,23 @@ jobs:
             releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/ario-full.txt
             releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/ario-manifest.json
             releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/checksums.json
+
+  generator-roundtrip:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-2022]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Clone pinned source repository
+        run: git clone --no-local . releases/ai-readable-full-2026-11-11-05ba5c9/source
+      - name: Checkout release source commit
+        run: git -C releases/ai-readable-full-2026-11-11-05ba5c9/source checkout 05ba5c960aaea96fc6bb80504b53b4d47e7d42f5
+      - name: Build ZIP and TXT and run independent restore roundtrip
+        run: python releases/ai-readable-full-2026-11-11-05ba5c9/make_export.py
