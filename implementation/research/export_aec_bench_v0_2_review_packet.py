@@ -28,7 +28,8 @@ def build_blinded_packet() -> dict:
     return {
         "packet": "AEC-Bench-v0.2-independent-public-fixture-review",
         "benchmark_version": VERSION,
-        "packet_kind": "PUBLIC_DEVELOPMENT_FIXTURES_BLINDED_TO_EXPECTED_LABELS",
+        "packet_kind": "PUBLIC_DEVELOPMENT_FIXTURES_LABEL_STRIPPED",
+        "blinding_strength": "PROCEDURAL_ONLY_SOURCE_ORACLE_IS_PUBLIC",
         "case_count": len(rows),
         "review_instruction": (
             "Reviewers must independently assign dispositions from the protocol. "
@@ -36,6 +37,11 @@ def build_blinded_packet() -> dict:
         ),
         "cases": rows,
         "not_hidden": True,
+        "blinding_limitation": (
+            "The repository is public and contains the authored oracle labels. This export omits them, "
+            "but cannot technically prevent a reviewer from inspecting the public source. Treat blinding "
+            "as procedural only; strict blinding requires a separate controlled distribution and custodian."
+        ),
         "warning": (
             "These public development fixtures are not a hidden test set. "
             "Do not describe this packet as independent validation or hidden evaluation."
