@@ -16,6 +16,8 @@ import pytest
 from core.memory_consolidation import (
     ConsolidationEngine,
     ConsolidationError,
+    ContestationReport,
+    MemoryConflict,
     NodeEpistemicStatus,
     SemanticNode,
 )
@@ -163,3 +165,76 @@ def test_invalid_node_instantiation():
             last_reinforced_at="2026-11-15",
             reinforcement_count=1,
         )
+
+
+def test_t_cons_05_contestation_report_clean_empty(tmp_path: Path):
+    """Contestation report on empty or unconflicted graphs reflects zero conflicts."""
+    engine = ConsolidationEngine()
+    report = engine.generate_contestation_report()
+    assert report.total_nodes == 0
+    assert report.contested_nodes_count == 0
+    assert len(report.conflicts) == 0
+    assert "No contested memories" in report.to_markdown()
+
+    # Ingest single non-contested event
+    h1 = _make_dummy_hash("solo-claim")
+    engine.ingest_event_stream([(h1, {"concept": "crypto", "assertion": "SHA256 required"})])
+    report2 = engine.generate_contestation_report()
+    assert report2.total_nodes == 1
+    assert report2.accepted_nodes_count == 1
+    assert report2.contested_nodes_count == 0
+    assert len(report2.conflicts) == 0
+
+
+def test_t_cons_06_contestation_report_with_contradictions(tmp_path: Path):
+    """Contestation report groups contested nodes by concept and retains source hashes."""
+    engine = ConsolidationEngine()
+    h1 = _make_dummy_hash("claim-1")
+    h2 = _make_dummy_hash("claim-2")
+
+    ev1 = {"concept": "deployment_status", "assertion": "Service is live on port 8080", "value": "ONLINE"}
+    engine.ingest_event_stream([(h1, ev1)])
+    node_id_1 = list(engine.nodes.values())[0].node_id
+
+    ev2 = {
+        "concept": "deployment_status",
+        "assertion": "Service is offline",
+        "value": "OFFLINE",
+        "negates": node_id_1,
+        "relation": "opposite",
+    }
+    engine.ingest_event_stream([(h2, ev2)])
+
+    report = engine.generate_contestation_report()
+    assert report.total_nodes == 2
+    assert report.contested_nodes_count == 2
+    assert report.accepted_nodes_count == 0
+    assert report.contested_concepts == ("deployment_status",)
+    assert len(report.conflicts) == 1
+
+    conflict = report.conflicts[0]
+    assert conflict.concept == "deployment_status"
+    assert len(conflict.node_ids) == 2
+    assert h1 in conflict.source_event_hashes
+    assert h2 in conflict.source_event_hashes
+
+    # Test markdown formatting
+    md = report.to_markdown()
+    assert "Contestation & Conflict Audit Report" in md
+    assert "deployment_status" in md
+    assert h1 in md
+    assert h2 in md
+
+    # Test file export in markdown and JSON
+    md_path = tmp_path / "conflicts.md"
+    json_path = tmp_path / "conflicts.json"
+    engine.export_contestation_report(md_path, format="markdown")
+    engine.export_contestation_report(json_path, format="json")
+
+    assert md_path.exists()
+    assert "deployment_status" in md_path.read_text(encoding="utf-8")
+
+    assert json_path.exists()
+    data = json.loads(json_path.read_text(encoding="utf-8"))
+    assert data["contested_nodes_count"] == 2
+    assert len(data["conflicts"]) == 1

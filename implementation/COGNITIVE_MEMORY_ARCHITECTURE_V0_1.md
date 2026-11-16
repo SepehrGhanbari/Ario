@@ -123,6 +123,55 @@ Ario's cognitive memory architecture grounds biological memory mechanisms (Tulvi
 
 ---
 
+### D. `ContestationReportV1` & `MemoryConflictV1`
+```json
+{
+  "generated_at": "2026-11-16T18:00:00Z",
+  "total_nodes": 24,
+  "contested_nodes_count": 2,
+  "accepted_nodes_count": 22,
+  "contested_concepts": ["network_policy"],
+  "conflicts": [
+    {
+      "concept": "network_policy",
+      "node_ids": ["SEM-325e6fc935972794", "SEM-de9bdc9ae6d009de"],
+      "assertions": ["Loopback strictly bound to 127.0.0.1", "Proxy redirection enabled on port 8080"],
+      "source_event_hashes": [
+        "4b825dc642cb6eb9a060e54bf8d69288fbee49048a3f81e3a9b1c7d2e4f6a8b0",
+        "8a3f81e3a9b1c7d2e4f6a8b04b825dc642cb6eb9a060e54bf8d69288fbee4904"
+      ],
+      "saliency_scores": [0.70, 0.70],
+      "status": "CONTESTED",
+      "summary": "Contested assertion conflict across 2 schema nodes under concept 'network_policy'"
+    }
+  ]
+}
+```
+
+### E. `IntentionJournalV1` (Atomic Persistence & Tamper Detection)
+```json
+{
+  "version": "1.0",
+  "exported_at": "2026-11-16T18:00:00Z",
+  "max_pending": 50,
+  "records_count": 3,
+  "integrity_digest": "1aead788ab79cf458b34ed0eb75a576015358519e740c0f6f798c240b2004a82",
+  "intentions": [
+    {
+      "intention_id": "INT-PROSPECTIVE-01",
+      "description": "Trigger benchmark when loopback is accepted",
+      "predicate_expr": "concept == 'planner_loopback' and status == 'ACCEPTED'",
+      "action_payload": {"task": "schedule_regression_benchmark"},
+      "created_at_epoch": 1000.0,
+      "ttl_epoch": 2000.0,
+      "status": "PENDING"
+    }
+  ]
+}
+```
+
+---
+
 ## 4. Falsifiable Test Matrix Summary
 
 | Test ID | Module | Invariant | Verified Behavior |
@@ -131,10 +180,13 @@ Ario's cognitive memory architecture grounds biological memory mechanisms (Tulvi
 | `T-CONS-02` | ConsolidationEngine | Non-Erasure Principle | Ledger bytes strictly monotonic and non-decreasing. |
 | `T-CONS-03` | ConsolidationEngine | Contradiction Preservation | Conflicting claims yield `CONTESTED` status. |
 | `T-CONS-04` | ConsolidationEngine | Bounded Retrieval | Inactive nodes decay below retrieval threshold. |
+| `T-CONS-05/06` | ConsolidationEngine | Contestation Reporting | Structured conflict audit reports (JSON & Markdown) preserving audit lineage. |
 | `T-SRC-01` | SourceMonitoringGuard | Anti-Self-Citation | Rejects self-citation and circular rationalization (`SelfCitationError`). |
 | `T-SRC-02` | SourceMonitoringGuard | Tool Binding Integrity | Discrepancies in execution locks fail closed (`AttributionMismatchError`). |
 | `T-PROS-01` | ProspectiveMemoryRegistry | Safe Predicate Sandbox | Code injection (`eval`, `import`, dunder) fails closed at parse time. |
 | `T-PROS-02` | ProspectiveMemoryRegistry | Deterministic Expiration | Stale intentions transition to `EXPIRED` without side effects. |
+| `T-PROS-07..10` | ProspectiveMemoryRegistry | Journal Persistence & Recovery | Atomic persistence, SHA-256 integrity check, AST re-validation on load, reboot TTL sweep. |
+| `T-SEC-01..32` | Security Boundaries | Adversarial Hardening | AST injection fuzzing (walrus, comprehensions, f-strings), tool smuggling, multi-hop circularity. |
 | `T-INT-01` | Integration | Full Lifecycle Pipeline | Verified hypothesis -> ledger -> consolidated schema -> prospective cue. |
 
-Total test suite: **19 passing tests** (108 total regression tests passing).
+Total test suite: **57 specialized cognitive memory tests** (1,198 overall repository regression tests passing).

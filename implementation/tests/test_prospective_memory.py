@@ -1,3 +1,5 @@
+import json
+from pathlib import Path
 """Tests for Ario Prospective Memory Registry & Condition Gating.
 
 Validates core invariants from Issue #209:
@@ -149,3 +151,100 @@ def test_intention_serialization():
     d = intention.to_dict()
     restored = DelayedIntention.from_dict(d)
     assert restored == intention
+
+
+def test_t_pros_07_journal_atomic_save_and_load(tmp_path: Path):
+    """Save registry to disk and reload; verify state and integrity."""
+    journal_path = tmp_path / "intentions_journal.json"
+    registry = ProspectiveMemoryRegistry(max_pending=10)
+
+    i1 = registry.register_intention("Task 1", "x == 1", {"action": "act_1"}, 100.0, 500.0, intention_id="INT-1")
+    i2 = registry.register_intention("Task 2", "y == 2", {"action": "act_2"}, 100.0, 300.0, intention_id="INT-2")
+
+    # Trigger INT-1
+    registry.evaluate_cues({"x": 1}, current_epoch=200.0)
+    assert registry.intentions["INT-1"].status == IntentionStatus.TRIGGERED
+
+    # Expire INT-2
+    registry.evaluate_cues({"y": 2}, current_epoch=400.0)
+    assert registry.intentions["INT-2"].status == IntentionStatus.EXPIRED
+
+    # Add PENDING INT-3
+    i3 = registry.register_intention("Task 3", "z == 3", {"action": "act_3"}, 200.0, 800.0, intention_id="INT-3")
+
+    # Save journal
+    count = registry.save_journal(journal_path)
+    assert count == 3
+    assert journal_path.exists()
+
+    # Reconstruct from journal
+    loaded = ProspectiveMemoryRegistry.load_journal(journal_path)
+    assert len(loaded.intentions) == 3
+    assert loaded.intentions["INT-1"].status == IntentionStatus.TRIGGERED
+    assert loaded.intentions["INT-2"].status == IntentionStatus.EXPIRED
+    assert loaded.intentions["INT-3"].status == IntentionStatus.PENDING
+    assert loaded.intentions["INT-3"].action_payload == {"action": "act_3"}
+
+
+def test_t_pros_08_journal_tamper_detection_checksum(tmp_path: Path):
+    """Tampering with journal file contents on disk is detected via sha256 checksum."""
+    journal_path = tmp_path / "tamper_test_journal.json"
+    registry = ProspectiveMemoryRegistry()
+    registry.register_intention("Audit", "x == 10", {"target": "log"}, 100.0, 200.0)
+    registry.save_journal(journal_path)
+
+    # Modify intention payload directly in the JSON file without updating digest
+    with open(journal_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    data["intentions"][0]["description"] = "TAMPERED DESCRIPTION"
+    with open(journal_path, "w", encoding="utf-8") as f:
+        json.dump(data, f)
+
+    # Loading must fail closed due to integrity digest mismatch
+    with pytest.raises(ProspectiveSecurityError, match="Integrity digest mismatch"):
+        ProspectiveMemoryRegistry.load_journal(journal_path)
+
+
+def test_t_pros_09_journal_tamper_detection_ast_revalidation(tmp_path: Path):
+    """Tampering predicate expression to inject disallowed AST fails on load even if digest is forged."""
+    journal_path = tmp_path / "tamper_ast_journal.json"
+    registry = ProspectiveMemoryRegistry()
+    registry.register_intention("Clean", "flag == True", {"notify": "admin"}, 100.0, 300.0)
+    registry.save_journal(journal_path)
+
+    # Tamper with predicate AND forge the checksum
+    with open(journal_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    data["intentions"][0]["predicate_expr"] = "__import__('os').system('echo hacked')"
+    # Recompute checksum so checksum passes, but AST revalidation catches it
+    import hashlib
+    canon = json.dumps(data["intentions"], sort_keys=True, separators=(",", ":")).encode("utf-8")
+    data["integrity_digest"] = hashlib.sha256(canon).hexdigest()
+    with open(journal_path, "w", encoding="utf-8") as f:
+        json.dump(data, f)
+
+    with pytest.raises(ProspectiveSecurityError, match="T-PROS-01"):
+        ProspectiveMemoryRegistry.load_journal(journal_path, enforce_ast_revalidation=True)
+
+
+def test_t_pros_10_journal_reboot_ttl_reconciliation(tmp_path: Path):
+    """Post-recovery sweep transitions overdue intentions to EXPIRED without firing actions."""
+    journal_path = tmp_path / "reboot_journal.json"
+    registry = ProspectiveMemoryRegistry()
+
+    # Created at t=100, TTL at t=200
+    registry.register_intention("Nightly Sync", "sync_ready == True", {"sync": "db"}, 100.0, 200.0, intention_id="INT-SYNC")
+    registry.save_journal(journal_path)
+
+    # System reboots at t=350.0 (past TTL of 200)
+    recovered = ProspectiveMemoryRegistry.load_journal(journal_path)
+    assert recovered.intentions["INT-SYNC"].status == IntentionStatus.PENDING
+
+    # Run sweep reconciliation
+    expired_count = recovered.reconcile_expired_intentions(current_epoch=350.0)
+    assert expired_count == 1
+    assert recovered.intentions["INT-SYNC"].status == IntentionStatus.EXPIRED
+
+    # Even if cue now matches, it must not trigger
+    triggered = recovered.evaluate_cues({"sync_ready": True}, current_epoch=360.0)
+    assert len(triggered) == 0

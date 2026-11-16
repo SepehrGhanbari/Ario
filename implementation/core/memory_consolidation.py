@@ -77,6 +77,78 @@ class CausalLink:
             raise ConsolidationError("weight must be between 0.0 and 1.0")
 
 
+
+@dataclasses.dataclass(frozen=True)
+class MemoryConflict:
+    """Epistemic conflict record under a shared concept schema."""
+    concept: str
+    node_ids: Tuple[str, ...]
+    assertions: Tuple[str, ...]
+    source_event_hashes: Tuple[str, ...]
+    saliency_scores: Tuple[float, ...]
+    status: NodeEpistemicStatus
+    summary: str
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "concept": self.concept,
+            "node_ids": list(self.node_ids),
+            "assertions": list(self.assertions),
+            "source_event_hashes": list(self.source_event_hashes),
+            "saliency_scores": list(self.saliency_scores),
+            "status": self.status.value,
+            "summary": self.summary,
+        }
+
+
+@dataclasses.dataclass(frozen=True)
+class ContestationReport:
+    """Structured audit report of epistemic disagreements and contested memories."""
+    generated_at: str
+    total_nodes: int
+    contested_nodes_count: int
+    accepted_nodes_count: int
+    contested_concepts: Tuple[str, ...]
+    conflicts: Tuple[MemoryConflict, ...]
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "generated_at": self.generated_at,
+            "total_nodes": self.total_nodes,
+            "contested_nodes_count": self.contested_nodes_count,
+            "accepted_nodes_count": self.accepted_nodes_count,
+            "contested_concepts": list(self.contested_concepts),
+            "conflicts": [c.to_dict() for c in self.conflicts],
+        }
+
+    def to_markdown(self) -> str:
+        lines = [
+            "# Ario Cognitive Memory: Contestation & Conflict Audit Report",
+            f"- **Generated At:** {self.generated_at}",
+            f"- **Total Semantic Nodes:** {self.total_nodes}",
+            f"- **Contested Nodes:** {self.contested_nodes_count}",
+            f"- **Accepted Nodes:** {self.accepted_nodes_count}",
+            "",
+            "## Contested Memory Concepts",
+        ]
+        if not self.conflicts:
+            lines.append("_No contested memories or epistemic conflicts detected in semantic graph._")
+            return "\n".join(lines)
+
+        for i, c in enumerate(self.conflicts, start=1):
+            lines.append(f"### {i}. Concept: `{c.concept}`")
+            lines.append(f"- **Summary:** {c.summary}")
+            lines.append(f"- **Status:** `{c.status.value}`")
+            lines.append("- **Conflicting Assertions:**")
+            for nid, assertion, score in zip(c.node_ids, c.assertions, c.saliency_scores):
+                lines.append(f"  - Node `{nid}` (saliency: {score:.2f}): \"{assertion}\"")
+            lines.append("- **Source Lineage Hashes (Audit Trail):**")
+            for h in c.source_event_hashes:
+                lines.append(f"  - `{h}`")
+            lines.append("")
+        return "\n".join(lines)
+
+
 class ConsolidationEngine:
     """Bounded, fail-closed systems consolidation engine for Ario."""
 
@@ -222,3 +294,64 @@ class ConsolidationEngine:
                         f"T-CONS-01: Dangling lineage reference: hash {h} not found in ingested ledger"
                     )
         return True
+
+    def generate_contestation_report(self) -> ContestationReport:
+        """Generate a structured audit report of all contested and contradictory semantic nodes."""
+        now_iso = datetime.now(timezone.utc).isoformat()
+        total_nodes = len(self._nodes)
+        accepted_count = sum(1 for n in self._nodes.values() if n.status == NodeEpistemicStatus.ACCEPTED)
+
+        # Group contested nodes by concept
+        contested_by_concept: Dict[str, List[SemanticNode]] = {}
+        for node in self._nodes.values():
+            if node.status == NodeEpistemicStatus.CONTESTED:
+                contested_by_concept.setdefault(node.concept, []).append(node)
+
+        conflicts: List[MemoryConflict] = []
+        for concept, nodes in sorted(contested_by_concept.items(), key=lambda x: x[0]):
+            node_ids = tuple(n.node_id for n in nodes)
+            assertions = tuple(n.assertion for n in nodes)
+            all_hashes: List[str] = []
+            for n in nodes:
+                for h in n.source_event_hashes:
+                    if h not in all_hashes:
+                        all_hashes.append(h)
+            saliency_scores = tuple(n.saliency_score for n in nodes)
+            summary = f"Contested assertion conflict across {len(nodes)} schema nodes under concept '{concept}'"
+            conflicts.append(
+                MemoryConflict(
+                    concept=concept,
+                    node_ids=node_ids,
+                    assertions=assertions,
+                    source_event_hashes=tuple(all_hashes),
+                    saliency_scores=saliency_scores,
+                    status=NodeEpistemicStatus.CONTESTED,
+                    summary=summary,
+                )
+            )
+
+        contested_nodes_count = sum(len(nodes) for nodes in contested_by_concept.values())
+        contested_concepts = tuple(sorted(contested_by_concept.keys()))
+
+        return ContestationReport(
+            generated_at=now_iso,
+            total_nodes=total_nodes,
+            contested_nodes_count=contested_nodes_count,
+            accepted_nodes_count=accepted_count,
+            contested_concepts=contested_concepts,
+            conflicts=tuple(conflicts),
+        )
+
+    def export_contestation_report(self, output_path: Path, format: str = "markdown") -> Path:
+        """Export contestation report to file in markdown or JSON format."""
+        report = self.generate_contestation_report()
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        if format.lower() == "json":
+            with open(output_path, "w", encoding="utf-8") as f:
+                json.dump(report.to_dict(), f, indent=2)
+        elif format.lower() in ("markdown", "md"):
+            with open(output_path, "w", encoding="utf-8") as f:
+                f.write(report.to_markdown())
+        else:
+            raise ConsolidationError(f"Unsupported export format '{format}', must be 'markdown' or 'json'")
+        return output_path
