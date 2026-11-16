@@ -35,3 +35,10 @@
 ## Repository boundary
 - No main edits, merge, trust activation, Ruleset or key changes were performed.
 - Main has since advanced six commits beyond the original review base; the review branch is intentionally not rebased automatically.
+
+## Resource-bounded intake follow-up (research candidate; 2026-11-16)
+- **Reproduced before fix in disposable Windows scratch** at base HEAD `f83b76b`: a 1 MiB ignored header and 1 MiB unused record JSON field were silently accepted; a forged `payload_bytes=1099511627776` (1 TiB) reached a huge `f.read` request and raised `MemoryError`, not a controlled `SnapshotError`. No user file/destination was exposed, and no heap-size claim is inferred.
+- Proposed default bounds: input file 384 MiB; entire header 16 KiB with 4 KiB per header line; record header 64 KiB; footer 512 bytes; file count 10,000; raw tracked total 256 MiB; raw/payload per record 64 MiB; path UTF-8 4096 bytes. Reject declarations and framing before large reads; check cumulative raw count; consume at most one byte when checking for trailing data.
+- **Independent local follow-up**: 38/38 unittest methods PASS on Windows (29 original, 9 new resource controls). The three reproduced bad inputs now raise `SnapshotError` and clean staged output; an ordinary valid synthetic archive still restores. Source + tests are a *candidate* pending exact-HEAD CI.
+- Compatibility anchor: published snapshot commit `05ba5c960aaea96fc6bb80504b53b4d47e7d42f5`, 204 files, 16,183,258 raw tracked bytes, largest tracked file 2,857,981 bytes, full TXT 17,751,878 bytes. Exact-head Ubuntu/Windows generator→restore roundtrip must pass before treating the candidate as compatible with that snapshot.
+- These are V1 **consumer policy caps**, not permission to reinterpret old snapshots. Larger future archives require a separately reviewed explicit limits policy. Neither resource bounds nor blob digests prove external source authenticity, prevent same-user filesystem interference or authorize deployment.

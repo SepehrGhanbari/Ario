@@ -1,4 +1,6 @@
 import base64,contextlib,hashlib,io,json,pathlib,tempfile,unittest
+from unittest import mock
+import RESTORE_FROM_TXT_HARDENED as hardened
 from RESTORE_FROM_TXT_HARDENED import restore,SnapshotError
 def sha(b): return hashlib.sha1(b"blob "+str(len(b)).encode()+b"\0"+b).hexdigest()
 def snap(rows,**bad):
@@ -58,6 +60,35 @@ class Tests(unittest.TestCase):
   with contextlib.redirect_stdout(captured): self.assertEqual(restore(self.src,self.dst),1)
   self.assertIn("RESTORE_STRUCTURAL_PASS_AUTHENTICITY_UNKNOWN",captured.getvalue())
 
+ def test_oversized_preamble_line_rejected(self):
+  data=snap([("a",b"x")]).replace(b"@@ARIO_BEGIN\n",b"X"*1048576+b"\n@@ARIO_BEGIN\n",1)
+  self.bad(data)
+ def test_oversized_record_json_field_rejected(self):
+  data=snap([("a",b"x")]).replace(b'"path":"a"',b'"ignored":"'+b"X"*1048576+b'","path":"a"',1)
+  self.bad(data)
+ def test_terabyte_payload_declaration_rejected_before_read(self):
+  data=snap([("a",b"x")]).replace(b'"payload_bytes":1',b'"payload_bytes":1099511627776',1)
+  self.bad(data)
+ def test_header_file_count_budget(self):
+  self.bad(snap([("a",b"x")],hc=hardened.MAX_FILES+1))
+ def test_header_total_bytes_budget(self):
+  self.bad(snap([("a",b"x")],hb=hardened.MAX_TRACKED_BYTES+1))
+ def test_record_payload_budget(self):
+  data=snap([("a",b"x")]).replace(b'"payload_bytes":1',b'"payload_bytes":67108865',1)
+  self.bad(data)
+ def test_input_file_budget_without_huge_fixture(self):
+  self.src.write_bytes(snap([("a",b"x")]))
+  with mock.patch.object(hardened,"MAX_INPUT_BYTES",self.src.stat().st_size-1):
+   with self.assertRaisesRegex(SnapshotError,"source type or size limit"): restore(self.src,self.dst)
+  self.assertFalse(self.dst.exists())
+ def test_record_count_budget_before_extra_record(self):
+  data=snap([("a",b"x"),("b",b"y")],hc=1)
+  self.src.write_bytes(data)
+  with self.assertRaisesRegex(SnapshotError,"record count budget"): restore(self.src,self.dst)
+  self.assertFalse(self.dst.exists())
+ def test_header_line_budget_even_without_equals(self):
+  data=snap([("a",b"x")]).replace(b"@@ARIO_BEGIN\n",b"X"*4097+b"\n@@ARIO_BEGIN\n",1)
+  self.bad(data)
  def test_invalid_surrogate_path(self):self.bad(snap([("\udcff",b"x")]))
  def test_header_count_mismatch(self):self.bad(snap([("a",b"x")],hc=2))
  def test_footer_manifest_mismatch(self):self.bad(snap([("a",b"x")],fm="d"*64))
