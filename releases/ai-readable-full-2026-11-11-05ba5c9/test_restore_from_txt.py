@@ -21,7 +21,8 @@ class Tests(unittest.TestCase):
  def bad(self,data):
   self.src.write_bytes(data)
   with self.assertRaises(SnapshotError):restore(self.src,self.dst)
-  self.assertFalse(self.dst.exists())\n  self.assertEqual(list(self.d.glob(".out.stage-*")),[])
+  self.assertFalse(self.dst.exists())
+  self.assertEqual(list(self.d.glob(".out.stage-*")),[])
  def test_valid_text_and_binary(self):
   self.src.write_bytes(snap([("a",b"hello"),("b/c",b"\0\xff")]))
   self.assertEqual(restore(self.src,self.dst),2);self.assertEqual((self.dst/"b/c").read_bytes(),b"\0\xff")
