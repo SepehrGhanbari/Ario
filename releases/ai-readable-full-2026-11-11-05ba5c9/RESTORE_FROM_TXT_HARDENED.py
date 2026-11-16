@@ -16,11 +16,19 @@ MAX_RECORD_PAYLOAD_BYTES = 64 * 1024 * 1024
 MAX_PATH_BYTES = 4096
 class SnapshotError(ValueError): pass
 def blobsha(b): return hashlib.sha1(b"blob "+str(len(b)).encode()+b"\0"+b).hexdigest()
+def _unique_object(pairs):
+ result={}
+ for key,value in pairs:
+  if key in result: raise SnapshotError("duplicate record JSON key")
+  result[key]=value
+ return result
+def _reject_nonfinite(_token):
+ raise SnapshotError("non-finite JSON constant")
 def safe(s):
  if not isinstance(s,str) or not s or "\\" in s or "\0" in s or any(0xD800 <= ord(ch) <= 0xDFFF for ch in s): raise SnapshotError("invalid path")
  if len(s.encode("utf-8"))>MAX_PATH_BYTES: raise SnapshotError("path length limit")
  p=pathlib.PurePosixPath(s); w=pathlib.PureWindowsPath(s)
- if p.as_posix()!=s: raise SnapshotError("non-canonical path")
+ if not p.parts or p.as_posix()!=s: raise SnapshotError("non-canonical or empty path")
  if p.is_absolute() or w.drive or w.root or w.is_absolute() or ".." in p.parts: raise SnapshotError("absolute or escaping path")
  for x in p.parts:
   if (x in ("",".","..") or x.endswith(("."," ")) or ":" in x
@@ -70,7 +78,7 @@ def restore(src,dst):
      if f.read(1): raise SnapshotError("trailing bytes")
      break
     if not line.startswith(b"@@ARIO_FILE "): raise SnapshotError("bad record boundary")
-    try: e=json.loads(line[len(b"@@ARIO_FILE "):].decode("utf-8"))
+    try: e=json.loads(line[len(b"@@ARIO_FILE "):].decode("utf-8"),object_pairs_hook=_unique_object,parse_constant=_reject_nonfinite)
     except Exception as ex: raise SnapshotError("invalid record JSON") from ex
     keys={"path","mode","git_blob_sha1","sha256","bytes","encoding","payload_bytes"}
     if not isinstance(e,dict) or not keys<=e.keys(): raise SnapshotError("incomplete record")

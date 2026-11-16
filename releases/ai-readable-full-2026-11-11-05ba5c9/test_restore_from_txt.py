@@ -89,6 +89,20 @@ class Tests(unittest.TestCase):
  def test_header_line_budget_even_without_equals(self):
   data=snap([("a",b"x")]).replace(b"@@ARIO_BEGIN\n",b"X"*4097+b"\n@@ARIO_BEGIN\n",1)
   self.bad(data)
+ def test_duplicate_record_path_rejected(self):
+  data=snap([("valid.txt",b"x")]).replace(b'"path":"valid.txt"',b'"path":"../unsafe.txt","path":"valid.txt"',1)
+  self.bad(data)
+ def test_duplicate_record_hash_rejected(self):
+  data=snap([("a",b"x")]).replace(b'"sha256":"',b'"sha256":"deadbeef","sha256":"',1)
+  self.bad(data)
+ def test_nested_duplicate_json_keys_rejected(self):
+  data=snap([("a",b"x")]).replace(b'"path":"a"',b'"meta":{"flag":1,"flag":2},"path":"a"',1)
+  self.bad(data)
+ def test_nonfinite_json_constant_rejected(self):
+  data=snap([("a",b"x")]).replace(b'"path":"a"',b'"meta":NaN,"path":"a"',1)
+  self.bad(data)
+ def test_dot_path_fails_before_write(self):
+  self.bad(snap([(".",b"x")]))
  def test_invalid_surrogate_path(self):self.bad(snap([("\udcff",b"x")]))
  def test_header_count_mismatch(self):self.bad(snap([("a",b"x")],hc=2))
  def test_footer_manifest_mismatch(self):self.bad(snap([("a",b"x")],fm="d"*64))
