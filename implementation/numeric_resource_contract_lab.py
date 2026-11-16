@@ -149,9 +149,13 @@ def diagnose_numeric_resource_bytes(
     # invoking the old parser. This pass never retains or exports source text.
     # In an early rejection, the older parser was NOT run by this diagnostic;
     # its actual historical results, if any, must never be invented.
+    # Bound the underlying Python readline argument by bytes already
+    # allocated in this immutable snapshot. A huge configured line limit is
+    # a policy ceiling, not a request to allocate/convert a huge read size.
+    bounded_read_size = min(limits.max_line_bytes, len(raw)) + 1
     stream = io.BytesIO(raw)
     while True:
-        line = stream.readline(limits.max_line_bytes + 1)
+        line = stream.readline(bounded_read_size)
         if not line:
             break
         result["records_examined"] += 1
@@ -176,7 +180,7 @@ def diagnose_numeric_resource_bytes(
 
     stream.seek(0)
     while True:
-        line = stream.readline(limits.max_line_bytes + 1)
+        line = stream.readline(bounded_read_size)
         if not line:
             break
         outcome = _diagnose_line(line, limits)
