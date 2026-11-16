@@ -40,7 +40,6 @@ def test_f1_preflight_prevents_strict_lab_invocation(monkeypatch, raw, limit, re
     _check_epistemic_firewall(result)
 
 
-@pytest.mark.xfail(strict=True, reason="RED F2: wider sidecar cap looks like diagnostic success")
 @pytest.mark.parametrize("raw,limit,prior_reason", [
     (_record(goal=b"x" * 70000), side.NumericResourceLimits(max_line_bytes=100000), "LINE_SIZE_LIMIT"),
     (_record() * 5001, side.NumericResourceLimits(max_records=6000), "EVENT_COUNT_LIMIT"),
@@ -56,7 +55,6 @@ def test_f2_wider_sidecar_never_mislabels_strict_resource_unknown(raw, limit, pr
     _check_epistemic_firewall(result)
 
 
-@pytest.mark.xfail(strict=True, reason="RED F2: view invokes legacy comparator before tighter preflight")
 @pytest.mark.parametrize("raw,limit", [
     (_record(), side.NumericResourceLimits(max_line_bytes=16)),
     (_record() * 2, side.NumericResourceLimits(max_records=1)),
