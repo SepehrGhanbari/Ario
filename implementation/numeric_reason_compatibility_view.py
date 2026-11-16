@@ -171,6 +171,13 @@ def compare_numeric_reason_views(
         result["existing_strict_lab_reason"] = prior_reason
         result["proposed_sidecar_status"] = proposed_status
 
+        # The existing strict parser's nonnumeric resource refusal takes
+        # precedence even if the separate sidecar also found a numeric cap.
+        # Never convert two simultaneous UNKNOWN reasons into acceptance.
+        if strict_status == "UNKNOWN" and prior_reason in OTHER_RESOURCE_REASONS:
+            result["reason_code"] = "OTHER_RESOURCE_BOUNDARY"
+            return result
+
         if proposed_reason == "NUMERIC_RESOURCE_LIMIT":
             if proposed_status != "UNKNOWN" or proposed.get("resource_records", 0) < 1:
                 result["reason_code"] = "VERSION_REPORT_MISMATCH"
@@ -189,9 +196,6 @@ def compare_numeric_reason_views(
         elif proposed_reason is None and proposed_status == "NO_NUMERIC_RESOURCE_OBSERVED":
             # "No integer budget exceeded in the sidecar" does NOT imply the
             # existing parser or old comparator accepted this exact snapshot.
-            if strict_status == "UNKNOWN" and prior_reason in OTHER_RESOURCE_REASONS:
-                result["reason_code"] = "OTHER_RESOURCE_BOUNDARY"
-                return result
             if strict_status != "OBSERVED" or prior_reason is not None:
                 result["reason_code"] = "EXISTING_STRUCTURAL_REJECTION"
                 return result
