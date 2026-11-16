@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import math
 import os
 import stat
 from dataclasses import dataclass
@@ -68,6 +69,14 @@ def _forbid_nonfinite(_token: str) -> Any:
     raise _InvalidJSON("JSON_NONFINITE_CONSTANT")
 
 
+def _finite_json_float(token: str) -> float:
+    """Reject valid JSON numeric tokens that overflow Python's finite float."""
+    value = float(token)
+    if not math.isfinite(value):
+        raise _InvalidJSON("JSON_NONFINITE_CONSTANT")
+    return value
+
+
 def _new_report(source_kind: str, raw_bytes: int | None = None) -> dict[str, Any]:
     return {
         "contract_version": CONTRACT_VERSION,
@@ -102,6 +111,7 @@ def _parse_envelope(raw_line: bytes) -> tuple[str | None, str]:
             raw_line.decode("utf-8"),
             object_pairs_hook=_unique_object,
             parse_constant=_forbid_nonfinite,
+            parse_float=_finite_json_float,
         )
     except _InvalidJSON as exc:
         return None, exc.reason_code
