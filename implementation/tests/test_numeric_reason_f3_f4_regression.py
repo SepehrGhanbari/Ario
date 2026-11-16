@@ -31,7 +31,6 @@ def _no_promotion(report):
     assert report.get("proposed_numeric_reason") is None
 
 
-@pytest.mark.xfail(strict=True, reason="F3 RED: mixed resource and numeric budget reports ambiguous reason")
 @pytest.mark.parametrize("source,limits,old_reason", [
     (
         _event(b"9" * 21, goal=b"g" * 70000),
