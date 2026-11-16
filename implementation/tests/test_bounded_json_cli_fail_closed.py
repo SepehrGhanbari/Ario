@@ -126,5 +126,81 @@ class CliFailClosedTests(unittest.TestCase):
         self.assert_inputs_unchanged()
 
 
+
+class ExitCodeContractIntegrationTests(unittest.TestCase):
+    """Subprocess-level pin of what exit 0 does and does not mean.
+
+    Raised in review: admission/preflight return exit 0 for UNKNOWN,
+    including unreadable input. These tests pin that (a) exit 0 never
+    accompanies an admitting or authorizing decision, and (b) the exit code
+    alone cannot distinguish "unreadable input" from "valid but unverifiable",
+    so consumers MUST read the JSON outcome. No in-repo workflow or script
+    consumes these exit codes as of this commit; this is a guard, not a fix.
+    """
+
+    MODULE_DIR = Path(__file__).resolve().parents[1]
+    NON_ADMITTING = {"NOT_EVALUATED"}
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.dir = Path(self._tmp.name)
+        self.inputs = {
+            "deep": DEEP,
+            "malformed": "{not json",
+            "near_limit": _nested(MAX_JSON_DEPTH),
+        }
+        self.paths = {}
+        for name, text in self.inputs.items():
+            path = self.dir / f"{name}.json"
+            path.write_text(text, encoding="utf-8")
+            self.paths[name] = path
+        self.ledger = self.dir / "ledger.jsonl"
+        self.ledger.write_bytes(b'{"event":"TASK_STARTED","timestamp":"t"}\n')
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def run_cli(self, script, *args):
+        import subprocess
+        import sys
+        done = subprocess.run(
+            [sys.executable, "-B", str(self.MODULE_DIR / script), *map(str, args)],
+            capture_output=True, text=True, timeout=60,
+        )
+        self.assertNotIn("Traceback", done.stderr)
+        return done.returncode, json.loads(done.stdout)
+
+    def assert_exit0_is_non_admitting(self, code, result):
+        if code == 0:
+            self.assertEqual(result["status"], "UNKNOWN")
+            self.assertIn(result["admission_decision"], self.NON_ADMITTING)
+
+    def test_preflight_exit0_never_authorizes_and_is_ambiguous_without_stdout(self):
+        from test_reviewer_authorization_preflight import grant
+        valid = self.dir / "grant.json"
+        valid.write_text(json.dumps(grant()), encoding="utf-8")
+        seen = {}
+        for name, path in [("valid", valid), *self.paths.items()]:
+            code, result = self.run_cli("reviewer_authorization_preflight.py", path)
+            self.assert_exit0_is_non_admitting(code, result)
+            if code == 0:
+                self.assertEqual(result["authorization_decision"], "NOT_CHECKED")
+            seen[name] = (code, result["rule_id"])
+        # Same exit code, different meaning: only rule_id tells them apart.
+        self.assertEqual(seen["valid"][0], seen["deep"][0])
+        self.assertEqual(seen["valid"][1], "RAC-02")
+        self.assertEqual(seen["deep"][1], "RAC-14")
+        self.assertEqual(seen["malformed"][1], "RAC-14")
+
+    def test_admission_exit0_never_admits_for_unreadable_inputs(self):
+        for name in ("deep", "malformed"):
+            code, result = self.run_cli(
+                "admission_review_evaluator.py", self.paths[name], self.paths[name], self.ledger,
+            )
+            self.assertEqual(code, 0, name)
+            self.assert_exit0_is_non_admitting(code, result)
+            self.assertIn("cannot load bounded input", result["reason"])
+
+
 if __name__ == "__main__":
     unittest.main()
