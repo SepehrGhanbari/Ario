@@ -10,7 +10,7 @@ def sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 def git_blob_sha1(data: bytes) -> str:
-    return hashlib.sha1(b"blob " + str(len(data)).encode("ascii") + b"\\0" + data).hexdigest()
+    return hashlib.sha1(b"blob " + str(len(data)).encode("ascii") + b"\0" + data).hexdigest()
 
 def build(repo: pathlib.Path, manifest_v2: pathlib.Path, ref: str) -> dict:
     repo = repo.resolve()
@@ -23,10 +23,10 @@ def build(repo: pathlib.Path, manifest_v2: pathlib.Path, ref: str) -> dict:
         raise ValueError("V2 file list/count is inconsistent")
     commit = git(repo, "rev-parse", "--verify", ref + "^{commit}").decode("ascii").strip()
     tree_rows = {}
-    for row in git(repo, "ls-tree", "-r", "-z", "--full-tree", commit).split(b"\\0"):
+    for row in git(repo, "ls-tree", "-r", "-z", "--full-tree", commit).split(b"\0"):
         if not row:
             continue
-        meta, raw_path = row.split(b"\\t", 1)
+        meta, raw_path = row.split(b"\t", 1)
         mode, obj_type, oid = meta.decode("ascii").split()
         tree_rows[raw_path.decode("utf-8")] = (mode, obj_type, oid)
     package_root = pathlib.Path(os.path.relpath(manifest_v2.parent, repo)).as_posix()
@@ -47,7 +47,7 @@ def build(repo: pathlib.Path, manifest_v2: pathlib.Path, ref: str) -> dict:
         current = {"bytes": len(raw), "sha256": sha256(raw), "git_blob_sha1": oid}
         entries[rel_path] = current
         if previous.get("bytes") != current["bytes"] or previous.get("sha256") != current["sha256"]:
-            crlf = raw.replace(b"\\n", b"\\r\\n") if b"\\r\\n" not in raw else raw
+            crlf = raw.replace(b"\n", b"\r\n") if b"\r\n" not in raw else raw
             crlf_match = crlf != raw and len(crlf) == previous.get("bytes") and sha256(crlf) == previous.get("sha256")
             corrections.append({
                 "path": rel_path,
@@ -78,7 +78,7 @@ def main() -> int:
     args = ap.parse_args()
     try:
         result = build(args.repo, args.manifest_v2, args.ref)
-        data = (json.dumps(result, ensure_ascii=False, sort_keys=True, indent=2) + "\\n").encode("utf-8")
+        data = (json.dumps(result, ensure_ascii=False, sort_keys=True, indent=2) + "\n").encode("utf-8")
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_bytes(data)
         print(json.dumps({"status":"BUILT_FROM_GIT_BLOBS","source_git_commit":result["source_git_commit"],"file_count":result["file_count_excluding_self"],"corrections":len(result["correction_log"]),"output":str(args.output)}, ensure_ascii=False))
