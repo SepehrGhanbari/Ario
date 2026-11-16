@@ -100,6 +100,21 @@ def parse_evidence_ancestry_findings(basis: str) -> dict:
                     or row["property_id"] != "SUPPLIED_RECORD_PRESENT"
                     or target is None or target["reference_type"] not in ("CLAIM", "OBSERVATION")):
                 raise ValueError("M0 ancestry presence binding invalid")
+    # Optional informational keys: accept only what the emitter can produce.
+    declared = data.get("transformation_derivations_declared_not_resolved")
+    if "transformation_derivations_declared_not_resolved" in data and (
+            not isinstance(declared, list) or len(declared) > 64
+            or not all(isinstance(item, str) and valid_identifier(item) for item in declared)
+            or declared != sorted(set(declared))):
+        raise ValueError("M0 ancestry transformation list invalid")
+    truncated = data.get("transformation_derivations_truncated")
+    if "transformation_derivations_truncated" in data and (
+            type(truncated) is not bool or (truncated and len(declared or []) != 64)):
+        raise ValueError("M0 ancestry transformation truncation flag invalid")
+    count = data.get("transformation_derivations_unreportable_count")
+    if "transformation_derivations_unreportable_count" in data and (
+            type(count) is not int or not 0 <= count <= AuditEngine.MAX_ANCESTRY_OBJECTS):
+        raise ValueError("M0 ancestry transformation count invalid")
     if "use_disposition" in data and data["use_disposition"] != "UNKNOWN":
         raise ValueError("M0 ancestry fallback state invalid")
     return data
@@ -1304,10 +1319,36 @@ class _EvidenceAncestryGuard:
                 "use_disposition": disposition,
                 "source_authentication": "UNKNOWN", "reasons": sorted(reasons),
             })
+        # TRANSFORMATION derivations are declarations: they are never resolved
+        # against a supplied object, so "traceable" above does not cover them.
+        # Report them so a reader cannot take the label as a closed chain.
+        # Informational only: this never changes the verdict or violation codes.
+        all_transformations = [
+            e.derivation_reference.reference_id
+            for e in self.artifacts.evidence
+            if e.derivation_reference is not None
+            and e.derivation_reference.reference_type == "TRANSFORMATION"
+        ]
+        declared_transformations = sorted({
+            rid for rid in all_transformations if self.report_id(rid) is not None
+        })
+        unreportable = sum(1 for rid in all_transformations if self.report_id(rid) is None)
         report.update(
             candidate_ancestry=("UNKNOWN" if candidate_unknown else
                                "TRACEABLE_WITHIN_SUPPLIED_SNAPSHOT" if roots else "NOT_EVALUATED"),
             assessments=findings)
+        extras = {
+            "transformation_derivations_declared_not_resolved": declared_transformations[:64],
+            "transformation_derivations_truncated": len(declared_transformations) > 64,
+            "transformation_derivations_unreportable_count": unreportable,
+        }
+        # Add the informational keys only if they cannot push the report over the
+        # size limit: overflow forces UNKNOWN/FAIL, so adding them near the cap
+        # would change the verdict. If they do not fit they are omitted.
+        _, would_overflow = _serialize_ancestry_report(
+            dict(report, **extras), [], self.engine.MAX_ANCESTRY_REPORT_BYTES)
+        if not would_overflow:
+            report.update(extras)
         return sorted(self.violation_codes), report
 
 

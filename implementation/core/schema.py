@@ -234,7 +234,7 @@ class LineageEdge:
     derivation_reference: Reference
     admissibility_status: str
     provenance: Provenance
-    compatibility_authorizations: tuple["LineageCompatibilityAuthorization", ...] = ()
+    compatibility_authorizations: tuple[LineageCompatibilityAuthorization, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.lineage_id or not self.lineage_id.strip():
