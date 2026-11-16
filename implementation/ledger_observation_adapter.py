@@ -12,11 +12,45 @@ from pathlib import Path
 MAX_LEDGER_BYTES = 8 * 1024 * 1024
 MAX_LINE_BYTES = 64 * 1024
 MAX_EVENTS = 5000
+# Explicit structural bound. Without it, whether deeply nested JSON is
+# accepted depends on the interpreter's json recursion behaviour (CPython
+# 3.12/3.13 raise RecursionError; 3.14 parses the same bytes successfully),
+# so identical ledger bytes could yield UNKNOWN on one runtime and OBSERVED
+# on another. The bound makes the verdict a function of the bytes alone.
+MAX_JSON_DEPTH = 64
 KNOWN_EVENTS = frozenset({
     "TASK_STARTED", "STEP_OBSERVED", "GOAL_CRITERION_OBSERVED",
     "FAILURE_DIAGNOSTIC_OBSERVED", "TASK_FINISHED", "WORKFLOW_STARTED",
     "WORKFLOW_STAGE_OBSERVED", "WORKFLOW_FINISHED",
 })
+
+
+def json_nesting_exceeds(text: str, limit: int = MAX_JSON_DEPTH) -> bool:
+    """Return True when array/object nesting in ``text`` exceeds ``limit``.
+
+    Brackets inside JSON strings (including escaped quotes) are ignored.
+    This is a structural pre-check only; it does not validate JSON.
+    """
+    depth = 0
+    in_string = False
+    escaped = False
+    for char in text:
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+        elif char == '"':
+            in_string = True
+        elif char in "[{":
+            depth += 1
+            if depth > limit:
+                return True
+        elif char in "]}":
+            depth -= 1
+    return False
 
 
 def observe_ledger(path: str | Path) -> dict:
@@ -47,8 +81,14 @@ def observe_ledger(path: str | Path) -> dict:
                     return unknown(f"line {line_number}: incomplete JSONL line")
                 digest.update(raw_line)
                 try:
-                    event = json.loads(raw_line.decode("utf-8"))
-                except (UnicodeDecodeError, json.JSONDecodeError, RecursionError):
+                    text = raw_line.decode("utf-8")
+                except UnicodeDecodeError:
+                    return unknown(f"line {line_number}: invalid UTF-8 or JSON")
+                if json_nesting_exceeds(text):
+                    return unknown(f"line {line_number}: JSON nesting-depth limit exceeded")
+                try:
+                    event = json.loads(text)
+                except (json.JSONDecodeError, RecursionError):
                     return unknown(f"line {line_number}: invalid UTF-8 or JSON")
                 if (not isinstance(event, dict)
                         or not isinstance(event.get("event"), str)
