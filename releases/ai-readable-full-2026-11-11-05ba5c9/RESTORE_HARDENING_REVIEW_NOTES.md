@@ -4,8 +4,8 @@
 - Fail-closed staged restore validates header/footer record count, commit, tree, total bytes and manifest digest token.
 - Every record validates payload length, SHA-256 and Git blob SHA-1.
 - Rejects POSIX traversal, Windows drive/UNC/backslash paths, reserved device names, trailing dots/spaces, colon, duplicate and case-colliding paths.
-- Rejects non-canonical path spellings and invalid UTF-8 path strings.
-- Publishes only after complete validation; never overwrites an existing destination.
+- Rejects non-canonical path spellings, invalid UTF-8 path strings, case-colliding directory components, and file/directory path conflicts.
+- Publishes only after complete validation; failed restores clean their staging directory and do not publish a partial destination.
 - Git symlink blobs are materialized as regular files, never filesystem links. Safe against link creation but not semantics-preserving.
 
 ## Manifest V3
@@ -13,17 +13,23 @@
 - V2 remains unchanged as historical record.
 - Four V2 entries are corrected; their prior byte counts and hashes match an LF-to-CRLF transformation, while V3 records exact Git blob bytes, SHA-256 and Git blob SHA-1.
 - Canonical builder and unit tests: `scripts/build_public_package_manifest_v3.py` and `scripts/test_public_package_manifest_v3.py`.
-- CI verifies the generated V3 against the committed Git blob, avoiding checkout newline conversion.
+- CI verifies generated V3 against the committed Git blob, avoiding checkout newline conversion.
 
 ## End-to-end artifact verification
-- Generator uses the pinned release source commit `05ba5c960aaea96fc6bb80504b53b4d47e7d42f5`.
+- Generator uses pinned release source commit `05ba5c960aaea96fc6bb80504b53b4d47e7d42f5`.
 - Generator validates ZIP and TXT content; hardened consumer restores TXT; independent verifier compares every restored path and byte sequence against Git blob objects.
-- GitHub Actions run #45 additionally passed the review-baseline snapshot roundtrip: 280 Git blobs / 94,812,023 bytes, exact paths and bytes, executable modes checked.
-- GitHub Actions run #51 passed 10/10 jobs: restore matrix (Ubuntu/Windows × Python 3.11/3.12), manifest builder matrix (same), and generator roundtrip on Ubuntu and Windows.
-- Run #51 predates the latest additional path-validation regression cases; a follow-up run is pending.
+- GitHub Actions run #51 passed 10/10 jobs on the original hardening baseline.
+- Follow-up run #78 passed 10/10 jobs after the additional path validation and expanded restore tests: Ubuntu/Windows × Python 3.11/3.12 for restore and manifest tests, plus full generator/restore/independent Git-blob roundtrip on both Ubuntu and Windows.
+- The final restore regression suite contains 27 tests, including malformed footer/header, Windows path/device cases, non-canonical and invalid-UTF8 paths, case-colliding directory components, file/directory conflicts, payload tampering and staging cleanup.
+- The run #57/#63 attempts exposed authoring defects in the added tests and generator initialization (literal escaped newline and missing RESERVED/path-set initialization). Those defects were corrected; run #78 is the successful verification of the corrected code.
+- The pinned release artifacts were downloaded and independently rechecked locally: ZIP integrity, all 204 Git blob SHA-1/SHA-256 entries, and TXT consumer restoration all passed.
 
 ## Remaining limitations
 - TXT contains a manifest SHA-256 token but not the manifest bytes; matching header/footer values do not independently authenticate the digest against a manifest. A future format revision or independently supplied manifest is still needed.
 - Symlink semantics are not preserved by restore; symlink blobs become regular files.
-- V3 remains a review candidate; no external DOI or Zenodo record has been replaced or republished.
-- No main changes, merge, trust activation, Ruleset or key changes.
+- V3 is a review candidate; no external DOI or Zenodo record has been replaced or republished.
+- No claim of full source-selection reproducibility: private-source selector material remains unavailable/UNKNOWN.
+
+## Repository boundary
+- No main edits, merge, trust activation, Ruleset or key changes were performed.
+- Main has since advanced six commits beyond the original review base; the review branch is intentionally not rebased automatically.
