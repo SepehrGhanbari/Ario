@@ -17,10 +17,11 @@
 
 ## End-to-end artifact verification
 - Generator uses pinned release source commit `05ba5c960aaea96fc6bb80504b53b4d47e7d42f5`.
+- Generator path validation now rejects the same Windows-invalid characters and control characters as the restore consumer; `test_make_export_path_policy.py` exercises invalid Git paths on POSIX and is skipped on Windows, where those filenames cannot be created.
 - Generator validates ZIP and TXT content; hardened consumer restores TXT; independent verifier compares every restored path and byte sequence against Git blob objects.
 - GitHub Actions run #51 passed 10/10 jobs on the original hardening baseline.
-- Follow-up run #78 passed 10/10 jobs after the additional path validation and expanded restore tests: Ubuntu/Windows × Python 3.11/3.12 for restore and manifest tests, plus full generator/restore/independent Git-blob roundtrip on both Ubuntu and Windows.
-- Baseline restore regression suite: 27 tests; follow-up adds Windows-invalid-name and source-authenticity-label tests (29 tests PASS in isolated local Windows scratch). Fresh CI on the follow-up HEAD remains necessary.
+- Follow-up run #78 passed 10/10 jobs after the additional path validation and expanded restore tests: Ubuntu/Windows × Python 3.11/3.12 for restore and manifest tests, plus full generator/restore/independent Git-blob roundtrip on both Ubuntu and Windows. The latest follow-up PR-head run is recorded separately above.
+- Restore regression suite: 29 test methods. The added generator-path parity regression also passes on Ubuntu; its POSIX-only fixture is skipped on Windows. The latest PR-head GitHub Actions run `43923055510` passed all 10 jobs, including the restore and manifest matrices and full Ubuntu/Windows artifact roundtrip.
 - The run #57/#63 attempts exposed authoring defects in the added tests and generator initialization (literal escaped newline and missing RESERVED/path-set initialization). Those defects were corrected; run #78 is the successful verification of the corrected code.
 - The pinned release artifacts were downloaded and independently rechecked locally: ZIP integrity, all 204 Git blob SHA-1/SHA-256 entries, and TXT consumer restoration all passed.
 
