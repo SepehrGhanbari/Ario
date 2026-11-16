@@ -57,15 +57,15 @@
   "excluded_external_asset": "notes.zip (available only on Zenodo; not re-uploaded)",
   "file_count_excluding_self": 14,
   "files": {
-    "README.md": {
-      "bytes": 3580,
-      "git_blob_sha1": "3093c0df438ad04eb0ea409062a84510b7f9f27a",
-      "sha256": "1fd8f5312dda3e9be3ecfbaaaa84abd9d6641e616aacd86a5ad82f05a6141508"
-    },
     "PUBLIC_EDITORIAL_CHANGELOG_2026-11-12.md": {
       "bytes": 3166,
       "git_blob_sha1": "a9b29c8f3cdccbc7341f617eec47b801c4f0a2d8",
       "sha256": "12e6d878ef90197d6fb2754590a26aa5f17fced574c334fc035571e34b6e0624"
+    },
+    "README.md": {
+      "bytes": 3580,
+      "git_blob_sha1": "3093c0df438ad04eb0ea409062a84510b7f9f27a",
+      "sha256": "1fd8f5312dda3e9be3ecfbaaaa84abd9d6641e616aacd86a5ad82f05a6141508"
     },
     "evidence/CLAIM_EVIDENCE_LEDGER.md": {
       "bytes": 5902,
