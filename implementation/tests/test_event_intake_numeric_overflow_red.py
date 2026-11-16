@@ -14,7 +14,6 @@ def _synthetic_record(token: str) -> bytes:
 
 
 @pytest.mark.parametrize("number", ["1e999", "-1e999", "9.99e999"])
-@pytest.mark.xfail(strict=True, reason="RED: JSON parse_constant cannot catch float exponent overflow")
 def test_numeric_float_overflow_must_not_be_eligible(number):
     result = inspect_jsonl_bytes(_synthetic_record(number))
     assert result["status"] == "UNKNOWN"
