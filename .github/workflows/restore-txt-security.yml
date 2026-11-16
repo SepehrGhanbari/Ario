@@ -71,8 +71,6 @@ jobs:
         run: python RESTORE_FROM_TXT_HARDENED.py artifacts/ario-full.txt "${{ runner.temp }}/ario-restored"
       - name: Independently compare restored bytes to pinned Git blobs
         run: python papers/creation-without-sovereignty/2026-11-11/verify_snapshot_roundtrip.py --source releases/ai-readable-full-2026-11-11-05ba5c9/source --restored "${{ runner.temp }}/ario-restored"
-      - name: Build candidate V3 manifest from immutable Git objects
-        run: python papers/creation-without-sovereignty/2026-11-11/build_public_manifest_v3.py --commit 2e7f83c6c7518012bed7fedfb12103ce9b7222ea
       - name: Upload generated artifacts and manifest candidate
         uses: actions/upload-artifact@v4
         with:
@@ -82,4 +80,3 @@ jobs:
             releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/ario-full.txt
             releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/ario-manifest.json
             releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/checksums.json
-            papers/creation-without-sovereignty/2026-11-11/PUBLIC_PACKAGE_FILE_MANIFEST_V3.json
