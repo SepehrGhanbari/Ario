@@ -49,7 +49,7 @@ class Tests(unittest.TestCase):
  def test_repeated_separator(self):self.bad(snap([("a//b",b"x")]))
  def test_windows_console_device(self):self.bad(snap([("dir/CONIN$",b"x")]))
  def test_windows_superscript_device(self):self.bad(snap([("COM¹.txt",b"x")]))
- def test_invalid_surrogate_path(self):self.bad(snap([("\\udcff",b"x")]))
+ def test_invalid_surrogate_path(self):self.bad(snap([("\udcff",b"x")]))
  def test_header_count_mismatch(self):self.bad(snap([("a",b"x")],hc=2))
  def test_footer_manifest_mismatch(self):self.bad(snap([("a",b"x")],fm="d"*64))
  def test_partial_record_failure_cleans_stage(self):
