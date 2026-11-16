@@ -62,3 +62,11 @@
 - The new generator includes the verifier and warnings in the newly built candidate ZIP; the historical checked-in RESTORE_FROM_TXT.py and old distributed files remain deliberately unchanged.
 - GitHub Actions candidate artifact name: ario-05ba5c9-restore-review-candidate-unpublished.
 - See RESTORE_PUBLICATION_DECISION_V0_1.md for no-overwrite release policy, reviewer gate and publication HOLD.
+
+
+## Base64 allocation-amplification defense (2026-11-16)
+
+- Independent disposable Windows allocation probe: input 1,050,000 bytes of ASCII-white-space-separated Base64-like data reached a 43,882,417-byte Python traced-memory peak using `b"".join(payload.split())`, versus 1,050,033 bytes using `payload.translate(None, ASCII_WHITESPACE)`. This is a **resource-use amplification** even with per-record byte limits, not evidence of arbitrary code execution.
+- Both hardened restore consumer and independently implemented pinned-manifest verifier now compact Base64 whitespace using bytes.translate instead of creating a list of tokens. Nonwhitespace invalid characters remain untouched and are rejected by `base64.b64decode(..., validate=True)`.
+- Negative controls: bounded allocation under the ~1 MiB adversarial sample on both implementations; invalid non-whitespace character remains invalid; malformed non-UTF8 manifest is converted to controlled `VerificationError`.
+- The verifier does not call the restore consumer; only the review test compares their resource behavior. New HEAD requires fresh exact-head CI plus explicit no-publication status.

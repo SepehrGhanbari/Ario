@@ -4,6 +4,7 @@ These are synthetic bytes. The expected pin is passed separately from the
 manifest/TXT. Running restore alone must NOT be confused with authentication.
 """
 import hashlib
+import tracemalloc
 import json
 import pathlib
 import subprocess
@@ -11,6 +12,8 @@ import sys
 import tempfile
 import unittest
 
+import RESTORE_FROM_TXT_HARDENED as hardened
+import verify_pinned_manifest as pinned
 from RESTORE_FROM_TXT_HARDENED import restore
 from test_restore_from_txt import snap, sha
 from verify_pinned_manifest import VerificationError, verify
@@ -55,6 +58,33 @@ class PinnedManifestTests(unittest.TestCase):
     def write(self, manifest, txt):
         self.manifest.write_bytes(manifest)
         self.txt.write_bytes(txt)
+
+    def test_base64_whitespace_compaction_avoids_token_explosion(self):
+        # A ~1 MiB attacker-controlled payload can previously allocate ~44 MiB
+        # transiently via bytes.split(), despite the record-size input cap.
+        payload = b"AA " * 350_000
+        for compact in (hardened.compact_base64, pinned.compact_base64):
+            with self.subTest(consumer=compact.__module__):
+                tracemalloc.start()
+                try:
+                    cleaned = compact(payload)
+                    _, peak = tracemalloc.get_traced_memory()
+                finally:
+                    tracemalloc.stop()
+                self.assertEqual(len(cleaned), 700_000)
+                self.assertLess(peak, 8 * 1024 * 1024)
+
+    def test_base64_compaction_keeps_nonwhitespace_invalid_bytes(self):
+        for compact in (hardened.compact_base64, pinned.compact_base64):
+            with self.subTest(consumer=compact.__module__):
+                self.assertEqual(compact(b"YQ==\n!"), b"YQ==!")
+                self.assertEqual(compact(b"YQ==\r\n"), b"YQ==")
+
+    def test_non_utf8_manifest_rejected_with_scoped_verification_error(self):
+        raw = b"\xff\xfe\x80"
+        self.manifest.write_bytes(raw)
+        with self.assertRaisesRegex(VerificationError, "manifest is not valid UTF-8"):
+            verify(self.txt, self.manifest, hashlib.sha256(raw).hexdigest())
 
     def test_valid_external_pin_and_contents_match(self):
         result = verify(self.txt, self.manifest, self.good_pin)

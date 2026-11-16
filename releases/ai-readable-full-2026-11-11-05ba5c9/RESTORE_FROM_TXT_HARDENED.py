@@ -17,6 +17,10 @@ MAX_PATH_BYTES = 4096
 class SnapshotError(ValueError): pass
 def blobsha(b): return hashlib.sha1(b"blob "+str(len(b)).encode()+b"\0"+b).hexdigest()
 def portable_key(s): return unicodedata.normalize("NFC",s.casefold())
+def compact_base64(payload):
+ # bytes.split() builds one Python object per whitespace-delimited token and
+ # can amplify a bounded ~1 MiB payload into tens of MiB of transient memory.
+ return payload.translate(None,b" \t\r\n\v\f")
 def _unique_object(pairs):
  result={}
  for key,value in pairs:
@@ -111,7 +115,7 @@ def restore(src,dst):
      except UnicodeDecodeError as ex: raise SnapshotError("invalid UTF-8") from ex
      raw=payload
     elif e["encoding"]=="base64":
-     try: raw=base64.b64decode(b"".join(payload.split()),validate=True)
+     try: raw=base64.b64decode(compact_base64(payload),validate=True)
      except (ValueError,binascii.Error) as ex: raise SnapshotError("invalid Base64") from ex
     else: raise SnapshotError("unsupported encoding")
     if len(raw)!=e["bytes"] or hashlib.sha256(raw).hexdigest()!=e["sha256"] or blobsha(raw)!=e["git_blob_sha1"]: raise SnapshotError("payload integrity mismatch: "+name)

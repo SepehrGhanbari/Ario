@@ -45,6 +45,11 @@ def unique_object(pairs):
     return result
 
 
+def compact_base64(payload):
+    """Remove only ASCII Base64 whitespace without per-token allocations."""
+    return payload.translate(None, b" \t\r\n\v\f")
+
+
 def reject_constant(_token):
     raise VerificationError("non-standard JSON number")
 
@@ -77,7 +82,11 @@ def read_manifest(path, expected_sha256):
     require(len(raw) <= MANIFEST_LIMIT, "manifest byte limit")
     actual = hashlib.sha256(raw).hexdigest()
     require(actual == expected_sha256, "EXTERNAL_MANIFEST_PIN_MISMATCH")
-    manifest = strict_json(raw.decode("utf-8"))
+    try:
+        manifest_text = raw.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise VerificationError("manifest is not valid UTF-8") from exc
+    manifest = strict_json(manifest_text)
     require(isinstance(manifest, dict), "manifest object expected")
     require(manifest.get("format") == "ARIO_FULL_SNAPSHOT_v1", "manifest format mismatch")
     require(isinstance(manifest.get("commit"), str) and HEX40.fullmatch(manifest["commit"]), "manifest commit")
@@ -174,7 +183,7 @@ def verify(txt_path, manifest_path, expected_manifest_sha256):
                 raw = payload
             else:
                 try:
-                    raw = base64.b64decode(b"".join(payload.split()), validate=True)
+                    raw = base64.b64decode(compact_base64(payload), validate=True)
                 except (ValueError, binascii.Error) as exc:
                     raise VerificationError("invalid Base64") from exc
             require(len(raw) == item["bytes"], "record length mismatch")
