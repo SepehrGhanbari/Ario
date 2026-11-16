@@ -34,6 +34,15 @@ KNOWN_DIAGNOSTIC_REASONS = frozenset({
     "EVENT_COUNT_LIMIT", "EMPTY_LEDGER",
     "EMPTY_JSONL_RECORD", "INCOMPLETE_JSONL_RECORD",
 })
+# A non-numeric resource rejection in the original strict parser must
+# never be presented as generic successful intake or numeric compatibility.
+OTHER_RESOURCE_REASONS = frozenset({
+    "LEDGER_SIZE_LIMIT", "LINE_SIZE_LIMIT", "EVENT_COUNT_LIMIT",
+})
+EARLY_FRAMING_REASONS = frozenset({
+    "EMPTY_LEDGER", "INCOMPLETE_JSONL_RECORD", "EMPTY_JSONL_RECORD",
+})
+
 KNOWN_CURRENT_REASONS = frozenset({
     None, "INVALID_JSON", "JSON_NONFINITE_CONSTANT",
     "JSON_DUPLICATE_KEY", "INVALID_UTF8",
@@ -98,13 +107,34 @@ def compare_numeric_reason_views(
         return result
 
     try:
+        # Diagnose caller-selected resource caps FIRST. The sidecar's bounded
+        # framing preflight can reject without invoking the original parser.
+        proposed = diagnose_numeric_resource_bytes(raw, limits=limits)
+        if type(proposed) is not dict:
+            result["reason_code"] = "UNRECOGNIZED_REPORT_TYPE"
+            return result
+        if proposed.get("existing_lab_status") == "NOT_CHECKED":
+            # This diagnostic cannot make historical comparator claims about
+            # a source it deliberately did not pass through the old parser.
+            early_reason = proposed.get("reason_code")
+            if (proposed.get("status") != "UNKNOWN"
+                    or proposed.get("existing_lab_reason") is not None):
+                result["reason_code"] = "VERSION_REPORT_MISMATCH"
+            elif type(early_reason) is str and early_reason in OTHER_RESOURCE_REASONS:
+                result["reason_code"] = "OTHER_RESOURCE_BOUNDARY"
+            elif type(early_reason) is str and early_reason in EARLY_FRAMING_REASONS:
+                result["reason_code"] = "NO_NUMERIC_DECISION"
+            else:
+                result["reason_code"] = "VERSION_REPORT_MISMATCH"
+            result["proposed_sidecar_status"] = "UNKNOWN"
+            return result
+
         old = compare_snapshot(
             raw,
             legacy_observer_module=ledger_observation_adapter,
             strict_lab_module=event_intake_validator_lab,
         )
-        proposed = diagnose_numeric_resource_bytes(raw, limits=limits)
-        if type(old) is not dict or type(proposed) is not dict:
+        if type(old) is not dict:
             result["reason_code"] = "UNRECOGNIZED_REPORT_TYPE"
             return result
         if (type(old.get("comparison")) is not str or
@@ -157,6 +187,17 @@ def compare_numeric_reason_views(
             result["status"] = "DIAGNOSTIC_ONLY"
             result["proposed_numeric_reason"] = proposed_reason
         elif proposed_reason is None and proposed_status == "NO_NUMERIC_RESOURCE_OBSERVED":
+            # "No integer budget exceeded in the sidecar" does NOT imply the
+            # existing parser or old comparator accepted this exact snapshot.
+            if strict_status == "UNKNOWN" and prior_reason in OTHER_RESOURCE_REASONS:
+                result["reason_code"] = "OTHER_RESOURCE_BOUNDARY"
+                return result
+            if strict_status != "OBSERVED" or prior_reason is not None:
+                result["reason_code"] = "EXISTING_STRUCTURAL_REJECTION"
+                return result
+            if old["comparison"] != "AGREE_OBSERVED":
+                result["reason_code"] = "EXISTING_COMPARISON_UNRESOLVED"
+                return result
             result["relation"] = "NO_NUMERIC_LIMIT_OBSERVED"
             result["status"] = "DIAGNOSTIC_ONLY"
         else:
