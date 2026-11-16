@@ -33,6 +33,22 @@ class ExportPathPolicyTests(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0, repr(invalid_name))
                 self.assertFalse((release / "artifacts" / "ario-full.txt").exists())
 
+    def test_generator_rejects_unicode_nfc_alias(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            release = pathlib.Path(tmp) / "release"
+            source = release / "source"
+            source.mkdir(parents=True)
+            shutil.copyfile(SCRIPT_SOURCE, release / "make_export.py")
+            subprocess.check_call(["git", "init", "-q", str(source)])
+            subprocess.check_call(["git", "-C", str(source), "config", "user.email", "test@example.invalid"])
+            subprocess.check_call(["git", "-C", str(source), "config", "user.name", "Export Path Test"])
+            (source / "é.txt").write_bytes(b"a")
+            (source / "e\u0301.txt").write_bytes(b"b")
+            subprocess.check_call(["git", "-C", str(source), "add", "--all"])
+            subprocess.check_call(["git", "-C", str(source), "commit", "-qm", "unicode alias fixture"])
+            result = subprocess.run([sys.executable, str(release / "make_export.py")], capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertFalse((release / "artifacts" / "ario-full.txt").exists())
 
 if __name__ == "__main__":
     unittest.main()

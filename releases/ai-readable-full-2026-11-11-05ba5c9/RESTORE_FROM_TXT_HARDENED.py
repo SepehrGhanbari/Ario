@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Fail-closed, staged restore for ARIO_FULL_TEXT_EXPORT_V1."""
-import argparse,base64,binascii,hashlib,json,os,pathlib,re,shutil,stat,tempfile
+import argparse,base64,binascii,hashlib,json,os,pathlib,re,shutil,stat,tempfile,unicodedata
 FMT=b"ARIO_FULL_TEXT_EXPORT_V1"
 FOOT=re.compile(rb"@@ARIO_COMPLETE files=(\d+) commit=([0-9a-f]{40}) tree=([0-9a-f]{40}) tracked_bytes=(\d+) manifest_sha256=([0-9a-f]{64})\n")
 RES={"CON","PRN","AUX","NUL","CONIN$","CONOUT$","COM¹","COM²","COM³","LPT¹","LPT²","LPT³",*(f"COM{i}" for i in range(1,10)),*(f"LPT{i}" for i in range(1,10))}
@@ -16,6 +16,7 @@ MAX_RECORD_PAYLOAD_BYTES = 64 * 1024 * 1024
 MAX_PATH_BYTES = 4096
 class SnapshotError(ValueError): pass
 def blobsha(b): return hashlib.sha1(b"blob "+str(len(b)).encode()+b"\0"+b).hexdigest()
+def portable_key(s): return unicodedata.normalize("NFC",s.casefold())
 def _unique_object(pairs):
  result={}
  for key,value in pairs:
@@ -84,15 +85,15 @@ def restore(src,dst):
     if not isinstance(e,dict) or not keys<=e.keys(): raise SnapshotError("incomplete record")
     if n>=expected_n or n>=MAX_FILES: raise SnapshotError("record count budget exceeded")
     p=safe(e["path"]); name=p.as_posix()
-    if name in seen or name in all_parents or name.casefold() in folded: raise SnapshotError("duplicate, case collision, or file/directory conflict")
+    if name in seen or name in all_parents or portable_key(name) in folded: raise SnapshotError("duplicate, case collision, or file/directory conflict")
     parts=p.parts
     for i in range(1,len(parts)+1):
-     prefix="/".join(parts[:i]); key=prefix.casefold()
+     prefix="/".join(parts[:i]); key=portable_key(prefix)
      previous=folded_components.get(key)
      if previous is not None and previous!=prefix: raise SnapshotError("case-colliding path component")
      folded_components[key]=prefix
      if i<len(parts) and prefix in seen: raise SnapshotError("file/directory path conflict")
-    seen.add(name); folded.add(name.casefold())
+    seen.add(name); folded.add(portable_key(name))
     for i in range(1,len(parts)): all_parents.add("/".join(parts[:i]))
     if e["mode"] not in ("100644","100755","120000"): raise SnapshotError("unsupported Git mode")
     for k in ("bytes","payload_bytes"):

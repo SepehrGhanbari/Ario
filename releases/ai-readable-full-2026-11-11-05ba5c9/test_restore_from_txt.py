@@ -110,6 +110,14 @@ class Tests(unittest.TestCase):
   data=snap([("first",b"x"),("second",b"y")]).replace(hashlib.sha256(b"y").hexdigest().encode(),b"f"*64)
   self.bad(data)
  def test_trailing_dot_path(self):self.bad(snap([("file.",b"x")]))
+ def test_unicode_nfc_collision_rejected(self):
+  self.bad(snap([("é.txt",b"a"),("e\u0301.txt",b"b")]))
+ def test_unicode_nfc_directory_component_collision_rejected(self):
+  self.bad(snap([("dir/é/a",b"a"),("dir/e\u0301/b",b"b")]))
+ def test_distinct_unicode_names_remain_representable(self):
+  self.src.write_bytes(snap([("é.txt",b"a"),("ê.txt",b"b")]))
+  self.assertEqual(restore(self.src,self.dst),2)
+  self.assertEqual((self.dst/"ê.txt").read_bytes(),b"b")
  def test_case_colliding_directory_components(self):self.bad(snap([("Dir/a",b"x"),("dir/b",b"y")]))
  def test_file_directory_conflict_parent_first(self):self.bad(snap([("a",b"x"),("a/b",b"y")]))
  def test_file_directory_conflict_child_first(self):self.bad(snap([("a/b",b"y"),("a",b"x")]))

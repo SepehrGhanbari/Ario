@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import subprocess, json, hashlib, base64, pathlib, re, zipfile, sys
+import subprocess, json, hashlib, base64, pathlib, re, zipfile, sys, unicodedata
 R=pathlib.Path(__file__).resolve().parent
 SRC=R/"source"; OUT=R/"artifacts"; OUT.mkdir(exist_ok=True)
 def g(*args):return subprocess.check_output(["git","-C",str(SRC),*args])
@@ -11,6 +11,7 @@ date=g("show","-s","--format=%cI","HEAD").decode().strip()
 rec=[]
 RESERVED={"CON","PRN","AUX","NUL","CONIN$","CONOUT$","COM¹","COM²","COM³","LPT¹","LPT²","LPT³",*(f"COM{i}" for i in range(1,10)),*(f"LPT{i}" for i in range(1,10))}
 seen_paths=set(); folded_paths=set(); all_parents=set(); folded_components={}
+def portable_key(s):return unicodedata.normalize("NFC",s.casefold())
 for item in g("ls-tree","-r","-z","--full-tree","HEAD").split(b"\x00"):
  if not item:continue
  h,path=item.split(b"\t",1)
@@ -20,14 +21,14 @@ for item in g("ls-tree","-r","-z","--full-tree","HEAD").split(b"\x00"):
  p=pathlib.PurePosixPath(name)
  wp=pathlib.PureWindowsPath(name)
  if p.is_absolute() or wp.drive or wp.root or wp.is_absolute() or ".." in p.parts or p.as_posix()!=name or "\\" in name or any(part.endswith((".", " ")) or ":" in part or part.split(".",1)[0].upper() in RESERVED or any(ord(ch)<32 or ch in '<>"|?*' for ch in part) for part in p.parts):raise ValueError("unsafe or non-portable path")
- if name in seen_paths or name in all_parents or name.casefold() in folded_paths:raise ValueError("duplicate, case-colliding, or file/directory-conflicting path")
+ if name in seen_paths or name in all_parents or portable_key(name) in folded_paths:raise ValueError("duplicate, case-colliding, or file/directory-conflicting path")
  parts=p.parts
  for i in range(1,len(parts)+1):
-  prefix="/".join(parts[:i]);key=prefix.casefold();previous=folded_components.get(key)
+  prefix="/".join(parts[:i]);key=portable_key(prefix);previous=folded_components.get(key)
   if previous is not None and previous!=prefix:raise ValueError("case-colliding path component")
   folded_components[key]=prefix
   if i<len(parts) and prefix in seen_paths:raise ValueError("file/directory path conflict")
- seen_paths.add(name);folded_paths.add(name.casefold())
+ seen_paths.add(name);folded_paths.add(portable_key(name))
  for i in range(1,len(parts)):all_parents.add("/".join(parts[:i]))
  raw=g("cat-file","blob",oid)
  if hashlib.sha1(b"blob "+str(len(raw)).encode()+b"\0"+raw).hexdigest()!=oid:raise ValueError("git sha mismatch")
