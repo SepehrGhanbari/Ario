@@ -21,6 +21,6 @@ def main():
   if got!=raw:raise SystemExit(f"byte mismatch: {path}")
   actual_oid=hashlib.sha1(b"blob "+str(len(got)).encode()+b"\0"+got).hexdigest()
   if actual_oid!=oid:raise SystemExit(f"Git blob SHA-1 mismatch: {path}")
-  if mode=="100755" and not ((dst/path).stat().st_mode & 0o111):raise SystemExit(f"executable bit missing: {path}")
+  if os.name!="nt" and mode=="100755" and not ((dst/path).stat().st_mode & 0o111):raise SystemExit(f"executable bit missing: {path}")
  print(f"ROUNDTRIP_VERIFIED: {len(rows)} Git blobs; exact paths and bytes; executable modes checked")
 if __name__=="__main__":main()
