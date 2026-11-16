@@ -46,3 +46,40 @@ jobs:
           --output manifest-v3.generated.json
       - name: Verify committed V3 is byte-for-byte reproducible
         run: python -c "from pathlib import Path; assert Path('manifest-v3.generated.json').read_bytes() == Path('papers/creation-without-sovereignty/2026-11-11/PUBLIC_PACKAGE_FILE_MANIFEST_V3.json').read_bytes(), 'V3 differs from deterministic Git-blob rebuild'"
+
+  snapshot-roundtrip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Checkout pinned source repository into generator input
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}
+          ref: 2e7f83c6c7518012bed7fedfb12103ce9b7222ea
+          path: releases/ai-readable-full-2026-11-11-05ba5c9/source
+          fetch-depth: 1
+      - name: Generate TXT and ZIP from pinned Git blobs
+        working-directory: releases/ai-readable-full-2026-11-11-05ba5c9
+        run: python make_export.py
+      - name: Restore TXT with hardened consumer
+        working-directory: releases/ai-readable-full-2026-11-11-05ba5c9
+        run: python RESTORE_FROM_TXT_HARDENED.py artifacts/ario-full.txt "${{ runner.temp }}/ario-restored"
+      - name: Independently compare restored bytes to pinned Git blobs
+        run: python papers/creation-without-sovereignty/2026-11-11/verify_snapshot_roundtrip.py --source releases/ai-readable-full-2026-11-11-05ba5c9/source --restored "${{ runner.temp }}/ario-restored"
+      - name: Build candidate V3 manifest from immutable Git objects
+        run: python papers/creation-without-sovereignty/2026-11-11/build_public_manifest_v3.py --commit 2e7f83c6c7518012bed7fedfb12103ce9b7222ea
+      - name: Upload generated artifacts and manifest candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: ario-roundtrip-and-manifest-v3-candidate
+          path: |
+            releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/ario-full.zip
+            releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/ario-full.txt
+            releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/ario-manifest.json
+            releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/checksums.json
+            papers/creation-without-sovereignty/2026-11-11/PUBLIC_PACKAGE_FILE_MANIFEST_V3.json
