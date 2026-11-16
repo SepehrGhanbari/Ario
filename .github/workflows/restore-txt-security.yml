@@ -18,7 +18,7 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Run isolated restore security tests
         working-directory: releases/ai-readable-full-2026-11-11-05ba5c9
-        run: python -m unittest -v test_restore_from_txt.py
+        run: python -m unittest -v test_restore_from_txt.py test_make_export_path_policy.py
 
   manifest-tests:
     strategy:
