@@ -1,6 +1,6 @@
 # AEC-Bench v0.2 — 120-case design and adapter contract
 
-**Status:** design specification only. No v0.2 execution, measured outcome, hidden-set result, or adapter conformance is claimed.
+**Status:** design specification and declared contracts for the v0.2 research harness. The harness has since been implemented and executed; the current execution record and limitations are maintained in [AEC_BENCH_V0_2_STATUS.md](./results/AEC_BENCH_V0_2_STATUS.md). This design document alone is not evidence of execution, adapter equivalence, independent validation, or hidden-set evaluation.
 
 ## 1. Purpose and falsifiability
 
@@ -117,4 +117,4 @@ A passing unit test proves only that code matches its test assertions. It does n
 
 ## 8. Explicit non-claims
 
-AEC-Bench v0.2 does not establish that Ario is superior, that declared provenance roots are authentic, that an assertion is true, or that a benchmark adapter is equivalent to a full product. No production service, signing infrastructure, trust registry, private oracle, or core Ario runtime is changed by this design document.
+AEC-Bench v0.2 does not establish that Ario is superior, that declared provenance roots are authentic, that an assertion is true, or that a benchmark adapter is equivalent to a full product. No production service, signing infrastructure, trust registry, private oracle, or core Ario runtime is changed by this design document. Actual implementation and execution claims must be checked against the exact-head evidence and limitations in AEC_BENCH_V0_2_STATUS.md; historical CI never validates later source/test changes automatically.
