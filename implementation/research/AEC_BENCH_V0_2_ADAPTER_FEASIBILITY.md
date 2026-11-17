@@ -1,7 +1,7 @@
 # AEC-Bench v0.2 — Adapter feasibility register
 
-**Research snapshot:** 2026-11-16  
-**Status:** desk-researched candidates; no external adapter result is claimed.
+**Research snapshot:** 2026-11-17  
+**Status:** desk-researched candidates; the bounded PROV and LTMS adapter smoke tests now pass in the dedicated AEC-Bench CI workflow. No full external-system comparison or product-level equivalence is claimed.
 
 This register distinguishes a paper, a code repository, and an executable benchmark adapter. A shared name is not enough to identify a system. Targets without a pinned, runnable implementation remain NOT RUN.
 
@@ -80,10 +80,10 @@ A package that serializes PROV records, an LTMS that maintains assumptions, and 
 
 | Target | Public code located | Fit to AEC | Status |
 |---|---|---|---|
-| PROV Python 3.3.0 | Yes | Provenance representation/interchange | Adapter source added; external runtime not verified |
-| LTMS Python 0.1.0 | Yes | Belief dependency/retraction | Adapter source added; external runtime not verified |
+| PROV Python 3.3.0 | Yes | Provenance representation/interchange | Bounded adapter tests and PROV-N round-trip passed in AEC workflow #79 at `0e7772c`; no authenticity/truth claim |
+| LTMS Python 0.1.0 | Yes | Belief dependency/retraction | Bounded conjunction/retraction tests passed in AEC workflow #79 at `0e7772c`; not a full ATMS comparison |
 | EviGuard industrial evidence grounding | No reproducible code located in this check | High conceptual relevance | Paper only; not run |
 | EviGuard cross-modal unlearning | Yes | Different problem | Not comparable |
 | DerivAudit | No matching public target located | Unknown | Not run |
 
-**Non-claim:** locating a codebase is not validating it; pinning a dependency is not reproducing a paper; and a successful adapter test is not evidence that Ario or the external system is generally superior.
+**Non-claim:** locating a codebase is not validating it; pinning a dependency is not reproducing a paper; and a successful adapter test is not evidence that Ario or the external system is generally superior. The AEC CI result validates only the declared bounded adapter checks on the recorded synthetic fixtures. It does not establish real-world root independence, source authenticity, truth, or complete PROV/LTMS feature coverage.
