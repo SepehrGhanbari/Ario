@@ -129,3 +129,36 @@ def test_unverified_attribution_roundtrips_and_cannot_claim_empirical():
         bad = dict(data, veracity_state=injected)
         with pytest.raises(SourceMonitoringError):
             SourceAttribution.from_dict(bad)
+
+
+def test_replayed_report_cannot_promote_hypothesis_or_enter_verified_context(tmp_path):
+    import pytest
+    from core.source_monitoring import SelfCitationError, SourceMonitoringGuard
+    ledger, _ = _untrusted_step(tmp_path)
+    guard = SourceMonitoringGuard()
+    guard.create_hypothesis("Claim: nonexistent file was fingerprinted",
+                            attribution_id="claim")
+    bridge = EpistemicLedgerBridge(source_guard=guard)
+    bridge.ingest_agent_ledger(ledger)
+    report_ids = [i for i, attr in guard.attributions.items()
+                  if attr.source_type == SourceType.LEDGER_REPORT]
+    assert len(report_ids) == 1
+    assert guard.filter_working_memory_candidates(report_ids, require_verified=True) == []
+    with pytest.raises(SelfCitationError):
+        guard.evaluate_claim_promotion("claim", report_ids)
+    assert guard.attributions["claim"].veracity_state != VeracityState.VERIFIED_EMPIRICAL
+
+
+def test_direct_empirical_guard_api_remains_distinct_from_ledger_replay():
+    from core.source_monitoring import SourceMonitoringGuard
+    guard = SourceMonitoringGuard()
+    attr = guard.record_empirical_observation(
+        assertion="SYNTHETIC direct test call, not external custody",
+        tool="run_tests", target="synthetic/test.py",
+        exit_code=0, stdout="test result", execution_lock="test-local-lock",
+    )
+    # Existing direct API behavior is preserved; this test does NOT establish
+    # authentication because we ourselves supplied the execution metadata.
+    assert attr.source_type == SourceType.EMPIRICAL_OBSERVATION
+    assert attr.veracity_state == VeracityState.VERIFIED_EMPIRICAL
+    assert attr.provenance is not None
