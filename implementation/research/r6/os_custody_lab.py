@@ -204,14 +204,17 @@ def custodian(directory, command, receipt_file=None):
         if (type(payload) is not dict
             or set(payload) != {"version", "key_id", "nonce", "issued_epoch", "request_sha256", "result_sha256"}
             or payload["version"] != VERSION
-            or type(payload["key_id"]) is not str or payload["key_id"] != hashlib.sha256(pub).hexdigest()
+            or type(payload["key_id"]) is not str
             or type(payload["nonce"]) is not str or not _NONCE.fullmatch(payload["nonce"])
             or type(payload["issued_epoch"]) is not int
-            or abs(int(time.time()) - payload["issued_epoch"]) > MAX_SKEW_SECONDS
             or type(payload["request_sha256"]) is not str or not _HEX.fullmatch(payload["request_sha256"])
             or type(payload["result_sha256"]) is not str or not _HEX.fullmatch(payload["result_sha256"])
             or type(signature) is not str or not re.fullmatch(r"[0-9a-f]{128}", signature)):
-            raise ValueError("INVALID_RECEIPT_OR_CUSTODIAN_CLOCK")
+            raise ValueError("INVALID_RECEIPT_FIELDS")
+        if payload["key_id"] != hashlib.sha256(pub).hexdigest():
+            raise ValueError("UNPINNED_EXECUTOR_KEY")
+        if abs(int(time.time()) - payload["issued_epoch"]) > MAX_SKEW_SECONDS:
+            raise ValueError("CUSTODIAN_CLOCK_SKEW")
         try:
             Ed25519PublicKey.from_public_bytes(pub).verify(bytes.fromhex(signature), DOMAIN + canon(payload))
         except InvalidSignature as ex:
@@ -285,7 +288,16 @@ def main():
         else:
             result = probe(args.path, args.mode)
     except (ValueError, OSError, TypeError, UnicodeError) as exc:
-        result = outcome("LAB_ERROR_FAIL_CLOSED", error_type=type(exc).__name__)
+        # Only emit finite, hard-coded reason codes; don't print untrusted
+        # path/JSON text, stack traces, private keys or arbitrary exceptions.
+        safe_codes = {
+            "INVALID_RECEIPT_FIELDS", "UNPINNED_EXECUTOR_KEY",
+            "CUSTODIAN_CLOCK_SKEW", "INVALID_SIGNATURE",
+            "TRUNCATED_OR_OVERSIZED_JOURNAL", "INVALID_OR_DUPLICATE_NONCE_HISTORY",
+            "JOURNAL_HASH_MISMATCH", "INVALID_REVOCATION_HISTORY",
+        }
+        code = str(exc) if type(exc) is ValueError and str(exc) in safe_codes else "LAB_ERROR_FAIL_CLOSED"
+        result = outcome(code, error_type=type(exc).__name__)
     print(json.dumps(result, sort_keys=True))
     # Protocol result is structured; nonzero for refusals and access-granted probes.
     if args.operation == "probe":
