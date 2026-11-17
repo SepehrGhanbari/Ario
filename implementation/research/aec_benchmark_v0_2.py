@@ -393,13 +393,69 @@ def _evaluate(f: Fixture) -> dict:
         else: h="PRESERVED"
         return {"history":h,"status":"REJECTED" if h in {"INTEGRITY_FAILURE","ERASURE_DETECTED"} else "UNKNOWN"}
     if f.family == "composition_dependencies":
-        if any(d.get(k) for k in ("incompatible","cycle","time_incompatible","scope_incompatible","claim_kind_mismatch","firewall_bypassed")):
-            return {"composition":"INVALID","status":"REJECTED"}
-        if d.get("local_validity_only"): return {"composition":"UNKNOWN","status":"UNKNOWN"}
-        if d.get("shared_dependency"): return {"composition":"VALID_WITH_SHARED_DEPENDENCY","status":"UNKNOWN"}
-        if d.get("partial_overlap") or not set(d["requirements"]).issubset(set(d["premises"])):
-            return {"composition":"INCOMPLETE","status":"UNKNOWN"}
-        return {"composition":"VALID","status":"UNKNOWN"}
+        allowed_fields = {
+            "premises", "requirements",
+            "incompatible", "cycle", "time_incompatible",
+            "scope_incompatible", "claim_kind_mismatch", "firewall_bypassed",
+            "composition_checks", "composition_checks_complete",
+        }
+        if set(d) - allowed_fields:
+            return {"composition": "UNKNOWN", "status": "UNKNOWN"}
+
+        premises = d.get("premises")
+        requirements = d.get("requirements")
+        if (
+            not isinstance(premises, list)
+            or not isinstance(requirements, list)
+            or not requirements
+            or any(not isinstance(item, str) or not item.strip() for item in premises + requirements)
+            or len(set(premises)) != len(premises)
+            or len(set(requirements)) != len(requirements)
+        ):
+            return {"composition": "UNKNOWN", "status": "UNKNOWN"}
+
+        incompatibility_flags = (
+            "incompatible", "cycle", "time_incompatible",
+            "scope_incompatible", "claim_kind_mismatch", "firewall_bypassed",
+        )
+        if any(key in d and type(d[key]) is not bool for key in incompatibility_flags):
+            return {"composition": "UNKNOWN", "status": "UNKNOWN"}
+        if any(d.get(key) is True for key in incompatibility_flags):
+            return {"composition": "INVALID", "status": "REJECTED"}
+
+        missing_requirements = not set(requirements).issubset(set(premises))
+        if missing_requirements:
+            return {"composition": "INCOMPLETE", "status": "UNKNOWN"}
+
+        checks = d.get("composition_checks")
+        checks_complete = d.get("composition_checks_complete")
+        required_checks = {"dependency", "scope", "temporal", "claim_kind"}
+        if (
+            not isinstance(checks, dict)
+            or set(checks) != required_checks
+            or type(checks_complete) is not bool
+        ):
+            return {"composition": "UNKNOWN", "status": "UNKNOWN"}
+
+        dependency_states = {"COMPATIBLE", "SHARED_DEPENDENCY", "INCOMPATIBLE", "UNKNOWN"}
+        other_states = {"COMPATIBLE", "INCOMPATIBLE", "UNKNOWN"}
+        if (
+            checks["dependency"] not in dependency_states
+            or any(checks[key] not in other_states for key in ("scope", "temporal", "claim_kind"))
+        ):
+            return {"composition": "UNKNOWN", "status": "UNKNOWN"}
+
+        # A known incompatibility is sufficient to reject even if another
+        # required check is unresolved or the check set is not complete.
+        if "INCOMPATIBLE" in checks.values():
+            return {"composition": "INVALID", "status": "REJECTED"}
+        if not checks_complete or "UNKNOWN" in checks.values():
+            return {"composition": "UNKNOWN", "status": "UNKNOWN"}
+        if checks["dependency"] == "SHARED_DEPENDENCY":
+            return {"composition": "VALID_WITH_SHARED_DEPENDENCY", "status": "UNKNOWN"}
+        if all(value == "COMPATIBLE" for value in checks.values()):
+            return {"composition": "VALID", "status": "UNKNOWN"}
+        return {"composition": "UNKNOWN", "status": "UNKNOWN"}
     if f.family == "uncertainty_abstention":
         if d.get("conflict") or d.get("contradiction_unresolved"): return {"status":"CONTESTED"}
         return {"status":"UNKNOWN"}
