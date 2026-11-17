@@ -186,3 +186,32 @@ def test_policy_with_unrecognized_authority_field_is_refused():
     r = inspect_receipt(**_update_policy(args, p))
     assert r["reason_code"] == "INVALID_POLICY_CONTRACT"
     _check_no_authority(r)
+
+
+def test_missing_external_nonce_history_cannot_establish_replay_safety():
+    _, _, _, _, args = _case()
+    # Two inspections with an unchanging caller-controlled empty snapshot
+    # both appear reviewable; NO durable replay defense is established.
+    first, second = inspect_receipt(**args), inspect_receipt(**args)
+    assert first["signature_valid"] is True
+    assert second["signature_valid"] is True
+    assert second["replay_seen"] is False
+    _check_no_authority(second)
+
+def test_declared_revocation_can_be_unilaterally_reversed_by_policy_supplier():
+    _, p, _, _, args = _case()
+    revoked = dict(p, revoked=True)
+    assert inspect_receipt(**_update_policy(args, revoked))["reason_code"] == "DECLARED_KEY_REVOKED"
+    # Whoever supplies policy AND pin can reverse revocation without a custodian.
+    r = inspect_receipt(**_update_policy(args, dict(revoked, revoked=False)))
+    assert r["inspection"] == "REVIEWABLE_ONLY"
+    _check_no_authority(r)
+
+def test_caller_supplied_clock_does_not_prove_real_time():
+    _, _, _, _, args = _case()
+    early = inspect_receipt(**dict(args, now_epoch=1420))
+    late = inspect_receipt(**dict(args, now_epoch=2001))
+    assert early["signature_valid"] is True
+    assert late["reason_code"] == "POLICY_NOT_CURRENT"
+    _check_no_authority(early)
+    _check_no_authority(late)
