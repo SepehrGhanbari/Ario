@@ -64,6 +64,10 @@ class W23(unittest.TestCase):
     def test_15_wrong_public_key_rejected(self):
         self.assertIsNone(read_signed_note(NEW,KEY[:-1]+'A'))
         self.assertIsNone(read_signed_note(NEW,KEY.replace('ario-w22','other-log',1)))
+    def test_17_malformed_peer_must_not_hide_valid_fork(self):
+        r=gossip({'A':NEW,'B':FORK,'C':b'corrupted'},KEY)
+        self.assertEqual(r['finding'],'SIGNED_EQUIVOCATION_PROVEN')
+        self.assertEqual(r['view_labels_untrusted'],['A','B'])
     def test_16_bad_proof_types_rejected(self):
         old,new=read_signed_note(OLD,KEY),read_signed_note(NEW,KEY)
         for proof in ([],['0'*64]*17,['A'*64],['0'*63],['z'*64],None):
