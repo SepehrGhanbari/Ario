@@ -16,15 +16,19 @@ MAX_RECORD_RAW_BYTES=64*1024*1024
 MAX_RECORD_PAYLOAD_BYTES=90*1024*1024
 MAX_PATH_BYTES=4096
 MAX_PATH_COMPONENT_BYTES=255
+MAX_PATH_DEPTH=128
+MAX_PATH_INDEX_ENTRIES=100000
+MAX_PATH_INDEX_BYTES=8*1024*1024
 MAX_INPUT_BYTES=384*1024*1024
 MAX_MANIFEST_BYTES=8*1024*1024
-seen_paths=set(); folded_paths=set(); all_parents=set(); folded_components={};sum_raw=0
+seen_paths=set(); folded_paths=set(); all_parents=set(); folded_components={};sum_raw=0;path_index_entries=path_index_bytes=0
 def portable_key(s):return unicodedata.normalize("NFC",s.casefold())
 def validate_portable_path(name):
  encoded=name.encode("utf-8","strict")
  if not encoded or len(encoded)>MAX_PATH_BYTES:raise ValueError("path length limit")
  p=pathlib.PurePosixPath(name);wp=pathlib.PureWindowsPath(name)
  if p.is_absolute() or wp.drive or wp.root or wp.is_absolute() or ".." in p.parts or p.as_posix()!=name or chr(92) in name or chr(0) in name:raise ValueError("unsafe or non-canonical path")
+ if len(p.parts)>MAX_PATH_DEPTH:raise ValueError("path depth limit")
  for part in p.parts:
   if len(part.encode("utf-8"))>MAX_PATH_COMPONENT_BYTES:raise ValueError("path component byte limit")
   device_base=part.split(".",1)[0].rstrip(" ").upper()
@@ -46,11 +50,15 @@ for item in g("ls-tree","-r","-z","--full-tree","HEAD").split(b"\x00"):
  parts=p.parts
  for i in range(1,len(parts)+1):
   prefix="/".join(parts[:i]);key=portable_key(prefix);previous=folded_components.get(key)
-  if previous is not None and previous!=prefix:raise ValueError("case-colliding path component")
-  folded_components[key]=prefix
-  if i<len(parts) and prefix in seen_paths:raise ValueError("file/directory path conflict")
- seen_paths.add(name);folded_paths.add(portable_key(name))
- for i in range(1,len(parts)):all_parents.add("/".join(parts[:i]))
+  if previous is None:
+   added=len(key.encode("utf-8"))+len(prefix.encode("utf-8"))
+   if path_index_entries>=MAX_PATH_INDEX_ENTRIES or path_index_bytes+added>MAX_PATH_INDEX_BYTES:raise ValueError("path index resource limit")
+   folded_components[key]=prefix;path_index_entries+=1;path_index_bytes+=added
+  elif previous!=prefix:raise ValueError("case-colliding path component")
+  if i<len(parts):
+   if prefix in seen_paths:raise ValueError("file/directory path conflict")
+   all_parents.add(prefix)
+ seen_paths.add(prefix);folded_paths.add(key)
  raw=g("cat-file","blob",oid)
  if len(raw)!=raw_size:raise ValueError("Git blob size mismatch")
  sum_raw+=len(raw)
