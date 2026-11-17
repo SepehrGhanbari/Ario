@@ -1,0 +1,64 @@
+name: R63 V10 Windows CNG feasibility (research only)
+on:
+  push:
+    branches:
+      - research/r63-v10-windows-ci-smoke-20261117
+    paths:
+      - .github/workflows/r63-v10-windows-ci-smoke.yml
+      - research/r63-v10-windows-ci-smoke/**
+permissions:
+  contents: read
+jobs:
+  software-ksp-preflight:
+    runs-on: windows-2022
+    timeout-minutes: 8
+    steps:
+      - name: Windows and test boundary
+        shell: pwsh
+        run: |
+          Write-Host "RESEARCH_ONLY / NO_REAL_KEYS / NO_SERVICE / NO_TPM / NO_TRUST_ACTIVATION"
+          Write-Host "Native Windows VM; this is NOT Windows Sandbox and NOT R63 crash/recovery"
+          [System.Runtime.InteropServices.RuntimeInformation]::OSDescription
+          $PSVersionTable.PSVersion.ToString()
+      - name: Disposable Microsoft Software KSP ECDSA-P256 self-check
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (-not $IsWindows -or $env:RUNNER_OS -ne 'Windows') { throw 'NOT_WINDOWS_RUNNER' }
+          $key = $null
+          $signer = $null
+          $verifier = $null
+          $hash = $null
+          $keyName = 'ARIO_R63_RESEARCH_' + [guid]::NewGuid().ToString('N')
+          try {
+            $params = [System.Security.Cryptography.CngKeyCreationParameters]::new()
+            $params.Provider = [System.Security.Cryptography.CngProvider]::MicrosoftSoftwareKeyStorageProvider
+            $params.ExportPolicy = [System.Security.Cryptography.CngExportPolicies]::None
+            $params.KeyUsage = [System.Security.Cryptography.CngKeyUsages]::Signing
+            $key = [System.Security.Cryptography.CngKey]::Create(
+              [System.Security.Cryptography.CngAlgorithm]::ECDsaP256, $keyName, $params)
+            $signer = [System.Security.Cryptography.ECDsaCng]::new($key)
+            $hash = [System.Security.Cryptography.SHA256]::Create()
+            $digest = $hash.ComputeHash([Text.Encoding]::UTF8.GetBytes(
+              'Ario R63 independent CI preflight: disposable key only'))
+            $signature = $signer.SignHash($digest)
+            $publicOnly = $signer.ExportParameters($false)
+            $verifier = [System.Security.Cryptography.ECDsa]::Create($publicOnly)
+            if (-not $verifier.VerifyHash($digest, $signature)) {
+              throw 'PUBLIC_SIGNATURE_VERIFICATION_FAILED'
+            }
+            Write-Host 'SOFTWARE_KSP_P256_SIGNATURE_AND_PUBLIC_VERIFY_PASS'
+            Write-Host 'R63_V10_GUEST_RPC_CRASH=NOT_EXECUTED'
+            Write-Host 'R63_V10_NATIVE_NCRYPT_ENTER_RETURN_COUNTS=NOT_MEASURED'
+            Write-Host 'INDEPENDENT_CUSTODY=NOT_ESTABLISHED'
+          } finally {
+            if ($verifier) { $verifier.Dispose() }
+            if ($signer) { $signer.Dispose() }
+            if ($hash) { $hash.Dispose() }
+            if ($key) {
+              try {
+                $key.Delete()
+                Write-Host 'DISPOSABLE_KEY_DELETE_REQUESTED'
+              } finally { $key.Dispose() }
+            }
+          }
