@@ -1,0 +1,83 @@
+name: "W20 one-shot synthetic Ario Merkle replay"
+on:
+  push:
+    branches:
+      - research/w20-one-shot-native-merkle-replay-20261117
+    paths:
+      - research/consensus/W20_ONE_SHOT_REPLAY_TRIGGER_2026-11-17.txt
+
+permissions:
+  contents: read
+
+jobs:
+  w20-verify-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout immutable W20 test source at pinned research commit
+        uses: actions/checkout@v4
+        with:
+          ref: "5d3345dfb20bf1e17f7ce97f9cb3832d5c13f6be"
+          persist-credentials: false
+
+      - name: Install python from clean ephemeral hosted runner
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: false
+
+      - name: Install only synthetic verification library
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install 'cryptography==46.0.4'
+
+      - name: Execute actual W20 exhaustive RFC-style consistency/inclusion tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd research/consensus
+          python -B -m unittest -v test_w20_native_log.py 2>&1 | tee W20_UNITTEST_STDOUT.txt
+          grep -Fq 'Ran 6 tests' W20_UNITTEST_STDOUT.txt
+          grep -Fq 'OK' W20_UNITTEST_STDOUT.txt
+
+      - name: Check 13 selected source mutants including documented survivor
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd research/consensus
+          python -B w20_selected_mutation_audit.py > W20_MUTANTS_REPLAY.json
+          python - <<'PY'
+          import json
+          x=json.load(open('W20_MUTANTS_REPLAY.json'))
+          assert (x['mutants_selected'],x['mutants_killed'],x['mutants_survived']) == (13,12,1),x
+          assert [m['id'] for m in x['mutants'] if not m['killed']]==['M12_OMIT_FULL_INCLUSION_SET_CHECK']
+          print('W20_MUTATION_REPLAY_MATCHED_12_OF_13_WITH_EXPLICIT_REDUNDANT_SURVIVOR')
+          PY
+
+      - name: Strict external-pinning interface on public test fixture only
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd research/consensus
+          python -B w20_verify_published_fixture.py \
+            --fixture W20_SYNTHETIC_LOG_CHECKPOINTS_AND_PROOFS_2026-11-17.json \
+            --prior W20_PRIOR_CHECKPOINT_SIMULATED_PIN_2026-11-17.json \
+            --pinned-public-key-hex "$(cat W20_EPHEMERAL_PUBLIC_LOG_KEY_2026-11-17.txt)" \
+            | tee W20_PUBLIC_REPLAY.txt
+          grep -Fq '"verdict": "HISTORICAL_CONSISTENT"' W20_PUBLIC_REPLAY.txt
+          grep -Fq '"operational_authority": "NONE"' W20_PUBLIC_REPLAY.txt
+          grep -Fq '"real_ario_log_witnessed": "NOT_ESTABLISHED"' W20_PUBLIC_REPLAY.txt
+          echo "W20_EXTERNAL_MACHINE_READ_ONLY_REPLAY=PASS / TRUST=NO_GO / NO_PUBLICATION"
+
+      - name: Archive only text results (no private test key exists)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: W20-Read-only-native-Merkle-replay
+          path: |
+            research/consensus/W20_UNITTEST_STDOUT.txt
+            research/consensus/W20_MUTANTS_REPLAY.json
+            research/consensus/W20_PUBLIC_REPLAY.txt
+          retention-days: 30
+          if-no-files-found: error
