@@ -1,1 +1,3 @@
 W22 single-use offline replay only. Pinned research source: d07620afa5e0e2f69daa6284ba0789b3a5957840. Re-run original C2SP public-note Python and Go verifier tests, with 10 deliberately selected mutant controls. All ports loopback; no Sigsum submission, no production key, no memory action, no workflow schedule. No external human review prerequisite for research but independence remains NOT_ESTABLISHED.
+
+SECURITY_HARDENING_REPLAY_2: source 3459ebd539c383375eea7d138fe10a6e0f2caad8; explicit ProxyHandler({}) and reachable proxy trap. The first successful W22 one-shot predates this security fix. Same no-egress/synthetic scope, no new real keys or public submission.
