@@ -5,3 +5,5 @@ Commitment target: Sigsum test policy sigsum-test1-2025; exact W18 public W17 re
 No Ario owner key, Ario independent signing key, private memory, live agent, protected memory, trust activation or production.
 Submission may create public permanent log leaf. A successful submit is NOT an Ario-native witnessed log, independently audited witness ownership or operational authority.
 Trigger: push of THIS file on this disposable execution branch only; no schedules or future workflow reactivation.
+
+ONE_SHOT_RETRY_2: initial attempt failed while installing go module (Go 1.23; Sigsum v0.14.1 requires Go >=1.25); initial attempt never reached the public submission step. Runtime pinned now to Go 1.25. Same authorized public manifest, same test-policy, no new authorized scope.
