@@ -265,3 +265,103 @@ def test_non_finite_timestamp_remains_unknown_not_ordered():
     assert _evaluate(_fixture_with_input(case, mutated_input)) == {
         "temporal": "UNKNOWN", "status": "UNKNOWN"
     }
+
+
+def test_composition_requires_explicit_complete_compatibility_checks():
+    case = next(c for c in corpus() if c.case_id == "AEC02_COMPOSITION_DEPENDENCIES_01")
+    assert _evaluate(case) == {"composition": "VALID", "status": "UNKNOWN"}
+    mutated_input = dict(case.input)
+    mutated_input.pop("composition_checks")
+    mutated_input.pop("composition_checks_complete")
+    assert _evaluate(_fixture_with_input(case, mutated_input)) == {
+        "composition": "UNKNOWN", "status": "UNKNOWN"
+    }
+
+
+def test_composition_pair_changes_only_check_completeness_and_never_promotes_truth():
+    pair = [
+        c for c in corpus()
+        if c.family == "composition_dependencies" and c.pair_group
+    ]
+    assert len(pair) == 2
+    first, second = pair
+    assert changed_input_paths(first.input, second.input) == [
+        "/composition_checks_complete"
+    ]
+    assert _evaluate(first) == {"composition": "UNKNOWN", "status": "UNKNOWN"}
+    assert _evaluate(second) == {"composition": "VALID", "status": "UNKNOWN"}
+
+
+def test_composition_missing_compatibility_dimension_remains_unknown():
+    case = next(c for c in corpus() if c.case_id == "AEC02_COMPOSITION_DEPENDENCIES_01")
+    mutated_input = {**case.input, "composition_checks": dict(case.input["composition_checks"])}
+    mutated_input["composition_checks"].pop("scope")
+    assert _evaluate(_fixture_with_input(case, mutated_input)) == {
+        "composition": "UNKNOWN", "status": "UNKNOWN"
+    }
+
+
+def test_composition_unknown_dimension_does_not_become_valid():
+    case = next(c for c in corpus() if c.case_id == "AEC02_COMPOSITION_DEPENDENCIES_01")
+    mutated_input = {**case.input, "composition_checks": dict(case.input["composition_checks"])}
+    mutated_input["composition_checks"]["temporal"] = "UNKNOWN"
+    assert _evaluate(_fixture_with_input(case, mutated_input)) == {
+        "composition": "UNKNOWN", "status": "UNKNOWN"
+    }
+
+
+def test_composition_explicit_incompatibility_rejects():
+    case = next(c for c in corpus() if c.case_id == "AEC02_COMPOSITION_DEPENDENCIES_01")
+    mutated_input = {**case.input, "composition_checks": dict(case.input["composition_checks"])}
+    mutated_input["composition_checks"]["scope"] = "INCOMPATIBLE"
+    assert _evaluate(_fixture_with_input(case, mutated_input)) == {
+        "composition": "INVALID", "status": "REJECTED"
+    }
+
+
+def test_shared_dependency_does_not_bypass_missing_requirement_check():
+    case = next(c for c in corpus() if c.case_id == "AEC02_COMPOSITION_DEPENDENCIES_04")
+    mutated_input = {**case.input, "requirements": ["P1", "P2", "P3"]}
+    assert _evaluate(_fixture_with_input(case, mutated_input)) == {
+        "composition": "INCOMPLETE", "status": "UNKNOWN"
+    }
+
+
+def test_shared_dependency_is_qualified_and_never_asserts_independence():
+    case = next(c for c in corpus() if c.case_id == "AEC02_COMPOSITION_DEPENDENCIES_04")
+    assert _evaluate(case) == {
+        "composition": "VALID_WITH_SHARED_DEPENDENCY", "status": "UNKNOWN"
+    }
+
+
+def test_composition_check_completion_must_be_a_boolean():
+    case = next(c for c in corpus() if c.case_id == "AEC02_COMPOSITION_DEPENDENCIES_01")
+    mutated_input = {**case.input, "composition_checks_complete": "false"}
+    assert _evaluate(_fixture_with_input(case, mutated_input)) == {
+        "composition": "UNKNOWN", "status": "UNKNOWN"
+    }
+
+
+def test_malformed_composition_check_types_fail_closed_without_exception():
+    case = next(c for c in corpus() if c.case_id == "AEC02_COMPOSITION_DEPENDENCIES_01")
+    mutated_input = {**case.input, "composition_checks": dict(case.input["composition_checks"])}
+    mutated_input["composition_checks"]["dependency"] = []
+    assert _evaluate(_fixture_with_input(case, mutated_input)) == {
+        "composition": "UNKNOWN", "status": "UNKNOWN"
+    }
+
+
+def test_composition_duplicate_premise_identity_remains_unknown():
+    case = next(c for c in corpus() if c.case_id == "AEC02_COMPOSITION_DEPENDENCIES_01")
+    mutated_input = {**case.input, "premises": ["P1", "P1"]}
+    assert _evaluate(_fixture_with_input(case, mutated_input)) == {
+        "composition": "UNKNOWN", "status": "UNKNOWN"
+    }
+
+
+def test_legacy_boolean_shared_dependency_is_not_accepted_as_composition_evidence():
+    case = next(c for c in corpus() if c.case_id == "AEC02_COMPOSITION_DEPENDENCIES_01")
+    mutated_input = {**case.input, "shared_dependency": True}
+    assert _evaluate(_fixture_with_input(case, mutated_input)) == {
+        "composition": "UNKNOWN", "status": "UNKNOWN"
+    }
