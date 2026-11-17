@@ -1,6 +1,22 @@
 # W23 — Signed checkpoint gossip, fork evidence, and custody boundaries
 
 **Date:** 2026-11-18
+
+## W23 revision — poisoned-peer RED/GREEN, final source-pinned CI
+
+**This section supersedes the first-run test count and source hashes below; those first-run values remain in the document as historical evidence.**
+
+A new adversarial scenario found a genuine evidence-suppression defect: with two valid contradictory size-8 notes plus one malformed peer view, the initial implementation returned HOLD before comparing the valid pair. The new test test_17_malformed_peer_must_not_hide_valid_fork first **FAILED (RED)**: expected SIGNED_EQUIVOCATION_PROVEN, actually HOLD_INVALID_NOTE_OR_UNPINNED_KEY. Minimal repair first compares *verified valid* views for an independently signed same-size conflict; if no conflict is proven and any view is malformed, it still returns HOLD (fail closed). No malformed view can grant authority.
+
+- Final source Git blob: 653b01a44f15e14ee877d295f30d16d52e481394.
+- Final tests Git blob: 9877acea1ea37152301a707f5b7bb111b0f6bab8.
+- Source pin/CI-triggering commit: 292eddc308bf43a424262163b60d51ff9e706ce8.
+- Corrected **local GREEN**: 17/17 Python tests.
+- **Actual separate GitHub runner:** https://github.com/SepehrGhanbari/Ario/actions/runs/44174701387 — Windows job 134362827168 **17/17 PASS**, Ubuntu job 134362829042 **17/17 PASS**; the test_17 line and final count were checked in both job logs.
+- The previous successful https://github.com/SepehrGhanbari/Ario/actions/runs/44174186535 remains 16/16 per OS, **not relabeled** as covering this fix.
+
+**Remaining negative:** an attacker can still withhold every new head and keep two observers on signed size 3. Without an independently administered, independently queried retained state or fresh gossip there is no proof of newest-world state. Cross-OS replay is not cross-admin witness custody.
+
 **Status:** RESEARCH_ONLY / DRAFT / HOLD / NO_MERGE / GENESIS=NO_GO / TRUST_ACTIVATION=NO_GO / PRODUCTION=NO_GO
 
 ## خلاصهٔ فارسی
