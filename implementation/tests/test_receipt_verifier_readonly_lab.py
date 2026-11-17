@@ -215,3 +215,16 @@ def test_caller_supplied_clock_does_not_prove_real_time():
     assert late["reason_code"] == "POLICY_NOT_CURRENT"
     _check_no_authority(early)
     _check_no_authority(late)
+
+
+def test_seeded_single_byte_mutations_never_crash_or_authorize():
+    import random
+    _, _, _, _, args = _case()
+    rng = random.Random(20261117)
+    for which in ("envelope_bytes", "policy_bytes"):
+        for _ in range(128):
+            raw = bytearray(args[which])
+            at = rng.randrange(len(raw))
+            raw[at] = rng.randrange(256)
+            result = inspect_receipt(**dict(args, **{which: bytes(raw)}))
+            _check_no_authority(result)
