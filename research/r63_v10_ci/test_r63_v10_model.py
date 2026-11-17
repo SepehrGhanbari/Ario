@@ -270,7 +270,16 @@ class ModelTests(unittest.TestCase):
             with socket.create_connection(("127.0.0.1", port), timeout=5) as client:
                 client.sendall(b"synthetic-spend")
                 client.settimeout(5)
-                reply = client.recv(64)
+                try:
+                    reply = client.recv(64)
+                except ConnectionResetError as exc:
+                    # Windows may deliver WSAECONNRESET after a genuine peer
+                    # os._exit; Linux commonly returns EOF for this fixture.
+                    # Only accept the known Windows code, and still require
+                    # child exit 73 plus V1/V2 durable mismatch below.
+                    if os.name != "nt" or getattr(exc, "winerror", None) != 10054:
+                        raise
+                    reply = b""
             self.assertEqual(reply, b"")
             self.assertEqual(child.wait(timeout=10), 73)
             self.assertEqual(v2_review(self.v2.read_bytes())[0], 3)
