@@ -1,0 +1,1 @@
+ONE-TIME W21 hardening replay. Exact pinned code ebed96629829705919e8fcec2e7b6d5cdea52f6f; no external submission, no signer, no Ario memory, no production. Evaluate 13 fixture HTTP cases, redirect-to-second-origin canary forbidden, malformed URLs, outage and read-only endpoint; rebuild W20 Merkle verification. No recurring trigger.
