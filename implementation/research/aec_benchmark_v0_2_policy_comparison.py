@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections import Counter
 from typing import Any
 
-from research.aec_benchmark_v0_2 import FAMILIES, _evaluate, corpus
+from research.aec_benchmark_v0_2 import FAMILIES, _evaluate, audit_counterfactual_pairs, corpus
 
 METHODS = (
     "raw_relay_count",
@@ -339,6 +339,7 @@ def build_report() -> dict[str, Any]:
         "corpus_kind": "SYNTHETIC_DETERMINISTIC_PUBLIC_DEVELOPMENT",
         "case_count": len(fixtures),
         "method_count": len(METHODS),
+        "counterfactual_pair_validation": audit_counterfactual_pairs(fixtures),
         "methods": methods,
         "cases": case_outputs,
         "non_claims": [
