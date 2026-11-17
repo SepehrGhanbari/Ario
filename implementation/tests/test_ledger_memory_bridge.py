@@ -14,7 +14,7 @@ from core.prospective_memory import ProspectiveMemoryRegistry
 class LedgerMemoryBridgeTests(unittest.TestCase):
 
     def test_bridge_ingests_agent_events_end_to_end(self):
-        """Verify standard Ario agent ledger events consolidate with grounded provenance."""
+        """Verify synthetic ledger reports are consolidated but not source-authenticated."""
         with tempfile.TemporaryDirectory() as temp_dir:
             ledger_path = Path(temp_dir) / "agent_events.jsonl"
             events = [
@@ -40,9 +40,9 @@ class LedgerMemoryBridgeTests(unittest.TestCase):
             self.assertGreaterEqual(summary.nodes_consolidated, 2)
             self.assertEqual(summary.contested_nodes_count, 0)
 
-            # Check that step observation is marked as SUPPORTED empirical evidence
+            # A self-reported successful step remains RECORDED, never verified evidence.
             tool_node = [n for n in bridge.engine.nodes.values() if "agent_tool:file_fingerprint" in n.concept][0]
-            self.assertEqual(tool_node.status, NodeEpistemicStatus.SUPPORTED)
+            self.assertEqual(tool_node.status, NodeEpistemicStatus.RECORDED)
 
     def test_bridge_detects_contradictory_step_results_as_contested(self):
         """Conflicting observations on the same target must yield CONTESTED without erasure."""

@@ -36,11 +36,13 @@ class SourceType(str, Enum):
     INTERNAL_HYPOTHESIS = "INTERNAL_HYPOTHESIS"
     EMPIRICAL_OBSERVATION = "EMPIRICAL_OBSERVATION"
     EXTERNAL_TESTIMONY = "EXTERNAL_TESTIMONY"
+    LEDGER_REPORT = "LEDGER_REPORT"  # v0.1: observed bytes, NOT an authenticated tool execution
 
 
 class VeracityState(str, Enum):
     UNVERIFIED_HYPOTHESIS = "UNVERIFIED_HYPOTHESIS"
     EXTERNAL_ASSERTION = "EXTERNAL_ASSERTION"
+    REPORTED_UNVERIFIED = "REPORTED_UNVERIFIED"  # never a verified empirical receipt
     VERIFIED_EMPIRICAL = "VERIFIED_EMPIRICAL"
     UNSUPPORTED = "UNSUPPORTED"
     ATTRIBUTION_MISMATCH = "ATTRIBUTION_MISMATCH"
@@ -94,8 +96,9 @@ class EmpiricalProvenance:
             raise SourceMonitoringError(f"execution_lock_sha256 must be a valid 64-char sha256: {self.execution_lock_sha256}")
         if not _is_valid_sha256(self.stdout_sha256):
             raise SourceMonitoringError(f"stdout_sha256 must be a valid 64-char sha256: {self.stdout_sha256}")
-        if not isinstance(self.exit_code, int):
-            raise SourceMonitoringError("exit_code must be an integer")
+        if type(self.exit_code) is not int:
+            # bool is a subclass of int, but False must not impersonate exit_code=0.
+            raise SourceMonitoringError("exit_code must be a strict integer, not bool")
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -113,7 +116,8 @@ class EmpiricalProvenance:
         return cls(
             tool=str(data["tool"]),
             target=str(data.get("target", "")),
-            exit_code=int(data["exit_code"]),
+            # Do not coerce bool/string into a successful integer exit code.
+            exit_code=data["exit_code"],
             execution_lock_sha256=str(data["execution_lock_sha256"]),
             stdout_sha256=str(data.get("stdout_sha256", data.get("execution_lock_sha256"))),
             recorded_at=str(data.get("recorded_at", datetime.now(timezone.utc).isoformat())),
@@ -148,6 +152,11 @@ class SourceAttribution:
                 VeracityState.UNSUPPORTED,
             ):
                 raise SourceMonitoringError(f"Invalid veracity state for EMPIRICAL_OBSERVATION: {self.veracity_state}")
+
+        # A replayed ledger report has only source-byte integrity, not verified execution.
+        if self.source_type == SourceType.LEDGER_REPORT:
+            if self.veracity_state != VeracityState.REPORTED_UNVERIFIED or self.provenance is not None:
+                raise SourceMonitoringError("LEDGER_REPORT must be REPORTED_UNVERIFIED without empirical provenance")
 
         # Invariant: Hypotheses and external testimony cannot natively be VERIFIED_EMPIRICAL
         if self.source_type in (SourceType.INTERNAL_HYPOTHESIS, SourceType.EXTERNAL_TESTIMONY):
@@ -192,7 +201,8 @@ class SourceMonitoringGuard:
     """Reality monitoring guard enforcing origin attribution and anti-self-citation."""
 
     def __init__(self, allowlisted_tools: Optional[Set[str]] = None) -> None:
-        self._allowlisted_tools = set(allowlisted_tools) if allowlisted_tools else set(ALLOWLISTED_TOOLS)
+        # Explicit deny-all (set()/frozenset()) must not silently re-enable defaults.
+        self._allowlisted_tools = set(ALLOWLISTED_TOOLS) if allowlisted_tools is None else set(allowlisted_tools)
         self._attributions: Dict[str, SourceAttribution] = {}
 
     @property
@@ -237,6 +247,40 @@ class SourceMonitoringGuard:
             parent_attribution_ids=(),
             falsification_condition=falsification_condition,
         )
+        self._attributions[attr.attribution_id] = attr
+        return attr
+
+    def record_unverified_ledger_report(
+        self,
+        assertion: str,
+        *,
+        record_sha256: str,
+    ) -> SourceAttribution:
+        """Record an untrusted JSONL line as a report, not a tool attestation.
+
+        The hash binds to the line bytes already read; it cannot prove that a
+        tool ran. Only a separate authenticated execution boundary may produce
+        an empirical observation. This API never grants such a promotion.
+        """
+        if type(record_sha256) is not str or not _is_valid_sha256(record_sha256):
+            raise SourceMonitoringError("unverified ledger report requires a valid record sha256")
+        if type(assertion) is not str or not assertion.strip():
+            raise SourceMonitoringError("unverified ledger report requires a nonempty assertion")
+        attr = SourceAttribution(
+            attribution_id=f"ATTR-LEDGER-{record_sha256.lower()}",
+            source_type=SourceType.LEDGER_REPORT,
+            assertion=assertion,
+            veracity_state=VeracityState.REPORTED_UNVERIFIED,
+            provenance=None,
+        )
+        existing = self._attributions.get(attr.attribution_id)
+        if existing is not None and (existing.assertion != attr.assertion
+                                     or existing.source_type != attr.source_type):
+            raise SourceMonitoringError("ledger report attribution ID collision")
+        if existing is not None:
+            # Replaying the same immutable report must preserve the original
+            # registration time and object; never silently rewrite history.
+            return existing
         self._attributions[attr.attribution_id] = attr
         return attr
 
@@ -367,6 +411,12 @@ class SourceMonitoringGuard:
         claim = self._attributions.get(claim_id)
         if not claim:
             raise SourceMonitoringError(f"Unknown claim_id: {claim_id}")
+        if claim.source_type == SourceType.LEDGER_REPORT:
+            # No claim-lineage edge should be committed before an impossible
+            # promotion is rejected. A report cannot become empirical proof.
+            raise SourceMonitoringError(
+                f"Ledger report '{claim_id}' is not eligible for promotion"
+            )
 
         if not supporting_ids:
             raise SelfCitationError(f"T-SRC-01: Claim '{claim_id}' has no supporting evidence (unsupported)")
