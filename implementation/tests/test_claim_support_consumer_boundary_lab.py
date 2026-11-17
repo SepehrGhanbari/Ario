@@ -7,7 +7,7 @@ import copy
 import pytest
 
 from core.source_monitoring import SourceMonitoringGuard
-from claim_support_readonly_lab import inspect_claim_support
+from claim_support_readonly_lab import inspect_claim_support, MAX_RECEIPTS
 from claim_support_consumer_boundary_lab import inspect_consumer_boundary
 
 
@@ -204,4 +204,26 @@ def test_malformed_python_object_values_fail_closed_without_equality_hooks(field
     view[field] = _AdversarialEquality()
     result = inspect_consumer_boundary(view)
     assert result["queue_state"] == "NO_CANDIDATE"
+    _assert_denied(result)
+
+
+@pytest.mark.parametrize(
+    ("count", "expected_queue"),
+    [
+        (MAX_RECEIPTS, "MANUAL_REVIEW_CANDIDATE_ONLY"),
+        (MAX_RECEIPTS + 1, "NO_CANDIDATE"),
+    ],
+)
+def test_equal_receipt_counts_exercise_exact_upper_limit(count, expected_queue):
+    """CodeRabbit #261: matching counts isolate max limit from count equality.
+
+    This test probes only the *inert consumer projection* of a synthetic
+    report. It is NOT a valid authenticated multi-receipt attestation.
+    """
+    _, _, view = _candidate()
+    assert view["review_status"] == "REVIEWABLE_ONLY"
+    view["claimed_support_count"] = count
+    view["unique_receipt_count"] = count
+    result = inspect_consumer_boundary(view)
+    assert result["queue_state"] == expected_queue
     _assert_denied(result)
