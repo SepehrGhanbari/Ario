@@ -64,6 +64,10 @@ class ExportPathPolicyTests(unittest.TestCase):
             source = release / "source"
             source.mkdir(parents=True)
             shutil.copyfile(SCRIPT_SOURCE, release / "make_export.py")
+            shutil.copyfile(pathlib.Path(__file__).with_name("RESTORE_FROM_TXT_HARDENED.py"),
+                            release / "RESTORE_FROM_TXT_HARDENED.py")
+            shutil.copyfile(pathlib.Path(__file__).with_name("verify_pinned_manifest.py"),
+                            release / "verify_pinned_manifest.py")
             subprocess.check_call(["git", "init", "-q", str(source)])
             subprocess.check_call(["git", "-C", str(source), "config", "user.email", "test@example.invalid"])
             subprocess.check_call(["git", "-C", str(source), "config", "user.name", "Export Path Test"])
