@@ -83,7 +83,11 @@ Total tracked bytes: {manifest["tracked_bytes"]}
 ZIP contains each Git-tracked source file byte-for-byte in ARIO_SOURCE/.
 TXT includes all files in path order: exact UTF-8 text or Base64 for non-text content.
 Every TXT record is length-framed, so an accidental delimiter within source content is harmless.
-No files are omitted or summarized; duplicate tracked paths are intentionally retained.
+All accepted tracked Git blobs are included byte-for-byte; unsupported/non-portable paths cause a hard failure, not silent omission.
+Duplicate, case-fold/Unicode-normalization aliases and file/directory conflicts are rejected.
+Path policy: 4096-byte path, 255-byte component, 128 components, 100,000 indexed prefixes and 8 MiB prefix-index bytes maximum.
+Resource policy: 10,000 files, 64 MiB raw per blob, 256 MiB cumulative raw bytes, 90 MiB encoded record and 384 MiB TXT input maximum.
+Git symlink blobs are represented as ordinary files containing link-target bytes; link semantics are not recreated.
 Neither format includes .git history, untracked local files, or off-repo resources.
 Verify every SHA256 in the manifest. This snapshot is pinned, not live HEAD.
 To reconstruct the TXT, use RESTORE_FROM_TXT.py in the NEW candidate ZIP.
