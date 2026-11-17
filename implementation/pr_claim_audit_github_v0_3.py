@@ -167,12 +167,14 @@ def assess_github_pr(owner: str, repo: str, pr_number: int, *,
         _valid_repo(owner, repo)
         if not _integer(pr_number):
             raise OriginUnknown("invalid PR number")
+        injected_reader = reader is not None
         reader = PublicGitHubReader() if reader is None else reader
         api = f"https://api.github.com/repos/{owner}/{repo}"
         pr_url = f"{api}/pulls/{pr_number}"
         pr = _object(reader.get_json(pr_url), "pull request")
-        if pr.get("number") != pr_number:
-            raise OriginUnknown("PR number mismatch")
+        if pr.get("number") != pr_number or not _integer(pr.get("id")):
+            raise OriginUnknown("PR identity mismatch")
+        pr_id = pr["id"]
         current_head = _object(pr.get("head"), "PR head").get("sha")
         if not isinstance(current_head, str) or not SHA_RE.fullmatch(current_head):
             raise OriginUnknown("invalid PR head")
@@ -197,7 +199,8 @@ def assess_github_pr(owner: str, repo: str, pr_number: int, *,
         linked = run.get("pull_requests")
         if not isinstance(linked, list) or not any(
             isinstance(x, dict) and x.get("number") == pr_number and
-            isinstance(x.get("head"), dict) and x["head"].get("sha") == current_head
+            x.get("id") == pr_id and isinstance(x.get("head"), dict) and
+            x["head"].get("sha") == current_head
             for x in linked
         ):
             raise OriginUnknown("run is not linked to this exact PR head")
@@ -251,9 +254,9 @@ def assess_github_pr(owner: str, repo: str, pr_number: int, *,
         if compared["status"] not in ("MATCH", "MISMATCH"):
             raise OriginUnknown("fetched log is not assessable: " + compared["reason"])
         # An injected test reader is NOT an authenticated GitHub transport.
-        # Only exact PublicGitHubReader execution may surface a positive final
-        # status; fakes retain comparison diagnostics but are held UNKNOWN.
-        actual_transport = type(reader) is PublicGitHubReader
+        # Only an internally instantiated HTTPS reader can promote diagnostic
+        # correspondence to a scoped final status. Unit mocks do not attest it.
+        actual_transport = not injected_reader
         return {
             "schema": SCHEMA,
             "status": compared["status"] if actual_transport else "UNKNOWN",

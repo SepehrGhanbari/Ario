@@ -32,10 +32,10 @@ def claim_body(**updates):
 class FakeGitHub:
     """Synthetic transport; cannot grant positive final verdict."""
     def __init__(self):
-        self.pr = {"number": 249, "head": {"sha": SHA}, "body": claim_body()}
+        self.pr = {"number": 249, "id": 5344518184, "head": {"sha": SHA}, "body": claim_body()}
         self.run = {"id": 43949946093, "run_attempt": 1, "head_sha": SHA,
                     "event": "pull_request", "status": "completed", "conclusion": "failure",
-                    "pull_requests": [{"number": 249, "head": {"sha": SHA}}]}
+                    "pull_requests": [{"number": 249, "id": 5344518184, "head": {"sha": SHA}}]}
         self.job = {"id": 133589448819, "run_id": 43949946093, "run_attempt": 1,
                     "head_sha": SHA, "status": "completed", "conclusion": "failure",
                     "name": "python-314-differential-advisory"}
@@ -106,6 +106,10 @@ class GitHubBridgeTests(unittest.TestCase):
 
     def test_run_not_linked_to_actual_pr_unknown(self):
         self.fake.run["pull_requests"] = []
+        self.assertIn("not linked", self.call()["reason"])
+
+    def test_same_number_and_sha_but_wrong_pr_global_id_unknown(self):
+        self.fake.run["pull_requests"][0]["id"] = 999999999
         self.assertIn("not linked", self.call()["reason"])
 
     def test_wrong_run_attempt_unknown(self):
@@ -198,17 +202,29 @@ class GitHubBridgeTests(unittest.TestCase):
         self.fake.job_total = 2
         self.assertEqual(self.call()["status"], "UNKNOWN")
 
-    def test_mocked_real_transport_exercises_positive_comparison_path(self):
-        # Offline test of orchestration. The mocks do NOT authenticate GitHub.
+    def test_injected_real_reader_still_cannot_promote_status(self):
+        # Even an actual-class object whose get_json/get_job_log are monkeypatched
+        # is treated as injected, not externally authenticated.
+        reader = PublicGitHubReader()
+        with mock.patch.object(reader, "get_json", side_effect=self.fake.get_json), \
+             mock.patch.object(reader, "get_job_log", side_effect=self.fake.get_job_log):
+            result = assess_github_pr("SepehrGhanbari", "Ario", 249, reader=reader)
+        self.assertEqual(result["correspondence_status"], "MATCH")
+        self.assertEqual(result["status"], "UNKNOWN")
+        self.assertEqual(result["origin_status"], "UNVERIFIED")
+
+    def test_mocked_internal_reader_checks_positive_branch_only(self):
+        # Patch only the constructor for an *offline branch-coverage test*.
+        # This is NOT a live GitHub network origin observation.
         fake = self.fake
         reader = PublicGitHubReader()
-        with mock.patch.object(reader, "get_json", side_effect=fake.get_json), \
+        with mock.patch("pr_claim_audit_github_v0_3.PublicGitHubReader", return_value=reader), \
+             mock.patch.object(reader, "get_json", side_effect=fake.get_json), \
              mock.patch.object(reader, "get_job_log", side_effect=fake.get_job_log):
-            result = assess_github_pr("SepehrGhanbari", "Ario", 249, reader=reader)
+            result = assess_github_pr("SepehrGhanbari", "Ario", 249)
         self.assertEqual(result["correspondence_status"], "MATCH")
         self.assertEqual(result["status"], "MATCH")
         self.assertEqual(result["origin_status"], "GITHUB_API_TLS_FETCHED")
-        # This demonstrates a test seam, not a source-authenticity proof.
 
 
 if __name__ == "__main__":
