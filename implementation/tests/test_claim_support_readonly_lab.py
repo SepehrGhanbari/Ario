@@ -1,8 +1,6 @@
 """Synthetic nonprivileged tests of the read-only claim-support proposal view."""
 import hashlib
 
-import pytest
-
 from core.source_monitoring import SourceMonitoringGuard, VeracityState
 from claim_support_readonly_lab import inspect_claim_support, CONTRACT_VERSION
 
@@ -214,7 +212,6 @@ def test_reject_oversize_and_malformed_inputs_without_echo():
         _check_firewall(result)
 
 
-@pytest.mark.xfail(strict=True, reason="RED: existing ancestry walk misses receipt self-cycle")
 def test_receipt_must_not_cite_itself_as_ancestor():
     g = SourceMonitoringGuard()
     g.create_hypothesis("SYNTHETIC: completed test", attribution_id="c")
@@ -229,7 +226,6 @@ def test_receipt_must_not_cite_itself_as_ancestor():
     _check_firewall(result)
 
 
-@pytest.mark.xfail(strict=True, reason="RED: existing ancestry walk misses two-receipt cycle")
 def test_mutually_citing_receipts_must_not_be_reviewable():
     g = SourceMonitoringGuard()
     g.create_hypothesis("SYNTHETIC: completed test", attribution_id="c")
@@ -241,3 +237,17 @@ def test_mutually_citing_receipts_must_not_be_reviewable():
     assert result["review_status"] == "UNKNOWN"
     assert result["reason_code"] == "EVIDENCE_CYCLE"
     _check_firewall(result)
+
+
+def test_large_declared_ancestry_is_rejected_before_expansion():
+    g = SourceMonitoringGuard()
+    g.create_hypothesis("SYNTHETIC: completed test", attribution_id="c")
+    _receipt(g, "r", parents=("untrusted",) * 257)
+    before = g.attributions
+    report = inspect_claim_support(
+        before, claim_id="c", supporting_ids=("r",),
+        proposed_relations={"r": "SUPPORTS"})
+    assert report["review_status"] == "UNKNOWN"
+    assert report["reason_code"] == "ANCESTRY_BUDGET_EXCEEDED"
+    assert before == g.attributions
+    _check_firewall(report)
