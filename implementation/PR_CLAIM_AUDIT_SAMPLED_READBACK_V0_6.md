@@ -21,7 +21,7 @@ The historical v0.5 returned diagnostic `MATCH` for a stable mock run, and its f
 | `final_pr_readback_status` | `OK`, `CHANGED`, `FAILED`, `PARTIAL`, `NOT_REACHED`, or `UNRESOLVED` based on bounded local observations |
 | `pr_read_samples` | Ordered pairs of *local* request/completion UTC timestamps and outcome; no PR text, token, or log bytes emitted |
 | `state_consistency` | v0.5's `WORKFLOW_CONCLUSION_CHANGED` / `STABLE_AT_SAMPLED_READS` / failure states; only sampled, never atomic |
-| `source_delivery` | `READER_RESPONSE_UNATTESTED` — intentionally avoids a misleading `GITHUB_API_TLS_ROUTE=VERIFIED` meaning |
+| `source_delivery` | `READER_RESPONSE_UNATTESTED` after at least one complete PR response, else `NO_COMPLETE_PR_RESPONSE` — never claims authenticated origin |
 | `transport_configuration` | `PUBLIC_READER_CONFIGURED` vs `CALLER_INJECTED_READER`, describing a **code path**, not authenticated traffic |
 | `tls_route_verification` | Always `NOT_INDEPENDENTLY_VERIFIED`; no independent network trace or TLS attestation collected |
 | `execution_attestation` | Always `NOT_ESTABLISHED` (independent runner/source hash proving pytest execution is out of scope) |

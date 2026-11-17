@@ -105,7 +105,9 @@ def assess_github_pr(owner: str, repo: str, pr_number: int, *,
     result = assess_v05(owner, repo, pr_number, reader=traced)
     result = {
         **result, "schema": SCHEMA, "status": "UNKNOWN",
-        "source_delivery": "READER_RESPONSE_UNATTESTED",
+        "source_delivery": ("READER_RESPONSE_UNATTESTED"
+                            if any(x["result"] == "OK" for x in traced.samples)
+                            else "NO_COMPLETE_PR_RESPONSE"),
         "source_transport_status": "UNVERIFIED",
         "origin_status": "UNVERIFIED",
         "origin_basis": "READ_ONLY_READER_RESPONSES",

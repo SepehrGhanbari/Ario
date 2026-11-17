@@ -121,6 +121,7 @@ class ReadbackReports(unittest.TestCase):
         r = v06.assess_github_pr("../bad", REPO, PR, reader=self.fake)
         self.assertEqual(r["final_pr_readback_status"], "NOT_REACHED")
         self.assertIsNone(r["last_pr_head_sha_observed"])
+        self.assertEqual(r["source_delivery"], "NO_COMPLETE_PR_RESPONSE")
         self.assertEqual(r["status"], "UNKNOWN")
 
     def test_report_samples_have_ordered_local_time_not_server_attestation(self):
