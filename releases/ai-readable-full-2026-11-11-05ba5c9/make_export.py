@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import subprocess, json, hashlib, base64, pathlib, re, zipfile, sys, unicodedata
+import subprocess, json, hashlib, base64, pathlib, re, zipfile, sys, unicodedata, tempfile
 R=pathlib.Path(__file__).resolve().parent
 SRC=R/"source"; OUT=R/"artifacts"; OUT.mkdir(exist_ok=True)
 def g(*args):return subprocess.check_output(["git","-C",str(SRC),*args])
@@ -144,10 +144,13 @@ with open(txt,"rb") as f:
 # Exercise the actual published restore consumer, independently of the TXT parser above.
 sys.path.insert(0,str(R))
 from RESTORE_FROM_TXT_HARDENED import restore
-restored_root=OUT/"restored-from-txt"
-restore(txt,restored_root)
-for e,raw in rec:
- assert (restored_root/e["path"]).read_bytes()==raw,e["path"]
+with tempfile.TemporaryDirectory(prefix="ario-restore-check-") as temp:
+ restored_root=pathlib.Path(temp)/"restored"
+ restore(txt,restored_root)
+ for e,raw in rec:
+  restored_file=restored_root/e["path"]
+  assert restored_file.read_bytes()==raw,e["path"]
+  if e["mode"]=="120000":assert restored_file.is_file() and not restored_file.is_symlink(),e["path"]
 cs={"commit":sha,"git_tree":tree,"tracked_files":len(rec),"tracked_bytes":manifest["tracked_bytes"],"verification":"PASS: ZIP and TXT independently reconstructed all Git blobs and matched source SHA1/SHA256."}
 for x in ["ario-full.zip","ario-full.txt","ario-manifest.json","README-EXPORT.txt","RESTORE_FROM_TXT.py","VERIFY_PINNED_MANIFEST.py"]:
  b=(OUT/x).read_bytes();cs[x]={"bytes":len(b),"sha256":hash256(b)}
