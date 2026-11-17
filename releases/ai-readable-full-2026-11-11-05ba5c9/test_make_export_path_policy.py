@@ -9,8 +9,8 @@ import unittest
 SCRIPT_SOURCE = pathlib.Path(__file__).with_name("make_export.py")
 
 
-@unittest.skipIf(os.name == "nt", "POSIX fixture uses names Windows cannot create")
 class ExportPathPolicyTests(unittest.TestCase):
+    @unittest.skipIf(os.name == "nt", "POSIX fixture uses names Windows cannot create")
     def test_generator_rejects_windows_invalid_path_characters(self):
         invalid_names = ('bad?name', 'bad*name', 'bad|name', 'bad<name', 'bad>name', 'bad"name', 'bad\x01name')
         for invalid_name in invalid_names:
@@ -57,6 +57,7 @@ class ExportPathPolicyTests(unittest.TestCase):
             self.assertIn("tracked byte/resource limit", result.stderr)
             self.assertFalse((release / "artifacts" / "ario-full.txt").exists())
 
+    @unittest.skipIf(os.name == "nt", "Unicode normalization fixture is POSIX-only in this harness")
     def test_generator_rejects_unicode_nfc_alias(self):
         with tempfile.TemporaryDirectory() as tmp:
             release = pathlib.Path(tmp) / "release"
