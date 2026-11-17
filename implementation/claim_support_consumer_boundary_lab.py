@@ -59,6 +59,14 @@ def inspect_consumer_boundary(report: object) -> dict[str, Any]:
         return result
     if report.keys() != _EXPECTED_KEYS:
         return result
+    # No caller-controlled equality (__eq__/__ne__) may run during validation.
+    # Check exact primitive types BEFORE any value comparison.
+    string_fields = _EXPECTED_KEYS - {
+        "claimed_support_count", "unique_receipt_count",
+        "independent_support_count",
+    }
+    if any(type(report[k]) is not str for k in string_fields):
+        return result
     if report["contract_version"] != CONTRACT_VERSION:
         return result
     if any(report[k] != v for k, v in _FIXED_NON_AUTHORITY.items()):
