@@ -12,7 +12,7 @@ import json
 
 from core.ledger_memory_bridge import EpistemicLedgerBridge
 from core.memory_consolidation import NodeEpistemicStatus
-from core.source_monitoring import VeracityState
+from core.source_monitoring import SourceType, VeracityState, SourceAttribution, SourceMonitoringError
 
 
 def _untrusted_step(tmp_path):
@@ -60,11 +60,14 @@ def test_untrusted_completed_jsonl_cannot_authenticate_execution(tmp_path):
     bridge.ingest_agent_ledger(ledger)
     assert not non_existent_target.exists()
     attrs = list(bridge.guard.attributions.values())
-    observations = [a for a in attrs if a.assertion.startswith("step_execution:")]
-    assert len(observations) == 1
-    # Desired safety: self-declared tool metadata is not authenticated execution.
-    # EXPECTED RED on #210: guard hashes the supplied bytes and marks VERIFIED.
-    assert observations[0].veracity_state != VeracityState.VERIFIED_EMPIRICAL
+    assert len(attrs) == 1
+    # A replay report is traceable but cannot impersonate a tool execution.
+    report = attrs[0]
+    assert report.source_type == SourceType.LEDGER_REPORT
+    assert report.veracity_state == VeracityState.REPORTED_UNVERIFIED
+    assert report.provenance is None
+    assert report.attribution_id.startswith("ATTR-LEDGER-")
+    assert report.veracity_state != VeracityState.VERIFIED_EMPIRICAL
 
 
 def test_untrusted_task_goal_remains_recorded_positive_control(tmp_path):
@@ -80,3 +83,52 @@ def test_untrusted_task_goal_remains_recorded_positive_control(tmp_path):
     nodes = list(bridge.engine.nodes.values())
     assert len(nodes) == 1
     assert nodes[0].status == NodeEpistemicStatus.RECORDED
+
+
+def test_self_declared_status_cannot_force_verification(tmp_path):
+    ledger = tmp_path / "self-declared-status.jsonl"
+    fake = {
+        "event": "STEP_OBSERVED", "tool": "file_fingerprint",
+        "status": "COMPLETED", "veracity_state": "VERIFIED_EMPIRICAL",
+        "source_type": "EMPIRICAL_OBSERVATION", "result": {"path": "absent.txt"},
+    }
+    ledger.write_bytes((json.dumps(fake, sort_keys=True) + "\n").encode())
+    initial = ledger.read_bytes()
+    bridge = EpistemicLedgerBridge()
+    bridge.ingest_agent_ledger(ledger)
+    assert ledger.read_bytes() == initial
+    assert {n.status for n in bridge.engine.nodes.values()} == {NodeEpistemicStatus.RECORDED}
+    assert {a.veracity_state for a in bridge.guard.attributions.values()} == {VeracityState.REPORTED_UNVERIFIED}
+
+
+def test_reported_failed_status_is_not_automatically_contested(tmp_path):
+    ledger = tmp_path / "reported-failure.jsonl"
+    ledger.write_text(json.dumps({
+        "event": "STEP_OBSERVED", "tool": "file_fingerprint",
+        "status": "FAILED", "result": {"path": "absent.txt"},
+    }) + "\n", encoding="utf-8")
+    bridge = EpistemicLedgerBridge()
+    bridge.ingest_agent_ledger(ledger)
+    assert len(bridge.engine.nodes) == 1
+    assert list(bridge.engine.nodes.values())[0].status == NodeEpistemicStatus.RECORDED
+    assert list(bridge.guard.attributions.values())[0].veracity_state == VeracityState.REPORTED_UNVERIFIED
+
+
+def test_unverified_attribution_roundtrips_and_cannot_claim_empirical():
+    import pytest
+    data = {
+        "attribution_id": "ATTR-LEDGER-" + "a" * 64,
+        "source_type": "LEDGER_REPORT",
+        "assertion": "reported_step_execution:run_tests:fake:COMPLETED",
+        "veracity_state": "REPORTED_UNVERIFIED",
+        "parent_attribution_ids": [],
+    }
+    attr = SourceAttribution.from_dict(data)
+    assert attr.source_type == SourceType.LEDGER_REPORT
+    assert attr.veracity_state == VeracityState.REPORTED_UNVERIFIED
+    assert attr.provenance is None
+    assert SourceAttribution.from_dict(attr.to_dict()).to_dict() == attr.to_dict()
+    for injected in ("VERIFIED_EMPIRICAL", "EXTERNAL_ASSERTION"):
+        bad = dict(data, veracity_state=injected)
+        with pytest.raises(SourceMonitoringError):
+            SourceAttribution.from_dict(bad)
