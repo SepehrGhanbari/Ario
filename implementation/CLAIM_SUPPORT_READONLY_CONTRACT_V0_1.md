@@ -18,6 +18,7 @@ Existing **EA-0.1** (`implementation/EVIDENCE_ADMISSION_CONTRACT_V0_1.md`), **AR
 - `review_status=REVIEWABLE_ONLY`: a bounded well-typed **candidate for future review**, no epistemic promotion. It preserves positive same-topic receipts so reviewers can inspect them when real authorization and source custody exist.
 - `review_status=UNKNOWN`: missing/contradictory/unrelated/invalid/duplicated supporting evidence, shared recorded ancestry, graph cycle, missing source or cap violation. A declared `CONTRADICTS` does **not** prove the claim false.
 - `independent_support_count=0` in all results: distinct receipt IDs or distinct local lock hashes do not establish independently authenticated real-world sources.
+- A receipt selected as support is part of its **own recorded ancestry** for pairwise intersection. If receipt B directly cites receipt A, or cites an intermediate receipt derived from A, the proposed two-receipt support returns `UNKNOWN / SHARED_DECLARED_ANCESTRY`. Without this root-inclusive check, known dependence could evade the detector. This rule does not claim that two disjoint declared ancestry graphs are independently authenticated.
 - `source_authenticity=UNKNOWN`, `semantic_support=NOT_ASSESSED`, `claim_assessment=NOT_ASSESSED`, `admission_decision=NOT_EVALUATED`, `reviewer_authorization=NOT_ESTABLISHED`, `memory_mutation=NONE`, `history_mutation=NONE`, `contract_adoption=NOT_ADOPTED` on every path.
 
 ## Synthetic evaluation
