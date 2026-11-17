@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from core.source_monitoring import SourceAttribution, SourceType, VeracityState
+from core.source_monitoring import EmpiricalProvenance, SourceAttribution, SourceType, VeracityState
 
 CONTRACT_VERSION = "ario_claim_support_readonly_view_v0_1"
 MAX_REGISTRY = 256
@@ -152,7 +152,7 @@ def inspect_claim_support(
             type(receipt) is not SourceAttribution
             or receipt.source_type is not SourceType.EMPIRICAL_OBSERVATION
             or receipt.veracity_state is not VeracityState.VERIFIED_EMPIRICAL
-            or receipt.provenance is None
+            or type(receipt.provenance) is not EmpiricalProvenance
             or type(receipt.provenance.exit_code) is not int
             or receipt.provenance.exit_code != 0
         ):
