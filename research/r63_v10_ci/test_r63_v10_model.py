@@ -163,7 +163,11 @@ def rpc_crash_fixture(root):
                 os.fsync(stream.fileno())
             os._exit(73)  # Process death before V1 append / RPC ACK.
     with socketserver.TCPServer(("127.0.0.1", 0), Handler) as server:
-        (root / "port").write_text(str(server.server_address[1]), encoding="ascii")
+        # Publish readiness atomically: an existing, empty port file is
+        # not evidence the RPC listener has finished writing its port.
+        pending = root / "port.tmp"
+        pending.write_text(str(server.server_address[1]), encoding="ascii")
+        os.replace(pending, root / "port")
         server.handle_request()
     return 90
 
