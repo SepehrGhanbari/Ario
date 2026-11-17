@@ -1,0 +1,7 @@
+ARIO_W18_EXPLICIT_ONE_SHOT_PUBLIC_LOG_SUBMISSION
+Date: 2026-11-17
+Authorized scope: published W18 PUBLIC_SYNTHETIC_RESEARCH_ONLY manifest SHA256 ee83050bff68f9b73afb115949bca8c46bb09462a6f000eecb9ed07bf2855769
+Commitment target: Sigsum test policy sigsum-test1-2025; exact W18 public W17 research snapshot.
+No Ario owner key, Ario independent signing key, private memory, live agent, protected memory, trust activation or production.
+Submission may create public permanent log leaf. A successful submit is NOT an Ario-native witnessed log, independently audited witness ownership or operational authority.
+Trigger: push of THIS file on this disposable execution branch only; no schedules or future workflow reactivation.
