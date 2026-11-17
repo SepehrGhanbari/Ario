@@ -1,0 +1,121 @@
+{
+  "actual_key_activation": false,
+  "independent_external_custody": false,
+  "killed": 13,
+  "note": "All mutants and test expectations authored in the same research session; no external gold corpus.",
+  "original_tests": "PASS",
+  "python_version": "3.13.5",
+  "real_effects": 0,
+  "records": [
+    {
+      "exit_code": 1,
+      "first_failure": "FAIL: test_matrix (__main__.IssuerCases.test_matrix) (name='09_wrong_source_key')",
+      "killed_by_tests": true,
+      "meaning": "forged source and grant signatures accepted",
+      "mutated_sha256": "fbda055cbb248202a021683266d093fce034aefe29892dabd08321bf80c28315",
+      "name": "M01_NO_SIGNATURE_CHECK"
+    },
+    {
+      "exit_code": 1,
+      "first_failure": "FAIL: test_matrix (__main__.IssuerCases.test_matrix) (name='03_exact_signed_source_and_grant')",
+      "killed_by_tests": true,
+      "meaning": "wrong signer key accepted, correct grants refused",
+      "mutated_sha256": "00d4ef943c1c191bd06877b0d156e38022b657266cdc265d2ee3c0d2bf51a445",
+      "name": "M02_GRANT_KEY_AS_ORIGIN"
+    },
+    {
+      "exit_code": 1,
+      "first_failure": "FAIL: test_revocation_custody_and_compromised_issuer_limits (__main__.IssuerCases.test_revocation_custody_and_compromised_issuer_limits)",
+      "killed_by_tests": true,
+      "meaning": "revoked grant reuse",
+      "mutated_sha256": "e6be232caa3009e5e92fa3290a9c8614d2ea7dec1a9c2c0f5c99035cc048cc94",
+      "name": "M03_IGNORE_REVOCATION"
+    },
+    {
+      "exit_code": 1,
+      "first_failure": "FAIL: test_matrix (__main__.IssuerCases.test_matrix) (name='12_grant_replayed_after_expiry')",
+      "killed_by_tests": true,
+      "meaning": "expired grant reuse",
+      "mutated_sha256": "9963d07c6cdaaa6263562a26b590f3c82128a6bc7d3d8377481f3cb7d0d5c69b",
+      "name": "M04_IGNORE_EXPIRY"
+    },
+    {
+      "exit_code": 1,
+      "first_failure": "FAIL: test_matrix (__main__.IssuerCases.test_matrix) (name='04_changed_target_after_grant')",
+      "killed_by_tests": true,
+      "meaning": "grant operation/recipient/resource unbound",
+      "mutated_sha256": "74792edbdb99117fd276894ca1cc3f58ce1becf5d6945dad8ca8841002e1b0eb",
+      "name": "M05_IGNORE_SCOPE"
+    },
+    {
+      "exit_code": 1,
+      "first_failure": "FAIL: test_matrix (__main__.IssuerCases.test_matrix) (name='02_success_history_no_grant')",
+      "killed_by_tests": true,
+      "meaning": "tampered content source reused",
+      "mutated_sha256": "391ebcaedbdc3a38b2695c480561f447ede9fe66655ba4a13bcb2cef76fd1b4e",
+      "name": "M06_IGNORE_CONTENT_DIGEST"
+    },
+    {
+      "exit_code": 1,
+      "first_failure": "FAIL: test_matrix (__main__.IssuerCases.test_matrix) (name='07_changed_principal')",
+      "killed_by_tests": true,
+      "meaning": "principal mismatch at source boundary",
+      "mutated_sha256": "5ed9c99002da5c42bc94be6ceb865b4d135a19d9e32bdf9e3900bf371df69bc7",
+      "name": "M07_IGNORE_PROPOSED_PRINCIPAL"
+    },
+    {
+      "exit_code": 1,
+      "first_failure": "FAIL: test_revocation_custody_and_compromised_issuer_limits (__main__.IssuerCases.test_revocation_custody_and_compromised_issuer_limits)",
+      "killed_by_tests": true,
+      "meaning": "one shared key accepted for two trust roles",
+      "mutated_sha256": "b3367e831286b0e6116388588850c8dcd03e6d7d0fee345bd44303b393942ea5",
+      "name": "M08_CONFIG_SAME_KEY_ALLOWED"
+    },
+    {
+      "exit_code": 1,
+      "first_failure": "FAIL: test_matrix (__main__.IssuerCases.test_matrix) (name='01_untrusted_memory_no_grant')",
+      "killed_by_tests": true,
+      "meaning": "memory alone is eligible",
+      "mutated_sha256": "90afd0e23b705bda96557513ba9acd20c246d40eaab051c18d5b3d537ec01fc3",
+      "name": "M09_GRANT_NOT_REQUIRED"
+    },
+    {
+      "exit_code": 1,
+      "first_failure": "FAIL: test_matrix (__main__.IssuerCases.test_matrix) (name='01_untrusted_memory_no_grant')",
+      "killed_by_tests": true,
+      "meaning": "synthetic eligibility mislabeled final authorization",
+      "mutated_sha256": "c3bc6349f3a8e7feb3a7e031f03f9fa3b66c8d9af5423c475d91b87be12c019b",
+      "name": "M10_AUTHORITY_GRANTED"
+    },
+    {
+      "exit_code": 1,
+      "first_failure": "FAIL: test_matrix (__main__.IssuerCases.test_matrix) (name='01_untrusted_memory_no_grant')",
+      "killed_by_tests": true,
+      "meaning": "synthetic action counter falsely reports effect",
+      "mutated_sha256": "78caefe341098a063fcc336e0164ca801b41f712e4acae8708770edcc4a5d877",
+      "name": "M11_FORGED_EXECUTION"
+    },
+    {
+      "exit_code": 1,
+      "first_failure": "ERROR: test_matrix (__main__.IssuerCases.test_matrix) (name='15_no_clock_attestation')",
+      "killed_by_tests": true,
+      "meaning": "invalid clock accepted or causes unexpected behavior",
+      "mutated_sha256": "b27bd98fb0b9edd238fd0f6862ed72b422b8d2c64f2ca6e8364838b54dd53c61",
+      "name": "M12_BAD_CLOCK_TYPE"
+    },
+    {
+      "exit_code": 1,
+      "first_failure": "FAIL: test_matrix (__main__.IssuerCases.test_matrix) (name='01_untrusted_memory_no_grant')",
+      "killed_by_tests": true,
+      "meaning": "wrong source verification key",
+      "mutated_sha256": "9683256cda14d2ef212f198e00da67b5372bed26266db8d77cf7993f944a6bde",
+      "name": "M13_SKIP_SOURCE_SIG"
+    }
+  ],
+  "schema": "ARIO_W13_EPHEMERAL_TWO_DOMAIN_MUTATION_LAB_V1",
+  "selected_mutants": 13,
+  "source_git_blob_sha1": "2f5b21fb45fc335452d8950cec15ede323fc2810",
+  "source_sha256": "5c3f96a78f9d06fcb8fff5454547ba878e015246c10e011cffe5bb464ca4a039",
+  "source_test_methods": 4,
+  "survived": 0
+}
