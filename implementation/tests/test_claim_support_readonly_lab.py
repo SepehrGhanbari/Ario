@@ -303,10 +303,6 @@ def test_independent_declared_receipt_roots_keep_positive_control():
     _check_firewall(result)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="RED: malformed provenance object dereferenced before UNKNOWN guard",
-)
 @pytest.mark.parametrize(
     "bad_provenance",
     [
