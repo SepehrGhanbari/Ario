@@ -1,0 +1,49 @@
+name: "W19 one-time cross-operator cryptographic proof replay"
+on:
+  push:
+    branches:
+      - research/w19-cross-operator-proof-replay-20261117
+    paths:
+      - research/consensus/W19_VERIFY_ONLY_TRIGGER_2026-11-17.txt
+
+permissions:
+  contents: read
+
+jobs:
+  proof-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout research proof, policies and verifier
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup pinned Go toolchain
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.25"
+          cache: false
+
+      - name: Install official verifier (NO submitter)
+        shell: bash
+        run: |
+          set -euo pipefail
+          go install sigsum.org/sigsum-go/cmd/sigsum-verify@v0.14.1
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Compare exact original W18 public receipt against stricter published witness keys
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash research/consensus/w19_verify_cross_operator_existing_proof.sh | tee W19_ACTUAL_RUN_STDOUT.txt
+          grep -Fq 'W19_OFFLINE_STRICTER_VERIFICATION_COMPLETE' W19_ACTUAL_RUN_STDOUT.txt
+
+      - name: Archive small public analysis log only
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: W19-strict-cross-operator-proof-verification
+          path: W19_ACTUAL_RUN_STDOUT.txt
+          retention-days: 30
+          if-no-files-found: error
