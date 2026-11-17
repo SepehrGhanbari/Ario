@@ -1,0 +1,97 @@
+{
+  "date": "2026-11-17",
+  "env": {
+    "cryptography": "46.0.4",
+    "operating_system": "disposable ChatGPT Linux container",
+    "python": "3.13.5"
+  },
+  "executed_results": {
+    "cross_checked_tree_sizes": 65,
+    "exhaustive_compact_consistency_pairs": 1128,
+    "exhaustive_compact_inclusion_pairs": 1176,
+    "explicitly_generated_signed_checkpoint_count": 2,
+    "full_leaf_inclusion_proofs": 8,
+    "local_pinned_key_and_prior_replay": "HISTORICAL_CONSISTENT / ALL_SUPPLIED_SYNTHETIC_LEAVES_INCLUDED_NOT_AUTHORITY",
+    "selected_mutation_count": 13,
+    "selected_mutations_killed": 12,
+    "selected_mutations_survived": 1,
+    "surviving_mutant": "M12_OMIT_FULL_INCLUSION_SET_CHECK; redundant condition still covered by full-list length plus duplicate/index bounds checks",
+    "synthetic_leaf_count": 8,
+    "unit_test_methods": 6,
+    "unit_test_methods_passed": 6
+  },
+  "external_effects": 0,
+  "files": {
+    "W20_EPHEMERAL_PUBLIC_LOG_KEY_2026-11-17.txt": {
+      "bytes": 65,
+      "git_blob_sha1": "165c6261b6e1b60b53f194946b43746f0fc80e1a",
+      "sha256": "f60d72aa8ac8678d9968333e329d11fce6498533429b3874c8c787d092cf4009"
+    },
+    "W20_MUTATION_RESULTS_2026-11-17.json": {
+      "bytes": 4700,
+      "git_blob_sha1": "78e8d717f0049c745cf8cb1c20277aad42531115",
+      "sha256": "9b0d8e56ec8626dfc5c45458d7e8ff36eb195af7b94958f4c4213799095820df"
+    },
+    "W20_PRIOR_CHECKPOINT_SIMULATED_PIN_2026-11-17.json": {
+      "bytes": 457,
+      "git_blob_sha1": "3e741e1e6f032748450c9e675608f2cf5ab657bf",
+      "sha256": "0ed64cf2e6d405b1761fbe5d3a20c696a61a758598429c425ab63b9d17665c68"
+    },
+    "W20_SYNTHETIC_LOG_CHECKPOINTS_AND_PROOFS_2026-11-17.json": {
+      "bytes": 6648,
+      "git_blob_sha1": "13779afb7d953846424047bb16f0018b677131c8",
+      "sha256": "7a14bd6d5fc59ef30be66acdcec6351fc975050c112bd6b415c4bfd84c691a1c"
+    },
+    "test_w20_native_log.py": {
+      "bytes": 10427,
+      "git_blob_sha1": "66ad63ef9d610165071c1295272b042e7dcc9414",
+      "sha256": "36df44006cdb2e35b803478071a70a557110437e36ac9889d9ace4e59831686e"
+    },
+    "w20_independent_monitor.py": {
+      "bytes": 10284,
+      "git_blob_sha1": "e0e1132a19fe5774460ccea48ef055eb1787653e",
+      "sha256": "fc94037a2da7813299026ec2a545ef7dce75d243c6a433d8fefaaf2aa30e3d84"
+    },
+    "w20_merkle_producer.py": {
+      "bytes": 5833,
+      "git_blob_sha1": "33fa37710bf780e42dc697bb9490b97aa09e68a3",
+      "sha256": "c941c3cd0c2de878c2d62250aa8ec14715fbe9f1aa39e3cbf445dc568d0098f3"
+    },
+    "w20_selected_mutation_audit.py": {
+      "bytes": 3928,
+      "git_blob_sha1": "fb8cf16a450b37bbf6aa3fe778d3bc2f597d1901",
+      "sha256": "cc319f276ea2ff0c32e3522b435dc77dbb64c84902682eb5baba08872202dcc6"
+    },
+    "w20_verify_published_fixture.py": {
+      "bytes": 1535,
+      "git_blob_sha1": "18a3ea5ee7ab35393fcba40f2a9d2229a82b8f8a",
+      "sha256": "abeab38e80dbb5be2e4ee03f8e3fe0a8d302fa0c3850f5be9c4ee0e878e5c99a"
+    }
+  },
+  "historical_R13_note": "Issue #171 already reported 80/80 self-authored R13 synthetic Merkle checks; original R13 ZIP not independently accessed or cross-replayed here.",
+  "log_public_key_independently_pinned": false,
+  "operational_authority": "NONE",
+  "prior_highwater_independently_pinned": false,
+  "protocol_scope": "CT-style RFC9162 SHA-256 domain separated Merkle tree; NOT an implemented CT v2 service, not C2SP witness endpoint, and not production transparency",
+  "public_fixture_only": true,
+  "real_ario_data_processed": false,
+  "real_native_ario_witness_cosignature": false,
+  "real_signer_used": false,
+  "schema": "ARIO_W20_NATIVE_MERKLE_REPLAY_RESULTS_V1",
+  "source_primary_rfc": "https://www.rfc-editor.org/rfc/rfc9162.html#section-2.1",
+  "third_party_replay_confirmed": false,
+  "verification_boundaries": {
+    "complete_real_Ario_event_capture_proven": false,
+    "external_witness_proven": false,
+    "full_inclusion_proof_set_required": true,
+    "missing_pin_or_prior": "HOLD_UNCERTAIN",
+    "pinned_pubkey_and_retained_prior_required": true,
+    "plaintext_payload_rejected_from_public_event_schema": true,
+    "signed_altered_larger_branch_without_valid_consistency": "DENY",
+    "stale_old_head_repeated_when_new_exists": "HISTORICAL_MATCH_ONLY_NOT_FRESHNESS",
+    "unverified_declared_origin": "SOURCE_TRUTH_UNKNOWN",
+    "valid_fork_same_size_with_same_signing_key": "DENY"
+  },
+  "witness_independent_custody": "NOT_ESTABLISHED",
+  "world_freshness": "UNKNOWN"
+}
