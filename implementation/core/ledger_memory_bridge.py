@@ -8,7 +8,7 @@ Epistemic Invariant Guarantees:
 2. Reported Provenance (v0.1): replayed STEP_OBSERVED bytes are LEDGER_REPORT / REPORTED_UNVERIFIED, not independent execution evidence.
 3. Anti-Self-Citation: replayed JSONL cannot masquerade as authenticated tool execution.
 4. Contradiction Preservation: Contradictory step results are marked CONTESTED without historical erasure.
-5. Prospective Intention Evaluation: Task completion events trigger queued conditional actions.
+5. Prospective Cue Boundary: untrusted task-completion reports are counted, never used to trigger queued actions.
 6. No-History-Promotion: Repeated unverified steps retain RECORDED status without upgrading to SUPPORTED.
 """
 
@@ -60,6 +60,7 @@ class BridgeAuditSummary:
     contested_nodes_count: int
     triggered_intentions_count: int
     triggered_intentions: Tuple[Dict[str, Any], ...] = ()
+    reported_task_finishes_count: int = 0  # v0.1 audit only, no intention activation
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -71,6 +72,7 @@ class BridgeAuditSummary:
             "contested_nodes_count": self.contested_nodes_count,
             "triggered_intentions_count": self.triggered_intentions_count,
             "triggered_intentions": list(self.triggered_intentions),
+            "reported_task_finishes_count": self.reported_task_finishes_count,
         }
 
 
@@ -117,6 +119,7 @@ class EpistemicLedgerBridge:
         file_hasher = hashlib.sha256()
         total_events = 0
         steps_observed = 0
+        reported_task_finishes_count = 0
         triggered_intentions: List[Dict[str, Any]] = []
 
         with target.open("rb") as stream:
@@ -209,16 +212,12 @@ class EpistemicLedgerBridge:
 
                     self.engine.ingest_event_stream([(line_hash, claim_data)])
 
-                # 3. TASK_FINISHED: Evaluate prospective intention cues
+                # 3. TASK_FINISHED: preserve the *presence* of the untrusted
+                # report without evaluating a possibly privileged intention.
+                # evaluate_cues MUTATES the registry and exports action_payload.
+                # A JSONL status is not authority for that state transition.
                 elif event_type == "TASK_FINISHED":
-                    cue_context: Dict[str, Any] = {
-                        "task_id": event.get("task_id"),
-                        "status": event.get("status"),
-                        "exit_code": event.get("exit_code", 0 if event.get("status") == "COMPLETED" else 1),
-                    }
-                    triggered = self.registry.evaluate_cues(cue_context, current_epoch=current_epoch)
-                    for intent in triggered:
-                        triggered_intentions.append(intent.to_dict())
+                    reported_task_finishes_count += 1
 
         contested_count = sum(1 for n in self.engine.nodes.values() if n.status == NodeEpistemicStatus.CONTESTED)
 
@@ -231,4 +230,5 @@ class EpistemicLedgerBridge:
             contested_nodes_count=contested_count,
             triggered_intentions_count=len(triggered_intentions),
             triggered_intentions=tuple(triggered_intentions),
+            reported_task_finishes_count=reported_task_finishes_count,
         )
