@@ -144,14 +144,16 @@ def gossip(views, pinned_vkey=None):
         for k in views):
         return _finding('HOLD_BAD_VIEW_SET')
     parsed = {name: read_signed_note(note,pinned_vkey) for name,note in views.items()}
-    if any(head is None for head in parsed.values()):
-        return _finding('HOLD_INVALID_NOTE_OR_UNPINNED_KEY')
-    ordered = sorted(parsed.items())
+    # A malformed third-party view must not erase independently verified
+    # two-signature equivocation evidence from other peers.
+    ordered = sorted((name, head) for name, head in parsed.items() if head is not None)
     for i,(left_name,left) in enumerate(ordered):
         for right_name,right in ordered[i+1:]:
             if left['size'] == right['size'] and left['root'] != right['root']:
                 return _finding('SIGNED_EQUIVOCATION_PROVEN', view_labels_untrusted=[left_name,right_name],
                     evidence_note_sha256=[left['note_sha256'],right['note_sha256']])
+    if len(ordered) != len(parsed):
+        return _finding('HOLD_INVALID_NOTE_OR_UNPINNED_KEY')
     if len({head['size'] for head in parsed.values()}) > 1:
         return _finding('HOLD_DIFFERENT_SIZES_NEED_PAIRWISE_CONSISTENCY')
     return _finding('OBSERVED_AGREEMENT_NOT_WORLD_FRESHNESS', observed_size=ordered[0][1]['size'])
