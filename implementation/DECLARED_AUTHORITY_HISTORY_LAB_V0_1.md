@@ -48,3 +48,49 @@ This version is a candidate *format/logic probe* only; it does not fix direct in
 ## خلاصهٔ فارسی
 
 ممیز می‌تواند بفهمد آیا دفتر فرضیِ ثبت کلید، ابطال و مصرف رسید از نظر ترتیب و هش خودش سازگار است یا نه. اگر یک نسخهٔ قدیمی از تاریخچه ارائه شود و مرجع قبلاً مستقل «حداقل شماره و هش» را نگه داشته باشد، می‌توان عقب‌گرد را تشخیص داد. اما **در این آزمایش خودِ درخواست‌دهنده شماره و هش مرجع را هم می‌دهد**؛ پس می‌تواند دفتر تازه‌ای بسازد که ظاهراً سالم باشد. بنابراین سازگاری دفتر به معنی اعتماد یا شاهد مستقل نیست و هیچ مجوز امنیتی صادر نمی‌شود.
+
+
+## R5 independent reviews: verified distinctions and unresolved policy choices
+
+Several independent reviews had different levels of access: one ran a local
+74-case source-based suite on a different Python/cryptography version; a
+separate `r5_counterexamples.py` is explicitly **only a reviewer-authored
+reference model**, not a run of the repository implementation. A third review
+was primarily architectural, without exact 2026 PR source. Their VERIFIED
+labels are **not interchangeable**.
+
+**Actual source-backed checks added to this PR:**
+- A terminally revoked, otherwise known key now returns
+  `DECLARED_KEY_REVOKED` *even if the caller's requested policy pin differs*.
+  This is reporting precedence only, not a new source authentication or
+  authorization decision. A previous RED test captured the wrong reason.
+- `floor_sequence` and `floor_sha256` are a **pair**: the same-length
+  replacement of a floor-pinned revocation with a different event produces
+  `EXTERNAL_FLOOR_MISMATCH`. An independently retained floor **stale at the
+  enrollment event**, however, does **not** detect revocation later omitted
+  from the caller-controlled history. A floor is a prefix check, **not
+  proof that the observed head is current**. No trusted freshness bound or
+  independent high-water storage exists in this lab.
+- `KEY_REVOKED` is terminal for the exact `key_id` in this v0.1
+  research format. Re-enrolling even under another policy hash is rejected.
+  Whether a future authorized reinstatement should use a new identity or
+  an explicit versioned append-only reinstatement event requires a separate
+  governance decision; never silently resurrect or erase a revoked record.
+- **Nonce scope is GLOBAL across all key IDs in this experimental format**.
+  A nonce spent under key A also rejects a receipt query under key B; a
+  second spend by key B is `DUPLICATE_NONCE_SPEND`. This conservative
+  existing behavior is now explicitly tested; it may prevent independent
+  issuers from choosing the same nonce. Changing to per-key would require
+  a versioned security contract and proof that the signed receipt binds
+  the key identity. Do not silently change the existing semantics.
+- JSON `nonce` is a bounded **string** under this actual schema. A
+  recommendation to use `isinstance(nonce, int)` was based on a different
+  model and **does not apply** to this code.
+- **Concurrency and fork detection remain unsolved:** two independent
+  consumers can inspect the same pre-spend snapshot and each get
+  `REVIEWABLE_ONLY`. An actual compare-and-append primitive, independently
+  retained high-water head and cross-view monitoring are required before
+  claiming replay prevention. The laboratory performs neither.
+
+None of the above grants memory admission, tool execution, signing or trust.
+**REVIEWABLE_ONLY != AUTHORIZED; CLAIM != PROOF; MEMORY != TRUTH.**
