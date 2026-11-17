@@ -24,7 +24,7 @@ def validate_portable_path(name):
  encoded=name.encode("utf-8","strict")
  if not encoded or len(encoded)>MAX_PATH_BYTES:raise ValueError("path length limit")
  p=pathlib.PurePosixPath(name);wp=pathlib.PureWindowsPath(name)
- if p.is_absolute() or wp.drive or wp.root or wp.is_absolute() or ".." in p.parts or p.as_posix()!=name or "\\\\" in name or "\\0" in name:raise ValueError("unsafe or non-canonical path")
+ if p.is_absolute() or wp.drive or wp.root or wp.is_absolute() or ".." in p.parts or p.as_posix()!=name or chr(92) in name or chr(0) in name:raise ValueError("unsafe or non-canonical path")
  for part in p.parts:
   if len(part.encode("utf-8"))>MAX_PATH_COMPONENT_BYTES:raise ValueError("path component byte limit")
   device_base=part.split(".",1)[0].rstrip(" ").upper()
