@@ -99,6 +99,7 @@ jobs:
           fi
           grep -l 'SYNTHETIC_NONCE_SPEND_RECORDED' /tmp/ario-r6-race-*.json
           grep -l 'REPLAYED_NONCE' /tmp/ario-r6-race-*.json
+          echo "R6 count after two successful spends: $(sudo wc -l /tmp/ario-r6-custodian/journal.jsonl)"
           test "$(sudo wc -l /tmp/ario-r6-custodian/journal.jsonl | awk '{print $1}')" -eq 2
           # C revokes; even a NEW, correctly signed receipt must not pass.
           sudo -u ario_r6_custodian "$PY" "$LAB" custodian \
@@ -116,11 +117,13 @@ jobs:
           echo 'R6 post-revocation structured outcome:'
           cat /tmp/ario-r6-after-revoke.json
           grep -q 'KEY_ALREADY_REVOKED' /tmp/ario-r6-after-revoke.json
+          echo "R6 count after recorded revocation: $(sudo wc -l /tmp/ario-r6-custodian/journal.jsonl)"
           test "$(sudo wc -l /tmp/ario-r6-custodian/journal.jsonl | awk '{print $1}')" -eq 3
+          echo "R6 checkpoint and append checks passed; inspecting root access (no secret bytes)"
           # Root can still read BOTH private directories. This shows why
           # separate OS UIDs on a shared-admin host are NOT independent custody.
-          sudo test -r /tmp/ario-r6-executor/ephemeral.key
-          sudo test -r /tmp/ario-r6-custodian/trusted_executor.pub
+          sudo test -r /tmp/ario-r6-executor/ephemeral.key || { echo "ROOT E key test failed"; exit 1; }
+          sudo test -r /tmp/ario-r6-custodian/trusted_executor.pub || { echo "ROOT C pub test failed"; exit 1; }
           echo 'R6 ROOT_ADMIN_READS_BOTH: true; ADMINISTRATIVE_INDEPENDENCE: NOT_ESTABLISHED'
           echo 'R6 OS_DENIAL + SINGLE_SPEND + CONCURRENT_REPLAY_DENIAL + REVOCATION: PASS'
           echo 'R6 NO_REAL_EXECUTION / NO_PRIVILEGE / NO_PRODUCTION_KEYS / NO_TRUST_ACTIVATION'
