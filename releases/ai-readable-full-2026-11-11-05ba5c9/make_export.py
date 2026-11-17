@@ -10,17 +10,38 @@ tree=g("rev-parse","HEAD^{tree}").decode().strip()
 date=g("show","-s","--format=%cI","HEAD").decode().strip()
 rec=[]
 RESERVED={"CON","PRN","AUX","NUL","CONIN$","CONOUT$","COM¹","COM²","COM³","LPT¹","LPT²","LPT³",*(f"COM{i}" for i in range(1,10)),*(f"LPT{i}" for i in range(1,10))}
-seen_paths=set(); folded_paths=set(); all_parents=set(); folded_components={}
+MAX_FILES=10000
+MAX_TRACKED_BYTES=256*1024*1024
+MAX_RECORD_RAW_BYTES=64*1024*1024
+MAX_RECORD_PAYLOAD_BYTES=90*1024*1024
+MAX_PATH_BYTES=4096
+MAX_PATH_COMPONENT_BYTES=255
+MAX_INPUT_BYTES=384*1024*1024
+MAX_MANIFEST_BYTES=8*1024*1024
+seen_paths=set(); folded_paths=set(); all_parents=set(); folded_components={};sum_raw=0
 def portable_key(s):return unicodedata.normalize("NFC",s.casefold())
+def validate_portable_path(name):
+ encoded=name.encode("utf-8","strict")
+ if not encoded or len(encoded)>MAX_PATH_BYTES:raise ValueError("path length limit")
+ p=pathlib.PurePosixPath(name);wp=pathlib.PureWindowsPath(name)
+ if p.is_absolute() or wp.drive or wp.root or wp.is_absolute() or ".." in p.parts or p.as_posix()!=name or "\\\\" in name or "\\0" in name:raise ValueError("unsafe or non-canonical path")
+ for part in p.parts:
+  if len(part.encode("utf-8"))>MAX_PATH_COMPONENT_BYTES:raise ValueError("path component byte limit")
+  device_base=part.split(".",1)[0].rstrip(" ").upper()
+  if (part in ("",".","..") or part.endswith(("."," ")) or ":" in part
+      or any(ord(ch)<32 or ch in '<>"|?*' for ch in part)
+      or device_base in RESERVED):raise ValueError("unsafe or non-portable path")
+ return p
 for item in g("ls-tree","-r","-z","--full-tree","HEAD").split(b"\x00"):
  if not item:continue
  h,path=item.split(b"\t",1)
  mode,typ,oid=h.decode().split()
  if typ!="blob":raise ValueError(("Unsupported object type",typ,path))
  name=path.decode("utf-8","strict")
- p=pathlib.PurePosixPath(name)
- wp=pathlib.PureWindowsPath(name)
- if p.is_absolute() or wp.drive or wp.root or wp.is_absolute() or ".." in p.parts or p.as_posix()!=name or "\\" in name or any(part.endswith((".", " ")) or ":" in part or part.split(".",1)[0].upper() in RESERVED or any(ord(ch)<32 or ch in '<>"|?*' for ch in part) for part in p.parts):raise ValueError("unsafe or non-portable path")
+ p=validate_portable_path(name)
+ if len(rec)>=MAX_FILES:raise ValueError("tracked file count limit")
+ raw_size=int(g("cat-file","-s",oid))
+ if raw_size>MAX_RECORD_RAW_BYTES or sum_raw+raw_size>MAX_TRACKED_BYTES:raise ValueError("tracked byte/resource limit")
  if name in seen_paths or name in all_parents or portable_key(name) in folded_paths:raise ValueError("duplicate, case-colliding, or file/directory-conflicting path")
  parts=p.parts
  for i in range(1,len(parts)+1):
@@ -31,6 +52,8 @@ for item in g("ls-tree","-r","-z","--full-tree","HEAD").split(b"\x00"):
  seen_paths.add(name);folded_paths.add(portable_key(name))
  for i in range(1,len(parts)):all_parents.add("/".join(parts[:i]))
  raw=g("cat-file","blob",oid)
+ if len(raw)!=raw_size:raise ValueError("Git blob size mismatch")
+ sum_raw+=len(raw)
  if hashlib.sha1(b"blob "+str(len(raw)).encode()+b"\0"+raw).hexdigest()!=oid:raise ValueError("git sha mismatch")
  try:
   raw.decode("utf-8")
@@ -41,6 +64,7 @@ for item in g("ls-tree","-r","-z","--full-tree","HEAD").split(b"\x00"):
 rec.sort(key=lambda x:x[0]["path"].encode("utf-8","surrogateescape"))
 manifest={"format":"ARIO_FULL_SNAPSHOT_v1","source_repo":"https://github.com/SepehrGhanbari/Ario","ref":"refs/heads/main","commit":sha,"tree":tree,"commit_date":date,"tracked_files":len(rec),"tracked_bytes":sum(len(raw) for _,raw in rec),"text_files":sum(e["encoding"]=="raw-utf8" for e,_ in rec),"binary_files":sum(e["encoding"]=="base64" for e,_ in rec),"scope":"Every tracked Git blob at pinned commit, excluding untracked files, Git history and external submodule data.","files":[e for e,_ in rec]}
 m=(json.dumps(manifest,ensure_ascii=False,sort_keys=True,indent=2)+"\n").encode("utf-8")
+if len(m)>MAX_MANIFEST_BYTES:raise ValueError("manifest byte limit")
 (OUT/"ario-manifest.json").write_bytes(m)
 guide=f"""ARIO FULL MODEL-READABLE SNAPSHOT
 Source: https://github.com/SepehrGhanbari/Ario
@@ -71,10 +95,12 @@ with open(txt,"wb") as f:
  f.write((f"ARIO_FULL_TEXT_EXPORT_V1\nrepo=https://github.com/SepehrGhanbari/Ario\ncommit={sha}\ntree={tree}\ntracked_files={len(rec)}\ntracked_bytes={manifest['tracked_bytes']}\nmanifest_sha256={hash256(m)}\nraw-utf8 records preserve exact bytes; other records Base64 encode exact bytes.\nEach record's payload_bytes gives the exact length. One separator newline follows.\n@@ARIO_BEGIN\n").encode())
  for e,raw in rec:
   payload=raw if e["encoding"]=="raw-utf8" else base64.encodebytes(raw)
+  if len(payload)>MAX_RECORD_PAYLOAD_BYTES:raise ValueError("record payload byte limit")
   f.write(b"@@ARIO_FILE "+json.dumps({**e,"payload_bytes":len(payload)},ensure_ascii=True,sort_keys=True,separators=(",",":")).encode("ascii")+b"\n")
   f.write(payload)
   f.write(b"\n@@ARIO_END\n")
  f.write((f"@@ARIO_COMPLETE files={len(rec)} commit={sha} tree={tree} tracked_bytes={manifest['tracked_bytes']} manifest_sha256={hash256(m)}\n").encode())
+if txt.stat().st_size>MAX_INPUT_BYTES:raise ValueError("TXT input byte limit; candidate not compatible with restore policy")
 def info(path,mode):
  z=zipfile.ZipInfo(path,(2026,11,11,0,0,0))
  z.create_system=3
