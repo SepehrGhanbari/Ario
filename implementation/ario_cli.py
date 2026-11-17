@@ -192,7 +192,7 @@ def main(argv=None) -> int:
     parser.add_argument(
         "--bridge-agent-ledger",
         action="store_true",
-        help="Bridge an agent execution JSONL ledger into cognitive memory and evaluate prospective cues",
+        help="Audit untrusted agent JSONL into recorded-only cognitive memory; do not activate intentions",
     )
     args = parser.parse_args(argv)
 
