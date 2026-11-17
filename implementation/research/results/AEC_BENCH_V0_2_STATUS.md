@@ -167,3 +167,25 @@ A follow-on change was committed to the same research branch after the latest su
 **Verification state:** **NOT YET CI-VERIFIED.** The last successful code/test head remains `f3eab39883d6709775732bfff40ff78ab7b8d721`. No successful workflow run has yet been observed for `db4108a6ff0ae6fe86252c048dcd7fa752a5eee1`. Do not treat earlier CI runs as validating this follow-on change.
 
 **Interpretation limit:** a structurally single-field pair is not proof that the changed field is causally relevant, semantically isolated, or correctly labelled. Independent oracle review remains NOT RUN.
+
+
+## 9. Lineage-input completeness hardening — 2026-11-17
+
+A targeted adversarial review found that the reference evaluator could report a determinate root count when a declared source had no corresponding entry in the source-to-roots map. That behavior could silently turn incomplete ancestry into a seemingly complete count.
+
+The lineage evaluator now returns `root_count: null` and `status: UNKNOWN` when:
+- the declared source list is missing, empty, duplicated, or contains a blank/non-string identifier;
+- the root map is missing, malformed, or does not have an exact key match with the declared source list (including undeclared extra entries);
+- any source has an empty/malformed root list or a blank/non-string root identifier;
+- the existing unresolved-parent, missing-edge, or hidden-root conditions apply.
+
+Four out-of-corpus mutation regressions cover a missing source mapping, an undeclared extra mapping, a duplicate source declaration, and a blank root identifier. The public 120-fixture corpus and its expected labels were not changed by this hardening.
+
+### Exact source/test head and CI
+
+- Source/test head: `2b5a8f232895c3144c048dc14e12a1b14e25ff00`
+- [AEC-Bench v0.2 Adapter Tests #64](https://github.com/SepehrGhanbari/Ario/actions/runs/44081492015): **SUCCESS — 45 passed**. The fixture/comparison/runtime/reviewer-packet reports were regenerated.
+- [Implementation Regression #1908](https://github.com/SepehrGhanbari/Ario/actions/runs/44081491968): **SUCCESS — 1218 passed, 4 skipped, 121 subtests passed** (Ubuntu). The Windows advisory job was skipped.
+- [AEC-Bench reports and reviewer packet artifact](https://github.com/SepehrGhanbari/Ario/actions/runs/44081492015/artifacts/14326443307), SHA-256 `13d3b22bff9ae72be75ca4593c0d1a33475cb78039ff05b4adf9fabf4a6786e1`.
+
+These runs verify the source/test head above. This status-file update is documentation-only and does not alter the code/test head being reported. It does not establish external validation, independent oracle adjudication, or real-world source truth/authenticity.
