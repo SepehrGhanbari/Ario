@@ -192,3 +192,28 @@ def test_boolean_floor_sequence_rejected():
     r = inspect_declared_history(**dict(args_for(records, digests), floor_sequence=True))
     assert r["reason_code"] == "INVALID_EXTERNAL_BINDINGS"
     deny_all(r)
+
+
+def test_deleting_revocation_and_rewriting_self_declared_pin_can_appear_clean():
+    records, digests = make_history(kinds=("KEY_ENROLLED", "KEY_REVOKED"))
+    revoked = inspect_declared_history(**args_for(records, digests))
+    assert revoked["reason_code"] == "DECLARED_KEY_REVOKED"
+    # A malicious single custodian can remove the revocation, alter the head
+    # pin it also controls, and present a deceptively self-consistent history.
+    forged = inspect_declared_history(**args_for(records[:1], digests[:1]))
+    assert forged["inspection"] == "REVIEWABLE_ONLY"
+    deny_all(forged)
+    # An independently preserved floor beyond that revocation is what would
+    # reveal the rollback; here it is only supplied by the test controller.
+    pinned = dict(args_for(records[:1], digests[:1]),
+                  floor_sequence=2, floor_sha256=digests[1])
+    detected = inspect_declared_history(**pinned)
+    assert detected["reason_code"] == "HISTORY_BELOW_DECLARED_FLOOR"
+    deny_all(detected)
+
+
+def test_revocation_without_prior_enrollment_is_invalid():
+    records, digests = make_history(kinds=("KEY_REVOKED",))
+    r = inspect_declared_history(**args_for(records, digests))
+    assert r["reason_code"] == "INVALID_REVOCATION"
+    deny_all(r)
