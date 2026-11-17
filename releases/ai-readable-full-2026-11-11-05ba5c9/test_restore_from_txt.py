@@ -132,4 +132,13 @@ class Tests(unittest.TestCase):
   with mock.patch.object(hardened,"MAX_RECORD_RAW_BYTES",10), mock.patch.object(hardened,"MAX_RECORD_PAYLOAD_BYTES",20):
    self.assertEqual(restore(self.src,self.dst),1)
    self.assertEqual((self.dst/"data.bin").read_bytes(),raw)
+ def test_path_depth_budget(self):
+  with mock.patch.object(hardened,"MAX_PATH_DEPTH",2):
+   self.bad(snap([("a/b/c.txt",b"x")]))
+ def test_path_index_entry_budget(self):
+  with mock.patch.object(hardened,"MAX_PATH_INDEX_ENTRIES",1):
+   self.bad(snap([("a/b.txt",b"x")]))
+ def test_path_index_byte_budget(self):
+  with mock.patch.object(hardened,"MAX_PATH_INDEX_BYTES",1):
+   self.bad(snap([("a.txt",b"x")]))
 if __name__=="__main__":unittest.main()
