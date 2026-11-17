@@ -1,0 +1,174 @@
+{
+  "schema": "ARIO_W21_LOOPBACK_HTTP_SIGNED_HISTORY_OBSERVATIONS_V1",
+  "date": "2026-11-17",
+  "scope": "SYNTHETIC_ONLY_LOOPBACK_HTTP_AND_STATIC_PUBLIC_GITHUB_SNAPSHOT",
+  "source_commit_pinned": "f26a479e6c1f893f05bc96fd49c8b06cecba206a",
+  "sources": [
+    {
+      "file": "w21_loopback_log_server.py",
+      "git_blob_sha1": "166829146235878c239d397a232f9b74f04f5afd"
+    },
+    {
+      "file": "w21_http_observer.py",
+      "git_blob_sha1": "275bbfa8235e00837fb50b18c604f4e7bcce7153"
+    },
+    {
+      "file": "test_w21_http_monitor.py",
+      "git_blob_sha1": "4d0fb95e39a46c8cd38b532bcb1cb3a16736c7b5"
+    },
+    {
+      "file": "W21_SIMULATED_RETAINED_HIGHWATER_2026-11-17.json",
+      "git_blob_sha1": "3100c1d5e144503d2da4569aea0f34fd5b611fc6"
+    }
+  ],
+  "observed_local": {
+    "python_version": "3.13.5",
+    "cryptography": "46.0.4",
+    "unittest_method_groups": 3,
+    "passed": 3,
+    "named_end_to_end_matrix": 13,
+    "other_checks": [
+      "unreachable loopback HOLD",
+      "non-loopback and malformed URL HOLD",
+      "POST PUT DELETE all HTTP 405"
+    ],
+    "real_external_effects": 0
+  },
+  "actual_second_runner": {
+    "run_id": 44162876016,
+    "url": "https://github.com/SepehrGhanbari/Ario/actions/runs/44162876016",
+    "job_id": 134321083174,
+    "result": "SUCCESS",
+    "python_version": "3.13",
+    "unittest_method_groups_passed": 3,
+    "underlying_w20_proof_unittest_methods_passed": 6,
+    "stdout_artifact_id": 14363183832,
+    "external_cosigning_requests": 0
+  },
+  "matrix": [
+    {
+      "id": "W21-01_VALID_SYNTHETIC_HTTP_HEAD_AND_ALL_LEAVES",
+      "view": "normal",
+      "observed_verdict": "HISTORICAL_CONSISTENT",
+      "reason": "HTTP_RESPONSES_MATCH_SYNTHETIC_RETAINED_HIGHWATER_NOT_WORLD_FRESHNESS",
+      "operational_authority": "NONE",
+      "real_ario_log_witnessed": "NOT_ESTABLISHED"
+    },
+    {
+      "id": "W21-02_OLD_HEAD_VS_RETAINED_NEW_HIGHWATER_DENIED",
+      "view": "stale",
+      "observed_verdict": "DENY",
+      "reason": "HTTP_ROLLBACK_BELOW_PINNED_HIGHWATER",
+      "operational_authority": "NONE",
+      "real_ario_log_witnessed": "NOT_ESTABLISHED"
+    },
+    {
+      "id": "W21-03_OLD_OLD_WITH_OLD_HIGHWATER_STILL_LOOKS_VALID",
+      "view": "stale",
+      "observed_verdict": "HISTORICAL_CONSISTENT",
+      "reason": "HTTP_RESPONSES_MATCH_SYNTHETIC_RETAINED_HIGHWATER_NOT_WORLD_FRESHNESS",
+      "operational_authority": "NONE",
+      "real_ario_log_witnessed": "NOT_ESTABLISHED"
+    },
+    {
+      "id": "W21-04_NO_HIGHWATER_HOLD",
+      "view": "normal",
+      "observed_verdict": "HOLD_UNCERTAIN",
+      "reason": "NO_SEPARATELY_RETAINED_HIGHWATER",
+      "operational_authority": "NONE",
+      "real_ario_log_witnessed": "NOT_ESTABLISHED"
+    },
+    {
+      "id": "W21-05_NO_OOB_KEY_HOLD",
+      "view": "normal",
+      "observed_verdict": "HOLD_UNCERTAIN",
+      "reason": "NO_OUT_OF_BAND_KEY_PIN",
+      "operational_authority": "NONE",
+      "real_ario_log_witnessed": "NOT_ESTABLISHED"
+    },
+    {
+      "id": "W21-06_NO_PRIOR_HOLD",
+      "view": "normal",
+      "observed_verdict": "HOLD_UNCERTAIN",
+      "reason": "NO_RETAINED_PRIOR_CHECKPOINT",
+      "operational_authority": "NONE",
+      "real_ario_log_witnessed": "NOT_ESTABLISHED"
+    },
+    {
+      "id": "W21-07_CORRUPT_EVENT_DENIED",
+      "view": "tampered-event",
+      "observed_verdict": "DENY",
+      "reason": "EVENT_INCLUSION_INVALID",
+      "operational_authority": "NONE",
+      "real_ario_log_witnessed": "NOT_ESTABLISHED"
+    },
+    {
+      "id": "W21-08_CORRUPT_CHECKPOINT_DENIED",
+      "view": "tampered-checkpoint",
+      "observed_verdict": "DENY",
+      "reason": "HTTP_HEAD_SIGNATURE_INVALID",
+      "operational_authority": "NONE",
+      "real_ario_log_witnessed": "NOT_ESTABLISHED"
+    },
+    {
+      "id": "W21-09_PARTIAL_HISTORY_HOLD",
+      "view": "partial",
+      "observed_verdict": "HOLD_UNCERTAIN",
+      "reason": "INCOMPLETE_FULL_HISTORY_EVIDENCE",
+      "operational_authority": "NONE",
+      "real_ario_log_witnessed": "NOT_ESTABLISHED"
+    },
+    {
+      "id": "W21-10_OVERSIZE_RESPONSE_HOLD",
+      "view": "oversize",
+      "observed_verdict": "HOLD_UNCERTAIN",
+      "reason": "REMOTE_LOOKUP_INVALID_OR_UNAVAILABLE",
+      "operational_authority": "NONE",
+      "real_ario_log_witnessed": "NOT_ESTABLISHED"
+    },
+    {
+      "id": "W21-11_DUPLICATE_KEY_JSON_HOLD",
+      "view": "bad-json",
+      "observed_verdict": "HOLD_UNCERTAIN",
+      "reason": "REMOTE_LOOKUP_INVALID_OR_UNAVAILABLE",
+      "operational_authority": "NONE",
+      "real_ario_log_witnessed": "NOT_ESTABLISHED"
+    },
+    {
+      "id": "W21-12_WRONG_PINNED_KEY_DENIED",
+      "view": "normal",
+      "observed_verdict": "HOLD_UNCERTAIN",
+      "reason": "UNTRUSTED_PRIOR_INVALID",
+      "operational_authority": "NONE",
+      "real_ario_log_witnessed": "NOT_ESTABLISHED"
+    },
+    {
+      "id": "W21-13_ALTERED_HIGHWATER_HOLD",
+      "view": "normal",
+      "observed_verdict": "HOLD_UNCERTAIN",
+      "reason": "HIGHWATER_INVALID_OR_UNTRUSTED",
+      "operational_authority": "NONE",
+      "real_ario_log_witnessed": "NOT_ESTABLISHED"
+    }
+  ],
+  "public_snapshot": {
+    "read_from": "raw.githubusercontent.com via GitHub connector",
+    "status": "STATIC_PINNED_COMMIT_PUBLIC_FILE_RETRIEVED",
+    "raw_url": "https://raw.githubusercontent.com/SepehrGhanbari/Ario/5d3345dfb20bf1e17f7ce97f9cb3832d5c13f6be/research/consensus/W20_SYNTHETIC_LOG_CHECKPOINTS_AND_PROOFS_2026-11-17.json",
+    "wire_standard": "CUSTOM_W20_JSON_NOT_C2SP"
+  },
+  "full_ario_event_capture": "NOT_ESTABLISHED",
+  "trusted_log_origin_key_out_of_band": "NOT_ESTABLISHED",
+  "prior_highwater_outside_same_repo_admin": "NOT_ESTABLISHED",
+  "separate_organizational_operator": "NOT_ESTABLISHED",
+  "public_live_production_api": false,
+  "native_c2sp_witness_protocol_implemented": false,
+  "real_signer_key_retained": false,
+  "trusted_world_freshness": "UNKNOWN",
+  "honest_negative": "signed old head + same old highwater is indistinguishable from latest to that isolated observer",
+  "no_real_key_or_memory": true,
+  "not_independent_human_review": true,
+  "trust_activation": "NO_GO",
+  "production": "NO_GO",
+  "automation_scheduled": false
+}
