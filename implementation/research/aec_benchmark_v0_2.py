@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Optional
@@ -353,19 +354,35 @@ def _evaluate(f: Fixture) -> dict:
         status = "REJECTED" if integrity=="INVALID" or auth=="FAILED" else "UNKNOWN"
         return {"integrity":integrity,"auth":auth,"status":status}
     if f.family == "temporal_provenance":
-        if d.get("clock_uncertain") or d.get("timestamp_conflict"): t="UNCERTAIN"
-        elif d.get("timezone_missing"): t="UNKNOWN"
-        elif d.get("superseded"): t="SUPERSEDED"
-        elif d.get("future_skew") or (
-            d["observed"] is not None and d["event"] > d["observed"]
-        ) or (
-            d["observed"] is not None and d["recorded"] is not None
-            and d["recorded"] < d["observed"]
-        ): t="ANOMALY"
-        elif d["observed"] is None: t="PARTIAL"
-        elif d["recorded"]-d["event"]>50: t="STALE"
-        else: t="ORDERED"
-        return {"temporal":t,"status":"UNKNOWN"}
+        event_time = d.get("event")
+        observed_time = d.get("observed")
+        recorded_time = d.get("recorded")
+        times = (event_time, observed_time, recorded_time)
+        if d.get("clock_uncertain") or d.get("timestamp_conflict"):
+            t = "UNCERTAIN"
+        elif d.get("timezone_missing"):
+            t = "UNKNOWN"
+        elif d.get("superseded"):
+            t = "SUPERSEDED"
+        elif d.get("future_skew"):
+            t = "ANOMALY"
+        elif any(value is None for value in times):
+            # Missing event/observation/recording time cannot support strict ordering.
+            t = "PARTIAL"
+        elif any(
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(value)
+            for value in times
+        ):
+            t = "UNKNOWN"
+        elif observed_time < event_time or recorded_time < observed_time:
+            t = "ANOMALY"
+        elif recorded_time - event_time > 50:
+            t = "STALE"
+        else:
+            t = "ORDERED"
+        return {"temporal": t, "status": "UNKNOWN"}
     if f.family == "revision_history":
         if d.get("hash_chain_valid") is False: h="INTEGRITY_FAILURE"
         elif d["operation"] in {"erase","rewrite"} or (d["operation"]=="correct" and not d.get("prior_retained",True)): h="ERASURE_DETECTED"
