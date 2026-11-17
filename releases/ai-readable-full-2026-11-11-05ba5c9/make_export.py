@@ -50,7 +50,7 @@ for item in g("ls-tree","-r","-z","--full-tree","HEAD").split(b"\x00"):
  if len(rec)>=MAX_FILES:raise ValueError("tracked file count limit")
  raw_size=int(g("cat-file","-s",oid))
  if raw_size>MAX_RECORD_RAW_BYTES or sum_raw+raw_size>MAX_TRACKED_BYTES:raise ValueError("tracked byte/resource limit")
- if name in seen_paths or name in all_parents or portable_key(name) in folded_paths:raise ValueError("duplicate, case-colliding, or file/directory-conflicting path")
+ if name in seen_paths or portable_key(name) in all_parents or portable_key(name) in folded_paths:raise ValueError("duplicate, case-colliding, or file/directory-conflicting path")
  parts=p.parts
  for i in range(1,len(parts)+1):
   prefix="/".join(parts[:i]);key=portable_key(prefix);previous=folded_components.get(key)
@@ -60,8 +60,8 @@ for item in g("ls-tree","-r","-z","--full-tree","HEAD").split(b"\x00"):
    folded_components[key]=prefix;path_index_entries+=1;path_index_bytes+=added
   elif previous!=prefix:raise ValueError("case-colliding path component")
   if i<len(parts):
-   if prefix in seen_paths:raise ValueError("file/directory path conflict")
-   all_parents.add(prefix)
+   if key in folded_paths:raise ValueError("file/directory path conflict")
+   all_parents.add(key)
  seen_paths.add(prefix);folded_paths.add(key)
  raw=g("cat-file","blob",oid)
  if len(raw)!=raw_size:raise ValueError("Git blob size mismatch")
