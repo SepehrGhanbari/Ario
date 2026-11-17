@@ -104,3 +104,14 @@
 - Failed-rebuild regression first creates a valid artifact set, then forces a late TXT-size failure. The prior ZIP/TXT remain byte-identical and no stage/backup directory remains. This guards against stale or partial artifacts being mistaken for the result of a failed build.
 - Exact code/test HEAD: ba722299361ab52512190ed1a415fdee9c698e08. [Published TXT Restore Security #44084146677](https://github.com/SepehrGhanbari/Ario/actions/runs/44084146677) passed **10/10 jobs SUCCESS**; [Implementation Regression #44084146681](https://github.com/SepehrGhanbari/Ario/actions/runs/44084146681) passed. The restore suite ran **84 test methods** on Ubuntu (all pass) and Windows (all pass, 3 POSIX-only skips) with Python 3.11 and 3.12. Full generator→restore→independent-manifest→Git-blob roundtrip passed on Ubuntu and Windows.
 
+
+
+## Local audit of the exact GitHub Actions artifact (2026-11-17)
+
+- Downloaded unpublished workflow artifact ID 14327873860 from run 44084146677. The downloaded outer ZIP SHA-256 was cdc8759b4fe804ebc9b35c6312feec6fc66ef27c47e69da687e11509c5d7963b, exactly matching the digest returned by GitHub for that artifact.
+- Outer ZIP CRC passed. All files delivered in the outer artifact that have checksum entries were checked against checksums.json; README-EXPORT.txt and RESTORE_FROM_TXT.py are carried inside the release ZIP and their bytes were checked there.
+- Inner ario-full.zip CRC passed. It contains exactly 204 unique ARIO_SOURCE paths. Each source entry matched manifest byte count, SHA-256 and Git blob SHA-1. Embedded ario-manifest.json matched the standalone manifest bytes.
+- TXT consumer restored all 204 files. Every restored file was compared byte-for-byte with the corresponding ZIP source entry and manifest hash.
+- Separate VERIFY_PINNED_MANIFEST.py run returned PINNED_MANIFEST_AND_SOURCE_BYTES_MATCH; PIN_CUSTODY_NOT_VERIFIED, with 204 files / 16,183,258 bytes. It used the known regression pin f86fb10ef3eb71dd6e3c348b3f0c9b42c88b3837ae889918c33d8f5d62fe11d8; this test pin is not an external publishing authority and does not establish publisher identity.
+- Artifact digests: inner ZIP SHA-256 aaafd65cde044155564df73ec6ce908f05b5b10622a08d63c7e56cae475f8eb7; TXT SHA-256 cf0c3386bc8957a964548e3569211978b76c5ec9b5f86c0e4acbf0c0e0977a90; manifest SHA-256 f86fb10ef3eb71dd6e3c348b3f0c9b42c88b3837ae889918c33d8f5d62fe11d8.
+
