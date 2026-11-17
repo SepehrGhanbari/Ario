@@ -232,3 +232,36 @@ def test_blank_root_identifier_preserves_unknown_root_count():
     assert _evaluate(_fixture_with_input(case, mutated_input)) == {
         "root_count": None, "status": "UNKNOWN"
     }
+
+
+def test_missing_event_time_remains_partial_not_exception():
+    case = next(c for c in corpus() if c.case_id == "AEC02_TEMPORAL_PROVENANCE_01")
+    mutated_input = dict(case.input)
+    mutated_input.pop("event")
+    assert _evaluate(_fixture_with_input(case, mutated_input)) == {
+        "temporal": "PARTIAL", "status": "UNKNOWN"
+    }
+
+
+def test_missing_recorded_time_remains_partial_not_exception():
+    case = next(c for c in corpus() if c.case_id == "AEC02_TEMPORAL_PROVENANCE_01")
+    mutated_input = {**case.input, "recorded": None}
+    assert _evaluate(_fixture_with_input(case, mutated_input)) == {
+        "temporal": "PARTIAL", "status": "UNKNOWN"
+    }
+
+
+def test_malformed_timestamp_remains_unknown_not_exception():
+    case = next(c for c in corpus() if c.case_id == "AEC02_TEMPORAL_PROVENANCE_01")
+    mutated_input = {**case.input, "recorded": "twelve"}
+    assert _evaluate(_fixture_with_input(case, mutated_input)) == {
+        "temporal": "UNKNOWN", "status": "UNKNOWN"
+    }
+
+
+def test_non_finite_timestamp_remains_unknown_not_ordered():
+    case = next(c for c in corpus() if c.case_id == "AEC02_TEMPORAL_PROVENANCE_01")
+    mutated_input = {**case.input, "recorded": float("nan")}
+    assert _evaluate(_fixture_with_input(case, mutated_input)) == {
+        "temporal": "UNKNOWN", "status": "UNKNOWN"
+    }
