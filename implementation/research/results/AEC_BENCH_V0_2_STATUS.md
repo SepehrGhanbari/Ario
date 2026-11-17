@@ -206,3 +206,25 @@ Four out-of-corpus mutation regressions cover missing event time, missing record
 - [AEC-Bench reports and reviewer packet artifact](https://github.com/SepehrGhanbari/Ario/actions/runs/44081800110/artifacts/14328021370), SHA-256 `11871400852ee5fe499c396d6d8deb2ebc306921a69db187590004cd1154aae3`.
 
 These runs verify the exact source/test head above. This status-file revision is documentation-only and does not alter that source/test head. The corpus remains synthetic and public. No independent oracle adjudication, hidden validation set, or real-world source truth/authenticity evaluation has been completed.
+
+
+## 10. PROV adapter completeness and identifier hardening — 2026-11-17
+
+A targeted review found that the PROV adapter used `roots.get(source, [])`, which could silently omit a declared source's missing ancestry mapping while still returning a PROV graph. The adapter now validates the full source-to-root contract before creating any graph:
+
+- source identifiers must be unique, non-empty strings;
+- the root map must contain exactly the declared sources (no omissions or undeclared entries);
+- every source must have a non-empty list/tuple of non-empty string root identifiers;
+- malformed mappings raise `ValueError`; no incomplete graph is returned as if complete;
+- generated PROV local identifiers use reversible UTF-8 hex encoding, avoiding unsafe QName characters while preserving a deterministic reversible representation.
+
+New adapter tests cover missing and undeclared mappings, blank root identifiers, and PROV-N round-trip for source/root identifiers containing spaces and slashes.
+
+### Exact source/test head and CI
+
+- Source/test head: `0e7772c0085732506af6735d9cfa6d089c2754bd`
+- [AEC-Bench v0.2 Adapter Tests #79](https://github.com/SepehrGhanbari/Ario/actions/runs/44082508758): **SUCCESS — 52 passed**. The dedicated workflow installed `prov==3.3.0` and the pinned LTMS implementation, executed the PROV/LTMS adapter tests, regenerated the reports and reviewer packet, and uploaded the artifact.
+- [Implementation Regression #1957](https://github.com/SepehrGhanbari/Ario/actions/runs/44082508666): **SUCCESS** — Ubuntu **1222 passed, 7 skipped, 121 subtests passed**; Windows advisory **1222 passed, 7 skipped, 121 subtests passed**.
+- [AEC-Bench reports and reviewer packet artifact](https://github.com/SepehrGhanbari/Ario/actions/runs/44082508758/artifacts/14327637367), SHA-256 `4d44cccc05386e89f87a94977a059d639b5061ff7a6d9e19092dff6d752cfb26`.
+
+The code/test evidence above is for the exact source/test head listed. The adapter remains a bounded representation/interchange integration only: it does not authenticate real-world roots, decide truth, or establish source independence. Independent oracle adjudication and hidden-set evaluation remain NOT RUN.
