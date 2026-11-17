@@ -18,6 +18,8 @@ jobs:
         os: [ubuntu-latest, windows-2022]
         python: ['3.11', '3.13']
     steps:
+      - name: Keep source checkout byte-exact on Windows and Linux
+        run: git config --global core.autocrlf false
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
