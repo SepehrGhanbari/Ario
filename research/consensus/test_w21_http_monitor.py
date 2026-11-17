@@ -8,6 +8,8 @@ import subprocess
 import sys
 import unittest
 from urllib.error import HTTPError
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from threading import Thread
 from urllib.request import Request,urlopen
 from w21_http_observer import observe
 
@@ -63,6 +65,41 @@ class WebLab(unittest.TestCase):
         for url in ['https://example.com','http://192.0.2.1:80','http://localhost:1234','http://127.0.0.1:1/other','http://127.0.0.1:not-a-port','http://127.0.0.1:99999']:
             z=observe(url,pinned_key=KEY,prior=PRIOR,highwater=HW)
             self.assertEqual((z['verdict'],z['reason']),('HOLD_UNCERTAIN','NON_LOOPBACK_OR_INVALID_URL'))
+
+    def test_redirect_cannot_escape_single_allowed_origin(self):
+        # Deliberately use a second loopback server as a harmless canary:
+        # following even this redirect would break the strict origin boundary.
+        contacted=[]
+        class Canary(BaseHTTPRequestHandler):
+            def log_message(self,*_): pass
+            def do_GET(self):
+                contacted.append(self.path)
+                self.send_response(200)
+                self.send_header('Content-Type','application/json')
+                self.end_headers()
+                self.wfile.write(b'{}')
+        with HTTPServer(('127.0.0.1',0),Canary) as canary:
+            canary_thread=Thread(target=canary.serve_forever,daemon=True)
+            canary_thread.start()
+            dest=f'http://127.0.0.1:{canary.server_address[1]}/redirected'
+            class Redirect(BaseHTTPRequestHandler):
+                def log_message(self,*_): pass
+                def do_GET(self):
+                    self.send_response(302)
+                    self.send_header('Location',dest)
+                    self.end_headers()
+            with HTTPServer(('127.0.0.1',0),Redirect) as redirector:
+                redirect_thread=Thread(target=redirector.serve_forever,daemon=True)
+                redirect_thread.start()
+                try:
+                    z=observe(f'http://127.0.0.1:{redirector.server_address[1]}',
+                              pinned_key=KEY,prior=PRIOR,highwater=HW)
+                    self.assertEqual((z['verdict'],z['reason']),
+                                     ('HOLD_UNCERTAIN','REMOTE_LOOKUP_INVALID_OR_UNAVAILABLE'))
+                    self.assertEqual(contacted,[], 'HTTP redirect must not reach another origin')
+                finally:
+                    redirector.shutdown();redirect_thread.join(timeout=2)
+            canary.shutdown();canary_thread.join(timeout=2)
 
     def test_server_rejects_mutating_request(self):
         p=subprocess.Popen([sys.executable,'-B',str(ROOT/'w21_loopback_log_server.py')],cwd=ROOT,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
