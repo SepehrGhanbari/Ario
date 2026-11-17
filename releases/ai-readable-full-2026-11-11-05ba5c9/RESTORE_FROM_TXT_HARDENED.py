@@ -17,6 +17,9 @@ MAX_RECORD_RAW_BYTES = 64 * 1024 * 1024
 MAX_RECORD_PAYLOAD_BYTES = 90 * 1024 * 1024
 MAX_PATH_BYTES = 4096
 MAX_PATH_COMPONENT_BYTES = 255
+MAX_PATH_DEPTH = 128
+MAX_PATH_INDEX_ENTRIES = 100000
+MAX_PATH_INDEX_BYTES = 8 * 1024 * 1024
 class SnapshotError(ValueError): pass
 def blobsha(b): return hashlib.sha1(b"blob "+str(len(b)).encode()+b"\0"+b).hexdigest()
 def portable_key(s): return unicodedata.normalize("NFC",s.casefold())
@@ -37,6 +40,7 @@ def safe(s):
  if len(s.encode("utf-8"))>MAX_PATH_BYTES: raise SnapshotError("path length limit")
  p=pathlib.PurePosixPath(s); w=pathlib.PureWindowsPath(s)
  if not p.parts or p.as_posix()!=s: raise SnapshotError("non-canonical or empty path")
+ if len(p.parts)>MAX_PATH_DEPTH: raise SnapshotError("path depth limit")
  if p.is_absolute() or w.drive or w.root or w.is_absolute() or ".." in p.parts: raise SnapshotError("absolute or escaping path")
  for x in p.parts:
   if len(x.encode("utf-8"))>MAX_PATH_COMPONENT_BYTES: raise SnapshotError("path component byte limit")
@@ -74,7 +78,7 @@ def restore(src,dst):
    if len(h["tracked_files"])>len(str(MAX_FILES)) or len(h["tracked_bytes"])>len(str(MAX_TRACKED_BYTES)): raise SnapshotError("oversized count encoding")
    expected_n,expected_b=int(h["tracked_files"]),int(h["tracked_bytes"])
    if expected_n>MAX_FILES or expected_b>MAX_TRACKED_BYTES: raise SnapshotError("snapshot resource limit")
-   seen=set(); folded=set(); all_parents=set(); folded_components={}; n=total=0
+   seen=set(); folded=set(); all_parents=set(); folded_components={}; path_index_entries=path_index_bytes=0; n=total=0
    while True:
     line=f.readline(MAX_RECORD_LINE_BYTES+1)
     if len(line)>MAX_RECORD_LINE_BYTES or f.tell()>MAX_INPUT_BYTES: raise SnapshotError("record header resource limit")
@@ -99,11 +103,15 @@ def restore(src,dst):
     for i in range(1,len(parts)+1):
      prefix="/".join(parts[:i]); key=portable_key(prefix)
      previous=folded_components.get(key)
-     if previous is not None and previous!=prefix: raise SnapshotError("case-colliding path component")
-     folded_components[key]=prefix
-     if i<len(parts) and prefix in seen: raise SnapshotError("file/directory path conflict")
-    seen.add(name); folded.add(portable_key(name))
-    for i in range(1,len(parts)): all_parents.add("/".join(parts[:i]))
+     if previous is None:
+      added=len(key.encode("utf-8"))+len(prefix.encode("utf-8"))
+      if path_index_entries>=MAX_PATH_INDEX_ENTRIES or path_index_bytes+added>MAX_PATH_INDEX_BYTES: raise SnapshotError("path index resource limit")
+      folded_components[key]=prefix; path_index_entries+=1; path_index_bytes+=added
+     elif previous!=prefix: raise SnapshotError("case-colliding path component")
+     if i<len(parts):
+      if prefix in seen: raise SnapshotError("file/directory path conflict")
+      all_parents.add(prefix)
+    seen.add(prefix); folded.add(key)
     if e["mode"] not in ("100644","100755","120000"): raise SnapshotError("unsupported Git mode")
     for k in ("bytes","payload_bytes"):
      if not isinstance(e[k],int) or isinstance(e[k],bool) or e[k]<0: raise SnapshotError("invalid byte count")
