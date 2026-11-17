@@ -1,0 +1,1 @@
+ONE-TIME W19: cryptographic verification ONLY of existing W18 proof with named public keys for Glasklar, Google TrustFabric and Remora; no submission, no keys created, no external witness requests, no Ario memory/signers, no automation or scheduling. Preserve source SHA and result.
