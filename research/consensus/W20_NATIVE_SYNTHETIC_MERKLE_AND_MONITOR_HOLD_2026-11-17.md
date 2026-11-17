@@ -86,3 +86,15 @@ A **complete inclusion-proof set** shows that every **supplied** synthetic event
 **Reviewer request**: reply in [#259](https://github.com/SepehrGhanbari/Ario/issues/259) with `CONFIRMED/REFUTED/UNKNOWN | source commit/blob | independently authored counterexample | original protocol line | reproducible commands | custody assumption`. Keep all negative evidence rather than replacing older W18/W19 checkpoints.
 
 **Protected status:** `#171_NATIVE_WITNESS_OPEN / #259_INDEPENDENT_REVIEW_OPEN / #216_MEMORY_HOLD / #242_DRAFT_HOLD / GENESIS=NO_GO / OWNER_SIGNER=NO_GO / TRUST_ACTIVATION=NO_GO / PRODUCTION=NO_GO / NO_CHATGPT_AUTOMATIONS`.
+
+## 6. Actual separate GitHub-runner reproduction (after original source/fixture publication)
+
+**This is real second-machine execution of the same source bytes, not a new independent human/custodian:**
+
+- First [run 44159178012](https://github.com/SepehrGhanbari/Ario/actions/runs/44159178012) **FAILED before the test stage**, because `setup-python@v5` rejected `cache: false` (it requires an enum if given). Python was installed, but **zero W20 test methods were executed in that attempt**. Preserve this as a non-security CI setup failure.
+- Corrected workflow and triggered exactly once more on the isolated research execution branch, with **checkout pinned to W20 source commit `5d3345dfb20bf1e17f7ce97f9cb3832d5c13f6be`**: [run 44159334216](https://github.com/SepehrGhanbari/Ario/actions/runs/44159334216), job `134308599911` completed **SUCCESS** on GitHub's fresh Ubuntu Python 3.13 runner. Installed `cryptography==46.0.4`. Exact stdout: [W20_ACTUAL_GITHUB_REPLAY_STDOUT_2026-11-17.txt](W20_ACTUAL_GITHUB_REPLAY_STDOUT_2026-11-17.txt). [Public-only 30-day artifact](https://github.com/SepehrGhanbari/Ario/actions/runs/44159334216/artifacts/14362592322).
+- Actual result: **6 unittest methods PASS**, compact proof exhaustive checks included; source mutation replay matched **12 detected / 1 survived** (the same redundant `M12`); published signed fixture passed the explicit-key + explicit-prior CLI, with `HISTORICAL_CONSISTENT` **and simultaneously `authority=NONE`, `ario_log_witnessed=NOT_ESTABLISHED`, `freshness=UNKNOWN`**.
+- After that successful replay, the disposable `.github/workflows/w20-one-shot-merkle.yml` was **deleted from the one-shot execution branch**, preventing future push-triggered W20 jobs. No recurring scheduled workflow or ChatGPT automation created. No third-party public submission/Signature was attempted.
+- Concurrent PR activity note: after W20 commits, the shared #242 PR also included **another contributor's** `.github/workflows/w1-provenance-research.yml` outside the W20-only path. Its W1 Python/OS matrix is separate work; W20 did not create, alter, remove or approve it. Therefore do not report that **every** file in #242 is under `research/consensus/` without checking the latest PR diff.
+
+**Updated epistemic disposition:** `SOURCE-PINNED SECOND-RUNNER REPLAY=VERIFIED / ACTUAL_INDEPENDENT_HUMAN_REVIEW=0 / OUT-OF-BAND_PRIOR_AND_LOG_KEY_PIN=NOT_ESTABLISHED / ACTUAL_ARIO_NATIVE_LOG_WITNESSED=NOT_ESTABLISHED / NO_REAL_KEYS / NO_EXTERNAL_EGRESS / #242_DRAFT_HOLD`.
