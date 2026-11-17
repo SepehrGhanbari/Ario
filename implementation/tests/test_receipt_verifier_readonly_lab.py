@@ -123,6 +123,27 @@ def test_modified_payload_without_resign_rejected():
     assert r["reason_code"] == "INVALID_SIGNATURE"
     _check_no_authority(r)
 
+
+@pytest.mark.parametrize(("field", "replacement"), [
+    ("nonce", "another-nonce-456"),
+    ("observed_epoch", 1401),  # still within declared time and TTL window
+    ("tool", "run_tests"),
+    ("execution_id", "synthetic-execution-2"),
+    ("exit_code", 1),
+    ("request_sha256", "c" * 64),
+    ("result_sha256", "d" * 64),
+])
+def test_each_signed_payload_field_is_bound_to_signature_without_resigning(field, replacement):
+    _, _, _, envelope, args = _case()
+    before_signature = envelope["signature_hex"]
+    envelope["payload"][field] = replacement
+    assert envelope["signature_hex"] == before_signature
+    r = inspect_receipt(**dict(args, envelope_bytes=enc(envelope)))
+    assert r["reason_code"] == "INVALID_SIGNATURE"
+    assert r["signature_valid"] is False
+    _check_no_authority(r)
+
+
 def test_key_substitution_rejected_if_independent_pin_unchanged():
     _, _, _, _, a = _case()
     _, _, _, _, b = _case()
