@@ -121,4 +121,15 @@ class Tests(unittest.TestCase):
  def test_case_colliding_directory_components(self):self.bad(snap([("Dir/a",b"x"),("dir/b",b"y")]))
  def test_file_directory_conflict_parent_first(self):self.bad(snap([("a",b"x"),("a/b",b"y")]))
  def test_file_directory_conflict_child_first(self):self.bad(snap([("a/b",b"y"),("a",b"x")]))
+ def test_reserved_device_alias_with_space_before_extension(self):
+  for name in ("CON .txt","COM1 .dat","AUX .log","dir/LPT2 .bin"):
+   with self.subTest(path=name): self.bad(snap([(name,b"x")]))
+ def test_path_component_byte_limit(self):
+  self.bad(snap([("é"*128+".txt",b"x")]))
+ def test_binary_payload_uses_separate_encoded_limit(self):
+  raw=b"\\x00"*10
+  self.src.write_bytes(snap([("data.bin",raw)]))
+  with mock.patch.object(hardened,"MAX_RECORD_RAW_BYTES",10), mock.patch.object(hardened,"MAX_RECORD_PAYLOAD_BYTES",20):
+   self.assertEqual(restore(self.src,self.dst),1)
+   self.assertEqual((self.dst/"data.bin").read_bytes(),raw)
 if __name__=="__main__":unittest.main()
