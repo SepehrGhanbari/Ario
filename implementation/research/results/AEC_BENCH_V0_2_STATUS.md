@@ -3,7 +3,7 @@
 **State:** 120-case synthetic development harness, task-scoped policy comparison, two bounded external-library adapters, and a separate direct M0-EAG runtime probe suite executed successfully.  
 **PR:** [#234 — AEC-Bench v0.2](https://github.com/SepehrGhanbari/Ario/pull/234)  
 **Branch:** `codex/aec-bench-v0-2-design-2026-11-15`  
-**Verified source/test head:** `052f8a518352d147cb8cc31fd5ae8d2255c51ac2`
+**Initial v0.2 source/test head (historical CI record):** `052f8a518352d147cb8cc31fd5ae8d2255c51ac2`
 
 ## 1. Exact-head CI evidence
 
@@ -152,3 +152,18 @@ The JSON packet omits expected labels and rationales, but the repository is publ
 ### Reviewer governance
 
 The protocol asks for at least two independent first-pass reviewers, conflict/prior-exposure/LLM-use disclosure, preserved original judgments, explicit per-case rationale, counterfactual pair checks, and a third reviewer for material disagreements. No reviewer has yet been recruited or has submitted a judgment.
+
+
+## 9. Counterfactual-pair audit hardening — pending CI
+
+A follow-on change was committed to the same research branch after the latest successful code/test run:
+
+- Current branch head at the time of this status update: `db4108a6ff0ae6fe86252c048dcd7fa752a5eee1` (later documentation commits may advance the branch without changing this source/test revision).
+- Added recursive JSON-like input-difference paths so a paired fixture is not counted as a one-variable counterfactual merely because multiple nested values sit under one changed top-level key.
+- Added a structural audit of pair membership, same-family membership, duplicate case IDs within a pair, and exactly one atomic input change.
+- Exposed the pair audit as a separate field in both the fixture-contract report and task-scoped policy-comparison report; it is not a performance score.
+- Added regression tests that verify all ten authored pairs and reject a synthetic pair with two nested changes.
+
+**Verification state:** **NOT YET CI-VERIFIED.** The last successful code/test head remains `f3eab39883d6709775732bfff40ff78ab7b8d721`. No successful workflow run has yet been observed for `db4108a6ff0ae6fe86252c048dcd7fa752a5eee1`. Do not treat earlier CI runs as validating this follow-on change.
+
+**Interpretation limit:** a structurally single-field pair is not proof that the changed field is causally relevant, semantically isolated, or correctly labelled. Independent oracle review remains NOT RUN.
