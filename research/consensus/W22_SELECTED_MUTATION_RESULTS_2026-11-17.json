@@ -1,0 +1,81 @@
+{
+  "detected": 10,
+  "mutations": [
+    {
+      "detected": true,
+      "first_failed_test": "FAIL: test_01_note_grammar_and_independent_verifier (test_w22_checkpoint_interop.W22.test_01_note_grammar_and_independent_verifier)",
+      "mutated_sha256": "7135f692a5bf7eb2b66429ad8749dfd6596a5fc7b681c115efe080695b98ec3d",
+      "mutation": "M01_SKIP_ED25519_VERIFY",
+      "test_process_returncode": 1
+    },
+    {
+      "detected": true,
+      "first_failed_test": "FAIL: test_01_note_grammar_and_independent_verifier (test_w22_checkpoint_interop.W22.test_01_note_grammar_and_independent_verifier)",
+      "mutated_sha256": "1ee9859754afaf93cf96a967bdb96f5cbdd9a3d0f7f6b34b3e294a62e6e0c7fe",
+      "mutation": "M02_SKIP_VKEY_KEYID_BINDING",
+      "test_process_returncode": 1
+    },
+    {
+      "detected": true,
+      "first_failed_test": "FAIL: test_06_signed_fork_and_malformed_bytes (test_w22_checkpoint_interop.W22.test_06_signed_fork_and_malformed_bytes) (mode='coordinated-data-tamper')",
+      "mutated_sha256": "8cb0b4b397f0fdc2e84fd286660bed4adca8438efda608f9b71c9f65a6b7d1d4",
+      "mutation": "M03_SKIP_MERKLE_ROOT_MATCH",
+      "test_process_returncode": 1
+    },
+    {
+      "detected": true,
+      "first_failed_test": "FAIL: test_06_signed_fork_and_malformed_bytes (test_w22_checkpoint_interop.W22.test_06_signed_fork_and_malformed_bytes) (mode='bad-tile')",
+      "mutated_sha256": "3a789bd88beca2c0bed66277b873adcf074792ca42c7d7c60dc3e134dc8d9eed",
+      "mutation": "M04_SKIP_LEAF_TILE_BINDING",
+      "test_process_returncode": 1
+    },
+    {
+      "detected": true,
+      "first_failed_test": "FAIL: test_04_rollback_and_two_old_limitation (test_w22_checkpoint_interop.W22.test_04_rollback_and_two_old_limitation)",
+      "mutated_sha256": "fd7adcc9074b8f27d2cb723695cf2ba104fc56bbe7648d3de99e55c00b81af7a",
+      "mutation": "M05_ALLOW_HISTORY_ROLLBACK",
+      "test_process_returncode": 1
+    },
+    {
+      "detected": true,
+      "first_failed_test": "FAIL: test_06_signed_fork_and_malformed_bytes (test_w22_checkpoint_interop.W22.test_06_signed_fork_and_malformed_bytes) (mode='fork')",
+      "mutated_sha256": "b7f5f78df571ebf3649fea6406b27b0696a0263a0b59c7e1d3e13740d166f7f3",
+      "mutation": "M06_ALLOW_SAME_SIZE_FORK",
+      "test_process_returncode": 1
+    },
+    {
+      "detected": true,
+      "first_failed_test": "FAIL: test_07_redirect_target_was_not_contacted (test_w22_checkpoint_interop.W22.test_07_redirect_target_was_not_contacted)",
+      "mutated_sha256": "82b802ad05a866ea29e8380f3fffa2e00449a1f8584576ed29d89adce975a49e",
+      "mutation": "M07_FOLLOW_HTTP_REDIRECTS",
+      "test_process_returncode": 1
+    },
+    {
+      "detected": true,
+      "first_failed_test": "FAIL: test_06_signed_fork_and_malformed_bytes (test_w22_checkpoint_interop.W22.test_06_signed_fork_and_malformed_bytes) (mode='bad-consistency')",
+      "mutated_sha256": "8c175e75fb9242a58fd525944bc355259654ad9d9ce06eb30f81f04c74120dd9",
+      "mutation": "M08_SKIP_COMPACT_CONSISTENCY",
+      "test_process_returncode": 1
+    },
+    {
+      "detected": true,
+      "first_failed_test": "FAIL: test_03_valid_partial_tiles_and_continuity (test_w22_checkpoint_interop.W22.test_03_valid_partial_tiles_and_continuity)",
+      "mutated_sha256": "0d8bf212ae1b9e7e42e700d62958278a0b534382bc7ac5be3d186ebf0e9ff633",
+      "mutation": "M09_FAKE_ACTION_AUTHORITY",
+      "test_process_returncode": 1
+    },
+    {
+      "detected": true,
+      "first_failed_test": "FAIL: test_05_wrong_trust_inputs_hold (test_w22_checkpoint_interop.W22.test_05_wrong_trust_inputs_hold)",
+      "mutated_sha256": "8caaa901c868072741559a84808933fa993be98df82248cb718b54588daa513f",
+      "mutation": "M10_DROP_HIGHWATER_REQUIRED",
+      "test_process_returncode": 1
+    }
+  ],
+  "not_independent_audit": true,
+  "schema": "ARIO_W22_SELECTED_SOURCE_MUTATIONS_V1",
+  "scope": "W22 Python monitor in temporary files, synthetic keys and localhost only, no external publication",
+  "selected": 10,
+  "source_git_blob_sha1": "5b5e70714f55592c85503f3f5dda23225b9ef342",
+  "survivors": []
+}

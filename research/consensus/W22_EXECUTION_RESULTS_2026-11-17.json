@@ -1,0 +1,100 @@
+{
+  "actual_ario_log_deployment": false,
+  "api_scope": "C2SP_SIGNED_NOTE_ED25519_STRICT_SINGLE_SIG; TLOG_TILES_LEVEL0_PARTIAL_ONLY; NONSTANDARD_W22_COMPACT_PROOF_ENDPOINT",
+  "date": "2026-11-17",
+  "external_provider_submission": false,
+  "go_local": "go1.23.2",
+  "held_negative": "BOTH_OLD_SIGNED_CHECKPOINT_AND_OLD_LOCAL_HIGHWATER_CANNOT_DETECT_MISSING_LATER_EPOCH",
+  "independently_administered_retained_highwater": false,
+  "mode": "RESEARCH_ONLY_NO_EGRESS",
+  "official_external_c2sp_vkey_known_vector_passed": true,
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "preliminary_mutant_full_suite_timeout": "UNSCORED; targeted final mutation suite completed",
+  "private_keys_saved": false,
+  "python": "3.13.5",
+  "python_unittest_methods_passed": 8,
+  "real_actions": 0,
+  "real_ario_or_founder_keys_used": false,
+  "real_witness_cosignature_for_ario_log": false,
+  "same_source_author_tests_not_blinded": true,
+  "schema": "ARIO_W22_SYNTHETIC_C2SP_SIGNED_NOTE_TILES_EXECUTION_V1",
+  "selected_mutants": 10,
+  "selected_mutants_killed": 10,
+  "selected_mutants_survived": [],
+  "separate_runner_status": "NOT_YET_EXECUTED",
+  "source_files": {
+    "W22_CURRENT_CHECKPOINT.note": {
+      "bytes": 225,
+      "git_blob_sha1": "6174d8062511ea8a1e04737cacc1fc9032695bd8",
+      "sha256": "867c724ac0f25acd6c2db3716efd286819a46cb80796ffa9ca3bef4c97d8a7d1"
+    },
+    "W22_PREVIOUS_CHECKPOINT.note": {
+      "bytes": 225,
+      "git_blob_sha1": "49dbcbb4956d20ae367c008f9643ec5564539416",
+      "sha256": "79ec6d6b25f77e7ac5548312910afa2a77286e99361beb681d6ce66278fca5ed"
+    },
+    "W22_PUBLIC_LOG_VERIFIER.vkey": {
+      "bytes": 94,
+      "git_blob_sha1": "b6f099d0115e9432079a484e586b57af8934f45f",
+      "sha256": "83b211d00b3e6ead4307fe961146364ab94cf2c874d8487cdcfbb38b109fe55a"
+    },
+    "W22_PUBLIC_SYNTHETIC_SIGNED_NOTES_2026-11-17.json": {
+      "bytes": 6365,
+      "git_blob_sha1": "6aaf4b53e4f1e3e88556fcfbbbfddaef3445da8e",
+      "sha256": "be371ee59d8f4979ca779af497d11b82cacaaf05aaa93b551e1bc1f38e1c4b1a"
+    },
+    "W22_REPLAY_STDOUT_2026-11-17.txt": {
+      "bytes": 1466,
+      "git_blob_sha1": "8fdf0a0f7c71360679d41f6c2410d510afeb2f09",
+      "sha256": "b28570cbcfb73ecf3c3879a14664974ac96c2e7664eaad69fd587a0f3a75714b"
+    },
+    "W22_SAME_SIGNER_FORK.note": {
+      "bytes": 225,
+      "git_blob_sha1": "8e72f32373408c9cbf42c1d305cadbcf86afef20",
+      "sha256": "1ccc3d84219ff4551ab859fb84a1b36e514aa6abeee776755b3692fbb1c6c8e1"
+    },
+    "W22_SELECTED_MUTATION_RESULTS_2026-11-17.json": {
+      "bytes": 4072,
+      "git_blob_sha1": "4d13329ab6d240a05d7603eaf4f2a14cb577a28e",
+      "sha256": "1d23ca14bf90ace2a4b76f6d4aefc12b7ab011a48158901a2ca00b003a4e72f9"
+    },
+    "test_w22_checkpoint_interop.py": {
+      "bytes": 10390,
+      "git_blob_sha1": "b21911ea8c76dd405cf3ccc7b586b048a3cb8e8e",
+      "sha256": "204ef1b890b5bd463978a36958c601a0f08ca4d90053c0da8d346e968c0b0019"
+    },
+    "w22_note_fixture.py": {
+      "bytes": 3771,
+      "git_blob_sha1": "f38db156a18260760443e915f4c0bb4a612949f1",
+      "sha256": "1bbbd7f8eb6417f332229d2d6f6140a845def53c17440d515b0ad5f7f3113933"
+    },
+    "w22_note_go_check.go": {
+      "bytes": 3578,
+      "git_blob_sha1": "1a4ae512f28536715cc281dfe461fd826beee3be",
+      "sha256": "a50877068d67a1637d3d5170e9b17f272deeae9bfd1372e06e7ae2abb70911d1"
+    },
+    "w22_note_monitor.py": {
+      "bytes": 10125,
+      "git_blob_sha1": "5b5e70714f55592c85503f3f5dda23225b9ef342",
+      "sha256": "cfd35540d670ef7d29cde08f87d4f9d8e29a57e306c5139e76c5e33b28e896bb"
+    },
+    "w22_replay_no_egress.sh": {
+      "bytes": 1847,
+      "git_blob_sha1": "e8d7af771bb62b3a965eb6f72d07265db06bf8ed",
+      "sha256": "df1fcf4170f9bad19526e3c30e565bfc576f45642bdd7ba29b8fc4b5e3e659a3"
+    },
+    "w22_selected_mutation_audit.py": {
+      "bytes": 4421,
+      "git_blob_sha1": "21afb3714e81515396e8297c56cc1578fe62b163",
+      "sha256": "d92dc5b70cb35e13cb06739918bf53a74f7143f0ad814f6eb9eeddd7490c9c23"
+    },
+    "w22_tile_server.py": {
+      "bytes": 4683,
+      "git_blob_sha1": "fce5a5f098d9784608c9abab2a3396d4c98187e4",
+      "sha256": "c935ac5d8d552a94f98ab27227c4fec2c2c8b501b7fb8d2c6bd7176ff4e99667"
+    }
+  },
+  "source_truth": "UNKNOWN",
+  "standalone_go_mutated_negative": 1,
+  "standalone_go_positive": 2
+}
