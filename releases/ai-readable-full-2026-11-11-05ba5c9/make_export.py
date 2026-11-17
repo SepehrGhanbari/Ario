@@ -109,7 +109,7 @@ def info(path,mode):
  return z
 zp=OUT/"ario-full.zip"
 with zipfile.ZipFile(zp,"w",compression=zipfile.ZIP_DEFLATED,compresslevel=9,allowZip64=True) as z:
- for e,raw in rec:z.writestr(info("ARIO_SOURCE/"+e["path"],e["mode"]),raw)
+ for e,raw in rec:z.writestr(info("ARIO_SOURCE/"+e["path"],"100644" if e["mode"]=="120000" else e["mode"]),raw)
  for x in ["ario-manifest.json","README-EXPORT.txt","RESTORE_FROM_TXT.py","VERIFY_PINNED_MANIFEST.py"]:z.writestr(info("EXPORT_META/"+x,"100644"),(OUT/x).read_bytes())
 # Full archive verification against original Git blobs, not just ZIP CRC.
 with zipfile.ZipFile(zp) as z:
