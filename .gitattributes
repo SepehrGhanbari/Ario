@@ -1,0 +1,3 @@
+# Preserve exact LF bytes for W1's Git-blob-pinned research evaluator on all OS checkouts.
+# Do not apply any global line-ending conversion to this one source file.
+implementation/witness_provenance_experiment.py -text
