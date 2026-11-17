@@ -1,0 +1,134 @@
+{
+  "cryptography_required": true,
+  "explicit_failure_boundaries": {
+    "absent_grant": "DENY",
+    "compromised_actual_grant_signer_cannot_be_detected": "ELIGIBLE_FOR_SEPARATE_GATE",
+    "restored_revocation_store_allows_old_grant": "ELIGIBLE_FOR_SEPARATE_GATE",
+    "revoked_grant": "GRANT_REVOKED",
+    "same_grant_repeated_check_is_eligible": "ELIGIBLE_FOR_SEPARATE_GATE"
+  },
+  "implementation_git_blob_sha1": "2f5b21fb45fc335452d8950cec15ede323fc2810",
+  "matrix": [
+    {
+      "id": "01_untrusted_memory_no_grant",
+      "reason": "NO_SEPARATE_GRANT",
+      "verdict": "DENY"
+    },
+    {
+      "id": "02_success_history_no_grant",
+      "reason": "SOURCE_BYTES_OR_PRINCIPAL_MISMATCH",
+      "verdict": "DENY"
+    },
+    {
+      "id": "03_exact_signed_source_and_grant",
+      "reason": "TWO_DISTINCT_SIGNATURE_DOMAINS_MATCH_SYNTHETIC_SCOPE",
+      "verdict": "ELIGIBLE_FOR_SEPARATE_GATE"
+    },
+    {
+      "id": "04_changed_target_after_grant",
+      "reason": "GRANT_SCOPE_MISMATCH",
+      "verdict": "DENY"
+    },
+    {
+      "id": "05_changed_operation",
+      "reason": "GRANT_SCOPE_MISMATCH",
+      "verdict": "DENY"
+    },
+    {
+      "id": "06_changed_resource",
+      "reason": "GRANT_SCOPE_MISMATCH",
+      "verdict": "DENY"
+    },
+    {
+      "id": "07_changed_principal",
+      "reason": "SOURCE_BYTES_OR_PRINCIPAL_MISMATCH",
+      "verdict": "DENY"
+    },
+    {
+      "id": "08_changed_content",
+      "reason": "SOURCE_BYTES_OR_PRINCIPAL_MISMATCH",
+      "verdict": "DENY"
+    },
+    {
+      "id": "09_wrong_source_key",
+      "reason": "SOURCE_INVALID_SIGNATURE_OR_PAYLOAD",
+      "verdict": "DENY"
+    },
+    {
+      "id": "10_source_key_used_to_sign_grant",
+      "reason": "GRANT_INVALID_SIGNATURE_OR_PAYLOAD",
+      "verdict": "DENY"
+    },
+    {
+      "id": "11_wrong_grant_key",
+      "reason": "GRANT_INVALID_SIGNATURE_OR_PAYLOAD",
+      "verdict": "DENY"
+    },
+    {
+      "id": "12_grant_replayed_after_expiry",
+      "reason": "GRANT_NOT_CURRENT",
+      "verdict": "DENY"
+    },
+    {
+      "id": "13_grant_not_yet_valid",
+      "reason": "GRANT_NOT_CURRENT",
+      "verdict": "DENY"
+    },
+    {
+      "id": "14_wrong_source_digest",
+      "reason": "SOURCE_BYTES_OR_PRINCIPAL_MISMATCH",
+      "verdict": "DENY"
+    },
+    {
+      "id": "15_no_clock_attestation",
+      "reason": "CLOCK_INVALID",
+      "verdict": "UNKNOWN"
+    },
+    {
+      "id": "16_invalid_candidate",
+      "reason": "CANDIDATE_SCHEMA",
+      "verdict": "UNKNOWN"
+    },
+    {
+      "id": "17_malformed_source_packet",
+      "reason": "SOURCE_PACKET_SCHEMA",
+      "verdict": "DENY"
+    },
+    {
+      "id": "18_malformed_grant_packet",
+      "reason": "GRANT_PACKET_SCHEMA",
+      "verdict": "DENY"
+    },
+    {
+      "id": "19_no_real_action_on_success",
+      "reason": "TWO_DISTINCT_SIGNATURE_DOMAINS_MATCH_SYNTHETIC_SCOPE",
+      "verdict": "ELIGIBLE_FOR_SEPARATE_GATE"
+    },
+    {
+      "id": "20_grant_source_digest_mismatch",
+      "reason": "GRANT_SCOPE_MISMATCH",
+      "verdict": "DENY"
+    }
+  ],
+  "notes": "Intentionally forged malicious grant under compromised *correct grant key* is accepted as eligible: signatures prove possession of key, not intent or independent custody. All keys ephemeral synthetic in one process.",
+  "python": "3.13.5",
+  "run": {
+    "errors": 0,
+    "failures": 0,
+    "matrix_cases": 20,
+    "unittest_methods": 4
+  },
+  "schema": "ARIO_W13_TWO_LOGICAL_SIGNERS_SYNTHETIC_RESULTS_V1",
+  "status": "LOCAL_SYNTHETIC_EXECUTION_COMPLETED",
+  "trust_limits": {
+    "actual_os_or_admin_isolation_proven": false,
+    "actual_user_approval_proven": false,
+    "independent_blind_custodian": false,
+    "malicious_grant_signer_resistance_proven": false,
+    "memory_mutations": 0,
+    "real_effects": 0,
+    "result_is_authority": "NONE",
+    "rollback_resistant_revocation_proven": false,
+    "source_signer_and_grant_issuer_in_distinct_logical_roles": true
+  }
+}
