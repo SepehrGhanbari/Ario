@@ -107,6 +107,6 @@ class IssuerCases(unittest.TestCase):
         self.assertEqual(first['external_effects'],0)
         self.assertEqual(second['authority'],'NOT_ESTABLISHED')
         # This checker does not consume grants, prove one-shot semantics, or bind
-        # its logical \`now\` to a trusted wall-clock. Such claims remain NO_GO.
+        # its logical `now` to a trusted wall-clock. Such claims remain NO_GO.
 
 if __name__=='__main__':unittest.main(verbosity=2)
