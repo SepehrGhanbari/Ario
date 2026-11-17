@@ -96,8 +96,9 @@ class EmpiricalProvenance:
             raise SourceMonitoringError(f"execution_lock_sha256 must be a valid 64-char sha256: {self.execution_lock_sha256}")
         if not _is_valid_sha256(self.stdout_sha256):
             raise SourceMonitoringError(f"stdout_sha256 must be a valid 64-char sha256: {self.stdout_sha256}")
-        if not isinstance(self.exit_code, int):
-            raise SourceMonitoringError("exit_code must be an integer")
+        if type(self.exit_code) is not int:
+            # bool is a subclass of int, but False must not impersonate exit_code=0.
+            raise SourceMonitoringError("exit_code must be a strict integer, not bool")
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -115,7 +116,8 @@ class EmpiricalProvenance:
         return cls(
             tool=str(data["tool"]),
             target=str(data.get("target", "")),
-            exit_code=int(data["exit_code"]),
+            # Do not coerce bool/string into a successful integer exit code.
+            exit_code=data["exit_code"],
             execution_lock_sha256=str(data["execution_lock_sha256"]),
             stdout_sha256=str(data.get("stdout_sha256", data.get("execution_lock_sha256"))),
             recorded_at=str(data.get("recorded_at", datetime.now(timezone.utc).isoformat())),
@@ -199,7 +201,8 @@ class SourceMonitoringGuard:
     """Reality monitoring guard enforcing origin attribution and anti-self-citation."""
 
     def __init__(self, allowlisted_tools: Optional[Set[str]] = None) -> None:
-        self._allowlisted_tools = set(allowlisted_tools) if allowlisted_tools else set(ALLOWLISTED_TOOLS)
+        # Explicit deny-all (set()/frozenset()) must not silently re-enable defaults.
+        self._allowlisted_tools = set(ALLOWLISTED_TOOLS) if allowlisted_tools is None else set(allowlisted_tools)
         self._attributions: Dict[str, SourceAttribution] = {}
 
     @property
