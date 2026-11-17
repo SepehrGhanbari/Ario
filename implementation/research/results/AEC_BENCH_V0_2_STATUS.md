@@ -264,3 +264,16 @@ Eleven added tests cover: no compatibility record, the single-Boolean counterfac
 - [AEC-Bench reports and reviewer packet artifact](https://github.com/SepehrGhanbari/Ario/actions/runs/44097087615/artifacts/14334706455), SHA-256 `384bc8b12a109e4a7b4186a190df038dae0fad3b4a3baf5c141bb19f986ab272`.
 
 These are synthetic, author-authored development cases and internal tests. No independent oracle adjudication or real-world composition evaluation has occurred.
+
+
+### Composition follow-up: partial-overlap and required-premise precedence
+
+A subsequent refinement made the composition family’s partial-overlap case explicit: two declared premises are present while a third required premise is absent. A further adversarial test proves that a fully compatible, complete four-dimension check set cannot override a missing required premise. Both cases must remain `INCOMPLETE / UNKNOWN`.
+
+- Additional regression tests: 2 (13 composition-specific adversarial tests in total).
+- Final source/test head: `26e6bbe415e9b040ab994c804122a6515b78ea21`
+- [AEC-Bench v0.2 Adapter Tests #100](https://github.com/SepehrGhanbari/Ario/actions/runs/44097473409): **SUCCESS — 65 passed**. Reports and reviewer packet regenerated.
+- [Implementation Regression #2053](https://github.com/SepehrGhanbari/Ario/actions/runs/44097473432): **SUCCESS** — Ubuntu **1235 passed, 7 skipped, 121 subtests passed**; Windows advisory **1235 passed, 7 skipped, 121 subtests passed**.
+- [AEC-Bench reports and reviewer-packet artifact](https://github.com/SepehrGhanbari/Ario/actions/runs/44097473409/artifacts/14334317616), SHA-256 `4edfa341b0cd5a1997289c3b8ba234b5329ce36f6075048116ab37c6e0004144`.
+
+The two additional tests and partial-overlap fixture are part of the final source/test head above. All evidence remains synthetic and internal; independent oracle adjudication and real-world composition evaluation remain NOT RUN.
