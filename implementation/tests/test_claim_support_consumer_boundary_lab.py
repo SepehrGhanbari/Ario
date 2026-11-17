@@ -184,3 +184,24 @@ def test_output_contains_no_raw_report_or_legacy_approval_keys():
     assert "supported" not in result
     assert "accepted" not in result
     _assert_denied(result)
+
+
+class _AdversarialEquality:
+    """A malformed caller-provided field must not execute equality hooks."""
+    def __eq__(self, other):
+        raise AssertionError("UNTRUSTED_OBJECT_EQ_CALLED")
+
+    def __ne__(self, other):
+        raise AssertionError("UNTRUSTED_OBJECT_NE_CALLED")
+
+
+@pytest.mark.parametrize("field", [
+    "contract_version", "source_authenticity",
+    "review_status", "execution_integrity",
+])
+def test_malformed_python_object_values_fail_closed_without_equality_hooks(field):
+    _, _, view = _candidate()
+    view[field] = _AdversarialEquality()
+    result = inspect_consumer_boundary(view)
+    assert result["queue_state"] == "NO_CANDIDATE"
+    _assert_denied(result)
