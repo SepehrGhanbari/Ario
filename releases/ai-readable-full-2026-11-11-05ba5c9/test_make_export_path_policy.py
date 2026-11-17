@@ -109,5 +109,30 @@ class ExportPathPolicyTests(unittest.TestCase):
             self.assertTrue(restored.is_file())
             self.assertFalse(restored.is_symlink())
 
+    def test_generator_rejects_path_depth_and_index_budget(self):
+        for patch_text, filename, expected in (
+            ("MAX_PATH_DEPTH=128", "a/b.txt", "path depth limit"),
+            ("MAX_PATH_INDEX_ENTRIES=100000", "a/b.txt", "path index resource limit"),
+        ):
+            with self.subTest(expected=expected), tempfile.TemporaryDirectory() as tmp:
+                release = pathlib.Path(tmp) / "release"
+                source = release / "source"
+                (source / "a").mkdir(parents=True)
+                script = release / "make_export.py"
+                shutil.copyfile(SCRIPT_SOURCE, script)
+                source_text = script.read_text(encoding="utf-8")
+                replacement = patch_text.split("=")[0] + ("=1" if "ENTRIES" in patch_text else "=1")
+                script.write_text(source_text.replace(patch_text, replacement), encoding="utf-8")
+                subprocess.check_call(["git", "init", "-q", str(source)])
+                subprocess.check_call(["git", "-C", str(source), "config", "user.email", "test@example.invalid"])
+                subprocess.check_call(["git", "-C", str(source), "config", "user.name", "Export Path Test"])
+                (source / filename).write_bytes(b"x")
+                subprocess.check_call(["git", "-C", str(source), "add", "--all"])
+                subprocess.check_call(["git", "-C", str(source), "commit", "-qm", "path-index fixture"])
+                result = subprocess.run([sys.executable, str(script)], capture_output=True, text=True)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(expected, result.stderr)
+                self.assertFalse((release / "artifacts" / "ario-full.txt").exists())
+
 if __name__ == "__main__":
     unittest.main()
