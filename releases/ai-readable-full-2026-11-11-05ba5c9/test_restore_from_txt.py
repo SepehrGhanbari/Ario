@@ -121,6 +121,11 @@ class Tests(unittest.TestCase):
  def test_case_colliding_directory_components(self):self.bad(snap([("Dir/a",b"x"),("dir/b",b"y")]))
  def test_file_directory_conflict_parent_first(self):self.bad(snap([("a",b"x"),("a/b",b"y")]))
  def test_file_directory_conflict_child_first(self):self.bad(snap([("a/b",b"y"),("a",b"x")]))
+ def test_file_parent_conflicts_with_normalized_unicode_child(self):
+  decomposed="e"+chr(0x301)
+  self.bad(snap([(decomposed,b"x"),("é/child",b"y")]))
+ def test_file_parent_conflicts_with_casefold_alias_child(self):
+  self.bad(snap([("Parent",b"x"),("parent/child",b"y")]))
  def test_reserved_device_alias_with_space_before_extension(self):
   for name in ("CON .txt","COM1 .dat","AUX .log","dir/LPT2 .bin"):
    with self.subTest(path=name): self.bad(snap([(name,b"x")]))
