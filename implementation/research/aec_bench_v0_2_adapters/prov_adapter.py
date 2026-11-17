@@ -8,13 +8,63 @@ from __future__ import annotations
 from typing import Any
 
 
-def build_prov_document(fixture: Any) -> Any:
-    """Map a lineage fixture into a PROV-DM document.
+def _validated_lineage_inputs(fixture: Any) -> tuple[list[str], dict[str, list[str]]]:
+    """Reject incomplete or malformed source-to-root maps before graph creation."""
+    data = fixture.input
+    if not isinstance(data, dict):
+        raise ValueError("PROV adapter requires a mapping-like fixture input")
 
+    sources = data.get("sources")
+    roots = data.get("roots")
+    if (
+        not isinstance(sources, list)
+        or not sources
+        or any(not isinstance(source, str) or not source.strip() for source in sources)
+        or len(set(sources)) != len(sources)
+    ):
+        raise ValueError("PROV adapter requires unique, non-empty string source identifiers")
+
+    if not isinstance(roots, dict) or set(roots) != set(sources):
+        raise ValueError(
+            "PROV adapter requires an exact source-to-root mapping; "
+            "missing or undeclared source entries are not accepted"
+        )
+
+    validated: dict[str, list[str]] = {}
+    for source in sources:
+        source_roots = roots[source]
+        if (
+            not isinstance(source_roots, (list, tuple))
+            or not source_roots
+            or any(not isinstance(root, str) or not root.strip() for root in source_roots)
+        ):
+            raise ValueError(
+                f"PROV adapter requires non-empty string root identifiers for source {source!r}"
+            )
+        validated[source] = list(source_roots)
+
+    return list(sources), validated
+
+
+def _safe_local_id(prefix: str, original_id: str) -> str:
+    """Encode UTF-8 identifiers as hex so arbitrary input cannot corrupt PROV QNames.
+
+    Hex is reversible and uses only QName-safe ASCII characters. The original
+    identifier is therefore not silently normalized or discarded.
+    """
+    return f"{prefix}_{original_id.encode('utf-8').hex()}"
+
+
+def build_prov_document(fixture: Any) -> Any:
+    """Map a complete lineage fixture into a PROV-DM document.
+
+    The adapter rejects incomplete lineage instead of silently omitting edges.
     The caller must install the pinned optional adapter requirements.
     """
     if fixture.family != "lineage_dependence":
         raise ValueError("PROV adapter currently supports lineage_dependence only")
+
+    sources, roots = _validated_lineage_inputs(fixture)
 
     try:
         from prov.model import ProvDocument
@@ -27,15 +77,18 @@ def build_prov_document(fixture: Any) -> Any:
     doc.set_default_namespace("https://ario.example/aec/")
     root_entities: dict[str, Any] = {}
 
-    # Deterministic ordering makes serialized fixtures stable.
-    for source in sorted(fixture.input["sources"]):
-        agent = doc.agent(f"agent_{source}")
-        record = doc.entity(f"record_{source}")
+    # Deterministic ordering makes serialized fixtures stable. Local identifiers
+    # are reversible UTF-8 hex encodings, not claimed source identities.
+    for source in sorted(sources):
+        source_local_id = _safe_local_id("source", source)
+        agent = doc.agent(f"agent_{source_local_id}")
+        record = doc.entity(f"record_{source_local_id}")
         record.wasAttributedTo(agent)
 
-        for root_id in sorted(fixture.input["roots"].get(source, [])):
+        for root_id in sorted(roots[source]):
             if root_id not in root_entities:
-                root_entities[root_id] = doc.entity(f"root_{root_id}")
+                root_local_id = _safe_local_id("root", root_id)
+                root_entities[root_id] = doc.entity(root_local_id)
             # PROV derivation records a declared lineage edge only. The root
             # label remains a fixture premise, not authenticated provenance.
             record.wasDerivedFrom(root_entities[root_id])
