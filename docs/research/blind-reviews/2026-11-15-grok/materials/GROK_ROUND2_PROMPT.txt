@@ -1,0 +1,15 @@
+You reviewed an earlier archive in this conversation. Round 2: review a PATCH I (not you) wrote. Be adversarial. Do not praise.
+
+Files: Ario-patch-review.zip (patched tree), ENGINE_PATCH.diff (the change to implementation/core/audit_engine.py), test_review_regressions_2026_11_15.py (new tests).
+Note: the zip is a clean tree. The earlier seeded flaws (history-mutation prefix, retrieval type, manuscript total, governance status) are NOT in it, except that Manuscript.md and GOVERNANCE.md in it are original-or-unchanged text you should simply re-check.
+
+The patch claims: (a) it only ADDS informational keys to the ancestry report and never changes a verdict or violation code; (b) the tests R1/R2 pin two comparison rules, R3 pins an intentional design decision and reports it.
+
+Do all of this, and say for each item whether you VERIFIED it by running code or only suspect it:
+1. Run the ENTIRE implementation/tests/ directory (not a subset) and give the exact result. List every test file name in implementation/tests/ (top level only) so I can see what exists.
+2. Try to find ANY input where the patched code returns a different verdict or violations than the unpatched code. (Unpatched = remove the added lines in the diff.)
+3. Check that parse_evidence_ancestry_findings and the 65536-byte report-limit fallback still behave correctly with the three new keys. Try a report that is near the limit.
+4. Mutation-check my tests: for each of R1, R2, R3, make the smallest change to the code that should break it and confirm the test fails. Report any test that stays green when it should not.
+5. Find anything the patch misses or breaks: edge cases in the new reporting code (empty evidence, duplicate ids, non-ASCII ids, ids at exactly 128 bytes, more than 64 ids).
+6. Anything else wrong in the tree, in any file, that you can verify. If an area is fine, write "no defect found".
+Format per finding: file and line, what is wrong, severity, confidence, verified or suspected.
