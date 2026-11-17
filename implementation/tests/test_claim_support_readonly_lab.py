@@ -251,3 +251,50 @@ def test_large_declared_ancestry_is_rejected_before_expansion():
     assert report["reason_code"] == "ANCESTRY_BUDGET_EXCEEDED"
     assert before == g.attributions
     _check_firewall(report)
+
+
+def test_direct_derivation_between_receipts_is_shared_ancestry():
+    """Two receipts are not two recorded lineages when one cites the other."""
+    g = SourceMonitoringGuard()
+    g.create_hypothesis("SYNTHETIC: one calculation ran", attribution_id="c")
+    _receipt(g, "r1")
+    _receipt(g, "r2", parents=("r1",))
+    before = g.attributions
+    result = inspect_claim_support(
+        before, claim_id="c", supporting_ids=("r1", "r2"),
+        proposed_relations={"r1": "SUPPORTS", "r2": "SUPPORTS"})
+    assert result["reason_code"] == "SHARED_DECLARED_ANCESTRY"
+    assert result["review_status"] == "UNKNOWN"
+    assert result["claimed_support_count"] == 0
+    assert g.attributions == before
+    _check_firewall(result)
+
+
+def test_transitive_receipt_derivation_is_shared_ancestry():
+    """A -> intermediate -> B must not appear independent of A."""
+    g = SourceMonitoringGuard()
+    g.create_hypothesis("SYNTHETIC: checks passed", attribution_id="c")
+    _receipt(g, "r1")
+    _receipt(g, "middle", parents=("r1",))
+    _receipt(g, "r3", parents=("middle",))
+    result = inspect_claim_support(
+        g.attributions, claim_id="c", supporting_ids=("r1", "r3"),
+        proposed_relations={"r1": "SUPPORTS", "r3": "SUPPORTS"})
+    assert result["reason_code"] == "SHARED_DECLARED_ANCESTRY"
+    assert result["review_status"] == "UNKNOWN"
+    _check_firewall(result)
+
+
+def test_independent_declared_receipt_roots_keep_positive_control():
+    """No recorded dependency is not proof of independence or truth."""
+    g = SourceMonitoringGuard()
+    g.create_hypothesis("SYNTHETIC: a result exists", attribution_id="c")
+    _receipt(g, "r1")
+    _receipt(g, "r2")
+    result = inspect_claim_support(
+        g.attributions, claim_id="c", supporting_ids=("r1", "r2"),
+        proposed_relations={"r1": "SUPPORTS", "r2": "SUPPORTS"})
+    assert result["review_status"] == "REVIEWABLE_ONLY"
+    assert result["claimed_support_count"] == 2
+    assert result["independent_support_count"] == 0
+    _check_firewall(result)
