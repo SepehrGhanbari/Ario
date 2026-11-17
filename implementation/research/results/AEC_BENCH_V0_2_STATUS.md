@@ -260,7 +260,7 @@ Eleven added tests cover: no compatibility record, the single-Boolean counterfac
 - Source/test head: `37ea3e17903ad5e021a62cfc81d381b20deda538`
 - Documentation-only follow-up head: `71f89b716c05540af9309d0704e355ed818a157b`
 - [AEC-Bench v0.2 Adapter Tests #94](https://github.com/SepehrGhanbari/Ario/actions/runs/44097087615): **SUCCESS — 63 passed**. All reports and the public reviewer packet were regenerated.
-- [Implementation Regression #2039](https://github.com/SepehrGhanbari/Ario/actions/runs/44097087523): Ubuntu **SUCCESS — 1233 passed, 7 skipped, 121 subtests passed**. Windows advisory was still running when this status was written; its result must be recorded separately.
+- [Implementation Regression #2039](https://github.com/SepehrGhanbari/Ario/actions/runs/44097087523): Ubuntu **SUCCESS — 1233 passed, 7 skipped, 121 subtests passed**; Windows advisory **SUCCESS — 1233 passed, 7 skipped, 121 subtests passed**.
 - [AEC-Bench reports and reviewer packet artifact](https://github.com/SepehrGhanbari/Ario/actions/runs/44097087615/artifacts/14334706455), SHA-256 `384bc8b12a109e4a7b4186a190df038dae0fad3b4a3baf5c141bb19f986ab272`.
 
 These are synthetic, author-authored development cases and internal tests. No independent oracle adjudication or real-world composition evaluation has occurred.
