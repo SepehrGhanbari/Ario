@@ -93,3 +93,13 @@ def test_macro_f1_discloses_class_support_and_exclusions():
     assert majority["per_class"]["REJECTED"]["support"] == 0
     assert "REJECTED" in majority["classes_excluded_for_zero_support"]
     assert majority["macro_f1_classes_included"] == 4
+
+
+
+def test_policy_comparison_report_exposes_pair_structure_audit():
+    report = build_report()
+    audit = report["counterfactual_pair_validation"]
+    assert audit["pair_group_count"] == 10
+    assert audit["valid_pair_count"] == 10
+    assert audit["invalid_pair_count"] == 0
+    assert audit["audit_kind"] == "STRUCTURAL_COUNTERFACTUAL_PAIR_AUDIT"
