@@ -1,5 +1,8 @@
 """Synthetic nonprivileged tests of the read-only claim-support proposal view."""
 import hashlib
+import dataclasses
+
+import pytest
 
 from core.source_monitoring import SourceMonitoringGuard, VeracityState
 from claim_support_readonly_lab import inspect_claim_support, CONTRACT_VERSION
@@ -298,3 +301,39 @@ def test_independent_declared_receipt_roots_keep_positive_control():
     assert result["claimed_support_count"] == 2
     assert result["independent_support_count"] == 0
     _check_firewall(result)
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="RED: malformed provenance object dereferenced before UNKNOWN guard",
+)
+@pytest.mark.parametrize(
+    "bad_provenance",
+    [
+        pytest.param({}, id="dict"),
+        pytest.param([], id="list"),
+        pytest.param("UNTRUSTED_SYNTHETIC", id="string"),
+    ],
+)
+def test_malformed_receipt_provenance_must_fail_closed(bad_provenance):
+    """CodeRabbit finding: SourceAttribution dataclass permits non-None
+    malformed provenance, so a read-only view MUST return UNKNOWN, not throw.
+    """
+    g = SourceMonitoringGuard()
+    g.create_hypothesis("SYNTHETIC: tests ran", attribution_id="c")
+    _receipt(g, "r")
+    baseline = g.attributions
+    supplied_snapshot = dict(baseline)
+    supplied_snapshot["r"] = dataclasses.replace(
+        baseline["r"], provenance=bad_provenance,
+    )
+    report = inspect_claim_support(
+        supplied_snapshot, claim_id="c", supporting_ids=("r",),
+        proposed_relations={"r": "SUPPORTS"},
+    )
+    assert report["review_status"] == "UNKNOWN"
+    assert report["reason_code"] == "NO_ELIGIBLE_EXECUTION_RECEIPT"
+    assert report["execution_integrity"] == "NOT_ASSESSED"
+    assert g.attributions == baseline
+    assert "UNTRUSTED_SYNTHETIC" not in str(report)
+    _check_firewall(report)
