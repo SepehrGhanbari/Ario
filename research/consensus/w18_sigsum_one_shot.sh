@@ -2,8 +2,14 @@
 # W18 — explicit opt-in only; no scheduled/automatic publication.
 set -euo pipefail
 POLICY='sigsum-test1-2025'
+# Exact public-only W17 research snapshot; refuse arbitrary file submission.
+EXPECTED_SHA256='ee83050bff68f9b73afb115949bca8c46bb09462a6f000eecb9ed07bf2855769'
 
 die() { printf 'W18_HOLD: %s\n' "$*" >&2; exit 2; }
+check_pinned_manifest() {
+  [[ -f "$1" ]] || die 'missing manifest'
+  [[ "$(sha256sum "$1" | awk '{print $1}')" == "$EXPECTED_SHA256" ]] || die 'unapproved manifest bytes; source must match pinned public W17 snapshot exactly'
+}
 usage() {
   cat <<'USAGE'
 Usage:
@@ -25,11 +31,13 @@ case "$mode" in
   --dry-run)
     [[ $# -eq 1 && -f "$1" ]] || die 'expected one existing public manifest'
     manifest="$1"
+    check_pinned_manifest "$manifest"
     printf 'W18_DRY_RUN_ONLY: public manifest path=%s sha256=%s\n' "$manifest" "$(sha256sum "$manifest" | awk '{print $1}')"
     printf 'POLICY=%s; EXTERNAL_PROOF=NOT_OBTAINED; WITNESSED_ARIO_LOG=NOT_ESTABLISHED; AUTHORITY=NONE\n' "$POLICY"
     ;;
   --verify)
     [[ $# -eq 3 && -f "$1" && -f "$2" && -s "$3" ]] || die 'requires manifest, public submitter key and nonempty proof'
+    check_pinned_manifest "$1"
     command -v sigsum-verify >/dev/null 2>&1 || die 'sigsum-verify is not installed'
     sigsum-verify -P "$POLICY" -k "$2" "$3" < "$1" || die 'Sigsum cryptographic/quorum proof verification FAILED'
     printf 'W18_EXTERNAL_SIGSUM_PROOF_VERIFIED_FOR_SUPPLIED_BYTES; POLICY=%s; ARIO_LOG_WITNESSED=NOT_ESTABLISHED; FRESHNESS=NOT_ESTABLISHED; AUTHORITY=NONE\n' "$POLICY"
@@ -38,6 +46,7 @@ case "$mode" in
     [[ $# -eq 2 && -f "$1" ]] || die 'requires existing public manifest and output directory'
     [[ "${ARIO_W18_PUBLIC_SUBMISSION_APPROVED:-}" == 'YES' ]] || die 'no explicit approval: set ARIO_W18_PUBLIC_SUBMISSION_APPROVED=YES only after reviewing publication'
     manifest="$1"; outdir="$2"
+    check_pinned_manifest "$manifest"
     [[ ! -e "$outdir" ]] || die 'OUT_DIR must not exist: avoid overwriting existing evidence'
     for tool in sigsum-key sigsum-policy sigsum-submit sigsum-verify; do
       command -v "$tool" >/dev/null 2>&1 || die "missing verified Sigsum CLI: $tool"
