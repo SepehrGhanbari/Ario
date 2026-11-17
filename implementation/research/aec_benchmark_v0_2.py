@@ -245,17 +245,17 @@ def corpus() -> tuple[Fixture, ...]:
       ({"history":["v1","v2"],"operation":"append","prior_retained":True}, {"history":"PRESERVED","status":"UNKNOWN"}, "Positive append control."),
     ]
     composition = [
-      ({"premises":["P1"],"requirements":["P1"]}, {"composition":"VALID","status":"UNKNOWN"}, "All declared requirements met."),
+      ({"premises":["P1"],"requirements":["P1"],"composition_checks":{"dependency":"COMPATIBLE","scope":"COMPATIBLE","temporal":"COMPATIBLE","claim_kind":"COMPATIBLE"},"composition_checks_complete":True}, {"composition":"VALID","status":"UNKNOWN"}, "All required premises are present and all four composition compatibility dimensions are explicitly checked."),
       ({"premises":["P1"],"requirements":["P1","P2"]}, {"composition":"INCOMPLETE","status":"UNKNOWN"}, "One required premise missing."),
       ({"premises":["P1","P2"],"requirements":["P1","P2"],"incompatible":True}, {"composition":"INVALID","status":"REJECTED"}, "Premises conflict despite local validity."),
-      ({"premises":["P1","P2"],"requirements":["P1","P2"],"shared_dependency":True}, {"composition":"VALID_WITH_SHARED_DEPENDENCY","status":"UNKNOWN"}, "Shared dependency recorded, not double-counted."),
+      ({"premises":["P1","P2"],"requirements":["P1","P2"],"composition_checks":{"dependency":"SHARED_DEPENDENCY","scope":"COMPATIBLE","temporal":"COMPATIBLE","claim_kind":"COMPATIBLE"},"composition_checks_complete":True}, {"composition":"VALID_WITH_SHARED_DEPENDENCY","status":"UNKNOWN"}, "Shared dependency is explicitly recorded; no independent-root or truth claim follows."),
       ({"premises":["P1"],"requirements":["P1"],"cycle":True}, {"composition":"INVALID","status":"REJECTED"}, "Circular dependency."),
       ({"premises":["P1","P2"],"requirements":["P1","P2"],"time_incompatible":True}, {"composition":"INVALID","status":"REJECTED"}, "Temporal incompatibility."),
       ({"premises":["P1","P2"],"requirements":["P1","P2"],"scope_incompatible":True}, {"composition":"INVALID","status":"REJECTED"}, "Scope incompatibility."),
       ({"premises":["P1","P2"],"requirements":["P1","P2"],"claim_kind_mismatch":True}, {"composition":"INVALID","status":"REJECTED"}, "Claim-kind mismatch."),
       ({"premises":[],"requirements":["P1"]}, {"composition":"INCOMPLETE","status":"UNKNOWN"}, "No premise available."),
-      ({"premises":["P1","P2"],"requirements":["P1","P2"],"local_validity_only":True}, {"composition":"UNKNOWN","status":"UNKNOWN"}, "Local validity alone cannot establish global validity."),
-      ({"premises":["P1","P2"],"requirements":["P1","P2"],"local_validity_only":False}, {"composition":"VALID","status":"UNKNOWN"}, "Counterfactual: remove only the local-validity-only restriction while preserving premises."),
+      ({"premises":["P1","P2"],"requirements":["P1","P2"],"composition_checks":{"dependency":"COMPATIBLE","scope":"COMPATIBLE","temporal":"COMPATIBLE","claim_kind":"COMPATIBLE"},"composition_checks_complete":False}, {"composition":"UNKNOWN","status":"UNKNOWN"}, "All local records are present and checks are listed, but their completeness is not established; global validity remains unknown."),
+      ({"premises":["P1","P2"],"requirements":["P1","P2"],"composition_checks":{"dependency":"COMPATIBLE","scope":"COMPATIBLE","temporal":"COMPATIBLE","claim_kind":"COMPATIBLE"},"composition_checks_complete":True}, {"composition":"VALID","status":"UNKNOWN"}, "Counterfactual: mark the same explicit four-dimension compatibility check set complete."),
       ({"premises":["P1","P2"],"requirements":["P1","P2"],"firewall_bypassed":True}, {"composition":"INVALID","status":"REJECTED"}, "Composition firewall bypass."),
     ]
     uncertainty = [
