@@ -36,11 +36,13 @@ class SourceType(str, Enum):
     INTERNAL_HYPOTHESIS = "INTERNAL_HYPOTHESIS"
     EMPIRICAL_OBSERVATION = "EMPIRICAL_OBSERVATION"
     EXTERNAL_TESTIMONY = "EXTERNAL_TESTIMONY"
+    LEDGER_REPORT = "LEDGER_REPORT"  # v0.1: observed bytes, NOT an authenticated tool execution
 
 
 class VeracityState(str, Enum):
     UNVERIFIED_HYPOTHESIS = "UNVERIFIED_HYPOTHESIS"
     EXTERNAL_ASSERTION = "EXTERNAL_ASSERTION"
+    REPORTED_UNVERIFIED = "REPORTED_UNVERIFIED"  # never a verified empirical receipt
     VERIFIED_EMPIRICAL = "VERIFIED_EMPIRICAL"
     UNSUPPORTED = "UNSUPPORTED"
     ATTRIBUTION_MISMATCH = "ATTRIBUTION_MISMATCH"
@@ -149,6 +151,11 @@ class SourceAttribution:
             ):
                 raise SourceMonitoringError(f"Invalid veracity state for EMPIRICAL_OBSERVATION: {self.veracity_state}")
 
+        # A replayed ledger report has only source-byte integrity, not verified execution.
+        if self.source_type == SourceType.LEDGER_REPORT:
+            if self.veracity_state != VeracityState.REPORTED_UNVERIFIED or self.provenance is not None:
+                raise SourceMonitoringError("LEDGER_REPORT must be REPORTED_UNVERIFIED without empirical provenance")
+
         # Invariant: Hypotheses and external testimony cannot natively be VERIFIED_EMPIRICAL
         if self.source_type in (SourceType.INTERNAL_HYPOTHESIS, SourceType.EXTERNAL_TESTIMONY):
             if self.veracity_state == VeracityState.VERIFIED_EMPIRICAL and not self.parent_attribution_ids:
@@ -237,6 +244,36 @@ class SourceMonitoringGuard:
             parent_attribution_ids=(),
             falsification_condition=falsification_condition,
         )
+        self._attributions[attr.attribution_id] = attr
+        return attr
+
+    def record_unverified_ledger_report(
+        self,
+        assertion: str,
+        *,
+        record_sha256: str,
+    ) -> SourceAttribution:
+        """Record an untrusted JSONL line as a report, not a tool attestation.
+
+        The hash binds to the line bytes already read; it cannot prove that a
+        tool ran. Only a separate authenticated execution boundary may produce
+        an empirical observation. This API never grants such a promotion.
+        """
+        if type(record_sha256) is not str or not _is_valid_sha256(record_sha256):
+            raise SourceMonitoringError("unverified ledger report requires a valid record sha256")
+        if type(assertion) is not str or not assertion.strip():
+            raise SourceMonitoringError("unverified ledger report requires a nonempty assertion")
+        attr = SourceAttribution(
+            attribution_id=f"ATTR-LEDGER-{record_sha256.lower()}",
+            source_type=SourceType.LEDGER_REPORT,
+            assertion=assertion,
+            veracity_state=VeracityState.REPORTED_UNVERIFIED,
+            provenance=None,
+        )
+        existing = self._attributions.get(attr.attribution_id)
+        if existing is not None and (existing.assertion != attr.assertion
+                                     or existing.source_type != attr.source_type):
+            raise SourceMonitoringError("ledger report attribution ID collision")
         self._attributions[attr.attribution_id] = attr
         return attr
 
