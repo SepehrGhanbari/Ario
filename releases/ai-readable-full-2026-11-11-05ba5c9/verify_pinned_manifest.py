@@ -158,6 +158,8 @@ def read_manifest(path, expected_sha256):
         for index in range(1, len(parts) + 1):
             prefix = "/".join(parts[:index])
             folded = portable_key(prefix)
+            if index < len(parts):
+                require(folded not in seen, "file/directory-conflicting manifest path")
             previous = folded_components.get(folded)
             if previous is None:
                 added = len(folded.encode("utf-8")) + len(prefix.encode("utf-8"))
@@ -170,7 +172,6 @@ def read_manifest(path, expected_sha256):
             else:
                 require(previous == prefix, "case/Unicode-colliding manifest path component")
             if index < len(parts):
-                require(folded not in seen, "file/directory-conflicting manifest path")
                 all_parents.add(folded)
         seen.add(key)
         require(item.get("mode") in ("100644", "100755", "120000"),
