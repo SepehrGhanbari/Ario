@@ -56,6 +56,10 @@ ALLOWLISTED_TOOLS: Set[str] = {
     "diff_check",
     "syntax_validator",
     "read_file_pinned",
+    "file_fingerprint",
+    "read_text",
+    "verify_text",
+    "inspect_backup",
 }
 
 

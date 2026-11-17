@@ -25,10 +25,12 @@ class ConsolidationError(ValueError):
 
 
 class NodeEpistemicStatus(str, Enum):
-    ACCEPTED = "ACCEPTED"
-    CONTESTED = "CONTESTED"
-    UNSUPPORTED = "UNSUPPORTED"
-    REVISED = "REVISED"
+    RECORDED = "RECORDED"      # Structurally ingested; no evidence or truth implied (Issue #216)
+    ACCEPTED = "ACCEPTED"      # Legacy operational status
+    SUPPORTED = "SUPPORTED"    # Verified by authorized witness or empirical tool
+    CONTESTED = "CONTESTED"    # Contradicted by conflicting evidence
+    UNSUPPORTED = "UNSUPPORTED"# Falsified or explicitly refuted
+    REVISED = "REVISED"        # Superseded by newer verified assessment
 
 
 @dataclasses.dataclass(frozen=True)
@@ -226,16 +228,52 @@ class ConsolidationEngine:
         )
 
 
-    def __init__(self, decay_rate: float = 0.05, retrieval_threshold: float = 0.2) -> None:
+    def __init__(
+        self,
+        decay_rate: float = 0.05,
+        retrieval_threshold: float = 0.2,
+        node_id_version: str = "v1",
+        default_status: NodeEpistemicStatus = NodeEpistemicStatus.ACCEPTED,
+    ) -> None:
         if not (0.0 < decay_rate < 1.0):
             raise ConsolidationError("decay_rate must be between 0.0 and 1.0")
         if not (0.0 <= retrieval_threshold <= 1.0):
             raise ConsolidationError("retrieval_threshold must be between 0.0 and 1.0")
+        if node_id_version not in ("v1", "v2"):
+            raise ConsolidationError(f"node_id_version must be 'v1' or 'v2': {node_id_version}")
         self.decay_rate = decay_rate
         self.retrieval_threshold = retrieval_threshold
+        self.node_id_version = node_id_version
+        self.default_status = default_status
         self._nodes: Dict[str, SemanticNode] = {}
+        self._legacy_aliases: Dict[str, str] = {}
         self._links: List[CausalLink] = []
         self._ledger_hashes: Set[str] = set()
+
+    @staticmethod
+    def compute_node_id(concept: str, assertion: str, version: str = "v1") -> str:
+        """Compute canonical node identifier.
+        
+        v1: sha256((concept + ':' + assertion).encode('utf-8'))[:16] (legacy delimiter collision)
+        v2: 'SEM-v2-' + sha256(json.dumps([concept, assertion], separators=(',', ':'), sort_keys=True).encode('utf-8'))[:16]
+        """
+        if version == "v2":
+            payload = json.dumps([concept, assertion], separators=(",", ":"), sort_keys=True)
+            return f"SEM-v2-{hashlib.sha256(payload.encode('utf-8')).hexdigest()[:16]}"
+        return f"SEM-{hashlib.sha256((concept + ':' + assertion).encode('utf-8')).hexdigest()[:16]}"
+
+    def resolve_node_id(self, identifier: str) -> Optional[str]:
+        """Resolve node identifier via exact match or legacy dual-resolver alias."""
+        if identifier in self._nodes:
+            return identifier
+        return self._legacy_aliases.get(identifier)
+
+    def get_node(self, identifier: str) -> Optional[SemanticNode]:
+        """Retrieve node by exact ID or dual-resolver alias."""
+        resolved = self.resolve_node_id(identifier)
+        if resolved and resolved in self._nodes:
+            return self._nodes[resolved]
+        return None
 
     @property
     def nodes(self) -> Dict[str, SemanticNode]:
@@ -297,12 +335,24 @@ class ConsolidationEngine:
             # Nothing to consolidate from an empty event assertion
             return
 
-        node_id = f"SEM-{hashlib.sha256((concept + ':' + assertion).encode('utf-8')).hexdigest()[:16]}"
+        node_id = self.compute_node_id(concept, assertion, version=self.node_id_version)
+        if self.node_id_version == "v2":
+            legacy_id = self.compute_node_id(concept, assertion, version="v1")
+            self._legacy_aliases[legacy_id] = node_id
+
         now_iso = datetime.now(timezone.utc).isoformat()
 
         # Check for contradiction with existing nodes (Invariant T-CONS-03)
         claimed_value = event.get("value")
-        status = NodeEpistemicStatus.ACCEPTED
+        # Invariant (Issue #216): Distinguish structural recording from truth/support
+        custom_status = event.get("status")
+        if custom_status and isinstance(custom_status, str):
+            try:
+                status = NodeEpistemicStatus(custom_status)
+            except ValueError:
+                status = self.default_status
+        else:
+            status = self.default_status
         for existing in self._nodes.values():
             if existing.concept == concept and existing.node_id != node_id:
                 # Contradiction detection: opposing assertions or opposite values under same concept

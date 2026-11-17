@@ -190,8 +190,9 @@ Ario's cognitive memory architecture grounds biological memory mechanisms (Tulvi
 | `T-CLI-01..08` | CLI Interface | Command Audit Execution | `--memory-conflicts` report generation (JSON/Markdown) and `--inspect-ledger` crash integrity. |
 | `T-CRASH-01..11` | Crash Recovery | Resilience & State Replay | Orphan journal temp cleanup, bitflip/truncation fail-closed, offline TTL sweep, reboot replay. |
 | `T-INT-01` | Integration | Full Lifecycle Pipeline | Verified hypothesis -> ledger -> consolidated schema -> prospective cue. |
+| `T-BRG-01..08` | EpistemicLedgerBridge | Agent Runtime Bridge | Ingests real agent execution JSONL, empirical tool locks, prospective triggers, v2 canonical IDs. |
 
-Total test suite: **76 specialized cognitive memory tests** (1,217 overall repository regression tests passing).
+Total test suite: **86 specialized cognitive memory tests** (1,227 overall repository regression tests passing).
 
 ---
 
@@ -213,7 +214,35 @@ Audit an episodic ledger for truncated tails or abrupt termination without mutat
 python implementation/ario_cli.py --inspect-ledger --ledger agent-events.jsonl
 ```
 
-### C. Continuous Integration Workflow
+### C. Agent Execution Ledger Bridge to Cognitive Memory
+Bridge bounded agent execution ledgers into cognitive memory schemas and evaluate prospective intentions:
+```bash
+# Markdown format (default)
+python implementation/ario_cli.py --bridge-agent-ledger --ledger agent-events.jsonl
+
+# Export to JSON
+python implementation/ario_cli.py --bridge-agent-ledger --ledger agent-events.jsonl --format json --output bridge_summary.json
+```
+
+---
+
+## 6. Resolution of Issue #216 Epistemic Invariants & v2 Identifiers
+
+### A. Epistemic Separation: RECORDED vs SUPPORTED
+To prevent conceptual boundary ambiguity between memory ingestion and truth claims (*Memory != Truth*), nodes ingested from caller streams default to `RECORDED`. Transitions to `SUPPORTED` occur strictly when empirical tool execution locks or authorized external witnesses are verified.
+
+### B. Delimiter-Free Canonical Node Identifiers (v2)
+Legacy identifiers derived from `sha256(concept + ":" + assertion)` exhibited colon delimiter aliasing: `("a:b", "c") == ("a", "b:c")`.
+The v2 canonical identifier format computes:
+```python
+node_id = "SEM-v2-" + sha256(json.dumps([concept, assertion], separators=(',', ':'), sort_keys=True))[:16]
+```
+A dual resolver maintains backwards compatibility by transparently resolving legacy `SEM-<hash>` queries to their canonical `SEM-v2-<hash>` counterpart.
+
+### C. No-History-Promotion Invariant
+Re-ingesting an unverified assertion increases operational reinforcement and updates saliency, but strictly preserves `RECORDED` status. History repetition cannot promote an assertion into `SUPPORTED` truth without empirical evidence.
+
+### D. Continuous Integration Workflow
 The test suite is enforced on every push and pull request via `.github/workflows/implementation-regression.yml`:
 1. `m0-regression`: Full repository test suite (1,217 tests).
 2. `cognitive-memory-invariants`: Dedicated check verifying all 76 memory consolidation, source monitoring, prospective registry, security boundary, and crash recovery tests.

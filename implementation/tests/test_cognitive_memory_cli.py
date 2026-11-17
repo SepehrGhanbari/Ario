@@ -117,3 +117,28 @@ def test_cli_inspect_ledger_missing_file():
     assert proc.returncode == 2
     data = json.loads(proc.stderr)
     assert data["error"] == "MISSING_REQUIRED_ARGUMENT"
+
+
+def test_cli_bridge_agent_ledger_missing_ledger():
+    proc = run_cli("--bridge-agent-ledger")
+    assert proc.returncode == 2
+    data = json.loads(proc.stderr)
+    assert data["error"] == "MISSING_REQUIRED_ARGUMENT"
+
+
+def test_cli_bridge_agent_ledger_success_json(tmp_path: Path):
+    ledger = tmp_path / "agent_run.jsonl"
+    events = [
+        {"event": "TASK_STARTED", "task_id": "T1", "goal": "Verify system"},
+        {"event": "STEP_OBSERVED", "task_id": "T1", "step_id": "S1", "tool": "git_status", "status": "COMPLETED", "result": {"clean": True}},
+        {"event": "TASK_FINISHED", "task_id": "T1", "status": "COMPLETED"},
+    ]
+    ledger.write_text("\n".join(json.dumps(ev) for ev in events) + "\n", encoding="utf-8")
+
+    proc = run_cli("--bridge-agent-ledger", "--ledger", str(ledger), "--format", "json")
+    assert proc.returncode == 0
+    data = json.loads(proc.stdout)
+    assert data["total_events_read"] == 3
+    assert data["steps_observed"] == 1
+    assert data["nodes_consolidated"] >= 2
+    assert data["contested_nodes_count"] == 0

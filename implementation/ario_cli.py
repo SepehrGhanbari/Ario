@@ -189,6 +189,11 @@ def main(argv=None) -> int:
         action="store_true",
         help="Perform a read-only crash integrity inspection of the specified --ledger file",
     )
+    parser.add_argument(
+        "--bridge-agent-ledger",
+        action="store_true",
+        help="Bridge an agent execution JSONL ledger into cognitive memory and evaluate prospective cues",
+    )
     args = parser.parse_args(argv)
 
     # 1. Handle memory conflict reporting
@@ -242,7 +247,44 @@ def main(argv=None) -> int:
         print(json.dumps(report.to_dict(), indent=2, ensure_ascii=False))
         return 0 if report.is_clean else 1
 
-    # 3. Default: M0 Deterministic Audit
+    # 3. Handle agent ledger bridge to cognitive memory
+    if args.bridge_agent_ledger:
+        if not args.ledger:
+            print(json.dumps({
+                "error": "MISSING_REQUIRED_ARGUMENT",
+                "detail": "--ledger path is required for --bridge-agent-ledger",
+            }, ensure_ascii=False, sort_keys=True), file=sys.stderr)
+            return 2
+        from core.ledger_memory_bridge import EpistemicLedgerBridge, BridgeError
+        try:
+            bridge = EpistemicLedgerBridge()
+            summary = bridge.ingest_agent_ledger(Path(args.ledger))
+            res_dict = summary.to_dict()
+            if args.format == "json":
+                out_str = json.dumps(res_dict, indent=2, ensure_ascii=False)
+            else:
+                out_str = (
+                    f"# Epistemic Ledger Memory Bridge Audit\n\n"
+                    f"- **Ledger Path:** `{res_dict['ledger_path']}`\n"
+                    f"- **Ledger SHA-256:** `{res_dict['ledger_sha256']}`\n"
+                    f"- **Total Events Read:** {res_dict['total_events_read']}\n"
+                    f"- **Steps Observed:** {res_dict['steps_observed']}\n"
+                    f"- **Nodes Consolidated:** {res_dict['nodes_consolidated']}\n"
+                    f"- **Contested Nodes:** {res_dict['contested_nodes_count']}\n"
+                    f"- **Triggered Intentions:** {res_dict['triggered_intentions_count']}\n"
+                )
+            if args.output:
+                Path(args.output).write_text(out_str, encoding="utf-8")
+            print(out_str)
+            return 0
+        except BridgeError as exc:
+            print(json.dumps({
+                "error": "BRIDGE_INGESTION_FAILED",
+                "detail": str(exc),
+            }, ensure_ascii=False, sort_keys=True), file=sys.stderr)
+            return 2
+
+    # 4. Default: M0 Deterministic Audit
     if not args.input:
         print(json.dumps({
             "error": "AUDIT_INPUT_OR_EXECUTION_FAILED",
