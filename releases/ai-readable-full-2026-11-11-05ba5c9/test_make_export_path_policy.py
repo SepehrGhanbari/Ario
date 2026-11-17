@@ -172,6 +172,33 @@ class ExportPathPolicyTests(unittest.TestCase):
             self.assertEqual(list(release.glob(".artifacts-stage-*")), [])
             self.assertEqual(list(release.glob(".artifacts-backup-*")), [])
 
+    @unittest.skipIf(os.name == "nt", "POSIX fixture for distinct Unicode normalization paths")
+    def test_generator_rejects_file_parent_unicode_and_casefold_aliases(self):
+        cases = (
+            ("e" + chr(0x301), "é"),
+            ("Parent", "parent"),
+        )
+        for file_name, child_dir in cases:
+            with self.subTest(file_name=file_name, child_dir=child_dir), tempfile.TemporaryDirectory() as tmp:
+                release = pathlib.Path(tmp) / "release"
+                source = release / "source"
+                source.mkdir(parents=True)
+                script = release / "make_export.py"
+                shutil.copyfile(SCRIPT_SOURCE, script)
+                (source / file_name).write_bytes(b"parent-is-file")
+                child = source / child_dir
+                child.mkdir()
+                (child / "child.txt").write_bytes(b"child")
+                subprocess.check_call(["git", "init", "-q", str(source)])
+                subprocess.check_call(["git", "-C", str(source), "config", "user.email", "test@example.invalid"])
+                subprocess.check_call(["git", "-C", str(source), "config", "user.name", "Parent Alias Test"])
+                subprocess.check_call(["git", "-C", str(source), "add", "--all"])
+                subprocess.check_call(["git", "-C", str(source), "commit", "-qm", "file parent alias fixture"])
+                result = subprocess.run([sys.executable, str(script)], capture_output=True, text=True)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("file/directory path conflict", result.stderr)
+                self.assertFalse((release / "artifacts" / "ario-full.txt").exists())
+
     def test_generator_rejects_path_depth_and_index_budget(self):
         for patch_text, filename, expected in (
             ("MAX_PATH_DEPTH=128", "a/b.txt", "path depth limit"),
