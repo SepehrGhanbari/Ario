@@ -46,28 +46,46 @@ def _ancestors(
     registry: dict[str, SourceAttribution],
     claim_id: str,
 ) -> tuple[set[str], str | None]:
-    """Graph walk of declarative ancestry, not authentication of custody."""
-    seen: set[str] = set()
-    pending = list(registry[receipt_id].parent_attribution_ids)
-    while pending:
-        if len(pending) > MAX_REGISTRY:
-            return seen, "ANCESTRY_BUDGET_EXCEEDED"
-        node_id = pending.pop()
+    """Bounded, nonrecursive DFS detecting both self and multi-node cycles.
+
+    All ancestors are *declared*. Even a cycle-free graph does not prove
+    real-world custody, independence, or historical authenticity.
+    """
+    done: set[str] = set()
+    active: set[str] = set()
+    stack: list[tuple[str, bool]] = [(receipt_id, False)]
+    while stack:
+        if len(stack) > 2 * MAX_REGISTRY:
+            return done, "ANCESTRY_BUDGET_EXCEEDED"
+        node_id, is_exit = stack.pop()
         if not _id_ok(node_id):
-            return seen, "INVALID_ANCESTRY_ID"
+            return done, "INVALID_ANCESTRY_ID"
         if node_id == claim_id:
-            return seen, "CLAIM_CYCLE"
-        if node_id in seen:
+            return done, "CLAIM_CYCLE"
+        if is_exit:
+            active.remove(node_id)
+            done.add(node_id)
+            continue
+        if node_id in active:
+            return done, "EVIDENCE_CYCLE"
+        if node_id in done:
             continue
         node = registry.get(node_id)
         if type(node) is not SourceAttribution:
-            return seen, "UNKNOWN_ANCESTRY"
-        seen.add(node_id)
-        if len(seen) > MAX_REGISTRY:
-            return seen, "ANCESTRY_BUDGET_EXCEEDED"
-        pending.extend(node.parent_attribution_ids)
-    return seen, None
-
+            return done, "UNKNOWN_ANCESTRY"
+        parents = node.parent_attribution_ids
+        if type(parents) is not tuple:
+            return done, "INVALID_ANCESTRY"
+        # Bound BEFORE copying or expanding the caller-provided ancestry.
+        if len(parents) > MAX_REGISTRY:
+            return done, "ANCESTRY_BUDGET_EXCEEDED"
+        if any(not _id_ok(parent) for parent in parents):
+            return done, "INVALID_ANCESTRY_ID"
+        active.add(node_id)
+        stack.append((node_id, True))
+        stack.extend((parent, False) for parent in reversed(parents))
+    done.discard(receipt_id)
+    return done, None
 
 def inspect_claim_support(
     registry: dict[str, SourceAttribution],
