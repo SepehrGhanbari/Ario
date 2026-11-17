@@ -228,3 +228,39 @@ New adapter tests cover missing and undeclared mappings, blank root identifiers,
 - [AEC-Bench reports and reviewer packet artifact](https://github.com/SepehrGhanbari/Ario/actions/runs/44082508758/artifacts/14327637367), SHA-256 `4d44cccc05386e89f87a94977a059d639b5061ff7a6d9e19092dff6d752cfb26`.
 
 The code/test evidence above is for the exact source/test head listed. The adapter remains a bounded representation/interchange integration only: it does not authenticate real-world roots, decide truth, or establish source independence. Independent oracle adjudication and hidden-set evaluation remain NOT RUN.
+
+
+## Composition firewall adversarial review — 2026-11-17
+
+A focused red-team review identified two fail-open paths in the earlier benchmark-side composition evaluator:
+
+1. Complete presence of named premises, combined with `local_validity_only=False`, could produce `VALID` without explicit evidence that dependency, scope, temporal, and claim-kind compatibility had been checked.
+2. A boolean `shared_dependency=True` could produce `VALID_WITH_SHARED_DEPENDENCY` before checking whether every required premise was present.
+
+### Changes
+
+- Composition inputs now require unique, non-empty premise and requirement identifiers; an empty requirement set, duplicate identity, malformed identifier, unknown field, or malformed incompatibility flag fails closed.
+- A valid composition requires exactly four explicit check dimensions: `dependency`, `scope`, `temporal`, and `claim_kind`.
+- `composition_checks_complete` must be an actual Boolean `true`; a string such as `"false"` is not accepted as a Boolean.
+- A missing required premise remains `INCOMPLETE / UNKNOWN`.
+- Any explicitly known incompatibility, cycle, type mismatch, temporal/scope conflict, or firewall bypass yields `INVALID / REJECTED`.
+- Missing, malformed, unresolved, or incomplete compatibility checks yield `UNKNOWN / UNKNOWN`.
+- Only a complete check set with all dimensions explicitly compatible yields `VALID / UNKNOWN`.
+- Shared dependency is now a typed dependency-check state, not a free-standing Boolean. It can yield `VALID_WITH_SHARED_DEPENDENCY / UNKNOWN` only after all required premises and compatibility checks are complete.
+- The proposition status remains `UNKNOWN`; structural composition validity is not promoted to truth or evidential admission.
+
+The paired composition counterfactual now keeps the same four check observations and changes only the `composition_checks_complete` Boolean. The incomplete state remains UNKNOWN; the complete state permits VALID only as a structural composition classification. The design specification now records the exact contract and decision precedence.
+
+### Adversarial regression coverage
+
+Eleven added tests cover: no compatibility record, the single-Boolean counterfactual, missing dimensions, UNKNOWN dimensions, explicit incompatibility, shared dependency with a missing requirement, qualified shared dependency, non-Boolean completeness, malformed/unhashable check values, duplicate premise IDs, and rejection of the legacy shared-dependency Boolean.
+
+### Exact source/test verification
+
+- Source/test head: `37ea3e17903ad5e021a62cfc81d381b20deda538`
+- Documentation-only follow-up head: `71f89b716c05540af9309d0704e355ed818a157b`
+- [AEC-Bench v0.2 Adapter Tests #94](https://github.com/SepehrGhanbari/Ario/actions/runs/44097087615): **SUCCESS — 63 passed**. All reports and the public reviewer packet were regenerated.
+- [Implementation Regression #2039](https://github.com/SepehrGhanbari/Ario/actions/runs/44097087523): Ubuntu **SUCCESS — 1233 passed, 7 skipped, 121 subtests passed**. Windows advisory was still running when this status was written; its result must be recorded separately.
+- [AEC-Bench reports and reviewer packet artifact](https://github.com/SepehrGhanbari/Ario/actions/runs/44097087615/artifacts/14334706455), SHA-256 `384bc8b12a109e4a7b4186a190df038dae0fad3b4a3baf5c141bb19f986ab272`.
+
+These are synthetic, author-authored development cases and internal tests. No independent oracle adjudication or real-world composition evaluation has occurred.
