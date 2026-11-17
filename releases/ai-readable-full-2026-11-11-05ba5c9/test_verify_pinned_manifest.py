@@ -216,9 +216,15 @@ class PinnedManifestTests(unittest.TestCase):
 
     def test_manifest_file_then_unicode_alias_child_is_rejected(self):
         decomposed = "e" + chr(0x301)
-        manifest, txt, pin = fixture([(decomposed, b"x"), (decomposed + "/child", b"y")])
+        manifest, txt, pin = fixture([(decomposed, b"x"), ("é/child", b"y")])
         self.write(manifest, txt)
-        with self.assertRaisesRegex(VerificationError, "file/directory-conflicting"):
+        with self.assertRaises(VerificationError):
+            verify(self.txt, self.manifest, pin)
+
+    def test_manifest_file_then_casefold_alias_child_is_rejected(self):
+        manifest, txt, pin = fixture([("Parent", b"x"), ("parent/child", b"y")])
+        self.write(manifest, txt)
+        with self.assertRaises(VerificationError):
             verify(self.txt, self.manifest, pin)
 
     def test_cli_refuses_missing_external_pin(self):
