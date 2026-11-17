@@ -1,0 +1,120 @@
+name: Ario R6 synthetic OS custody experiment (HOLD)
+
+on:
+  push:
+    branches:
+      - research/r6-two-principal-external-anchor-protocol-20261118
+  pull_request:
+    paths:
+      - 'implementation/research/r6/**'
+      - '.github/workflows/r6-synthetic-os-custody.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  two-os-principals:
+    name: Synthetic executor E vs custodian C (not admin-independent)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout research code
+        uses: actions/checkout@v4
+      - name: Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install test-only Ed25519 library
+        run: python -m pip install 'cryptography==46.0.4'
+      - name: Distinct Unix users and fail-closed filesystem controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY="$(command -v python)"
+          LAB="$GITHUB_WORKSPACE/implementation/research/r6/os_custody_lab.py"
+          echo "R6 research only: ephemeral runner, disposable identities, no real Ario keys."
+          sudo useradd --create-home --shell /bin/sh ario_r6_executor
+          sudo useradd --create-home --shell /bin/sh ario_r6_custodian
+          sudo install -d -m 0700 -o ario_r6_executor -g ario_r6_executor /tmp/ario-r6-executor
+          sudo install -d -m 0700 -o ario_r6_custodian -g ario_r6_custodian /tmp/ario-r6-custodian
+          sudo install -d -m 1777 -o root -g root /tmp/ario-r6-exchange
+          # E owns private signing material; C has a separately installed PUBLIC key.
+          sudo -u ario_r6_executor "$PY" "$LAB" keygen \
+            --private /tmp/ario-r6-executor/ephemeral.key \
+            --public /tmp/ario-r6-exchange/ephemeral.pub
+          sudo cp /tmp/ario-r6-exchange/ephemeral.pub /tmp/ario-r6-custodian/trusted_executor.pub
+          sudo chown ario_r6_custodian:ario_r6_custodian /tmp/ario-r6-custodian/trusted_executor.pub
+          sudo chmod 600 /tmp/ario-r6-custodian/trusted_executor.pub
+          sudo -u ario_r6_executor "$PY" "$LAB" sign \
+            --private /tmp/ario-r6-executor/ephemeral.key \
+            --public /tmp/ario-r6-exchange/ephemeral.pub \
+            --out /tmp/ario-r6-exchange/receipt-1.json --nonce r6-test-nonce-1
+          # Permission transcript must contain EACCES/EPERM from separate UIDs.
+          sudo -u ario_r6_executor "$PY" "$LAB" probe \
+            --path /tmp/ario-r6-custodian/trusted_executor.pub --mode read | tee /tmp/ario-r6-eacces-E-read.json
+          sudo -u ario_r6_executor "$PY" "$LAB" probe \
+            --path /tmp/ario-r6-custodian/journal.jsonl --mode write | tee /tmp/ario-r6-eacces-E-write.json
+          sudo -u ario_r6_custodian "$PY" "$LAB" probe \
+            --path /tmp/ario-r6-executor/ephemeral.key --mode read | tee /tmp/ario-r6-eacces-C-read.json
+          grep -q 'ACCESS_DENIED' /tmp/ario-r6-eacces-E-read.json
+          grep -q 'ACCESS_DENIED' /tmp/ario-r6-eacces-E-write.json
+          grep -q 'ACCESS_DENIED' /tmp/ario-r6-eacces-C-read.json
+          # Positive control: one fresh synthetic signed receipt is OBSERVED_ONLY.
+          sudo -u ario_r6_custodian "$PY" "$LAB" custodian \
+            --dir /tmp/ario-r6-custodian --action spend \
+            --receipt /tmp/ario-r6-exchange/receipt-1.json | tee /tmp/ario-r6-first.json
+          grep -q 'SYNTHETIC_NONCE_SPEND_RECORDED' /tmp/ario-r6-first.json
+          grep -q '"evidence_admission_allowed": false' /tmp/ario-r6-first.json
+          # Replay must refuse WITHOUT updating C's nonce journal.
+          if sudo -u ario_r6_custodian "$PY" "$LAB" custodian \
+              --dir /tmp/ario-r6-custodian --action spend \
+              --receipt /tmp/ario-r6-exchange/receipt-1.json > /tmp/ario-r6-replay.json; then
+            echo "ERROR: duplicate nonce was accepted" >&2; exit 1
+          fi
+          grep -q 'REPLAYED_NONCE' /tmp/ario-r6-replay.json
+          # Concurrent duplicate submissions: exactly one C-owned append.
+          sudo -u ario_r6_executor "$PY" "$LAB" sign \
+            --private /tmp/ario-r6-executor/ephemeral.key \
+            --public /tmp/ario-r6-exchange/ephemeral.pub \
+            --out /tmp/ario-r6-exchange/receipt-2.json --nonce r6-test-nonce-2
+          set +e
+          sudo -u ario_r6_custodian "$PY" "$LAB" custodian \
+            --dir /tmp/ario-r6-custodian --action spend \
+            --receipt /tmp/ario-r6-exchange/receipt-2.json > /tmp/ario-r6-race-a.json &
+          PA="$!"
+          sudo -u ario_r6_custodian "$PY" "$LAB" custodian \
+            --dir /tmp/ario-r6-custodian --action spend \
+            --receipt /tmp/ario-r6-exchange/receipt-2.json > /tmp/ario-r6-race-b.json &
+          PB="$!"
+          wait "$PA"; A="$?"
+          wait "$PB"; B="$?"
+          set -e
+          if ! { { test "$A" -eq 0 && test "$B" -eq 3; } || { test "$A" -eq 3 && test "$B" -eq 0; }; }; then
+            echo "ERROR: concurrent nonce spend result mismatch: A=$A B=$B" >&2; exit 1
+          fi
+          grep -l 'SYNTHETIC_NONCE_SPEND_RECORDED' /tmp/ario-r6-race-*.json
+          grep -l 'REPLAYED_NONCE' /tmp/ario-r6-race-*.json
+          test "$(sudo wc -l < /tmp/ario-r6-custodian/journal.jsonl)" -eq 2
+          # C revokes; even a NEW, correctly signed receipt must not pass.
+          sudo -u ario_r6_custodian "$PY" "$LAB" custodian \
+            --dir /tmp/ario-r6-custodian --action revoke | tee /tmp/ario-r6-revoke.json
+          grep -q 'SYNTHETIC_REVOCATION_RECORDED' /tmp/ario-r6-revoke.json
+          sudo -u ario_r6_executor "$PY" "$LAB" sign \
+            --private /tmp/ario-r6-executor/ephemeral.key \
+            --public /tmp/ario-r6-exchange/ephemeral.pub \
+            --out /tmp/ario-r6-exchange/receipt-3.json --nonce r6-test-nonce-3
+          if sudo -u ario_r6_custodian "$PY" "$LAB" custodian \
+              --dir /tmp/ario-r6-custodian --action spend \
+              --receipt /tmp/ario-r6-exchange/receipt-3.json > /tmp/ario-r6-after-revoke.json; then
+            echo "ERROR: revoked synthetic key accepted" >&2; exit 1
+          fi
+          grep -q 'KEY_ALREADY_REVOKED' /tmp/ario-r6-after-revoke.json
+          test "$(sudo wc -l < /tmp/ario-r6-custodian/journal.jsonl)" -eq 3
+          # Root can still read BOTH private directories. This shows why
+          # separate OS UIDs on a shared-admin host are NOT independent custody.
+          sudo test -r /tmp/ario-r6-executor/ephemeral.key
+          sudo test -r /tmp/ario-r6-custodian/trusted_executor.pub
+          echo 'R6 ROOT_ADMIN_READS_BOTH: true; ADMINISTRATIVE_INDEPENDENCE: NOT_ESTABLISHED'
+          echo 'R6 OS_DENIAL + SINGLE_SPEND + CONCURRENT_REPLAY_DENIAL + REVOCATION: PASS'
+          echo 'R6 NO_REAL_EXECUTION / NO_PRIVILEGE / NO_PRODUCTION_KEYS / NO_TRUST_ACTIVATION'
