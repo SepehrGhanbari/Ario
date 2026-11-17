@@ -274,6 +274,10 @@ class SourceMonitoringGuard:
         if existing is not None and (existing.assertion != attr.assertion
                                      or existing.source_type != attr.source_type):
             raise SourceMonitoringError("ledger report attribution ID collision")
+        if existing is not None:
+            # Replaying the same immutable report must preserve the original
+            # registration time and object; never silently rewrite history.
+            return existing
         self._attributions[attr.attribution_id] = attr
         return attr
 
@@ -404,6 +408,12 @@ class SourceMonitoringGuard:
         claim = self._attributions.get(claim_id)
         if not claim:
             raise SourceMonitoringError(f"Unknown claim_id: {claim_id}")
+        if claim.source_type == SourceType.LEDGER_REPORT:
+            # No claim-lineage edge should be committed before an impossible
+            # promotion is rejected. A report cannot become empirical proof.
+            raise SourceMonitoringError(
+                f"Ledger report '{claim_id}' is not eligible for promotion"
+            )
 
         if not supporting_ids:
             raise SelfCitationError(f"T-SRC-01: Claim '{claim_id}' has no supporting evidence (unsupported)")
