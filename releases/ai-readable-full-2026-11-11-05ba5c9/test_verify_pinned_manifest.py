@@ -174,7 +174,7 @@ class PinnedManifestTests(unittest.TestCase):
             verify(self.txt, self.manifest, pin)
 
     def test_manifest_rejects_unicode_nfc_aliases(self):
-        manifest, txt, pin = fixture([("é.txt", b"a"), ("e\\u0301.txt", b"b")])
+        manifest, txt, pin = fixture([("é.txt", b"a"), ("e" + chr(0x301) + ".txt", b"b")])
         self.write(manifest, txt)
         with self.assertRaisesRegex(VerificationError, "case/Unicode-colliding"):
             verify(self.txt, self.manifest, pin)
