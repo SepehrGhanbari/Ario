@@ -12,8 +12,11 @@ MAX_RECORD_LINE_BYTES = 65536
 MAX_FOOTER_LINE_BYTES = 512
 MAX_FILES = 10000
 MAX_TRACKED_BYTES = 256 * 1024 * 1024
-MAX_RECORD_PAYLOAD_BYTES = 64 * 1024 * 1024
+MAX_RECORD_RAW_BYTES = 64 * 1024 * 1024
+# Base64's line-wrapped representation is larger than the raw blob.
+MAX_RECORD_PAYLOAD_BYTES = 90 * 1024 * 1024
 MAX_PATH_BYTES = 4096
+MAX_PATH_COMPONENT_BYTES = 255
 class SnapshotError(ValueError): pass
 def blobsha(b): return hashlib.sha1(b"blob "+str(len(b)).encode()+b"\0"+b).hexdigest()
 def portable_key(s): return unicodedata.normalize("NFC",s.casefold())
@@ -36,9 +39,11 @@ def safe(s):
  if not p.parts or p.as_posix()!=s: raise SnapshotError("non-canonical or empty path")
  if p.is_absolute() or w.drive or w.root or w.is_absolute() or ".." in p.parts: raise SnapshotError("absolute or escaping path")
  for x in p.parts:
+  if len(x.encode("utf-8"))>MAX_PATH_COMPONENT_BYTES: raise SnapshotError("path component byte limit")
+  device_base=x.split(".",1)[0].rstrip(" ").upper()
   if (x in ("",".","..") or x.endswith(("."," ")) or ":" in x
       or any(ord(c)<32 or c in '<>"|?*' for c in x)
-      or x.split(".",1)[0].upper() in RES): raise SnapshotError("non-portable path")
+      or device_base in RES): raise SnapshotError("non-portable path")
  return p
 def restore(src,dst):
  dst=pathlib.Path(dst).absolute()
@@ -103,7 +108,7 @@ def restore(src,dst):
     for k in ("bytes","payload_bytes"):
      if not isinstance(e[k],int) or isinstance(e[k],bool) or e[k]<0: raise SnapshotError("invalid byte count")
     if (e["payload_bytes"]>MAX_RECORD_PAYLOAD_BYTES
-        or e["bytes"]>MAX_RECORD_PAYLOAD_BYTES
+        or e["bytes"]>MAX_RECORD_RAW_BYTES
         or total+e["bytes"]>expected_b
         or total+e["bytes"]>MAX_TRACKED_BYTES
         or f.tell()+e["payload_bytes"]>MAX_INPUT_BYTES): raise SnapshotError("record resource limit")
