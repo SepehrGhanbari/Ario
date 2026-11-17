@@ -246,7 +246,7 @@ def corpus() -> tuple[Fixture, ...]:
     ]
     composition = [
       ({"premises":["P1"],"requirements":["P1"],"composition_checks":{"dependency":"COMPATIBLE","scope":"COMPATIBLE","temporal":"COMPATIBLE","claim_kind":"COMPATIBLE"},"composition_checks_complete":True}, {"composition":"VALID","status":"UNKNOWN"}, "All required premises are present and all four composition compatibility dimensions are explicitly checked."),
-      ({"premises":["P1"],"requirements":["P1","P2"]}, {"composition":"INCOMPLETE","status":"UNKNOWN"}, "One required premise missing."),
+      ({"premises":["P1","P2"],"requirements":["P1","P2","P3"]}, {"composition":"INCOMPLETE","status":"UNKNOWN"}, "Partial overlap: two required premises are present, but P3 is missing."),
       ({"premises":["P1","P2"],"requirements":["P1","P2"],"incompatible":True}, {"composition":"INVALID","status":"REJECTED"}, "Premises conflict despite local validity."),
       ({"premises":["P1","P2"],"requirements":["P1","P2"],"composition_checks":{"dependency":"SHARED_DEPENDENCY","scope":"COMPATIBLE","temporal":"COMPATIBLE","claim_kind":"COMPATIBLE"},"composition_checks_complete":True}, {"composition":"VALID_WITH_SHARED_DEPENDENCY","status":"UNKNOWN"}, "Shared dependency is explicitly recorded; no independent-root or truth claim follows."),
       ({"premises":["P1"],"requirements":["P1"],"cycle":True}, {"composition":"INVALID","status":"REJECTED"}, "Circular dependency."),
