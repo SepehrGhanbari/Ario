@@ -113,6 +113,8 @@ jobs:
               --receipt /tmp/ario-r6-exchange/receipt-3.json > /tmp/ario-r6-after-revoke.json; then
             echo "ERROR: revoked synthetic key accepted" >&2; exit 1
           fi
+          echo 'R6 post-revocation structured outcome:'
+          cat /tmp/ario-r6-after-revoke.json
           grep -q 'KEY_ALREADY_REVOKED' /tmp/ario-r6-after-revoke.json
           test "$(sudo wc -l /tmp/ario-r6-custodian/journal.jsonl | awk '{print $1}')" -eq 3
           # Root can still read BOTH private directories. This shows why
