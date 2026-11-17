@@ -14,7 +14,8 @@ No existing runtime, memory engine, SourceMonitoringGuard, signer, Ruleset, jour
 ## Mechanism and bounded inputs
 
 Inputs supplied to `inspect_receipt`:
-1. Canonically encoded, bounded JSON **receipt envelope** containing a versioned payload and an Ed25519 signature over `b'ARIO-RESEARCH-EXECUTION-RECEIPT-V0.1\\x00' + canonical_payload_bytes`.
+1. Canonically encoded, bounded JSON **receipt envelope** containing a versioned payload and an Ed25519 signature over `b'ARIO-RESEARCH-EXECUTION-RECEIPT-V0.1\x00' + canonical_payload_bytes`.
+   The suffix `\x00` in the Python bytes literal represents exactly **one NUL byte**, not the two literal backslash-and-`x` characters.
 2. Canonical, bounded JSON **policy snapshot** with public key ID, raw Ed25519 public key, time interval, `revoked` flag, and a fixed `SYNTHETIC_RESEARCH_ONLY` purpose.
 3. Caller-supplied expected **SHA-256 of the policy bytes**, expected request digest and result digest.
 4. Caller-supplied, immutable `frozenset` of previously spent nonces (bounded to 1024), plus an integer inspection epoch.
