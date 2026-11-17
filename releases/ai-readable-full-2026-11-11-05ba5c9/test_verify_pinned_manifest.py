@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 import RESTORE_FROM_TXT_HARDENED as hardened
 import verify_pinned_manifest as pinned
@@ -165,6 +166,31 @@ class PinnedManifestTests(unittest.TestCase):
         manifest, txt, pin = fixture([("one.bin", b"\0\xff\xfe"), ("two.txt", b"yes")])
         self.write(manifest, txt)
         self.assertEqual(verify(self.txt, self.manifest, pin)["files"], 2)
+
+    def test_manifest_rejects_windows_reserved_name_with_pre_extension_space(self):
+        manifest, txt, pin = fixture([("CON .txt", b"x")])
+        self.write(manifest, txt)
+        with self.assertRaisesRegex(VerificationError, "non-portable manifest path"):
+            verify(self.txt, self.manifest, pin)
+
+    def test_manifest_rejects_unicode_nfc_aliases(self):
+        manifest, txt, pin = fixture([("é.txt", b"a"), ("e\\u0301.txt", b"b")])
+        self.write(manifest, txt)
+        with self.assertRaisesRegex(VerificationError, "case/Unicode-colliding"):
+            verify(self.txt, self.manifest, pin)
+
+    def test_manifest_rejects_overlong_path_component(self):
+        manifest, txt, pin = fixture([("é" * 128 + ".txt", b"x")])
+        self.write(manifest, txt)
+        with self.assertRaisesRegex(VerificationError, "component byte limit"):
+            verify(self.txt, self.manifest, pin)
+
+    def test_verifier_distinguishes_raw_and_base64_payload_limits(self):
+        manifest, txt, pin = fixture([("binary.bin", b"\\x00" * 10)])
+        self.write(manifest, txt)
+        with mock.patch.object(pinned, "PER_RECORD_RAW_LIMIT", 10), \\
+             mock.patch.object(pinned, "PER_RECORD_PAYLOAD_LIMIT", 20):
+            self.assertEqual(verify(self.txt, self.manifest, pin)["files"], 1)
 
     def test_cli_refuses_missing_external_pin(self):
         completed = subprocess.run([sys.executable, str(SCRIPT),
