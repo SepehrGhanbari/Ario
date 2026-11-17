@@ -21,6 +21,18 @@ status_verify=$?
 set -e
 [[ "$status_submit" == 2 && "$status_verify" == 2 ]] || { echo "FAIL: unsafe submit=$status_submit verify=$status_verify" >&2; exit 1; }
 [[ ! -e "$HERE/should_not_be_created" ]] || { echo 'FAIL: output created without approval' >&2; exit 1; }
+# A changed manifest must never reach Sigsum, even with the opt-in flag.
+tampered="$(mktemp)"
+trap 'rm -f -- "$tampered"' EXIT
+cp -- "$MANIFEST" "$tampered"
+printf ' ' >> "$tampered"
+set +e
+bash "$SCRIPT" --dry-run "$tampered" > /dev/null 2>&1
+status_tampered_dry=$?
+ARIO_W18_PUBLIC_SUBMISSION_APPROVED=YES bash "$SCRIPT" --submit "$tampered" "$HERE/should_not_be_created" > /dev/null 2>&1
+status_tampered_submit=$?
+set -e
+[[ "$status_tampered_dry" == 2 && "$status_tampered_submit" == 2 ]] || { echo "FAIL: tampered manifest passed: dry=$status_tampered_dry submit=$status_tampered_submit" >&2; exit 1; }
 python3 - "$MANIFEST" <<'PY'
 import json,sys,re
 x=json.load(open(sys.argv[1],encoding='utf-8'))
@@ -33,4 +45,4 @@ for f in x['artifacts']:
     assert f['path'].startswith('research/consensus/') and re.fullmatch('[a-f0-9]{40}',f['git_blob_sha1'])
 print('W18_MANIFEST_SCHEMA_PASS')
 PY
-printf 'W18_DRY_RUN_TEST_PASS: 4 checks: shell syntax, immutable manifest hash/schema, default no-network, unauthorized submit and missing proof denied. REAL_EXTERNAL_PROOF=NOT_OBTAINED\n'
+printf 'W18_DRY_RUN_TEST_PASS: 5 groups: shell syntax, immutable manifest hash/schema, default no-network, unauthorized submit and missing proof denied. REAL_EXTERNAL_PROOF=NOT_OBTAINED\n'
