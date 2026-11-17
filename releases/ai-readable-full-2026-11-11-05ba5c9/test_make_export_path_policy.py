@@ -33,6 +33,30 @@ class ExportPathPolicyTests(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0, repr(invalid_name))
                 self.assertFalse((release / "artifacts" / "ario-full.txt").exists())
 
+    def test_generator_rejects_oversized_source_blob_before_export(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            release = pathlib.Path(tmp) / "release"
+            source = release / "source"
+            source.mkdir(parents=True)
+            script = release / "make_export.py"
+            shutil.copyfile(SCRIPT_SOURCE, script)
+            source_text = script.read_text(encoding="utf-8")
+            source_text = source_text.replace(
+                "MAX_RECORD_RAW_BYTES=64*1024*1024",
+                "MAX_RECORD_RAW_BYTES=4",
+            )
+            script.write_text(source_text, encoding="utf-8")
+            subprocess.check_call(["git", "init", "-q", str(source)])
+            subprocess.check_call(["git", "-C", str(source), "config", "user.email", "test@example.invalid"])
+            subprocess.check_call(["git", "-C", str(source), "config", "user.name", "Export Path Test"])
+            (source / "too-large.bin").write_bytes(b"12345")
+            subprocess.check_call(["git", "-C", str(source), "add", "--all"])
+            subprocess.check_call(["git", "-C", str(source), "commit", "-qm", "oversized blob fixture"])
+            result = subprocess.run([sys.executable, str(script)], capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("tracked byte/resource limit", result.stderr)
+            self.assertFalse((release / "artifacts" / "ario-full.txt").exists())
+
     def test_generator_rejects_unicode_nfc_alias(self):
         with tempfile.TemporaryDirectory() as tmp:
             release = pathlib.Path(tmp) / "release"
