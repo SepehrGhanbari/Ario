@@ -102,15 +102,14 @@ def restore(src,dst):
     parts=p.parts
     for i in range(1,len(parts)+1):
      prefix="/".join(parts[:i]); key=portable_key(prefix)
+     if i<len(parts) and key in folded: raise SnapshotError("file/directory path conflict")
      previous=folded_components.get(key)
      if previous is None:
       added=len(key.encode("utf-8"))+len(prefix.encode("utf-8"))
       if path_index_entries>=MAX_PATH_INDEX_ENTRIES or path_index_bytes+added>MAX_PATH_INDEX_BYTES: raise SnapshotError("path index resource limit")
       folded_components[key]=prefix; path_index_entries+=1; path_index_bytes+=added
      elif previous!=prefix: raise SnapshotError("case-colliding path component")
-     if i<len(parts):
-      if key in folded: raise SnapshotError("file/directory path conflict")
-      all_parents.add(key)
+     if i<len(parts): all_parents.add(key)
     seen.add(prefix); folded.add(key)
     if e["mode"] not in ("100644","100755","120000"): raise SnapshotError("unsupported Git mode")
     for k in ("bytes","payload_bytes"):
