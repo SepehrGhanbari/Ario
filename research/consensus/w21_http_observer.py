@@ -9,10 +9,18 @@ import argparse
 import json
 from pathlib import Path
 from urllib.parse import urlsplit
-from urllib.request import Request, urlopen
+from urllib.request import Request, build_opener, HTTPRedirectHandler
 from w20_independent_monitor import evaluate_bundle, _check_head, ORIGIN, result
 
 MAX_RESPONSE=49152
+
+class _NeverFollowRedirect(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        # A loopback-only URL whitelist is meaningless if a localhost HTTP
+        # response can redirect the client to a different origin. Fail closed.
+        return None
+
+_NO_REDIRECT_OPENER = build_opener(_NeverFollowRedirect)
 
 
 def _no_dup(pairs):
@@ -26,7 +34,7 @@ def _no_dup(pairs):
 
 def _fetch(base:str, path:str):
     req=Request(base+path,headers={'Accept':'application/json','Cache-Control':'no-store'},method='GET')
-    with urlopen(req,timeout=2) as resp:
+    with _NO_REDIRECT_OPENER.open(req,timeout=2) as resp:
         if resp.status!=200 or resp.headers.get_content_type()!='application/json':
             raise ValueError('BAD_HTTP_STATUS_OR_CONTENT_TYPE')
         data=resp.read(MAX_RESPONSE+1)
