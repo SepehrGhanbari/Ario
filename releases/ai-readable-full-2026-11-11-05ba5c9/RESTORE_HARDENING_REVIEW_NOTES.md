@@ -94,3 +94,13 @@
 - Exact PR HEAD: 771f39d522f8d6da1d7a6b28c86889f6418c505d. GitHub Actions [Published TXT Restore Security #44083268037](https://github.com/SepehrGhanbari/Ario/actions/runs/44083268037) completed **10/10 jobs SUCCESS**; [Implementation Regression #44083272246](https://github.com/SepehrGhanbari/Ario/actions/runs/44083272246) completed SUCCESS. Restore workflow reports **82 test methods / OK on Ubuntu** and **82 test methods / OK (3 platform-specific skips) on Windows**, in both Python 3.11 and 3.12 restore matrix jobs. Manifest and pinned roundtrip matrices also passed.
 - Limits are explicit V1 candidate policy, not a general guarantee that all historical TXT snapshots satisfy the new bounds. macOS remains untested.
 
+
+
+## Staged artifact publication and failed-build preservation (2026-11-17)
+
+- Export generation now writes all files into a unique hidden staging directory under the release folder. The stage is cleaned on normal failure/exit. The final artifacts directory is not replaced until the ZIP, TXT, manifest, checksums, internal restore, and content checks have succeeded.
+- If a previous artifacts directory exists, the exporter moves it to a unique backup slot, replaces the final directory with the completed stage, and removes the backup only after success. If the replacement fails, it attempts to restore the backup. This is staged, rollback-protected publication; it is not a claim of a zero-gap atomic exchange under concurrent writers.
+- Repeated-build regression runs the generator twice against the same pinned Git source and confirms a byte-identical ZIP; no persistent restored-source tree is left inside artifacts.
+- Failed-rebuild regression first creates a valid artifact set, then forces a late TXT-size failure. The prior ZIP/TXT remain byte-identical and no stage/backup directory remains. This guards against stale or partial artifacts being mistaken for the result of a failed build.
+- Exact code/test HEAD: ba722299361ab52512190ed1a415fdee9c698e08. [Published TXT Restore Security #44084146677](https://github.com/SepehrGhanbari/Ario/actions/runs/44084146677) passed **10/10 jobs SUCCESS**; [Implementation Regression #44084146681](https://github.com/SepehrGhanbari/Ario/actions/runs/44084146681) passed. The restore suite ran **84 test methods** on Ubuntu (all pass) and Windows (all pass, 3 POSIX-only skips) with Python 3.11 and 3.12. Full generator→restore→independent-manifest→Git-blob roundtrip passed on Ubuntu and Windows.
+
