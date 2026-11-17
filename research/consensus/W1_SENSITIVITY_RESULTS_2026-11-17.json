@@ -1,0 +1,525 @@
+{
+  "aggregate": {
+    "designed_trials": 16,
+    "development_expectation_matches": 16,
+    "hidden_dependency_conditional": 3,
+    "hidden_dependency_trials": 3,
+    "permutation_checks": 192
+  },
+  "pinned_git_blob": "4faf010d73219af63c254097e9c135da68d60078",
+  "pinned_sha256": "71912958bad6db97218ac630cadee6c34c04b286aec99b3f7cda071f8d79f567",
+  "schema_version": "W1-INPUT-SENSITIVITY-DEV-1",
+  "scientific_status": "AUTHOR_BUILT_DEVELOPMENT_FIXTURES_NOT_BLINDED_OR_INDEPENDENT",
+  "trials": [
+    {
+      "axes": {
+        "admin": "LAB_CONDITIONALLY_SEPARATE",
+        "capture": "LAB_BEFORE_MUTATION",
+        "custody": [
+          "LAB_CHAIN_PRESENT",
+          "LAB_CHAIN_PRESENT"
+        ],
+        "source": "LAB_CONDITIONALLY_DISTINCT",
+        "storage": "LAB_DISTINCT_OBJECTS"
+      },
+      "case": "honest-separate",
+      "expected_development": "CONDITIONAL",
+      "latent_relation": "SEPARATE_MODELED",
+      "mechanism": "model-control",
+      "passes_dev_expectation": true,
+      "reason_codes": [
+        "CAPTURE_SEQUENCE_PRECEDES_MUTATION",
+        "DISJOINT_LAB_CONTROL_PATHS",
+        "DISJOINT_LAB_SOURCE_SETS",
+        "LAB_STORAGE_REFERENCES_DISTINCT",
+        "LAB_TRANSFER_CHAIN_PRESENT"
+      ],
+      "report": "CONDITIONAL",
+      "reported_graph_sha256": "fbc9a0267c0334d7f32bb87b0219f78e4febf7a342501cbd7da77b216b41813d",
+      "safety": {
+        "evidence_admission": "NOT_EVALUATED",
+        "historical_event_truth": "UNKNOWN",
+        "human_authorization": "NOT_EVALUATED",
+        "production_custody_authenticity": "NOT_ESTABLISHED"
+      }
+    },
+    {
+      "axes": {
+        "admin": "LAB_CONDITIONALLY_SEPARATE",
+        "capture": "LAB_BEFORE_MUTATION",
+        "custody": [
+          "LAB_CHAIN_PRESENT",
+          "LAB_CHAIN_PRESENT"
+        ],
+        "source": "COMMON_SOURCE_DETECTED",
+        "storage": "LAB_DISTINCT_OBJECTS"
+      },
+      "case": "honest-shared-source",
+      "expected_development": "DEPENDENT",
+      "latent_relation": "SHARED_SOURCE",
+      "mechanism": "positive-control",
+      "passes_dev_expectation": true,
+      "reason_codes": [
+        "CAPTURE_SEQUENCE_PRECEDES_MUTATION",
+        "DISJOINT_LAB_CONTROL_PATHS",
+        "LAB_STORAGE_REFERENCES_DISTINCT",
+        "LAB_TRANSFER_CHAIN_PRESENT",
+        "SHARED_DECLARED_ORIGIN"
+      ],
+      "report": "DEPENDENT",
+      "reported_graph_sha256": "5e013f0dcc435b98b4d380bc425ccf470ab8658bcb55e6501bb44203b64afe03",
+      "safety": {
+        "evidence_admission": "NOT_EVALUATED",
+        "historical_event_truth": "UNKNOWN",
+        "human_authorization": "NOT_EVALUATED",
+        "production_custody_authenticity": "NOT_ESTABLISHED"
+      }
+    },
+    {
+      "axes": {
+        "admin": "LAB_CONDITIONALLY_SEPARATE",
+        "capture": "LAB_BEFORE_MUTATION",
+        "custody": [
+          "LAB_CHAIN_PRESENT",
+          "LAB_CHAIN_PRESENT"
+        ],
+        "source": "LAB_CONDITIONALLY_DISTINCT",
+        "storage": "LAB_DISTINCT_OBJECTS"
+      },
+      "case": "hidden-source-false-complete",
+      "expected_development": "CONDITIONAL",
+      "latent_relation": "SHARED_SOURCE",
+      "mechanism": "false-completeness",
+      "passes_dev_expectation": true,
+      "reason_codes": [
+        "CAPTURE_SEQUENCE_PRECEDES_MUTATION",
+        "DISJOINT_LAB_CONTROL_PATHS",
+        "DISJOINT_LAB_SOURCE_SETS",
+        "LAB_STORAGE_REFERENCES_DISTINCT",
+        "LAB_TRANSFER_CHAIN_PRESENT"
+      ],
+      "report": "CONDITIONAL",
+      "reported_graph_sha256": "fbc9a0267c0334d7f32bb87b0219f78e4febf7a342501cbd7da77b216b41813d",
+      "safety": {
+        "evidence_admission": "NOT_EVALUATED",
+        "historical_event_truth": "UNKNOWN",
+        "human_authorization": "NOT_EVALUATED",
+        "production_custody_authenticity": "NOT_ESTABLISHED"
+      }
+    },
+    {
+      "axes": {
+        "admin": "LAB_CONDITIONALLY_SEPARATE",
+        "capture": "LAB_BEFORE_MUTATION",
+        "custody": [
+          "LAB_CHAIN_PRESENT",
+          "LAB_CHAIN_PRESENT"
+        ],
+        "source": "UNKNOWN",
+        "storage": "LAB_DISTINCT_OBJECTS"
+      },
+      "case": "hidden-source-incomplete",
+      "expected_development": "UNKNOWN",
+      "latent_relation": "SHARED_SOURCE",
+      "mechanism": "honest-incompleteness",
+      "passes_dev_expectation": true,
+      "reason_codes": [
+        "CAPTURE_SEQUENCE_PRECEDES_MUTATION",
+        "DISJOINT_LAB_CONTROL_PATHS",
+        "LAB_STORAGE_REFERENCES_DISTINCT",
+        "LAB_TRANSFER_CHAIN_PRESENT",
+        "SOURCE_SURFACE_INCOMPLETE_OR_UNSUPPORTED"
+      ],
+      "report": "UNKNOWN",
+      "reported_graph_sha256": "2d2d10fa3a4d56f0d39a7eeb7845964ce37bbacfa3700bc84f94274264fb3d45",
+      "safety": {
+        "evidence_admission": "NOT_EVALUATED",
+        "historical_event_truth": "UNKNOWN",
+        "human_authorization": "NOT_EVALUATED",
+        "production_custody_authenticity": "NOT_ESTABLISHED"
+      }
+    },
+    {
+      "axes": {
+        "admin": "COMMON_CONTROL_DETECTED",
+        "capture": "LAB_BEFORE_MUTATION",
+        "custody": [
+          "LAB_CHAIN_PRESENT",
+          "LAB_CHAIN_PRESENT"
+        ],
+        "source": "LAB_CONDITIONALLY_DISTINCT",
+        "storage": "LAB_DISTINCT_OBJECTS"
+      },
+      "case": "honest-shared-admin",
+      "expected_development": "DEPENDENT",
+      "latent_relation": "SHARED_ADMIN",
+      "mechanism": "positive-control",
+      "passes_dev_expectation": true,
+      "reason_codes": [
+        "CAPTURE_SEQUENCE_PRECEDES_MUTATION",
+        "DISJOINT_LAB_SOURCE_SETS",
+        "LAB_STORAGE_REFERENCES_DISTINCT",
+        "LAB_TRANSFER_CHAIN_PRESENT",
+        "SHARED_MUTATION_CONTROLLER"
+      ],
+      "report": "DEPENDENT",
+      "reported_graph_sha256": "d981ff7a04a4d9bd7d2da7dc924723f37fa3864d58b3fda43bed7310544e8655",
+      "safety": {
+        "evidence_admission": "NOT_EVALUATED",
+        "historical_event_truth": "UNKNOWN",
+        "human_authorization": "NOT_EVALUATED",
+        "production_custody_authenticity": "NOT_ESTABLISHED"
+      }
+    },
+    {
+      "axes": {
+        "admin": "LAB_CONDITIONALLY_SEPARATE",
+        "capture": "LAB_BEFORE_MUTATION",
+        "custody": [
+          "LAB_CHAIN_PRESENT",
+          "LAB_CHAIN_PRESENT"
+        ],
+        "source": "LAB_CONDITIONALLY_DISTINCT",
+        "storage": "LAB_DISTINCT_OBJECTS"
+      },
+      "case": "hidden-admin-false-complete",
+      "expected_development": "CONDITIONAL",
+      "latent_relation": "SHARED_ADMIN",
+      "mechanism": "false-completeness",
+      "passes_dev_expectation": true,
+      "reason_codes": [
+        "CAPTURE_SEQUENCE_PRECEDES_MUTATION",
+        "DISJOINT_LAB_CONTROL_PATHS",
+        "DISJOINT_LAB_SOURCE_SETS",
+        "LAB_STORAGE_REFERENCES_DISTINCT",
+        "LAB_TRANSFER_CHAIN_PRESENT"
+      ],
+      "report": "CONDITIONAL",
+      "reported_graph_sha256": "fbc9a0267c0334d7f32bb87b0219f78e4febf7a342501cbd7da77b216b41813d",
+      "safety": {
+        "evidence_admission": "NOT_EVALUATED",
+        "historical_event_truth": "UNKNOWN",
+        "human_authorization": "NOT_EVALUATED",
+        "production_custody_authenticity": "NOT_ESTABLISHED"
+      }
+    },
+    {
+      "axes": {
+        "admin": "UNKNOWN",
+        "capture": "LAB_BEFORE_MUTATION",
+        "custody": [
+          "LAB_CHAIN_PRESENT",
+          "LAB_CHAIN_PRESENT"
+        ],
+        "source": "LAB_CONDITIONALLY_DISTINCT",
+        "storage": "LAB_DISTINCT_OBJECTS"
+      },
+      "case": "hidden-admin-incomplete",
+      "expected_development": "UNKNOWN",
+      "latent_relation": "SHARED_ADMIN",
+      "mechanism": "honest-incompleteness",
+      "passes_dev_expectation": true,
+      "reason_codes": [
+        "CAPTURE_SEQUENCE_PRECEDES_MUTATION",
+        "CONTROL_SURFACE_INCOMPLETE_OR_SELF_DECLARED",
+        "DISJOINT_LAB_SOURCE_SETS",
+        "LAB_STORAGE_REFERENCES_DISTINCT",
+        "LAB_TRANSFER_CHAIN_PRESENT"
+      ],
+      "report": "UNKNOWN",
+      "reported_graph_sha256": "86294751c29b427093479bb0acc0ffeddd7ebde9590dab2be3f5c3d9bf8cf110",
+      "safety": {
+        "evidence_admission": "NOT_EVALUATED",
+        "historical_event_truth": "UNKNOWN",
+        "human_authorization": "NOT_EVALUATED",
+        "production_custody_authenticity": "NOT_ESTABLISHED"
+      }
+    },
+    {
+      "axes": {
+        "admin": "UNKNOWN",
+        "capture": "UNKNOWN",
+        "custody": [
+          "UNKNOWN",
+          "UNKNOWN"
+        ],
+        "source": "UNKNOWN",
+        "storage": "UNKNOWN"
+      },
+      "case": "candidate-claims-complete",
+      "expected_development": "UNKNOWN",
+      "latent_relation": "SHARED_SOURCE",
+      "mechanism": "untrusted-origin",
+      "passes_dev_expectation": true,
+      "reason_codes": [
+        "MISSING_OR_UNTRUSTED_STORAGE_BINDING",
+        "MISSING_STORAGE_FOR_CONTROL_AUDIT",
+        "NO_TRUSTED_LAB_SEQUENCE_ORDER",
+        "UNTRUSTED_GRAPH_OR_SCOPE",
+        "UNTRUSTED_SOURCE_GRAPH_OR_SCOPE"
+      ],
+      "report": "UNKNOWN",
+      "reported_graph_sha256": "11bbd3bad60f99c0539cd74e6d7aa0f6959140146019e17f118d075895a2cc9a",
+      "safety": {
+        "evidence_admission": "NOT_EVALUATED",
+        "historical_event_truth": "UNKNOWN",
+        "human_authorization": "NOT_EVALUATED",
+        "production_custody_authenticity": "NOT_ESTABLISHED"
+      }
+    },
+    {
+      "axes": {
+        "admin": "LAB_CONDITIONALLY_SEPARATE",
+        "capture": "LAB_BEFORE_MUTATION",
+        "custody": [
+          "LAB_CHAIN_PRESENT",
+          "LAB_CHAIN_PRESENT"
+        ],
+        "source": "COMMON_SOURCE_DETECTED",
+        "storage": "LAB_DISTINCT_OBJECTS"
+      },
+      "case": "source-alias-identity",
+      "expected_development": "DEPENDENT",
+      "latent_relation": "SHARED_SOURCE_OBJECT",
+      "mechanism": "canonical-object-alias",
+      "passes_dev_expectation": true,
+      "reason_codes": [
+        "CAPTURE_SEQUENCE_PRECEDES_MUTATION",
+        "DISJOINT_LAB_CONTROL_PATHS",
+        "LAB_STORAGE_REFERENCES_DISTINCT",
+        "LAB_TRANSFER_CHAIN_PRESENT",
+        "SHARED_DECLARED_ORIGIN"
+      ],
+      "report": "DEPENDENT",
+      "reported_graph_sha256": "53ccf16b04acb90e449ae7739b29fd57943be99fe22376e09af5b3210f082cd0",
+      "safety": {
+        "evidence_admission": "NOT_EVALUATED",
+        "historical_event_truth": "UNKNOWN",
+        "human_authorization": "NOT_EVALUATED",
+        "production_custody_authenticity": "NOT_ESTABLISHED"
+      }
+    },
+    {
+      "axes": {
+        "admin": "UNKNOWN",
+        "capture": "UNKNOWN",
+        "custody": [
+          "UNKNOWN",
+          "UNKNOWN"
+        ],
+        "source": "UNKNOWN",
+        "storage": "UNKNOWN"
+      },
+      "case": "duplicate-witness",
+      "expected_development": "UNKNOWN",
+      "latent_relation": "DUPLICATE_ARTIFACT",
+      "mechanism": "artifact-alias",
+      "passes_dev_expectation": true,
+      "reason_codes": [
+        "INVALID_ARTIFACT_OR_COMPROMISE_REFERENCE"
+      ],
+      "report": "UNKNOWN",
+      "reported_graph_sha256": "42f6abd2ea2661e0cdce051b43301033da3be28d4da224a325e078c5341fefcc",
+      "safety": {
+        "evidence_admission": "NOT_EVALUATED",
+        "historical_event_truth": "UNKNOWN",
+        "human_authorization": "NOT_EVALUATED",
+        "production_custody_authenticity": "NOT_ESTABLISHED"
+      }
+    },
+    {
+      "axes": {
+        "admin": "UNKNOWN",
+        "capture": "LAB_BEFORE_MUTATION",
+        "custody": [
+          "LAB_CHAIN_PRESENT",
+          "UNKNOWN"
+        ],
+        "source": "UNKNOWN",
+        "storage": "LAB_DISTINCT_OBJECTS"
+      },
+      "case": "missing-custody-transfer",
+      "expected_development": "UNKNOWN",
+      "latent_relation": "CUSTODY_UNKNOWN",
+      "mechanism": "missing-transfer",
+      "passes_dev_expectation": true,
+      "reason_codes": [
+        "CAPTURE_SEQUENCE_PRECEDES_MUTATION",
+        "CUSTODY_CHAIN_NOT_ESTABLISHED",
+        "LAB_STORAGE_REFERENCES_DISTINCT",
+        "LAB_TRANSFER_CHAIN_PRESENT",
+        "MISSING_OR_AMBIGUOUS_CUSTODY_TRANSFER",
+        "SOURCE_SURFACE_INCOMPLETE_OR_UNSUPPORTED"
+      ],
+      "report": "UNKNOWN",
+      "reported_graph_sha256": "30f7c01337ae7b058aeb2fcdae977fadd4aa519705b5d5de2ac413072db7cd1a",
+      "safety": {
+        "evidence_admission": "NOT_EVALUATED",
+        "historical_event_truth": "UNKNOWN",
+        "human_authorization": "NOT_EVALUATED",
+        "production_custody_authenticity": "NOT_ESTABLISHED"
+      }
+    },
+    {
+      "axes": {
+        "admin": "LAB_CONDITIONALLY_SEPARATE",
+        "capture": "LAB_BEFORE_MUTATION",
+        "custody": [
+          "LAB_CHAIN_PRESENT",
+          "LAB_CHAIN_PRESENT"
+        ],
+        "source": "LAB_CONDITIONALLY_DISTINCT",
+        "storage": "LAB_DISTINCT_OBJECTS"
+      },
+      "case": "hidden-source-admin-false-complete",
+      "expected_development": "CONDITIONAL",
+      "latent_relation": "SHARED_SOURCE_AND_ADMIN",
+      "mechanism": "dual-hidden-dependency",
+      "passes_dev_expectation": true,
+      "reason_codes": [
+        "CAPTURE_SEQUENCE_PRECEDES_MUTATION",
+        "DISJOINT_LAB_CONTROL_PATHS",
+        "DISJOINT_LAB_SOURCE_SETS",
+        "LAB_STORAGE_REFERENCES_DISTINCT",
+        "LAB_TRANSFER_CHAIN_PRESENT"
+      ],
+      "report": "CONDITIONAL",
+      "reported_graph_sha256": "fbc9a0267c0334d7f32bb87b0219f78e4febf7a342501cbd7da77b216b41813d",
+      "safety": {
+        "evidence_admission": "NOT_EVALUATED",
+        "historical_event_truth": "UNKNOWN",
+        "human_authorization": "NOT_EVALUATED",
+        "production_custody_authenticity": "NOT_ESTABLISHED"
+      }
+    },
+    {
+      "axes": {
+        "admin": "COMMON_CONTROL_DETECTED",
+        "capture": "LAB_BEFORE_MUTATION",
+        "custody": [
+          "LAB_CHAIN_PRESENT",
+          "LAB_CHAIN_PRESENT"
+        ],
+        "source": "COMMON_SOURCE_DETECTED",
+        "storage": "LAB_DISTINCT_OBJECTS"
+      },
+      "case": "honest-shared-source-and-admin",
+      "expected_development": "DEPENDENT",
+      "latent_relation": "SHARED_SOURCE_AND_ADMIN",
+      "mechanism": "positive-control",
+      "passes_dev_expectation": true,
+      "reason_codes": [
+        "CAPTURE_SEQUENCE_PRECEDES_MUTATION",
+        "LAB_STORAGE_REFERENCES_DISTINCT",
+        "LAB_TRANSFER_CHAIN_PRESENT",
+        "SHARED_DECLARED_ORIGIN",
+        "SHARED_MUTATION_CONTROLLER"
+      ],
+      "report": "DEPENDENT",
+      "reported_graph_sha256": "005ccbd3d0d078a38e71feaa40b967ffd5be85ab2ef30061a3b033888966ce27",
+      "safety": {
+        "evidence_admission": "NOT_EVALUATED",
+        "historical_event_truth": "UNKNOWN",
+        "human_authorization": "NOT_EVALUATED",
+        "production_custody_authenticity": "NOT_ESTABLISHED"
+      }
+    },
+    {
+      "axes": {
+        "admin": "LAB_CONDITIONALLY_SEPARATE",
+        "capture": "LAB_BEFORE_MUTATION",
+        "custody": [
+          "LAB_CHAIN_PRESENT",
+          "LAB_CHAIN_PRESENT"
+        ],
+        "source": "LAB_CONDITIONALLY_DISTINCT",
+        "storage": "LAB_DISTINCT_OBJECTS"
+      },
+      "case": "untrusted-self-certification",
+      "expected_development": "CONDITIONAL",
+      "latent_relation": "SEPARATE_MODELED",
+      "mechanism": "unsupported-extra-claim",
+      "passes_dev_expectation": true,
+      "reason_codes": [
+        "CAPTURE_SEQUENCE_PRECEDES_MUTATION",
+        "DISJOINT_LAB_CONTROL_PATHS",
+        "DISJOINT_LAB_SOURCE_SETS",
+        "LAB_STORAGE_REFERENCES_DISTINCT",
+        "LAB_TRANSFER_CHAIN_PRESENT",
+        "UNSUPPORTED_CLAIM:self"
+      ],
+      "report": "CONDITIONAL",
+      "reported_graph_sha256": "c71cebde3ea3a91b97281ea2136cce23f080c814b25469a047a4d46b78c2e30e",
+      "safety": {
+        "evidence_admission": "NOT_EVALUATED",
+        "historical_event_truth": "UNKNOWN",
+        "human_authorization": "NOT_EVALUATED",
+        "production_custody_authenticity": "NOT_ESTABLISHED"
+      }
+    },
+    {
+      "axes": {
+        "admin": "UNKNOWN",
+        "capture": "LAB_BEFORE_MUTATION",
+        "custody": [
+          "LAB_CHAIN_PRESENT",
+          "LAB_CHAIN_PRESENT"
+        ],
+        "source": "LAB_CONDITIONALLY_DISTINCT",
+        "storage": "LAB_DISTINCT_OBJECTS"
+      },
+      "case": "separate-incomplete-control",
+      "expected_development": "UNKNOWN",
+      "latent_relation": "SEPARATE_MODELED",
+      "mechanism": "missing-completeness",
+      "passes_dev_expectation": true,
+      "reason_codes": [
+        "CAPTURE_SEQUENCE_PRECEDES_MUTATION",
+        "CONTROL_SURFACE_INCOMPLETE_OR_SELF_DECLARED",
+        "DISJOINT_LAB_SOURCE_SETS",
+        "LAB_STORAGE_REFERENCES_DISTINCT",
+        "LAB_TRANSFER_CHAIN_PRESENT"
+      ],
+      "report": "UNKNOWN",
+      "reported_graph_sha256": "86294751c29b427093479bb0acc0ffeddd7ebde9590dab2be3f5c3d9bf8cf110",
+      "safety": {
+        "evidence_admission": "NOT_EVALUATED",
+        "historical_event_truth": "UNKNOWN",
+        "human_authorization": "NOT_EVALUATED",
+        "production_custody_authenticity": "NOT_ESTABLISHED"
+      }
+    },
+    {
+      "axes": {
+        "admin": "LAB_CONDITIONALLY_SEPARATE",
+        "capture": "LAB_BEFORE_MUTATION",
+        "custody": [
+          "LAB_CHAIN_PRESENT",
+          "LAB_CHAIN_PRESENT"
+        ],
+        "source": "UNKNOWN",
+        "storage": "LAB_DISTINCT_OBJECTS"
+      },
+      "case": "separate-incomplete-source",
+      "expected_development": "UNKNOWN",
+      "latent_relation": "SEPARATE_MODELED",
+      "mechanism": "missing-completeness",
+      "passes_dev_expectation": true,
+      "reason_codes": [
+        "CAPTURE_SEQUENCE_PRECEDES_MUTATION",
+        "DISJOINT_LAB_CONTROL_PATHS",
+        "LAB_STORAGE_REFERENCES_DISTINCT",
+        "LAB_TRANSFER_CHAIN_PRESENT",
+        "SOURCE_SURFACE_INCOMPLETE_OR_UNSUPPORTED"
+      ],
+      "report": "UNKNOWN",
+      "reported_graph_sha256": "2d2d10fa3a4d56f0d39a7eeb7845964ce37bbacfa3700bc84f94274264fb3d45",
+      "safety": {
+        "evidence_admission": "NOT_EVALUATED",
+        "historical_event_truth": "UNKNOWN",
+        "human_authorization": "NOT_EVALUATED",
+        "production_custody_authenticity": "NOT_ESTABLISHED"
+      }
+    }
+  ]
+}
