@@ -187,10 +187,11 @@ class PinnedManifestTests(unittest.TestCase):
 
     def test_verifier_distinguishes_raw_and_base64_payload_limits(self):
         manifest, txt, pin = fixture([("binary.bin", b"\\x00" * 10)])
+        manifest, txt, pin = fixture([("binary.bin", bytes([0]) * 10)])
         self.write(manifest, txt)
-        with mock.patch.object(pinned, "PER_RECORD_RAW_LIMIT", 10), \\
-             mock.patch.object(pinned, "PER_RECORD_PAYLOAD_LIMIT", 20):
-            self.assertEqual(verify(self.txt, self.manifest, pin)["files"], 1)
+        with mock.patch.object(pinned, "PER_RECORD_RAW_LIMIT", 10):
+            with mock.patch.object(pinned, "PER_RECORD_PAYLOAD_LIMIT", 20):
+                self.assertEqual(verify(self.txt, self.manifest, pin)["files"], 1)
 
     def test_cli_refuses_missing_external_pin(self):
         completed = subprocess.run([sys.executable, str(SCRIPT),
