@@ -1,0 +1,31 @@
+name: R63 V10 Direct NCryptSignHash CI probe (research only)
+on:
+  push:
+    branches:
+      - research/r63-v10-windows-ci-smoke-20261117
+    paths:
+      - .github/workflows/r63-v10-native-cng-probe.yml
+      - research/r63_native_ci/**
+permissions:
+  contents: read
+jobs:
+  cng-direct-probe:
+    runs-on: windows-2022
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Run one disposable native CNG call with public-only verification
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -NonInteractive -File research/r63_native_ci/Invoke-Probe.ps1 *> r63-native-probe.log
+          $rc = $LASTEXITCODE
+          Get-Content r63-native-probe.log
+          if ($rc -ne 0) { exit $rc }
+      - name: Preserve native probe result on success/failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r63-direct-cng-probe-${{ github.run_id }}
+          path: r63-native-probe.log
+          if-no-files-found: error
+          retention-days: 30
