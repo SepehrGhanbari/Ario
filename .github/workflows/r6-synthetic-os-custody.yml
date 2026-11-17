@@ -122,8 +122,18 @@ jobs:
           echo "R6 checkpoint and append checks passed; inspecting root access (no secret bytes)"
           # Root can still read BOTH private directories. This shows why
           # separate OS UIDs on a shared-admin host are NOT independent custody.
-          sudo test -r /tmp/ario-r6-executor/ephemeral.key || { echo "ROOT E key test failed"; exit 1; }
-          sudo test -r /tmp/ario-r6-custodian/trusted_executor.pub || { echo "ROOT C pub test failed"; exit 1; }
-          echo 'R6 ROOT_ADMIN_READS_BOTH: true; ADMINISTRATIVE_INDEPENDENCE: NOT_ESTABLISHED'
+          sudo id
+          sudo stat -c 'R6 synthetic file owner=%u group=%g mode=%a path=%n' \
+            /tmp/ario-r6-executor/ephemeral.key \
+            /tmp/ario-r6-custodian/trusted_executor.pub
+          # Test the shared workflow's administrative override without
+          # printing or copying private-key bytes. Happens after test runs.
+          if sudo chown root:root /tmp/ario-r6-executor/ephemeral.key; then
+            echo 'R6 ROOT_ADMIN_OWNERSHIP_OVERRIDE: OBSERVED'
+          else
+            echo 'R6 ROOT_ADMIN_OWNERSHIP_OVERRIDE: BLOCKED_IN_RUNNER'
+          fi
+          echo 'R6 BOTH_USERS_PROVISIONED_BY_ONE_WORKFLOW: true'
+          echo 'R6 ADMINISTRATIVE_INDEPENDENCE: NOT_ESTABLISHED'
           echo 'R6 OS_DENIAL + SINGLE_SPEND + CONCURRENT_REPLAY_DENIAL + REVOCATION: PASS'
           echo 'R6 NO_REAL_EXECUTION / NO_PRIVILEGE / NO_PRODUCTION_KEYS / NO_TRUST_ACTIVATION'
