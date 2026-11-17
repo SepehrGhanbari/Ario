@@ -2,7 +2,7 @@
 
 The known shared-custodian cross-witness gap is an expected failure,
 not a passing assurance claim. No engine, history, keys or authority modified.
-Original Trae patch was not supplied; these are independently reconstructed
+Original Trae patch is archived separately; these are independently reconstructed
 controls from the source-pinned reviewer findings.
 """
 from __future__ import annotations
@@ -43,6 +43,23 @@ class TestW1TraeBoundaryControls(unittest.TestCase):
         self.assertEqual(report.per_witness_custody[1].status, "LAB_CHAIN_PRESENT")
         self.assertEqual(report.capture_order.status, "NOT_BEFORE_MUTATION")
         self.assertEqual(w.classify(p,case)["classification"], "UNKNOWN")
+
+    def test_gap2_capture_equal_mutation_is_unknown(self):
+        """M9 >= to > must be killed: equality is NOT strictly before."""
+        p = self.p
+        case = w.build_case(p)
+        case = w.replace(case, mutation_sequence=2)  # capture-b=2, exactly on boundary
+        report = p.evaluate_provenance(case)
+        self.assertEqual(report.capture_order.status, "NOT_BEFORE_MUTATION")
+        self.assertEqual(w.classify(p, case)["classification"], "UNKNOWN")
+
+    def test_gap2_capture_just_before_mutation_is_conditional(self):
+        """Positive neighbor: both original captures (1,2) precede mutation=3."""
+        p = self.p
+        case = w.replace(w.build_case(p), mutation_sequence=3)
+        report = p.evaluate_provenance(case)
+        self.assertEqual(report.capture_order.status, "LAB_BEFORE_MUTATION")
+        self.assertEqual(w.classify(p, case)["classification"], "CONDITIONAL")
 
     @unittest.expectedFailure
     def test_known_gap3_shared_custodian_across_witnesses_not_separated(self):
