@@ -113,6 +113,7 @@ class ExportPathPolicyTests(unittest.TestCase):
         for patch_text, filename, expected in (
             ("MAX_PATH_DEPTH=128", "a/b.txt", "path depth limit"),
             ("MAX_PATH_INDEX_ENTRIES=100000", "a/b.txt", "path index resource limit"),
+            ("MAX_PATH_INDEX_BYTES=8*1024*1024", "a.txt", "path index resource limit"),
         ):
             with self.subTest(expected=expected), tempfile.TemporaryDirectory() as tmp:
                 release = pathlib.Path(tmp) / "release"
