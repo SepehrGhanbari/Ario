@@ -1,3 +1,4 @@
+import hashlib
 import os
 import pathlib
 import shutil
@@ -105,9 +106,35 @@ class ExportPathPolicyTests(unittest.TestCase):
                 mode = (entry.external_attr >> 16) & 0xFFFF
                 self.assertEqual(mode & 0o170000, 0o100000)
                 self.assertEqual(z.read("ARIO_SOURCE/link"), b"target.txt")
-            restored = release / "artifacts" / "restored-from-txt" / "link"
-            self.assertTrue(restored.is_file())
-            self.assertFalse(restored.is_symlink())
+            self.assertFalse((release / "artifacts" / "restored-from-txt").exists())
+
+    def test_generator_is_repeatable_without_stale_restore_tree(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            release = pathlib.Path(tmp) / "release"
+            source = release / "source"
+            source.mkdir(parents=True)
+            shutil.copyfile(SCRIPT_SOURCE, release / "make_export.py")
+            shutil.copyfile(pathlib.Path(__file__).with_name("RESTORE_FROM_TXT_HARDENED.py"),
+                            release / "RESTORE_FROM_TXT_HARDENED.py")
+            shutil.copyfile(pathlib.Path(__file__).with_name("verify_pinned_manifest.py"),
+                            release / "verify_pinned_manifest.py")
+            subprocess.check_call(["git", "init", "-q", str(source)])
+            subprocess.check_call(["git", "-C", str(source), "config", "user.email", "test@example.invalid"])
+            subprocess.check_call(["git", "-C", str(source), "config", "user.name", "Repeatability Test"])
+            (source / "hello.txt").write_bytes(b"hello")
+            subprocess.check_call(["git", "-C", str(source), "add", "--all"])
+            subprocess.check_call(["git", "-C", str(source), "commit", "-qm", "repeatable export fixture"])
+
+            script = release / "make_export.py"
+            first = subprocess.run([sys.executable, str(script)], capture_output=True, text=True)
+            self.assertEqual(first.returncode, 0, first.stderr)
+            archive = release / "artifacts" / "ario-full.zip"
+            first_hash = hashlib.sha256(archive.read_bytes()).hexdigest()
+
+            second = subprocess.run([sys.executable, str(script)], capture_output=True, text=True)
+            self.assertEqual(second.returncode, 0, second.stderr)
+            self.assertEqual(hashlib.sha256(archive.read_bytes()).hexdigest(), first_hash)
+            self.assertFalse((release / "artifacts" / "restored-from-txt").exists())
 
     def test_generator_rejects_path_depth_and_index_budget(self):
         for patch_text, filename, expected in (
