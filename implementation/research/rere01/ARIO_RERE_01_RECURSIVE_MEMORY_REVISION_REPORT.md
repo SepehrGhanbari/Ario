@@ -1,7 +1,7 @@
 # ARIO_RERE_01_RECURSIVE_MEMORY_REVISION_REPORT
 
 **Status:** RESEARCH_ONLY / DRAFT / HOLD / NO_MERGE / PRODUCTION=NO_GO  
-**Decision:** HOLD, with expected structural/epistemic RED probes; final empirical verdict pending exact-branch CI.  
+**Decision:** REVISE / HOLD. Recorded empirical result: 5 positive PASS, 7 desired-contract FAIL, 3 NOT_IMPLEMENTED; no merge or trust activation.  
 **Date:** 2026-11-18  
 **EVENT_ID:** LAB-E101  
 **Pre-registration:** [RERE_01_PREREGISTRATION_V0_1.json](RERE_01_PREREGISTRATION_V0_1.json)
@@ -36,7 +36,7 @@
 - Existing `_nodes` values are replaced when marked `CONTESTED`, without an in-engine prior-status history; immutable raw *ledger* is not the same as a recoverable history of *assessments*.
 - The source-level `get_node`/legacy alias behavior is not a versioned epistemic assessment lineage mechanism.
 
-These are source-inspected findings; empirically confirmed test statuses must come from CI, not this inspection.
+These are source-inspected findings, now supplemented by exactly pinned GitHub Actions tests. The direct `ConsolidationEngine` results do not imply the same default behavior via every wrapper: inspected `EpistemicLedgerBridge` explicitly sets `default_status=RECORDED` for its own engine; its `STEP_OBSERVED` path can separately build `SUPPORTED` from a caller-described `COMPLETED` record. The bridge behavior is SOURCE-INSPECTED ONLY in RERE-01, not a new executed RERE case. Do not infer untrusted network reachability.
 
 ## 3. Pre-registered independent synthetic reference
 
@@ -53,21 +53,21 @@ The comparison is intentionally dual: **epistemic justification** and **historic
 
 | ID | Contract | Preregistered expected baseline | Observed |
 | --- | --- | --- | --- |
-| P01 | Explicit `RECORDED` mode | PASS | PENDING CI |
-| N01 | Untrusted T1 must not default to `ACCEPTED` | FAIL | PENDING CI |
-| N02 | Plain T1/T2 contradiction handled | FAIL | PENDING CI |
-| P02 | Explicit `negates` conflict positive control | PASS | PENDING CI |
-| N03 | Caller-supplied T3 `SUPPORTED` cannot promote | FAIL | PENDING CI |
-| N04 | Recover prior assessment status at T4 | NOT_IMPLEMENTED | PENDING CI |
-| N05 | Exact event replay idempotent | FAIL | PENDING CI |
-| N06 | Fabricated digest cannot prove complete receipt | FAIL | PENDING CI |
-| P03 | Malformed digest rejected | PASS | PENDING CI |
-| N07 | Forward negation order invariant | FAIL | PENDING CI |
-| N08 | `REVISED` requires reason and predecessor | FAIL | PENDING CI |
-| P04 | M0 forbids prior audit-result as evidence | PASS | PENDING CI |
-| P05 | M0 flags declared historical overwrite | PASS | PENDING CI |
-| N09 | Independently authenticated source-root semantics | NOT_IMPLEMENTED | PENDING CI |
-| N10 | Typed second-order assessment adjudication API | NOT_IMPLEMENTED | PENDING CI |
+| P01 | Explicit `RECORDED` mode | PASS | PASS |
+| N01 | Untrusted T1 must not default to `ACCEPTED` | FAIL | FAIL (strict XFAIL) |
+| N02 | Plain T1/T2 contradiction handled | FAIL | FAIL (strict XFAIL) |
+| P02 | Explicit `negates` conflict positive control | PASS | PASS |
+| N03 | Caller-supplied T3 `SUPPORTED` cannot promote | FAIL | FAIL (strict XFAIL) |
+| N04 | Recover prior assessment status at T4 | NOT_IMPLEMENTED | NOT_IMPLEMENTED (strict XFAIL) |
+| N05 | Exact event replay idempotent | FAIL | FAIL (strict XFAIL) |
+| N06 | Fabricated digest cannot prove complete receipt | FAIL | FAIL (strict XFAIL) |
+| P03 | Malformed digest rejected | PASS | PASS |
+| N07 | Forward negation order invariant | FAIL | FAIL (strict XFAIL) |
+| N08 | `REVISED` requires reason and predecessor | FAIL | FAIL (strict XFAIL) |
+| P04 | M0 forbids prior audit-result as evidence | PASS | PASS |
+| P05 | M0 flags declared historical overwrite | PASS | PASS |
+| N09 | Independently authenticated source-root semantics | NOT_IMPLEMENTED | NOT_IMPLEMENTED (strict XFAIL) |
+| N10 | Typed second-order assessment adjudication API | NOT_IMPLEMENTED | NOT_IMPLEMENTED (strict XFAIL) |
 
 `pytest.mark.xfail(strict=True)` on N-cases is **not a PASS** for the desired contract. It records a known, expected failure while allowing a research branch CI run to distinguish baseline failure from an unanticipated regression; any unexpected success is an XPASS and fails CI. The `NOT_IMPLEMENTED` rows are absence-of-interface probes, not fabricated runtime claims.
 
@@ -103,7 +103,23 @@ A naive append-only list can retain T1..T4 records in order, but cannot itself a
 
 Cost estimates: S = roughly 0.5–2 engineering days of scoped implementation/review; M = roughly 2–7 days plus cross-platform and compatibility tests. Estimates are directional, not schedules or promises.
 
-## 8. Unknowns and decision boundary
+## 8. Actual CI run records and split assessment
+
+**Executed exact RERE test commit**: `3138cbf92bc3a5ff3294af03368a4277acbb29aa`. Compared against experimental base #210 `6235df45444f112c3a7a699d5c96cac85a4e5b66`; this research change made the 10 expected RED markers stricter with `raises=AssertionError`. Thus an unexpected crash cannot be disguised as expected RED.
+
+- [GitHub Actions PR run #44185466049](https://github.com/SepehrGhanbari/Ario/actions/runs/44185466049): **SUCCESS** for Ubuntu M0 job, Windows 2022 advisory job, and cognitive-memory job. This reports CI execution success, **not safety success**. Linux and Windows M0 jobs each report `1232 passed, 10 xfailed, 121 subtests passed`; dedicated cognitive-memory job reports `86 passed` (these are overlapping tests, not additional independent witnesses).
+- [GitHub Actions branch-push run #44185460000](https://github.com/SepehrGhanbari/Ario/actions/runs/44185460000): Linux PASS; Windows push job skipped per workflow's `pull_request` condition. Earlier exact PR-run [#44185167608](https://github.com/SepehrGhanbari/Ario/actions/runs/44185167608) also succeeded with the original 15-case preregistered tests, before stricter `raises` exception handling.
+- GitHub logs: Linux **Python 3.13.18**, Windows **Python 3.13.17**, `pytest==9.1.1`, pinned `cryptography==46.0.4`, pytest seed convention `510101` in our synthetic digest labels. Linux job command `python -m pytest -q tests`; Windows command `python -B -m pytest -p no:cacheprovider -p tests.test_m0_reproducibility_demo -q tests`. Both included 15 RERE cases. Linux dedicated suite also ran its existing 86 memory tests.
+- Preregistered **15 RERE cases**: five non-xfail positive controls passed (P01/P02/P03/P04/P05); seven intended safety assertions failed (N01/N02/N03/N05/N06/N07/N08); three absent interfaces were recorded as strict assertion XFAIL (N04/N09/N10). The 10 XFAIL are *not* counted as PASS, and `NOT_IMPLEMENTED` is not reclassified as a behavior-level FAIL.
+- Reporting contract: a safety RED means one asserted property fails in an in-memory synthetic candidate; it does **not** establish external exploitation, independently authenticated evidence or actual harm.
+
+**Epistemic justification, separate from structural history:** Basic explicit-record controls P01/P02 and wrong-kind M0 firewall P04 pass. The desired no-untrusted-promotion, general contradiction, ordering and reason-required transitions fail at the directly inspected candidate API. Real authenticated C→T3 and calibration-based T4 judgment have no implemented authorized interface. No warranted truth verdict is produced.
+
+**Historical integrity, separately reported:** M0 F05 can flag a supplied historical mutation candidate (P05 PASS). In draft consolidation, replay reinforcement (N05) and caller-declared hash completeness (N06) fail the required safety assertions, while a durable old-assessment version retrieval (N04) is not implemented. Existing raw ledger retention and M0 structural checks do not by themselves prove a complete chain of evolving assessment justifications.
+
+**GitHub records:** [Research Issue #276](https://github.com/SepehrGhanbari/Ario/issues/276), [Draft PR #274](https://github.com/SepehrGhanbari/Ario/pull/274). PR is stacked on open #210; neither #210 nor #274 is approved for merge.
+
+## 9. Unknowns and decision boundary
 
 - Real source A/B/C identity, custody, clock calibration, revocation and root independence: **UNKNOWN**.
 - Real append-only durability and deletion protection for memory assessment revisions: **NOT ESTABLISHED**.
@@ -112,4 +128,4 @@ Cost estimates: S = roughly 0.5–2 engineering days of scoped implementation/re
 - Claim truth, actual world status, independence of witnesses and consciousness: **NOT PROVEN**.
 - User/owner authorization to adopt a new `#216` protected memory contract: **NOT GRANTED**.
 
-**Decision: HOLD / REVISE candidate.** No merge, production use, trust activation, signer access or automatic admission. Independent review is absent; CI may assess test execution, but not epistemic authority. Add exact CI observations and link any issue/PR before calling this report complete.
+**Decision: REVISE / HOLD.** Exact-head Linux+Windows RERE probes have now run and their results are recorded above. Do not merge, activate production/trust, access signer or grant evidence admission. Independent human and administrative witness custody review are absent; a CI green marker does not undo seven observed safety REDs or create three missing capabilities.
