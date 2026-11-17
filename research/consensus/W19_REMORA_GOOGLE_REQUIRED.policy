@@ -1,0 +1,7 @@
+# W19 research only. Google TrustFabric dev witness AND remora.n621.de.
+# Operator labels are independently published, but independent admin/private key custody is NOT audited.
+log 4644af2abd40f4895a003bca350f9d5912ab301a49c77f13e5b6d905c20a5fe6 https://test.sigsum.org/barreleye
+witness remora.n621.de ebcdeb78e7fdb2ef9227b2c1ef11e94600b55b4d6d9a57877e31ee89e59adc36
+witness transparency.dev/DEV:witness-little-garden 2b6eb0ec483503544cde4e8fc1ce6d1921db21dffccc186865f808f7625443cc
+group cross-operator all remora.n621.de transparency.dev/DEV:witness-little-garden
+quorum cross-operator
