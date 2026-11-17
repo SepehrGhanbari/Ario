@@ -39,6 +39,10 @@ jobs:
           sudo install -d -m 0700 -o ario_r6_executor -g ario_r6_executor /tmp/ario-r6-executor
           sudo install -d -m 0700 -o ario_r6_custodian -g ario_r6_custodian /tmp/ario-r6-custodian
           sudo install -d -m 1777 -o root -g root /tmp/ario-r6-exchange
+          # GitHub checkout path may be inaccessible to new UIDs: publish only
+          # the research code into a root-owned, world-readable test path.
+          sudo install -m 0644 -o root -g root "$LAB" /tmp/ario-r6-exchange/os_custody_lab.py
+          LAB=/tmp/ario-r6-exchange/os_custody_lab.py
           # E owns private signing material; C has a separately installed PUBLIC key.
           sudo -u ario_r6_executor "$PY" "$LAB" keygen \
             --private /tmp/ario-r6-executor/ephemeral.key \
@@ -95,7 +99,7 @@ jobs:
           fi
           grep -l 'SYNTHETIC_NONCE_SPEND_RECORDED' /tmp/ario-r6-race-*.json
           grep -l 'REPLAYED_NONCE' /tmp/ario-r6-race-*.json
-          test "$(sudo wc -l < /tmp/ario-r6-custodian/journal.jsonl)" -eq 2
+          test "$(sudo wc -l /tmp/ario-r6-custodian/journal.jsonl | awk '{print $1}')" -eq 2
           # C revokes; even a NEW, correctly signed receipt must not pass.
           sudo -u ario_r6_custodian "$PY" "$LAB" custodian \
             --dir /tmp/ario-r6-custodian --action revoke | tee /tmp/ario-r6-revoke.json
@@ -110,7 +114,7 @@ jobs:
             echo "ERROR: revoked synthetic key accepted" >&2; exit 1
           fi
           grep -q 'KEY_ALREADY_REVOKED' /tmp/ario-r6-after-revoke.json
-          test "$(sudo wc -l < /tmp/ario-r6-custodian/journal.jsonl)" -eq 3
+          test "$(sudo wc -l /tmp/ario-r6-custodian/journal.jsonl | awk '{print $1}')" -eq 3
           # Root can still read BOTH private directories. This shows why
           # separate OS UIDs on a shared-admin host are NOT independent custody.
           sudo test -r /tmp/ario-r6-executor/ephemeral.key
