@@ -5,7 +5,7 @@
 
 ## خلاصهٔ فارسی برای بنیان‌گذار — مهم‌ترین قسمت
 
-رفیق، مرحلهٔ W21 یک گام از تست فایل مرکل جلوتر رفت: **سرویسی که فقط HTTP GET پاسخ می‌دهد** در یک فرایند جدا اجرا شد و **ناظرِ فقط‌خواندنی** از روی شبکهٔ داخلی `127.0.0.1` چک‌پوینت‌های امضاشده و اثبات‌های درج و تداوم W20 را گرفت و بررسی کرد. در همان محیط، ۱۳ حالت مشخص شامل دادهٔ سالم، حملهٔ بازگردانی، جعل داده و امضا، پاسخ ناقص، خطای JSON و اختلال شبکه آزموده شدند. سه گروه تست W21 به‌همراه شش گروه تست مرکل W20 هم روی یک ماشین تازهٔ GitHub موفق بودند.
+رفیق، مرحلهٔ W21 یک گام از تست فایل مرکل جلوتر رفت: **سرویسی که فقط HTTP GET پاسخ می‌دهد** در یک فرایند جدا اجرا شد و **ناظرِ فقط‌خواندنی** از روی شبکهٔ داخلی `127.0.0.1` چک‌پوینت‌های امضاشده و اثبات‌های درج و تداوم W20 را گرفت و بررسی کرد. در همان محیط، ۱۳ حالت مشخص شامل دادهٔ سالم، حملهٔ بازگردانی، جعل داده و امضا، پاسخ ناقص، خطای JSON و اختلال شبکه آزموده شدند. چهار گروه تست W21، شامل آزمایشِ منع HTTP Redirect، به‌همراه شش گروه تست مرکل W20 هم روی یک ماشین تازهٔ GitHub موفق بودند.
 
 **کشف مهم و تکرارپذیر:** وقتی ناظر یک چک‌پوینت جدیدترِ ۸ رویدادی را قبلاً نگه داشته، سرویسِ بازگردانده‌شده به ۳ رویداد را **رد می‌کند**. اما وقتی خودِ سرویس **و اطلاعات قبلیِ ناظر هر دو روی ۳ رویداد قدیمی** هستند، سیستم فقط سازگاری تاریخی می‌بیند و نمی‌تواند بفهمد نسخهٔ ۸ رویدادی بعداً وجود داشته است. این مورد عمداً به‌عنوان **نتیجهٔ منفی** باقی مانده، نه «امنیت اثبات‌شده».
 
@@ -18,18 +18,18 @@ All artifacts are on research Draft PR [#242](https://github.com/SepehrGhanbari/
 | Exact file | Git Blob SHA-1 read back from GitHub | Role |
 | --- | --- | --- |
 | [`w21_loopback_log_server.py`](w21_loopback_log_server.py) | `166829146235878c239d397a232f9b74f04f5afd` | Local-only HTTP service: `GET /v0/checkpoint`, `/v0/events`, `/v0/consistency?old=3&new=N` |
-| [`w21_http_observer.py`](w21_http_observer.py) | `275bbfa8235e00837fb50b18c604f4e7bcce7153` | Independent **process**, shared author; pinned key, prior and high-water supplied separately; full W20 proof checks; 48-KiB response cap |
-| [`test_w21_http_monitor.py`](test_w21_http_monitor.py) | `4d0fb95e39a46c8cd38b532bcb1cb3a16736c7b5` | 13 named adversarial HTTP scenarios plus unavailable/network URL/unsafe HTTP-method controls; 3 unittest methods |
+| [`w21_http_observer.py`](w21_http_observer.py) | `b97db30fd880fc8ec71d96936b87a2284cc38d8d` | Independent **process**, shared author; pinned key, prior and high-water supplied separately; full W20 proof checks; 48-KiB response cap |
+| [`test_w21_http_monitor.py`](test_w21_http_monitor.py) | `32ad0d92c6d119e6018eac483008dab9190f100c` | 13 named adversarial HTTP scenarios plus unavailable/network URL/unsafe HTTP-method controls AND explicit blocked HTTP 302 redirect to another origin; 4 unittest methods |
 | [`W21_SIMULATED_RETAINED_HIGHWATER_2026-11-17.json`](W21_SIMULATED_RETAINED_HIGHWATER_2026-11-17.json) | `3100c1d5e144503d2da4569aea0f34fd5b611fc6` | Valid **signed** eight-event high-water file, **copied from the same author/PR**, not independently retained |
 | [`W21_PUBLIC_STATIC_LOG_REFERENCE_2026-11-17.json`](W21_PUBLIC_STATIC_LOG_REFERENCE_2026-11-17.json) | Verify GitHub blob in current branch | Raw GitHub commit-pinned PUBLIC W20 reference, no live API or C2SP claim |
 | [`W21_HTTP_TEST_AND_HIGHWATER_NEGATIVES_2026-11-17.json`](W21_HTTP_TEST_AND_HIGHWATER_NEGATIVES_2026-11-17.json) | Verify GitHub blob in current branch | Explicit per-case `DENY / HOLD / HISTORICAL_CONSISTENT` outcomes and nonclaims |
 | [`W21_ACTUAL_HTTP_GITHUB_RUN_STDOUT_2026-11-17.txt`](W21_ACTUAL_HTTP_GITHUB_RUN_STDOUT_2026-11-17.txt) | Verify GitHub blob in current branch | Extracted exact successful job lines from the actual runner, including both test suite summaries |
 
-**Source snapshot pinned for second machine:** `f26a479e6c1f893f05bc96fd49c8b06cecba206a`.
+**Source snapshots pinned for second machines:** initial `f26a479e6c1f893f05bc96fd49c8b06cecba206a` (before redirect correction); hardened `ebed96629829705919e8fcec2e7b6d5cdea52f6f` (final test source).
 
-**Actual local verification:** Python 3.13.5 / cryptography 46.0.4, `python -B -m unittest -q test_w21_http_monitor.py`: 3/3 unittest methods PASS; 13 distinct cases inside the primary method plus network/HTTP method checks. Service is started as a real **separate subprocess**, bound to `127.0.0.1` only. It does not generate new signatures: it replays original W20 fake log checkpoints. `POST`, `PUT`, `DELETE` all return HTTP 405.
+**Actual local verification:** Python 3.13.5 / cryptography 46.0.4, `python -B -m unittest -q test_w21_http_monitor.py`: 4/4 unittest methods PASS; 13 distinct cases inside the primary method plus network/HTTP method checks. Service is started as a real **separate subprocess**, bound to `127.0.0.1` only. It does not generate new signatures: it replays original W20 fake log checkpoints. `POST`, `PUT`, `DELETE` all return HTTP 405.
 
-**Actual second-runner verification:** [GitHub Actions W21 run 44162876016](https://github.com/SepehrGhanbari/Ario/actions/runs/44162876016), job `134321083174` finished **SUCCESS**, Python 3.13 + cryptography 46.0.4. `Ran 3 tests / OK` for W21, `Ran 6 tests / OK` for unchanged W20 compact Merkle proof suite. [Actual 30-day result artifact](https://github.com/SepehrGhanbari/Ario/actions/runs/44162876016/artifacts/14363183832). **No real external network publication; only local HTTP loopback and public package dependency fetch.** The one-shot workflow file was **removed** from the disposable execution branch after run; no recurring workflow or ChatGPT automation created.
+**Actual second-runner verification:** initial [GitHub Actions W21 run 44162876016](https://github.com/SepehrGhanbari/Ario/actions/runs/44162876016) finished **SUCCESS** on the historical three-method source (not yet HTTP redirect hardened). Follow-up **hardened** [GitHub Actions run 44163994803](https://github.com/SepehrGhanbari/Ario/actions/runs/44163994803), job `134325027734`, pinned source `ebed96629829705919e8fcec2e7b6d5cdea52f6f`, finished **SUCCESS**, Python 3.13 + cryptography 46.0.4: `Ran 4 tests / OK` for W21 (including **HTTP redirect canary never contacted**) and `Ran 6 tests / OK` for the unchanged W20 compact Merkle proof suite. [Hardened artifact](https://github.com/SepehrGhanbari/Ario/actions/runs/44163994803/artifacts/14363414462), [actual stdout](W21_HARDENED_REDIRECT_GITHUB_STDOUT_2026-11-17.txt). **No real external network publication; only local HTTP loopback and public package dependency fetch.** The one-shot workflow file was **removed** from the disposable execution branch after run; no recurring workflow or ChatGPT automation created.
 
 ## 2. Negative/positive matrix (13 named HTTP cases)
 
@@ -79,3 +79,11 @@ Thus **no public external Witness Network operator is expected to accept/cosign 
 - [ ] **Independent review report:** exact commit and blobs, `CONFIRMED / REFUTED / UNKNOWN`, independent adversarial test/command, actual output, reviewer's source of trust key and operator custody assumptions. Request counterexample that changes a verdict, not just rerunning same author's tests.
 
 **No-go/status:** `#171_DIRECT_WITNESS_ENROLLMENT_OPEN / #259_REVIEW_OPEN / #216_MEMORY_HOLD / #242_RESEARCH_DRAFT_HOLD / GENESIS=NO_GO / TRUST_ACTIVATION=NO_GO / PRODUCTION=NO_GO / NO_CHATGPT_AUTOMATIONS`. The current work is defensive research and can be safely repeated; it is not authorization for unattended signing, deploy or data publication.
+
+### Verified HTTP redirect security repair (same-day review)
+
+The original W21 observer used Python's default `urlopen`, which **may follow an HTTP 3xx redirect to a different host even though the initial URL is restricted to 127.0.0.1**. This was a **real source-level boundary defect in the isolated W21 prototype**, not a demonstrated production Ario exploit. I corrected the observer to use a no-redirect opener (the redirect handler returns `None`) and added a test with a *second harmless loopback HTTP canary*. The redirected canary remained **uncontacted**; observer returned `HOLD_UNCERTAIN`. This separate hardening scenario passed both locally and on a new GitHub runner, not just by inspection.
+
+Hardened source Git blobs: `w21_http_observer.py` = `b97db30fd880fc8ec71d96936b87a2284cc38d8d`; `test_w21_http_monitor.py` = `32ad0d92c6d119e6018eac483008dab9190f100c`. The original run is preserved as a historical record and **does not** count as testing this fix. The second temporary one-shot workflow was removed after its successful run. No scheduled automation was enabled.
+
+**Important review scope:** the test covers redirect-following behavior by the configured opener, not every possible DNS/URL parsing or HTTP response-smuggling attack. A future real public deployment would require a separately reviewed HTTPS origin, redirect controls, TLS configuration and real operator authorization.
