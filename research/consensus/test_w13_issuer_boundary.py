@@ -36,14 +36,14 @@ class IssuerCases(unittest.TestCase):
           ('10_source_key_used_to_sign_grant',dict(grant_packet=self.origin.grant(grant_id='g1',principal='USER-A',operation='SEND',resource='report-1',destination='review@example.invalid',source_digest=digest_content(t))),'DENY','GRANT_INVALID_SIGNATURE_OR_PAYLOAD'),
           ('11_wrong_grant_key',dict(grant_packet=self.impostor.grant(grant_id='g1',principal='USER-A',operation='SEND',resource='report-1',destination='review@example.invalid',source_digest=digest_content(t))),'DENY','GRANT_INVALID_SIGNATURE_OR_PAYLOAD'),
           ('12_grant_replayed_after_expiry',dict(now=20),'DENY','GRANT_NOT_CURRENT'),
-          ('13_grant_not_yet_valid',dict(now=-1),'UNKNOWN','CLOCK_INVALID'),
+          ('13_grant_not_yet_valid',dict(grant_packet=self.granter.grant(grant_id='future',principal='USER-A',operation='SEND',resource='report-1',destination='review@example.invalid',source_digest=digest_content(t),not_before=5,expires=20),now=0),'DENY','GRANT_NOT_CURRENT'),
           ('14_wrong_source_digest',dict(proposed={**a,'source_digest':'0'*64}),'DENY','SOURCE_BYTES_OR_PRINCIPAL_MISMATCH'),
           ('15_no_clock_attestation',dict(now='0'),'UNKNOWN','CLOCK_INVALID'),
           ('16_invalid_candidate',dict(proposed={**a,'extra':'x'}),'UNKNOWN','CANDIDATE_SCHEMA'),
           ('17_malformed_source_packet',dict(source_packet={'bad':1}),'DENY','SOURCE_PACKET_SCHEMA'),
           ('18_malformed_grant_packet',dict(grant_packet={'bad':1}),'DENY','GRANT_PACKET_SCHEMA'),
           ('19_no_real_action_on_success',{},'ELIGIBLE_FOR_SEPARATE_GATE',None),
-          ('20_exact_data_only',{},'ELIGIBLE_FOR_SEPARATE_GATE',None),
+          ('20_grant_source_digest_mismatch',dict(grant_packet=self.granter.grant(grant_id='wrong-digest',principal='USER-A',operation='SEND',resource='report-1',destination='review@example.invalid',source_digest='0'*64)),'DENY','GRANT_SCOPE_MISMATCH'),
         ]
         for name,delta,want,reason in cases:
             with self.subTest(name=name):
