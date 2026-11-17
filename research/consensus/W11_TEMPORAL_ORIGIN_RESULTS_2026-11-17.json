@@ -1,0 +1,242 @@
+{
+  "schema": "ARIO_W11_TEMPORAL_ORIGIN_RESEARCH_V1",
+  "status": "SELF_AUTHORED_SYNTHETIC_EXPECTATIONS_MATCHED",
+  "scenario_count": 36,
+  "outcomes": {
+    "DENY": 21,
+    "DATA_ONLY": 2,
+    "UNKNOWN": 3,
+    "ELIGIBLE_FOR_SEPARATE_GATE": 5,
+    "INVALID_DERIVATION": 1,
+    "MISSING_PARENT": 1,
+    "ROOT_DEDUPED": 1,
+    "ORDERED_CORRECT": 1,
+    "ROOT_RETAINED": 1
+  },
+  "rows": [
+    {
+      "id": "T01",
+      "expected": "DENY",
+      "observed": "DENY",
+      "purpose": "external destination without independent grant"
+    },
+    {
+      "id": "T02",
+      "expected": "DENY",
+      "observed": "DENY",
+      "purpose": "four transformations do not confer authority"
+    },
+    {
+      "id": "T03",
+      "expected": "DENY",
+      "observed": "DENY",
+      "purpose": "forged user/system markers within source"
+    },
+    {
+      "id": "T04",
+      "expected": "DENY",
+      "observed": "DENY",
+      "purpose": "history success text not a grant"
+    },
+    {
+      "id": "T05",
+      "expected": "DENY",
+      "observed": "DENY",
+      "purpose": "source count inflation from one root"
+    },
+    {
+      "id": "T06",
+      "expected": "DENY",
+      "observed": "DENY",
+      "purpose": "two roots do not create user authority"
+    },
+    {
+      "id": "T07",
+      "expected": "DATA_ONLY",
+      "observed": "DATA_ONLY",
+      "purpose": "non-effect content remains usable"
+    },
+    {
+      "id": "T08",
+      "expected": "DATA_ONLY",
+      "observed": "DATA_ONLY",
+      "purpose": "data-only path; text to text injection not evaluated"
+    },
+    {
+      "id": "T09",
+      "expected": "UNKNOWN",
+      "observed": "UNKNOWN",
+      "purpose": "missing ancestry reference"
+    },
+    {
+      "id": "T10",
+      "expected": "UNKNOWN",
+      "observed": "UNKNOWN",
+      "purpose": "unknown origin fails closed"
+    },
+    {
+      "id": "T11",
+      "expected": "UNKNOWN",
+      "observed": "UNKNOWN",
+      "purpose": "incomplete candidate envelope"
+    },
+    {
+      "id": "T12",
+      "expected": "DENY",
+      "observed": "DENY",
+      "purpose": "changed recipient even with unrelated grant"
+    },
+    {
+      "id": "T13",
+      "expected": "ELIGIBLE_FOR_SEPARATE_GATE",
+      "observed": "ELIGIBLE_FOR_SEPARATE_GATE",
+      "purpose": "positive exact scope grant remains eligible not authorized"
+    },
+    {
+      "id": "T14",
+      "expected": "ELIGIBLE_FOR_SEPARATE_GATE",
+      "observed": "ELIGIBLE_FOR_SEPARATE_GATE",
+      "purpose": "fresh independent simulated grant may validate previously seen string"
+    },
+    {
+      "id": "T15",
+      "expected": "DENY",
+      "observed": "DENY",
+      "purpose": "revocation overrides old grant"
+    },
+    {
+      "id": "T16",
+      "expected": "ELIGIBLE_FOR_SEPARATE_GATE",
+      "observed": "ELIGIBLE_FOR_SEPARATE_GATE",
+      "purpose": "new grant can supersede revoked permission for exact scope"
+    },
+    {
+      "id": "T17",
+      "expected": "DENY",
+      "observed": "DENY",
+      "purpose": "resource mismatch"
+    },
+    {
+      "id": "T18",
+      "expected": "DENY",
+      "observed": "DENY",
+      "purpose": "principal mismatch"
+    },
+    {
+      "id": "T19",
+      "expected": "DENY",
+      "observed": "DENY",
+      "purpose": "operation mismatch"
+    },
+    {
+      "id": "T20",
+      "expected": "DENY",
+      "observed": "DENY",
+      "purpose": "grant expiry based on monotone lab step"
+    },
+    {
+      "id": "T21",
+      "expected": "DENY",
+      "observed": "DENY",
+      "purpose": "history reappearance after revocation cannot restore permission"
+    },
+    {
+      "id": "T22",
+      "expected": "DENY",
+      "observed": "DENY",
+      "purpose": "unattested user-request text does not auto grant"
+    },
+    {
+      "id": "T23",
+      "expected": "DENY",
+      "observed": "DENY",
+      "purpose": "success-looking tool text is non-authoritative"
+    },
+    {
+      "id": "T24",
+      "expected": "DENY",
+      "observed": "DENY",
+      "purpose": "mixed origins do not create grant"
+    },
+    {
+      "id": "T25",
+      "expected": "ELIGIBLE_FOR_SEPARATE_GATE",
+      "observed": "ELIGIBLE_FOR_SEPARATE_GATE",
+      "purpose": "legitimate scoped grant remains viable despite mixed content"
+    },
+    {
+      "id": "T26",
+      "expected": "INVALID_DERIVATION",
+      "observed": "INVALID_DERIVATION",
+      "purpose": "rewriting without source rejected"
+    },
+    {
+      "id": "T27",
+      "expected": "MISSING_PARENT",
+      "observed": "MISSING_PARENT",
+      "purpose": "dangling parent refused"
+    },
+    {
+      "id": "T28",
+      "expected": "ROOT_DEDUPED",
+      "observed": "ROOT_DEDUPED",
+      "purpose": "repetition does not multiply source roots"
+    },
+    {
+      "id": "T29",
+      "expected": "DENY",
+      "observed": "DENY",
+      "purpose": "mutating exported snapshot does not rewrite lineage"
+    },
+    {
+      "id": "T30",
+      "expected": "DENY",
+      "observed": "DENY",
+      "purpose": "other destination grant cannot be generalized"
+    },
+    {
+      "id": "T31",
+      "expected": "ELIGIBLE_FOR_SEPARATE_GATE",
+      "observed": "ELIGIBLE_FOR_SEPARATE_GATE",
+      "purpose": "benign write eligible only for separate action gate"
+    },
+    {
+      "id": "T32",
+      "expected": "DENY",
+      "observed": "DENY",
+      "purpose": "stale copied grant history cannot undo revocation"
+    },
+    {
+      "id": "T33",
+      "expected": "ORDERED_CORRECT",
+      "observed": "ORDERED_CORRECT",
+      "purpose": "out-of-band lab grant step changes eligibility only prospectively"
+    },
+    {
+      "id": "T34",
+      "expected": "DENY",
+      "observed": "DENY",
+      "purpose": "fake grant inside untrusted memory does not enter grant registry"
+    },
+    {
+      "id": "T35",
+      "expected": "DENY",
+      "observed": "DENY",
+      "purpose": "prospective status text is never effect approval"
+    },
+    {
+      "id": "T36",
+      "expected": "ROOT_RETAINED",
+      "observed": "ROOT_RETAINED",
+      "purpose": "source taint survives cross-step replay"
+    }
+  ],
+  "protected_status": "DRAFT_HOLD",
+  "foreign_oracle": false,
+  "external_origin_verification": false,
+  "real_user_grants": false,
+  "live_agent_invoked": false,
+  "real_side_effects": 0,
+  "actual_memory_mutation": false,
+  "interpretation": "No-history-promotion demonstrated within a toy append-only harness only. The harness both issues origin labels and simulated grants: an attacker controlling the source envelope could forge those. ELIGIBLE_FOR_SEPARATE_GATE never means authorization."
+}
