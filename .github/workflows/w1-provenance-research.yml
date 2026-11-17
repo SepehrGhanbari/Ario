@@ -4,6 +4,9 @@ on:
     paths:
       - 'research/consensus/w1_adversarial_input_sensitivity_v1.py'
       - 'research/consensus/test_w1_adversarial_input_sensitivity_v1.py'
+      - 'research/consensus/test_w1_trae_boundary_controls_v1.py'
+      - 'implementation/witness_provenance_experiment.py'
+      - '.gitattributes'
       - '.github/workflows/w1-provenance-research.yml'
   workflow_dispatch:
 permissions:
@@ -30,3 +33,7 @@ jobs:
         env:
           PYTHONDONTWRITEBYTECODE: '1'
         run: python -B -m unittest discover -s research/consensus -p test_w1_adversarial_input_sensitivity_v1.py -v
+      - name: Exercise Trae-reported custody and capture decision boundaries (synthetic only)
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python -B -m unittest discover -s research/consensus -p test_w1_trae_boundary_controls_v1.py -v
