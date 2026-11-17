@@ -282,9 +282,34 @@ def _evaluate(f: Fixture) -> dict:
     """Reference policy evaluator for fixture-level invariants; not Ario runtime."""
     d = f.input
     if f.family == "lineage_dependence":
-        if d.get("unresolved_parent") or d.get("edge_missing") or d.get("one_root_hidden") or any(not values for values in d["roots"].values()):
+        sources = d.get("sources")
+        root_map = d.get("roots")
+        # A root count is determinate only when every declared source has
+        # exactly one explicit, non-empty ancestry entry. Do not silently
+        # count a partial mapping or ignore undeclared extra source entries.
+        if (
+            not isinstance(sources, list)
+            or not sources
+            or any(not isinstance(source, str) or not source.strip() for source in sources)
+            or len(set(sources)) != len(sources)
+            or not isinstance(root_map, dict)
+            or set(root_map) != set(sources)
+            or d.get("unresolved_parent")
+            or d.get("edge_missing")
+            or d.get("one_root_hidden")
+        ):
             return {"root_count": None, "status": "UNKNOWN"}
-        roots = {root for values in d["roots"].values() for root in values}
+        ancestry_roots = []
+        for source in sources:
+            source_roots = root_map[source]
+            if (
+                not isinstance(source_roots, (list, tuple))
+                or not source_roots
+                or any(not isinstance(root, str) or not root.strip() for root in source_roots)
+            ):
+                return {"root_count": None, "status": "UNKNOWN"}
+            ancestry_roots.extend(source_roots)
+        roots = set(ancestry_roots)
         if d.get("declared_shared_ancestor"):
             return {"root_count": 1, "status": "UNKNOWN"}
         return {"root_count": len(roots), "status": "UNKNOWN"}
