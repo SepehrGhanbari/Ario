@@ -184,3 +184,51 @@ def test_fixture_contract_report_includes_pair_structure_audit():
     assert audit["pair_group_count"] == 10
     assert audit["valid_pair_count"] == 10
     assert audit["invalid_pair_count"] == 0
+
+
+
+def _fixture_with_input(case, input_data):
+    return Fixture(
+        case_id=case.case_id,
+        family=case.family,
+        variant=case.variant,
+        pair_group=case.pair_group,
+        input=input_data,
+        expected=case.expected,
+        rationale=case.rationale,
+    )
+
+
+def test_missing_source_root_mapping_preserves_unknown_root_count():
+    case = next(c for c in corpus() if c.case_id == "AEC02_LINEAGE_DEPENDENCE_01")
+    mutated_input = {**case.input, "roots": dict(case.input["roots"])}
+    mutated_input["roots"].pop("B")
+    assert _evaluate(_fixture_with_input(case, mutated_input)) == {
+        "root_count": None, "status": "UNKNOWN"
+    }
+
+
+def test_undeclared_extra_root_mapping_is_not_silently_counted():
+    case = next(c for c in corpus() if c.case_id == "AEC02_LINEAGE_DEPENDENCE_01")
+    mutated_input = {**case.input, "roots": dict(case.input["roots"])}
+    mutated_input["roots"]["UNDECLARED"] = ["R99"]
+    assert _evaluate(_fixture_with_input(case, mutated_input)) == {
+        "root_count": None, "status": "UNKNOWN"
+    }
+
+
+def test_duplicate_source_declaration_preserves_unknown_root_count():
+    case = next(c for c in corpus() if c.case_id == "AEC02_LINEAGE_DEPENDENCE_01")
+    mutated_input = {**case.input, "sources": [*case.input["sources"], "A"]}
+    assert _evaluate(_fixture_with_input(case, mutated_input)) == {
+        "root_count": None, "status": "UNKNOWN"
+    }
+
+
+def test_blank_root_identifier_preserves_unknown_root_count():
+    case = next(c for c in corpus() if c.case_id == "AEC02_LINEAGE_DEPENDENCE_01")
+    mutated_input = {**case.input, "roots": dict(case.input["roots"])}
+    mutated_input["roots"]["B"] = [" "]
+    assert _evaluate(_fixture_with_input(case, mutated_input)) == {
+        "root_count": None, "status": "UNKNOWN"
+    }
