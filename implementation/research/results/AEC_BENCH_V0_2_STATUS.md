@@ -169,23 +169,40 @@ A follow-on change was committed to the same research branch after the latest su
 **Interpretation limit:** a structurally single-field pair is not proof that the changed field is causally relevant, semantically isolated, or correctly labelled. Independent oracle review remains NOT RUN.
 
 
-## 9. Lineage-input completeness hardening — 2026-11-17
+## 9. Input-completeness and temporal-provenance hardening — 2026-11-17
 
-A targeted adversarial review found that the reference evaluator could report a determinate root count when a declared source had no corresponding entry in the source-to-roots map. That behavior could silently turn incomplete ancestry into a seemingly complete count.
+A targeted adversarial review identified two fail-open/robustness gaps in the benchmark-side reference evaluator. These changes harden the synthetic reference evaluator only; they do not alter the deployed M0 runtime or the 120 authored fixture labels.
+
+### 9.1 Lineage source-to-root completeness
+
+The evaluator previously could return a determinate root count when a declared source had no corresponding entry in the source-to-roots map. That could turn incomplete ancestry into a seemingly complete count.
 
 The lineage evaluator now returns `root_count: null` and `status: UNKNOWN` when:
 - the declared source list is missing, empty, duplicated, or contains a blank/non-string identifier;
-- the root map is missing, malformed, or does not have an exact key match with the declared source list (including undeclared extra entries);
+- the root map is missing, malformed, or its keys do not exactly match the declared source list (including undeclared extra entries);
 - any source has an empty/malformed root list or a blank/non-string root identifier;
-- the existing unresolved-parent, missing-edge, or hidden-root conditions apply.
+- unresolved-parent, missing-edge, or hidden-root conditions apply.
 
-Four out-of-corpus mutation regressions cover a missing source mapping, an undeclared extra mapping, a duplicate source declaration, and a blank root identifier. The public 120-fixture corpus and its expected labels were not changed by this hardening.
+Four out-of-corpus mutation regressions cover missing source mapping, undeclared extra mapping, duplicate source declaration, and blank root identifier.
+
+### 9.2 Temporal record completeness and validity
+
+The evaluator previously accessed temporal fields directly and could raise an exception when event or recording time was missing. It could also treat non-finite numeric values as apparently ordered.
+
+The evaluator now applies these conservative outcomes:
+- missing event, observation, or recording time → `PARTIAL`;
+- malformed or non-finite timestamp → `UNKNOWN`;
+- explicit clock uncertainty or timestamp conflict → `UNCERTAIN`;
+- contradictory time ordering → `ANOMALY`;
+- only complete, finite, ordered timestamps can be classified as `ORDERED` or `STALE`.
+
+Four out-of-corpus mutation regressions cover missing event time, missing recording time, malformed timestamp, and non-finite timestamp.
 
 ### Exact source/test head and CI
 
-- Source/test head: `2b5a8f232895c3144c048dc14e12a1b14e25ff00`
-- [AEC-Bench v0.2 Adapter Tests #64](https://github.com/SepehrGhanbari/Ario/actions/runs/44081492015): **SUCCESS — 45 passed**. The fixture/comparison/runtime/reviewer-packet reports were regenerated.
-- [Implementation Regression #1908](https://github.com/SepehrGhanbari/Ario/actions/runs/44081491968): **SUCCESS — 1218 passed, 4 skipped, 121 subtests passed** (Ubuntu). The Windows advisory job was skipped.
-- [AEC-Bench reports and reviewer packet artifact](https://github.com/SepehrGhanbari/Ario/actions/runs/44081492015/artifacts/14326443307), SHA-256 `13d3b22bff9ae72be75ca4593c0d1a33475cb78039ff05b4adf9fabf4a6786e1`.
+- Source/test head: `60cf133b7c131b265903b6be5cbda974c3ce7e7a`
+- [AEC-Bench v0.2 Adapter Tests #70](https://github.com/SepehrGhanbari/Ario/actions/runs/44081800110): **SUCCESS — 49 passed**. Fixture, comparison, M0 runtime, and public reviewer-packet reports were regenerated.
+- [Implementation Regression #1929](https://github.com/SepehrGhanbari/Ario/actions/runs/44081799868): **SUCCESS — 1222 passed, 4 skipped, 121 subtests passed** (Ubuntu). The Windows advisory job was skipped.
+- [AEC-Bench reports and reviewer packet artifact](https://github.com/SepehrGhanbari/Ario/actions/runs/44081800110/artifacts/14328021370), SHA-256 `11871400852ee5fe499c396d6d8deb2ebc306921a69db187590004cd1154aae3`.
 
-These runs verify the source/test head above. This status-file update is documentation-only and does not alter the code/test head being reported. It does not establish external validation, independent oracle adjudication, or real-world source truth/authenticity.
+These runs verify the exact source/test head above. This status-file revision is documentation-only and does not alter that source/test head. The corpus remains synthetic and public. No independent oracle adjudication, hidden validation set, or real-world source truth/authenticity evaluation has been completed.
