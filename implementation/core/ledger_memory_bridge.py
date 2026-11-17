@@ -5,8 +5,8 @@ to Cognitive Memory (ConsolidationEngine, SourceMonitoringGuard, ProspectiveMemo
 
 Epistemic Invariant Guarantees:
 1. Read-Only Ingestion: Does not write, mutate, truncate, or overwrite agent execution ledgers.
-2. Grounded Provenance: Tools observed in STEP_OBSERVED generate EMPIRICAL_OBSERVATION with locked SHA-256 digests.
-3. Anti-Self-Citation: Rejects synthetic agent claims masquerading as empirical facts.
+2. Reported Provenance (v0.1): replayed STEP_OBSERVED bytes are LEDGER_REPORT / REPORTED_UNVERIFIED, not independent execution evidence.
+3. Anti-Self-Citation: replayed JSONL cannot masquerade as authenticated tool execution.
 4. Contradiction Preservation: Contradictory step results are marked CONTESTED without historical erasure.
 5. Prospective Intention Evaluation: Task completion events trigger queued conditional actions.
 6. No-History-Promotion: Repeated unverified steps retain RECORDED status without upgrading to SUPPORTED.
@@ -163,7 +163,7 @@ class EpistemicLedgerBridge:
                             },
                         )])
 
-                # 2. STEP_OBSERVED: Tool execution -> Empirical provenance -> Semantic schema
+                # 2. STEP_OBSERVED: untrusted report -> source attribution -> RECORDED schema
                 elif event_type == "STEP_OBSERVED":
                     steps_observed += 1
                     tool = str(event.get("tool", ""))
@@ -176,17 +176,15 @@ class EpistemicLedgerBridge:
 
                     path_val = str(result.get("path", event.get("path", "")))
                     target_name = path_val or str(result.get("target", tool))
-                    lock_payload = json.dumps({"action": event, "result": result}, sort_keys=True, separators=(",", ":"))
                     stdout_str = json.dumps(result, sort_keys=True)
 
-                    # Source monitoring guard attribution
-                    attribution = self.guard.record_empirical_observation(
-                        assertion=f"step_execution:{tool}:{target_name}:{status}",
-                        tool=tool,
-                        target=target_name,
-                        exit_code=0 if status == "COMPLETED" else 1,
-                        stdout=stdout_str,
-                        execution_lock=lock_payload,
+                    # v0.1 strict replay boundary: an agent-authored status and
+                    # self-hashed result are REPORTS, not execution attestation.
+                    # Keep immutable source bytes / claim identity, but never
+                    # call record_empirical_observation from this untrusted path.
+                    self.guard.record_unverified_ledger_report(
+                        assertion=f"reported_step_execution:{tool}:{target_name}:{status}",
+                        record_sha256=line_hash,
                     )
 
                     # Determine semantic concept and assertion
@@ -197,7 +195,9 @@ class EpistemicLedgerBridge:
                     claim_data: Dict[str, Any] = {
                         "concept": concept,
                         "assertion": assertion,
-                        "status": NodeEpistemicStatus.SUPPORTED.value if status == "COMPLETED" else NodeEpistemicStatus.CONTESTED.value,
+                        # Successful and failed *reports* have equal epistemic
+                        # standing unless explicit contradictory data is found.
+                        "status": NodeEpistemicStatus.RECORDED.value,
                     }
 
                     # If previous observation on same target exists with different assertion, mark conflict
