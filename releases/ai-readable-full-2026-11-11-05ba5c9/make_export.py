@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 import subprocess, json, hashlib, base64, pathlib, re, zipfile, sys, unicodedata, tempfile, atexit, os, shutil
 R=pathlib.Path(__file__).resolve().parent
-SRC=R/"source"; FINAL_OUT=R/"artifacts"\nif FINAL_OUT.is_symlink():raise ValueError("refusing symlink artifacts destination")\nif FINAL_OUT.exists() and not FINAL_OUT.is_dir():raise ValueError("artifacts destination is not a directory")\nOUT=pathlib.Path(tempfile.mkdtemp(prefix=".artifacts-stage-",dir=R))\natexit.register(shutil.rmtree,OUT,ignore_errors=True)
+SRC=R/"source"; FINAL_OUT=R/"artifacts"
+if FINAL_OUT.is_symlink():raise ValueError("refusing symlink artifacts destination")
+if FINAL_OUT.exists() and not FINAL_OUT.is_dir():raise ValueError("artifacts destination is not a directory")
+OUT=pathlib.Path(tempfile.mkdtemp(prefix=".artifacts-stage-",dir=R))
+atexit.register(shutil.rmtree,OUT,ignore_errors=True)
 def g(*args):return subprocess.check_output(["git","-C",str(SRC),*args])
 def hash256(b):return hashlib.sha256(b).hexdigest()
 sha=g("rev-parse","HEAD").decode().strip()
@@ -158,7 +162,7 @@ with tempfile.TemporaryDirectory(prefix="ario-restore-check-") as temp:
 cs={"commit":sha,"git_tree":tree,"tracked_files":len(rec),"tracked_bytes":manifest["tracked_bytes"],"verification":"PASS: ZIP and TXT independently reconstructed all Git blobs and matched source SHA1/SHA256."}
 for x in ["ario-full.zip","ario-full.txt","ario-manifest.json","README-EXPORT.txt","RESTORE_FROM_TXT.py","VERIFY_PINNED_MANIFEST.py"]:
  b=(OUT/x).read_bytes();cs[x]={"bytes":len(b),"sha256":hash256(b)}
-(OUT/"checksums.json").write_text(json.dumps(cs,indent=2)+"\\n",encoding="utf-8",newline="\\n")
+(OUT/"checksums.json").write_text(json.dumps(cs,indent=2)+"\n",encoding="utf-8",newline="\n")
 backup=None
 if FINAL_OUT.exists():
  backup=pathlib.Path(tempfile.mkdtemp(prefix=".artifacts-backup-",dir=R));backup.rmdir()
