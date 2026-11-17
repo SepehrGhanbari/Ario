@@ -1,0 +1,122 @@
+name: Ario R6 synthetic Sigsum public witness proof (RESEARCH ONLY)
+
+# A one-time, test-only public transparency submission. The synthetic input
+# has no Ario private data, signer keys, real journal lines, or trust material.
+# This is intentionally separate from the R6 OS principal / memory CI.
+on:
+  push:
+    branches:
+      - research/r6-two-principal-external-anchor-protocol-20261118
+    paths:
+      - '.github/workflows/r6-synthetic-sigsum-proof.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  witness-public-checkpoint:
+    name: Synthetic digest inclusion in external Sigsum TEST log
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Setup Go (toolchain only; no repo checkout needed)
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+      - name: Install version-pinned Sigsum client tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          go install sigsum.org/sigsum-go/cmd/sigsum-key@v0.14.1
+          go install sigsum.org/sigsum-go/cmd/sigsum-policy@v0.14.1
+          go install sigsum.org/sigsum-go/cmd/sigsum-submit@v0.14.1
+          go install sigsum.org/sigsum-go/cmd/sigsum-verify@v0.14.1
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - name: Prepare PUBLIC synthetic checkpoint and test-only ephemeral signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 0700 "$RUNNER_TEMP/r6-sigsum-private"
+          install -d -m 0755 "$RUNNER_TEMP/r6-sigsum-public"
+          # Only a quoted, already PUBLIC digest that was reported by a
+          # disposable R6-A C journal run. NOT the journal itself or any key.
+          # This hash alone does not prove who controlled C or that E ran a tool.
+          python3 - <<'PY'
+          import json, os, pathlib
+          p = pathlib.Path(os.environ["RUNNER_TEMP"]) / "r6-sigsum-public" / "synthetic-checkpoint.json"
+          x = dict(
+              profile="ARIO-R6-EXTERNAL-ANCHOR-TEST-ONLY",
+              claim="synthetic journal digest from earlier R6 research CI; no Ario authority",
+              claimed_prior_ci_run=44173643104,
+              claimed_prior_ci_sha="54d280173f20c89787ae472689d9d44635fc9df3",
+              reported_sequence=3,
+              reported_head_sha256="da706a049e5fbacb3c94804f969686047907863d36cf29d77c10e10de52c948e",
+              signer_identity_verified=False,
+              source_custody_independence="NOT_ESTABLISHED",
+              execution_reality="NOT_ESTABLISHED",
+              evidence_admission_allowed=False,
+              memory_write_allowed=False,
+              signing_allowed=False,
+              trust_activation_allowed=False,
+          )
+          p.write_text(json.dumps(x, sort_keys=True, separators=(",", ":"), ensure_ascii=True) + "\n", encoding="ascii")
+          PY
+          cd "$RUNNER_TEMP/r6-sigsum-private"
+          sigsum-key generate -o synthetic-anchor-key
+          cp synthetic-anchor-key.pub "$RUNNER_TEMP/r6-sigsum-public/synthetic-anchor-key.pub"
+          sigsum-policy show sigsum-test1-2025 > "$RUNNER_TEMP/r6-sigsum-public/policy.txt"
+          sha256sum "$RUNNER_TEMP/r6-sigsum-public/synthetic-checkpoint.json" | tee "$RUNNER_TEMP/r6-sigsum-public/input-sha256.txt"
+          echo 'R6_SIGSUM_SCOPE: SYNTHETIC_DIGEST_ONLY'
+          echo 'R6_AUTHORIZATION: NEVER_GRANTED'
+      - name: Publish SYNTHETIC checksum to external TEST log; obtain witness cosignature proof
+        shell: bash
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          P="$RUNNER_TEMP/r6-sigsum-public"
+          PRIVATE="$RUNNER_TEMP/r6-sigsum-private/synthetic-anchor-key"
+          # This is an irreversible PUBLIC TEST-log entry about the synthetic
+          # checkpoint, not a real Ario signing or execution attestation.
+          sigsum-submit -P sigsum-test1-2025 -k "$PRIVATE" "$P/synthetic-checkpoint.json"
+          test -s "$P/synthetic-checkpoint.json.proof"
+          echo 'R6_EXTERNAL_TEST_LOG_SUBMISSION: PROOF_RECEIVED'
+      - name: Offline verify proof, then prove byte tampering fails
+        shell: bash
+        run: |
+          set -euo pipefail
+          P="$RUNNER_TEMP/r6-sigsum-public"
+          # Offline verification of signature + inclusion + witness quorum.
+          sigsum-verify -k "$P/synthetic-anchor-key.pub" -P sigsum-test1-2025 \
+            "$P/synthetic-checkpoint.json.proof" < "$P/synthetic-checkpoint.json"
+          echo 'R6_SIGSUM_OFFLINE_VERIFICATION: PASS'
+          # Tamper in a separate file without touching original proof/artifact.
+          cp "$P/synthetic-checkpoint.json" "$P/tampered-checkpoint.json"
+          printf '\n' >> "$P/tampered-checkpoint.json"
+          if sigsum-verify -k "$P/synthetic-anchor-key.pub" -P sigsum-test1-2025 \
+              "$P/synthetic-checkpoint.json.proof" < "$P/tampered-checkpoint.json" >/dev/null 2>&1; then
+            echo 'ERROR: modified synthetic checkpoint passed verification' >&2
+            exit 1
+          fi
+          rm "$P/tampered-checkpoint.json"
+          echo 'R6_SIGSUM_TAMPER_NEGATIVE: PASS'
+          # Preserve hashes of only PUBLIC research artifacts.
+          (cd "$P" && sha256sum synthetic-checkpoint.json synthetic-anchor-key.pub \
+                synthetic-checkpoint.json.proof policy.txt) > "$P/public-manifest.sha256"
+          echo 'R6_ADMIN_INDEPENDENCE: NOT_ESTABLISHED'
+          echo 'R6_EXECUTION_REALITY: NOT_ESTABLISHED'
+          echo 'R6_PRODUCTION_TRUST_ACTIVATION: NO_GO'
+      - name: Archive only PUBLIC evidence (never ephemeral private signing key)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r6-synthetic-sigsum-public-evidence
+          path: |
+            ${{ runner.temp }}/r6-sigsum-public/synthetic-checkpoint.json
+            ${{ runner.temp }}/r6-sigsum-public/synthetic-anchor-key.pub
+            ${{ runner.temp }}/r6-sigsum-public/synthetic-checkpoint.json.proof
+            ${{ runner.temp }}/r6-sigsum-public/policy.txt
+            ${{ runner.temp }}/r6-sigsum-public/input-sha256.txt
+            ${{ runner.temp }}/r6-sigsum-public/public-manifest.sha256
+          if-no-files-found: warn
+          retention-days: 30
