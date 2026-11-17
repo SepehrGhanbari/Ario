@@ -22,7 +22,7 @@
 
 ## 2. Exact reproducible source and byte-pinned evidence
 
-All nine W20 files below were **executed/created in a disposable local Python 3.13.5, cryptography 46.0.4 environment**, then imported to GitHub; **every returned Git Blob SHA-1 matched the exact original local bytes**, not a paraphrase. The output source `W20_EXECUTION_RESULTS_2026-11-17.json` has SHA-256 for every input. These are public research fixtures only.
+All ten W20 files below were **executed/created in a disposable local Python 3.13.5, cryptography 46.0.4 environment**, then imported to GitHub; **every returned Git Blob SHA-1 matched the exact original local bytes**, not a paraphrase. The output source `W20_EXECUTION_RESULTS_2026-11-17.json` has SHA-256 for every input. These are public research fixtures only.
 
 | Source | Exact Git Blob SHA-1 | Purpose |
 | --- | --- | --- |
