@@ -1103,6 +1103,57 @@ def test_f12_repeated_observation_causes_evidence_inflation():
     assert r.violations.count("EVIDENCE_INFLATION") == 1
 
 
+def test_f12_distinct_kinds_sharing_text_id_are_not_inflation():
+    """Two independent evidence items citing different canonical kinds that
+    share a text ID are not the same observed source and must not be counted
+    as an inflated plurality (M0-EAG-0.1 benign distinct-kind equal IDs)."""
+
+    def typed_evidence(eid, reference_type):
+        return Evidence(
+            evidence_id=eid,
+            observation_refs=(Reference("SHARED-ID", reference_type),),
+            evidence_level="OBSERVATION",
+            independence_status=IndependenceStatus.INDEPENDENT,
+            derivation_reference=ref(f"DER-{eid}"),
+            scope="M0-14J regression",
+        )
+
+    r = run(
+        "F12-DISTINCT-KINDS",
+        AuditInput(evidence=(
+            typed_evidence("E-F12-KIND-A", "OBSERVATION"),
+            typed_evidence("E-F12-KIND-B", "OTHER_KIND"),
+        )),
+    )
+
+    assert "EVIDENCE_INFLATION" not in r.violations
+
+
+def test_f12_same_kind_shared_text_id_still_inflates():
+    """Control: the same typed reference reused by two independent evidence
+    items is still an inflated plurality."""
+
+    def typed_evidence(eid):
+        return Evidence(
+            evidence_id=eid,
+            observation_refs=(Reference("SHARED-ID", "OBSERVATION"),),
+            evidence_level="OBSERVATION",
+            independence_status=IndependenceStatus.INDEPENDENT,
+            derivation_reference=ref(f"DER-{eid}"),
+            scope="M0-14J regression",
+        )
+
+    r = run(
+        "F12-SAME-KIND",
+        AuditInput(evidence=(
+            typed_evidence("E-F12-SAME-A"),
+            typed_evidence("E-F12-SAME-B"),
+        )),
+    )
+
+    assert "EVIDENCE_INFLATION" in r.violations
+
+
 def test_f14_two_states_without_temporal_relation():
     state_a = state("S-F14-A")
     state_b = state("S-F14-B")
