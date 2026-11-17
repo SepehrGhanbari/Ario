@@ -1,4 +1,7 @@
-from research.aec_benchmark_v0_2 import FAMILIES, VERSION, _evaluate, corpus, score
+from research.aec_benchmark_v0_2 import (
+    FAMILIES, VERSION, Fixture, _evaluate, audit_counterfactual_pairs,
+    changed_input_paths, corpus, score,
+)
 
 
 def test_version_and_corpus_shape():
@@ -124,3 +127,60 @@ def test_not_applicable_authentication_is_not_relabelled_unverified():
     assert result["integrity"] == "VALID"
     assert result["auth"] == "NOT_APPLICABLE"
     assert result["status"] == "UNKNOWN"
+
+
+
+def test_counterfactual_pair_audit_checks_atomic_nested_changes():
+    cases = corpus()
+    audit = audit_counterfactual_pairs(cases)
+    assert audit["pair_group_count"] == 10
+    assert audit["valid_pair_count"] == 10
+    assert audit["invalid_pair_count"] == 0
+    assert all(len(pair["changed_input_paths"]) == 1 for pair in audit["pairs"])
+    assert audit["limitation"].startswith("A single structural input delta")
+
+    # A top-level-only comparison would miss this two-leaf mutation.
+    left = {"metadata": {"scope": "A", "version": 1}}
+    right = {"metadata": {"scope": "B", "version": 2}}
+    assert changed_input_paths(left, right) == [
+        "/metadata/scope",
+        "/metadata/version",
+    ]
+
+
+def test_counterfactual_pair_audit_rejects_multiple_nested_mutations():
+    left = Fixture(
+        case_id="PAIR_A",
+        family="lineage_dependence",
+        variant="counterfactual_base",
+        pair_group="NESTED_MUTATION",
+        input={"metadata": {"scope": "A", "version": 1}},
+        expected={"status": "UNKNOWN"},
+        rationale="test-only",
+    )
+    right = Fixture(
+        case_id="PAIR_B",
+        family="lineage_dependence",
+        variant="counterfactual_delta",
+        pair_group="NESTED_MUTATION",
+        input={"metadata": {"scope": "B", "version": 2}},
+        expected={"status": "UNKNOWN"},
+        rationale="test-only",
+    )
+    audit = audit_counterfactual_pairs((left, right))
+    assert audit["invalid_pair_count"] == 1
+    assert audit["pairs"][0]["valid"] is False
+    assert audit["pairs"][0]["changed_input_paths"] == [
+        "/metadata/scope",
+        "/metadata/version",
+    ]
+    assert "EXPECTED_EXACTLY_ONE_ATOMIC_INPUT_CHANGE" in audit["pairs"][0]["issues"]
+
+
+def test_fixture_contract_report_includes_pair_structure_audit():
+    report = score()
+    audit = report["counterfactual_pair_validation"]
+    assert audit["audit_kind"] == "STRUCTURAL_COUNTERFACTUAL_PAIR_AUDIT"
+    assert audit["pair_group_count"] == 10
+    assert audit["valid_pair_count"] == 10
+    assert audit["invalid_pair_count"] == 0
