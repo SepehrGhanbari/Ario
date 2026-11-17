@@ -80,9 +80,8 @@ def build_prov_document(fixture: Any) -> Any:
     # Deterministic ordering makes serialized fixtures stable. Local identifiers
     # are reversible UTF-8 hex encodings, not claimed source identities.
     for source in sorted(sources):
-        source_local_id = _safe_local_id("source", source)
-        agent = doc.agent(f"agent_{source_local_id}")
-        record = doc.entity(f"record_{source_local_id}")
+        agent = doc.agent(_safe_local_id("agent", source))
+        record = doc.entity(_safe_local_id("record", source))
         record.wasAttributedTo(agent)
 
         for root_id in sorted(roots[source]):
