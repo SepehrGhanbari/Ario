@@ -98,7 +98,7 @@ def restore(src,dst):
     if not isinstance(e,dict) or not keys<=e.keys(): raise SnapshotError("incomplete record")
     if n>=expected_n or n>=MAX_FILES: raise SnapshotError("record count budget exceeded")
     p=safe(e["path"]); name=p.as_posix()
-    if name in seen or name in all_parents or portable_key(name) in folded: raise SnapshotError("duplicate, case collision, or file/directory conflict")
+    if name in seen or portable_key(name) in all_parents or portable_key(name) in folded: raise SnapshotError("duplicate, case collision, or file/directory conflict")
     parts=p.parts
     for i in range(1,len(parts)+1):
      prefix="/".join(parts[:i]); key=portable_key(prefix)
@@ -109,8 +109,8 @@ def restore(src,dst):
       folded_components[key]=prefix; path_index_entries+=1; path_index_bytes+=added
      elif previous!=prefix: raise SnapshotError("case-colliding path component")
      if i<len(parts):
-      if prefix in seen: raise SnapshotError("file/directory path conflict")
-      all_parents.add(prefix)
+      if key in folded: raise SnapshotError("file/directory path conflict")
+      all_parents.add(key)
     seen.add(prefix); folded.add(key)
     if e["mode"] not in ("100644","100755","120000"): raise SnapshotError("unsupported Git mode")
     for k in ("bytes","payload_bytes"):
