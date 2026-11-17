@@ -160,7 +160,7 @@ def read_manifest(path, expected_sha256):
                 require(prefix not in seen, "file/directory-conflicting manifest path")
         seen.add(key)
         for index in range(1, len(parts)):
-            all_parents.add("/".join(parts[:index]))
+            all_parents.add(portable_key("/".join(parts[:index])))
         require(item.get("mode") in ("100644", "100755", "120000"),
                 "invalid manifest mode")
         require(item.get("encoding") in ("raw-utf8", "base64"), "invalid manifest encoding")
@@ -224,8 +224,8 @@ def verify(txt_path, manifest_path, expected_manifest_sha256):
             require(isinstance(record, dict), "record object expected")
             for field in ("path", "mode", "git_blob_sha1", "sha256", "bytes", "encoding"):
                 require(record.get(field) == item[field], "TXT record/manifest metadata mismatch: " + field)
-            bounded_int(record.get("bytes"), PER_RECORD_LIMIT, "record raw bytes")
-            length = bounded_int(record.get("payload_bytes"), PER_RECORD_LIMIT, "payload_bytes")
+            bounded_int(record.get("bytes"), PER_RECORD_RAW_LIMIT, "record raw bytes")
+            length = bounded_int(record.get("payload_bytes"), PER_RECORD_PAYLOAD_LIMIT, "payload_bytes")
             require(f.tell() + length <= info.st_size, "truncated payload boundary")
             payload = f.read(length)
             require(len(payload) == length, "truncated payload")
