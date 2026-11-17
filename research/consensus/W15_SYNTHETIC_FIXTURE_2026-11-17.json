@@ -1,0 +1,91 @@
+{
+  "admin_independence": "NOT_ESTABLISHED",
+  "authority": "NONE",
+  "grants": {
+    "G1": {
+      "body": {
+        "destination": "LOCAL_NOTE",
+        "expires": 200,
+        "grant_id": "G1",
+        "not_before": 100,
+        "operation": "READ_ONLY_REVIEW",
+        "principal": "SYNTHETIC_USER",
+        "resource": "report-1",
+        "version": 1
+      },
+      "domain": "ARIO_W15_SYNTHETIC_GRANT",
+      "signature": "75e748b0b0e1f24e9b5f36d0ba9857611635153e3892ceb00c13681252b61f7380e84ddacad929d69ad2c4ff5908d0f9825314fbb75e526238c1341df0078d0d"
+    },
+    "G2": {
+      "body": {
+        "destination": "LOCAL_NOTE",
+        "expires": 200,
+        "grant_id": "G2",
+        "not_before": 100,
+        "operation": "READ_ONLY_REVIEW",
+        "principal": "SYNTHETIC_USER",
+        "resource": "report-1",
+        "version": 1
+      },
+      "domain": "ARIO_W15_SYNTHETIC_GRANT",
+      "signature": "3349b1b1bae31e09c7c4c48498b01ba8865e685f997413c944500447ec1e15e7303a2058efd8b040378e4edd46956a2b6684c83a6d060143fb6440b27a860306"
+    }
+  },
+  "keys_exported": false,
+  "real_world_truth": "UNKNOWN",
+  "schema": "ARIO_W15_SYNTHETIC_SNAPSHOT_FIXTURE_V1",
+  "snapshots": {
+    "E0": {
+      "anchor": {
+        "body": {
+          "epoch": 0,
+          "head_sha256": "90d0fc392ec5643ac1f39b600f7dad4a99df4f4f16237a4bdbeaf49f5b3423ea",
+          "prev_anchor_sha256": null,
+          "version": 1
+        },
+        "domain": "ARIO_W15_SYNTHETIC_ANCHOR",
+        "signature": "a53e1ee94a24b23a4c61af69b35c844ffb97b697a14bcd74e70f0b8408a92848b857e4803f5d3a24feab0fbe5948e0c77dd2ed416f118b9437a38d58577c5401"
+      },
+      "head": {
+        "body": {
+          "epoch": 0,
+          "prev_head_sha256": null,
+          "revoked": [],
+          "version": 1
+        },
+        "domain": "ARIO_W15_SYNTHETIC_REVOCATION",
+        "signature": "cd39ea17b05e6982331df6c43028ab57a7cd3cba10a34eed62d96906b70a507d49930601a6d2b16df4111a111ee0c0b0f96f35cf73ce2f21f142417d0e5c4f01"
+      }
+    },
+    "E1": {
+      "anchor": {
+        "body": {
+          "epoch": 1,
+          "head_sha256": "87dd09cc70e3a4daf1809008cf28db407324105e59c22e98ec983509b34b483a",
+          "prev_anchor_sha256": "49599de3f64f3e7f37a29535b3ec8bd14ffd8ae4e8b83087884128540c511328",
+          "version": 1
+        },
+        "domain": "ARIO_W15_SYNTHETIC_ANCHOR",
+        "signature": "4fa25fb1aee8bfda51e971ed647de659f6405e5d596756839a2b1b7d2b8099d65dc31b9ca64abe44ccf940d356fbaea28232319f9f3406dbcabeb411b546e10b"
+      },
+      "head": {
+        "body": {
+          "epoch": 1,
+          "prev_head_sha256": "90d0fc392ec5643ac1f39b600f7dad4a99df4f4f16237a4bdbeaf49f5b3423ea",
+          "revoked": [
+            "G1"
+          ],
+          "version": 1
+        },
+        "domain": "ARIO_W15_SYNTHETIC_REVOCATION",
+        "signature": "e5e9920acc4f0ba25d41ce1ad2649b330b4b915a49270bafe5b09e531d2021284b1a5491937c4655d31ded2b389c7b5087102b22c0617f8ac1e75ecec569800e"
+      }
+    }
+  },
+  "trust": {
+    "anchor": "42ba7dd027f8deeccfeda772788ae1d89c7d3a17231961033fca7b3a47d9591c",
+    "grant": "6a12ca33702d5496466669bed8ce02d4a2bb3b6d1c8d5d79b9361da940d3d78b",
+    "revoker": "1a89981bb39d2355f4ef0f3631d165d626e957edf8da52ae7341d261ca281533"
+  },
+  "writer_can_modify_github_data": true
+}
