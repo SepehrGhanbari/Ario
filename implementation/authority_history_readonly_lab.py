@@ -115,7 +115,8 @@ def inspect_declared_history(*, journal_bytes: bytes, expected_head_sha256: str,
             return _report("INVALID_RECORD_ENCODING", count=pos - 1, head=previous)
         if (item["version"] != RECORD_VERSION or type(item["sequence"]) is not int
             or not _sha(item["previous_sha256"]) or not _id(item["key_id"])
-            or item["kind"] not in _KINDS or not _sha(item["policy_sha256"])
+            or type(item["kind"]) is not str or item["kind"] not in _KINDS
+            or not _sha(item["policy_sha256"])
             or (item["nonce"] is not None and not _id(item["nonce"]))):
             return _report("INVALID_RECORD_FIELDS", count=pos - 1, head=previous)
         if item["sequence"] != pos:
