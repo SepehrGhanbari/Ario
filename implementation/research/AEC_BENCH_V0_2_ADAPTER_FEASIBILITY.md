@@ -13,7 +13,8 @@ This register distinguishes a paper, a code repository, and an executable benchm
 - License: MIT
 - Runtime declared by project: Python >= 3.11
 - Relevant capabilities: PROV-DM objects; PROV-N, PROV-JSON, PROV-JSONLD, PROV-XML and PROV-O serialization; derivation, attribution and graph conversion.
-- Source adapter added: `implementation/research/aec_bench_v0_2_adapters/prov_adapter.py`. It maps lineage fixtures into PROV entities, agents, attribution and derivation relations, and includes a PROV-N round-trip check.\n- Adapter runtime tests: NOT YET VERIFIED; the optional dependency is pinned separately.
+- Source adapter: `implementation/research/aec_bench_v0_2_adapters/prov_adapter.py`. It maps lineage fixtures into PROV entities, agents, attribution and derivation relations, and includes a PROV-N round-trip check. It rejects missing/extra source-to-root entries and malformed or empty root identifiers before graph creation. Generated local identifiers use reversible UTF-8 hex encoding, avoiding unsafe PROV QName characters.
+- Runtime evidence: [AEC-Bench workflow #79](https://github.com/SepehrGhanbari/Ario/actions/runs/44082508758) at source/test head `0e7772c0085732506af6735d9cfa6d089c2754bd` — **SUCCESS, 52 passed**. With `prov==3.3.0` installed, tests cover PROV-N round-trip, incomplete-map rejection, blank-root rejection and arbitrary UTF-8 identifier round-trip.
 
 **Boundary:** PROV is a provenance data model and implementation library. It does not authenticate source roots, decide whether claims are true, or supply Ario's claim-disposition policy. A successful serialization/round trip is a lineage-representation result only.
 
@@ -27,7 +28,8 @@ Sources: [project README](https://github.com/trungdong/prov/blob/6b432eda5cfa41a
 - License: MIT
 - Runtime declared by project: Python >= 3.10
 - Relevant capabilities: assumption enable/retract, Boolean constraint propagation, justifications, dependency-directed backtracking, and explanation of derived beliefs.
-- Source adapter added: `implementation/research/aec_bench_v0_2_adapters/ltms_adapter.py`. It maps simple conjunction-of-premises cases and includes an assumption-retraction probe. Complex scope, time, shared-dependency and composition-firewall cases are explicitly returned as NOT_COMPARABLE.\n- Adapter runtime tests: NOT YET VERIFIED; the optional dependency is pinned to the inspected Git commit.
+- Source adapter: `implementation/research/aec_bench_v0_2_adapters/ltms_adapter.py`. It maps simple conjunction-of-premises cases and includes an assumption-retraction probe. Complex scope, time, shared-dependency and composition-firewall cases are explicitly returned as NOT_COMPARABLE.
+- Runtime evidence: the same [AEC-Bench workflow #79](https://github.com/SepehrGhanbari/Ario/actions/runs/44082508758) — **SUCCESS, 52 passed** with LTMS pinned to commit `738161f2bdc2a938d97c40f974f51766f45d4c0c`. Tests cover supported/missing conjunction premises, explicit non-comparability and assumption retraction.
 
 **Boundary:** this is an LTMS/JTMS-oriented implementation, not a general implementation of every ATMS variant. It is suitable for bounded truth-maintenance comparisons, not a substitute for a provenance data model or for verifying external source authenticity.
 
