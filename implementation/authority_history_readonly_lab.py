@@ -148,11 +148,14 @@ def inspect_declared_history(*, journal_bytes: bytes, expected_head_sha256: str,
     if previous != expected_head_sha256:
         return _report("EXTERNAL_HEAD_MISMATCH", count=len(lines), head=previous,
                        floor_matches=floor_matched)
-    if requested_key_id not in active or active[requested_key_id] != expected_policy_sha256:
-        return _report("KEY_OR_POLICY_NOT_DECLARED", count=len(lines), head=previous,
-                       floor_matches=floor_matched, head_matches=True)
+    # In the fully parsed synthetic history, terminal revocation of a known
+    # key_id is not hidden by a caller-supplied wrong policy pin. This affects
+    # reporting precedence only; every path remains non-authoritative.
     if requested_key_id in revoked:
         return _report("DECLARED_KEY_REVOKED", count=len(lines), head=previous,
+                       floor_matches=floor_matched, head_matches=True)
+    if requested_key_id not in active or active[requested_key_id] != expected_policy_sha256:
+        return _report("KEY_OR_POLICY_NOT_DECLARED", count=len(lines), head=previous,
                        floor_matches=floor_matched, head_matches=True)
     if requested_nonce in nonces:
         return _report("DECLARED_NONCE_SPENT", count=len(lines), head=previous,
