@@ -1,0 +1,17 @@
+Round 3. I fixed the problems you found in round 2. Review the fixed patch the same adversarial way. No praise.
+
+Files: Ario-patch-v2-review.zip (clean tree + patch applied), PATCH_v2.diff (core/audit_engine.py and core/schema.py), test_review_regressions_2026_11_15.py.
+
+What changed since round 2, and what I claim:
+(a) The three new report keys are now added ONLY if the report with them still fits under MAX_ANCESTRY_REPORT_BYTES. Claim: verdict and violations are now identical to the unpatched engine for every input. Your 160-assessment / 80-byte-id case should now PASS as the unpatched engine does.
+(b) parse_evidence_ancestry_findings now validates the three keys when present.
+(c) schema.py: removed the inner quotes in LineageEdge.compatibility_authorizations (tuple[LineageCompatibilityAuthorization, ...]). Claim: fixes your finding 7 on Python 3.10 and changes nothing on 3.11+. I could only check 3.11 to 3.13 here, not 3.10.
+(d) New tests for each of your findings 2 to 4 and 6, plus a near-cap test. I mutation-checked them: prefix-17, fidelity-instead-of-type, truncated-always-false, no-size-gate, no-list-check, cap-65 all fail at least one test.
+
+Do, and mark each as VERIFIED (ran it) or SUSPECTED:
+1. Run the whole implementation/tests/ directory on your interpreter. Report exact counts. With cryptography installed or not, say which. Also confirm whether your three CLI failures from round 2 (lrt01 tests) are fixed by (c).
+2. Try to break claim (a): find ANY input where verdict or violations differ from the unpatched engine (remove the added lines to get unpatched). Include inputs near the byte cap with non-ASCII ids, many evidence items, and the 4097-object over-limit path.
+3. Try to break the parser change (b): any previously valid basis that is now rejected, or any malformed basis that is accepted.
+4. Mutation-check my new tests again with your own mutations. Report any that stay green when they should fail.
+5. Anything else wrong in the tree that you can verify. If an area is fine, write "no defect found".
+Format per finding: file and line, what is wrong, severity, confidence, verified or suspected.

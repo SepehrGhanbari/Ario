@@ -1,0 +1,31 @@
+--- a/implementation/core/audit_engine.py
++++ b/implementation/core/audit_engine.py
+@@ -1304,10 +1304,27 @@
+                 "use_disposition": disposition,
+                 "source_authentication": "UNKNOWN", "reasons": sorted(reasons),
+             })
++        # TRANSFORMATION derivations are declarations: they are never resolved
++        # against a supplied object, so "traceable" above does not cover them.
++        # Report them so a reader cannot take the label as a closed chain.
++        # Informational only: this never changes the verdict or violation codes.
++        all_transformations = [
++            e.derivation_reference.reference_id
++            for e in self.artifacts.evidence
++            if e.derivation_reference is not None
++            and e.derivation_reference.reference_type == "TRANSFORMATION"
++        ]
++        declared_transformations = sorted({
++            rid for rid in all_transformations if self.report_id(rid) is not None
++        })
++        unreportable = sum(1 for rid in all_transformations if self.report_id(rid) is None)
+         report.update(
+             candidate_ancestry=("UNKNOWN" if candidate_unknown else
+                                "TRACEABLE_WITHIN_SUPPLIED_SNAPSHOT" if roots else "NOT_EVALUATED"),
+-            assessments=findings)
++            assessments=findings,
++            transformation_derivations_declared_not_resolved=declared_transformations[:64],
++            transformation_derivations_truncated=len(declared_transformations) > 64,
++            transformation_derivations_unreportable_count=unreportable)
+         return sorted(self.violation_codes), report
+ 
+ 
