@@ -24,6 +24,9 @@ PER_RECORD_RAW_LIMIT = 64 * 1024 * 1024
 PER_RECORD_PAYLOAD_LIMIT = 90 * 1024 * 1024
 PATH_LIMIT = 4096
 PATH_COMPONENT_LIMIT = 255
+PATH_DEPTH_LIMIT = 128
+PATH_INDEX_ENTRY_LIMIT = 100000
+PATH_INDEX_BYTE_LIMIT = 8 * 1024 * 1024
 COUNT_LIMIT = 10000
 TOTAL_LIMIT = 256 * 1024 * 1024
 HEX64 = re.compile(r"[0-9a-f]{64}\Z")
@@ -51,6 +54,7 @@ def validate_manifest_path(value):
             "manifest path length or separator")
     posix = pathlib.PurePosixPath(value)
     windows = pathlib.PureWindowsPath(value)
+    require(len(posix.parts) <= PATH_DEPTH_LIMIT, "manifest path depth limit")
     require(bool(posix.parts) and posix.as_posix() == value
             and not posix.is_absolute() and not windows.drive
             and not windows.root and not windows.is_absolute()
@@ -142,6 +146,8 @@ def read_manifest(path, expected_sha256):
     seen = set()
     all_parents = set()
     folded_components = {}
+    path_index_entries = 0
+    path_index_bytes = 0
     for item in items:
         path_value = item.get("path")
         path_obj = validate_manifest_path(path_value)
@@ -153,14 +159,20 @@ def read_manifest(path, expected_sha256):
             prefix = "/".join(parts[:index])
             folded = portable_key(prefix)
             previous = folded_components.get(folded)
-            require(previous is None or previous == prefix,
-                    "case/Unicode-colliding manifest path component")
-            folded_components[folded] = prefix
+            if previous is None:
+                added = len(folded.encode("utf-8")) + len(prefix.encode("utf-8"))
+                require(path_index_entries < PATH_INDEX_ENTRY_LIMIT
+                        and path_index_bytes + added <= PATH_INDEX_BYTE_LIMIT,
+                        "manifest path index resource limit")
+                folded_components[folded] = prefix
+                path_index_entries += 1
+                path_index_bytes += added
+            else:
+                require(previous == prefix, "case/Unicode-colliding manifest path component")
             if index < len(parts):
-                require(prefix not in seen, "file/directory-conflicting manifest path")
+                require(folded not in seen, "file/directory-conflicting manifest path")
+                all_parents.add(folded)
         seen.add(key)
-        for index in range(1, len(parts)):
-            all_parents.add(portable_key("/".join(parts[:index])))
         require(item.get("mode") in ("100644", "100755", "120000"),
                 "invalid manifest mode")
         require(item.get("encoding") in ("raw-utf8", "base64"), "invalid manifest encoding")
