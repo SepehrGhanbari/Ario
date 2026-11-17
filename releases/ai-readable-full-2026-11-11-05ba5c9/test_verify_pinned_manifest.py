@@ -193,6 +193,27 @@ class PinnedManifestTests(unittest.TestCase):
             with mock.patch.object(pinned, "PER_RECORD_PAYLOAD_LIMIT", 20):
                 self.assertEqual(verify(self.txt, self.manifest, pin)["files"], 1)
 
+    def test_manifest_rejects_path_depth_limit(self):
+        manifest, txt, pin = fixture([("a/b/c.txt", b"x")])
+        self.write(manifest, txt)
+        with mock.patch.object(pinned, "PATH_DEPTH_LIMIT", 2):
+            with self.assertRaisesRegex(VerificationError, "path depth limit"):
+                verify(self.txt, self.manifest, pin)
+
+    def test_manifest_rejects_path_index_entry_budget(self):
+        manifest, txt, pin = fixture([("a/b.txt", b"x")])
+        self.write(manifest, txt)
+        with mock.patch.object(pinned, "PATH_INDEX_ENTRY_LIMIT", 1):
+            with self.assertRaisesRegex(VerificationError, "path index resource limit"):
+                verify(self.txt, self.manifest, pin)
+
+    def test_manifest_file_then_unicode_alias_child_is_rejected(self):
+        decomposed = "e" + chr(0x301)
+        manifest, txt, pin = fixture([(decomposed, b"x"), (decomposed + "/child", b"y")])
+        self.write(manifest, txt)
+        with self.assertRaisesRegex(VerificationError, "file/directory-conflicting"):
+            verify(self.txt, self.manifest, pin)
+
     def test_cli_refuses_missing_external_pin(self):
         completed = subprocess.run([sys.executable, str(SCRIPT),
                                     "--txt", str(self.txt),
