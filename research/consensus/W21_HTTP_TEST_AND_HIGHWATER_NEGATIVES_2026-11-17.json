@@ -2,7 +2,7 @@
   "schema": "ARIO_W21_LOOPBACK_HTTP_SIGNED_HISTORY_OBSERVATIONS_V1",
   "date": "2026-11-17",
   "scope": "SYNTHETIC_ONLY_LOOPBACK_HTTP_AND_STATIC_PUBLIC_GITHUB_SNAPSHOT",
-  "source_commit_pinned": "f26a479e6c1f893f05bc96fd49c8b06cecba206a",
+  "source_commit_pinned": "ebed96629829705919e8fcec2e7b6d5cdea52f6f",
   "sources": [
     {
       "file": "w21_loopback_log_server.py",
@@ -10,11 +10,11 @@
     },
     {
       "file": "w21_http_observer.py",
-      "git_blob_sha1": "275bbfa8235e00837fb50b18c604f4e7bcce7153"
+      "git_blob_sha1": "b97db30fd880fc8ec71d96936b87a2284cc38d8d"
     },
     {
       "file": "test_w21_http_monitor.py",
-      "git_blob_sha1": "4d0fb95e39a46c8cd38b532bcb1cb3a16736c7b5"
+      "git_blob_sha1": "32ad0d92c6d119e6018eac483008dab9190f100c"
     },
     {
       "file": "W21_SIMULATED_RETAINED_HIGHWATER_2026-11-17.json",
@@ -24,25 +24,30 @@
   "observed_local": {
     "python_version": "3.13.5",
     "cryptography": "46.0.4",
-    "unittest_method_groups": 3,
-    "passed": 3,
+    "unittest_method_groups": 4,
+    "passed": 4,
     "named_end_to_end_matrix": 13,
     "other_checks": [
       "unreachable loopback HOLD",
       "non-loopback and malformed URL HOLD",
-      "POST PUT DELETE all HTTP 405"
+      "POST PUT DELETE all HTTP 405",
+      "HTTP 302 to second loopback origin cannot be followed; canary GET count 0"
     ],
     "real_external_effects": 0
   },
   "actual_second_runner": {
-    "run_id": 44162876016,
-    "url": "https://github.com/SepehrGhanbari/Ario/actions/runs/44162876016",
-    "job_id": 134321083174,
+    "run_id": 44163994803,
+    "url": "https://github.com/SepehrGhanbari/Ario/actions/runs/44163994803",
+    "job_id": 134325027734,
     "result": "SUCCESS",
+    "source_commit_pinned": "ebed96629829705919e8fcec2e7b6d5cdea52f6f",
     "python_version": "3.13",
-    "unittest_method_groups_passed": 3,
+    "unittest_method_groups_passed": 4,
+    "named_http_matrix_cases": 13,
+    "redirect_canary_case_passed": true,
+    "redirect_destination_contacts": 0,
     "underlying_w20_proof_unittest_methods_passed": 6,
-    "stdout_artifact_id": 14363183832,
+    "stdout_artifact_id": 14363414462,
     "external_cosigning_requests": 0
   },
   "matrix": [
@@ -170,5 +175,19 @@
   "not_independent_human_review": true,
   "trust_activation": "NO_GO",
   "production": "NO_GO",
-  "automation_scheduled": false
+  "automation_scheduled": false,
+  "actual_second_runner_initial": {
+    "run_id": 44162876016,
+    "url": "https://github.com/SepehrGhanbari/Ario/actions/runs/44162876016",
+    "job_id": 134321083174,
+    "result": "SUCCESS",
+    "python_version": "3.13",
+    "unittest_method_groups_passed": 3,
+    "underlying_w20_proof_unittest_methods_passed": 6,
+    "stdout_artifact_id": 14363183832,
+    "external_cosigning_requests": 0,
+    "note": "initial pre-redirect-hardening source, kept as historical evidence; 3 group PASS"
+  },
+  "tested_hardening_revision": "W21_NO_REDIRECT_EXTERNAL_ORIGIN_GUARD",
+  "redirect_following_allowed": false
 }
