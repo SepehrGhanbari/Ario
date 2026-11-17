@@ -365,3 +365,18 @@ def test_legacy_boolean_shared_dependency_is_not_accepted_as_composition_evidenc
     assert _evaluate(_fixture_with_input(case, mutated_input)) == {
         "composition": "UNKNOWN", "status": "UNKNOWN"
     }
+
+
+def test_complete_compatibility_checks_do_not_mask_a_missing_required_premise():
+    case = next(c for c in corpus() if c.case_id == "AEC02_COMPOSITION_DEPENDENCIES_01")
+    mutated_input = {**case.input, "requirements": ["P1", "P2"]}
+    assert _evaluate(_fixture_with_input(case, mutated_input)) == {
+        "composition": "INCOMPLETE", "status": "UNKNOWN"
+    }
+
+
+def test_partial_overlap_fixture_is_incomplete_even_before_composition_checks():
+    case = next(c for c in corpus() if c.case_id == "AEC02_COMPOSITION_DEPENDENCIES_02")
+    assert set(case.input["premises"]) & set(case.input["requirements"])
+    assert not set(case.input["requirements"]).issubset(set(case.input["premises"]))
+    assert _evaluate(case) == {"composition": "INCOMPLETE", "status": "UNKNOWN"}
