@@ -440,8 +440,12 @@ def _evaluate(f: Fixture) -> dict:
         dependency_states = {"COMPATIBLE", "SHARED_DEPENDENCY", "INCOMPATIBLE", "UNKNOWN"}
         other_states = {"COMPATIBLE", "INCOMPATIBLE", "UNKNOWN"}
         if (
-            checks["dependency"] not in dependency_states
-            or any(checks[key] not in other_states for key in ("scope", "temporal", "claim_kind"))
+            not isinstance(checks["dependency"], str)
+            or checks["dependency"] not in dependency_states
+            or any(
+                not isinstance(checks[key], str) or checks[key] not in other_states
+                for key in ("scope", "temporal", "claim_kind")
+            )
         ):
             return {"composition": "UNKNOWN", "status": "UNKNOWN"}
 
