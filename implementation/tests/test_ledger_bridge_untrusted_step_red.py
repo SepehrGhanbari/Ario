@@ -1,12 +1,9 @@
-"""Untrusted STEP_OBSERVED ledger provenance: deliberately RED characterization.
+"""Untrusted STEP_OBSERVED ledger provenance: preserved RED then proposed GREEN.
 
-Security contract proposal for #216. This tests *existing* #210 bridge code
-with a fake tool-output event, without invoking a tool or checking the target.
-No production signer, memory activation or external credentials involved.
-
-Expected RED until upstream governance decides that unverified JSONL reports
-must not be labeled as independently SUPPORTED / VERIFIED_EMPIRICAL.
-Do NOT mark xfail or silently lower expectations. Do NOT merge as-is.
+The original test-only #266 commit reproducibly failed on the original #210
+bridge. This stacked research branch implements the strict reported-only
+versioned path. No tools, production keys, or live memory are exercised.
+Do not merge this Draft branch without independent governance review.
 """
 import json
 
@@ -50,7 +47,7 @@ def test_untrusted_completed_jsonl_cannot_create_supported_memory(tmp_path):
              if node.concept.startswith("agent_tool:file_fingerprint:")]
     assert len(nodes) == 1
     # Desired epistemic safety: an untrusted report can only be RECORDED.
-    # EXPECTED RED on #210: implementation currently assigns SUPPORTED.
+    # Historical RED on #210: original bridge assigned SUPPORTED.
     assert nodes[0].status == NodeEpistemicStatus.RECORDED
 
 
