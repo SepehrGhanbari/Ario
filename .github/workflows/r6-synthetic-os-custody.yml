@@ -77,6 +77,34 @@ jobs:
             echo "ERROR: duplicate nonce was accepted" >&2; exit 1
           fi
           grep -q 'REPLAYED_NONCE' /tmp/ario-r6-replay.json
+          # A NEW E-generated key must not replace the public key C already pinned.
+          sudo -u ario_r6_executor "$PY" "$LAB" keygen \
+            --private /tmp/ario-r6-executor/unpinned.key \
+            --public /tmp/ario-r6-exchange/unpinned.pub
+          sudo -u ario_r6_executor "$PY" "$LAB" sign \
+            --private /tmp/ario-r6-executor/unpinned.key \
+            --public /tmp/ario-r6-exchange/unpinned.pub \
+            --out /tmp/ario-r6-exchange/unpinned-receipt.json --nonce r6-unpinned-nonce
+          if sudo -u ario_r6_custodian "$PY" "$LAB" custodian \
+              --dir /tmp/ario-r6-custodian --action spend \
+              --receipt /tmp/ario-r6-exchange/unpinned-receipt.json > /tmp/ario-r6-unpinned.json; then
+            echo "ERROR: unpinned signing key accepted" >&2; exit 1
+          fi
+          grep -q 'UNPINNED_EXECUTOR_KEY' /tmp/ario-r6-unpinned.json
+          echo 'R6 UNPINNED_KEY_REJECTED: true'
+          # Signer controls issued_epoch, but only C's own runner time is checked.
+          sudo -u ario_r6_executor "$PY" "$LAB" sign \
+            --private /tmp/ario-r6-executor/ephemeral.key \
+            --public /tmp/ario-r6-exchange/ephemeral.pub \
+            --out /tmp/ario-r6-exchange/stale-receipt.json \
+            --nonce r6-stale-nonce --age-seconds -3600
+          if sudo -u ario_r6_custodian "$PY" "$LAB" custodian \
+              --dir /tmp/ario-r6-custodian --action spend \
+              --receipt /tmp/ario-r6-exchange/stale-receipt.json > /tmp/ario-r6-stale.json; then
+            echo "ERROR: stale signed receipt accepted" >&2; exit 1
+          fi
+          grep -q 'CUSTODIAN_CLOCK_SKEW' /tmp/ario-r6-stale.json
+          echo 'R6 CUSTODIAN_CLOCK_SKEW_REJECTED: true (runner clock not trusted time)'
           # Concurrent duplicate submissions: exactly one C-owned append.
           sudo -u ario_r6_executor "$PY" "$LAB" sign \
             --private /tmp/ario-r6-executor/ephemeral.key \
