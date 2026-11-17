@@ -46,6 +46,86 @@ def _fixture(family: str, index: int, variant: str, input_data: dict,
         rationale=rationale,
     )
 
+
+
+def changed_input_paths(left: dict, right: dict) -> list[str]:
+    """Return atomic JSON-pointer-like paths that differ between two inputs.
+
+    This is a structural check only: it does not establish that a changed field
+    is causally relevant or that the pair's expected labels are correct.
+    """
+    def visit(a, b, path: str) -> list[str]:
+        if type(a) is not type(b):
+            return [path or "/"]
+        if isinstance(a, dict):
+            changed: list[str] = []
+            for key in sorted(set(a) | set(b), key=lambda item: str(item)):
+                token = str(key).replace("~", "~0").replace("/", "~1")
+                child = f"{path}/{token}" if path else f"/{token}"
+                if key not in a or key not in b:
+                    changed.append(child)
+                else:
+                    changed.extend(visit(a[key], b[key], child))
+            return changed
+        if isinstance(a, (list, tuple)):
+            changed = []
+            if len(a) != len(b):
+                changed.append(f"{path}/@length" if path else "/@length")
+            for index in range(min(len(a), len(b))):
+                child = f"{path}/{index}" if path else f"/{index}"
+                changed.extend(visit(a[index], b[index], child))
+            return changed
+        return [path or "/"] if a != b else []
+
+    return visit(left, right, "")
+
+
+def audit_counterfactual_pairs(fixtures: tuple[Fixture, ...] | list[Fixture]) -> dict:
+    """Audit declared pairs for one family and exactly one atomic input delta."""
+    groups: dict[str, list[Fixture]] = {}
+    for fixture in fixtures:
+        if fixture.pair_group:
+            groups.setdefault(fixture.pair_group, []).append(fixture)
+
+    pair_rows = []
+    for group_id in sorted(groups):
+        members = groups[group_id]
+        issues: list[str] = []
+        changed_paths: list[str] = []
+        if len(members) != 2:
+            issues.append("PAIR_MEMBER_COUNT_NOT_TWO")
+        else:
+            first, second = members
+            if first.family != second.family:
+                issues.append("PAIR_FAMILY_MISMATCH")
+            if first.case_id == second.case_id:
+                issues.append("DUPLICATE_CASE_ID")
+            changed_paths = changed_input_paths(first.input, second.input)
+            if len(changed_paths) != 1:
+                issues.append("EXPECTED_EXACTLY_ONE_ATOMIC_INPUT_CHANGE")
+        pair_rows.append({
+            "pair_group": group_id,
+            "family": members[0].family if members else None,
+            "case_ids": [member.case_id for member in members],
+            "changed_input_paths": changed_paths,
+            "valid": not issues,
+            "issues": issues,
+        })
+
+    valid_count = sum(row["valid"] for row in pair_rows)
+    return {
+        "audit_kind": "STRUCTURAL_COUNTERFACTUAL_PAIR_AUDIT",
+        "pair_group_count": len(pair_rows),
+        "valid_pair_count": valid_count,
+        "invalid_pair_count": len(pair_rows) - valid_count,
+        "pairs": pair_rows,
+        "limitation": (
+            "A single structural input delta does not establish causal relevance, "
+            "semantic isolation, or correctness of either expected label."
+        ),
+    }
+
+
 def corpus() -> tuple[Fixture, ...]:
     """Build 10 families x 12 authored deterministic fixtures."""
     rows: list[Fixture] = []
@@ -302,11 +382,13 @@ def score() -> dict:
             "matches": sum(x["match"] for x in group),
             "fixture_contract_conformance": sum(x["match"] for x in group) / len(group),
         }
+    pair_audit = audit_counterfactual_pairs(fixtures)
     return {
         "benchmark": VERSION,
         "corpus_kind": "SYNTHETIC_DETERMINISTIC_PUBLIC_DEVELOPMENT",
         "case_count": len(fixtures),
         "family_count": len(FAMILIES),
+        "counterfactual_pair_validation": pair_audit,
         "policy_identity": "AEC_BENCH_FIXTURE_REFERENCE_EVALUATOR_NOT_ARIO_RUNTIME",
         "by_family": by_family,
         "cases": results,
