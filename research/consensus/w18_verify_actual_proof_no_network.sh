@@ -48,12 +48,14 @@ fi
 echo 'W18_N03_CORRUPTED_INCLUSION_NODE_DENIED'
 
 python3 - "$pub" "$tmp/tampered.pub" <<'PY'
-import pathlib,sys
+import base64,pathlib,sys
 s=pathlib.Path(sys.argv[1]).read_text('ascii')
 parts=s.split(' ',2)
-if len(parts)<2 or len(parts[1])<15: raise SystemExit('unexpected public key format')
-k=parts[1]
-parts[1]=k[:12]+('A' if k[12]!='A' else 'B')+k[13:]
+if len(parts)<2 or parts[0]!='ssh-ed25519': raise SystemExit('unexpected public key format')
+raw=bytearray(base64.b64decode(parts[1],validate=True))
+if len(raw)<32: raise SystemExit('not an Ed25519 public key')
+raw[-1]^=1
+parts[1]=base64.b64encode(raw).decode('ascii')
 pathlib.Path(sys.argv[2]).write_text(' '.join(parts),'ascii')
 PY
 if sigsum-verify -P "$policy" -k "$tmp/tampered.pub" "$proof" < "$manifest" >/dev/null 2>&1; then
