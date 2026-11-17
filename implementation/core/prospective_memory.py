@@ -347,6 +347,22 @@ class ProspectiveMemoryRegistry:
 
         return registry
 
+    @staticmethod
+    def cleanup_orphan_journals(directory: Path, pattern: str = "*.tmp.*") -> int:
+        """Remove orphaned temporary journal files left by abruptly crashed processes."""
+        directory = Path(directory)
+        if not directory.exists() or not directory.is_dir():
+            return 0
+        removed = 0
+        for tmp_file in directory.glob(pattern):
+            if tmp_file.is_file():
+                try:
+                    tmp_file.unlink()
+                    removed += 1
+                except OSError:
+                    pass
+        return removed
+
     def reconcile_expired_intentions(self, current_epoch: float) -> int:
         """T-PROS-02: Sweep pending intentions and transition any with ttl_epoch <= current_epoch to EXPIRED."""
         expired_count = 0

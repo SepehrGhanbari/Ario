@@ -149,8 +149,82 @@ class ContestationReport:
         return "\n".join(lines)
 
 
+@dataclasses.dataclass(frozen=True)
+class LedgerIntegrityReport:
+    """Read-only diagnostic audit of episodic ledger file integrity for crash recovery."""
+    ledger_path: str
+    total_bytes: int
+    valid_lines: int
+    is_clean: bool
+    corrupt_line_no: Optional[int] = None
+    corrupt_line_snippet: Optional[str] = None
+    diagnostic: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "ledger_path": self.ledger_path,
+            "total_bytes": self.total_bytes,
+            "valid_lines": self.valid_lines,
+            "is_clean": self.is_clean,
+            "corrupt_line_no": self.corrupt_line_no,
+            "corrupt_line_snippet": self.corrupt_line_snippet,
+            "diagnostic": self.diagnostic,
+        }
+
+
 class ConsolidationEngine:
     """Bounded, fail-closed systems consolidation engine for Ario."""
+
+    @staticmethod
+    def inspect_ledger_integrity(ledger_path: Path) -> LedgerIntegrityReport:
+        """Read-only diagnostic inspection of ledger file for crash analysis without mutations."""
+        ledger_path = Path(ledger_path)
+        if not ledger_path.exists():
+            return LedgerIntegrityReport(
+                ledger_path=str(ledger_path),
+                total_bytes=0,
+                valid_lines=0,
+                is_clean=False,
+                diagnostic="FILE_NOT_FOUND",
+            )
+        total_bytes = ledger_path.stat().st_size
+        if total_bytes == 0:
+            return LedgerIntegrityReport(
+                ledger_path=str(ledger_path),
+                total_bytes=0,
+                valid_lines=0,
+                is_clean=True,
+                diagnostic="EMPTY_LEDGER",
+            )
+        valid_lines = 0
+        with open(ledger_path, "rb") as f:
+            for line_no, raw_line in enumerate(f, start=1):
+                clean = raw_line.strip()
+                if not clean:
+                    continue
+                try:
+                    decoded = clean.decode("utf-8")
+                    json.loads(decoded)
+                    valid_lines += 1
+                except Exception as exc:
+                    snippet = clean[:80].decode("utf-8", errors="replace")
+                    return LedgerIntegrityReport(
+                        ledger_path=str(ledger_path),
+                        total_bytes=total_bytes,
+                        valid_lines=valid_lines,
+                        is_clean=False,
+                        corrupt_line_no=line_no,
+                        corrupt_line_snippet=snippet,
+                        diagnostic=f"CORRUPT_JSON_OR_TRUNCATED_TAIL: {exc}",
+                    )
+        return LedgerIntegrityReport(
+            ledger_path=str(ledger_path),
+            total_bytes=total_bytes,
+            valid_lines=valid_lines,
+            is_clean=True,
+            diagnostic="CLEAN",
+        )
+
 
     def __init__(self, decay_rate: float = 0.05, retrieval_threshold: float = 0.2) -> None:
         if not (0.0 < decay_rate < 1.0):

@@ -24,6 +24,42 @@ jobs:
         run: python -m pip install -r requirements-research.txt
       - name: Run M0 and runtime regression suites
         run: python -m pytest -q tests
+      - name: Run cognitive memory, crash recovery, and security boundary suites
+        run: |
+          python -m pytest -v \
+            tests/test_memory_consolidation.py \
+            tests/test_source_monitoring.py \
+            tests/test_prospective_memory.py \
+            tests/test_cognitive_memory_integration.py \
+            tests/test_cognitive_memory_security_boundaries.py \
+            tests/test_cognitive_memory_cli.py \
+            tests/test_cognitive_memory_crash_recovery.py
+
+  cognitive-memory-invariants:
+    name: Cognitive Memory Invariants, Crash Recovery & Security
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: implementation
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install pinned research test dependencies
+        run: python -m pip install -r requirements-research.txt
+      - name: Verify cognitive memory suite
+        run: |
+          python -m pytest -v \
+            tests/test_memory_consolidation.py \
+            tests/test_source_monitoring.py \
+            tests/test_prospective_memory.py \
+            tests/test_cognitive_memory_integration.py \
+            tests/test_cognitive_memory_security_boundaries.py \
+            tests/test_cognitive_memory_cli.py \
+            tests/test_cognitive_memory_crash_recovery.py
 
   windows-differential-advisory:
     # Informational pilot. Do not configure this as a required status check.

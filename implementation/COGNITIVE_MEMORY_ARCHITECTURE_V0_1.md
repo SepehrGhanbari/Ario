@@ -187,6 +187,34 @@ Ario's cognitive memory architecture grounds biological memory mechanisms (Tulvi
 | `T-PROS-02` | ProspectiveMemoryRegistry | Deterministic Expiration | Stale intentions transition to `EXPIRED` without side effects. |
 | `T-PROS-07..10` | ProspectiveMemoryRegistry | Journal Persistence & Recovery | Atomic persistence, SHA-256 integrity check, AST re-validation on load, reboot TTL sweep. |
 | `T-SEC-01..32` | Security Boundaries | Adversarial Hardening | AST injection fuzzing (walrus, comprehensions, f-strings), tool smuggling, multi-hop circularity. |
+| `T-CLI-01..08` | CLI Interface | Command Audit Execution | `--memory-conflicts` report generation (JSON/Markdown) and `--inspect-ledger` crash integrity. |
+| `T-CRASH-01..11` | Crash Recovery | Resilience & State Replay | Orphan journal temp cleanup, bitflip/truncation fail-closed, offline TTL sweep, reboot replay. |
 | `T-INT-01` | Integration | Full Lifecycle Pipeline | Verified hypothesis -> ledger -> consolidated schema -> prospective cue. |
 
-Total test suite: **57 specialized cognitive memory tests** (1,198 overall repository regression tests passing).
+Total test suite: **76 specialized cognitive memory tests** (1,217 overall repository regression tests passing).
+
+---
+
+## 5. Operational CLI & Crash Recovery Interface
+
+### A. Epistemic Contestation Audit via CLI
+Generate human-readable or machine-readable audit reports of contested memories directly from episodic ledgers:
+```bash
+# Markdown format (default)
+python implementation/ario_cli.py --memory-conflicts --ledger agent-events.jsonl
+
+# Export to JSON
+python implementation/ario_cli.py --memory-conflicts --ledger agent-events.jsonl --format json --output conflicts.json
+```
+
+### B. Read-Only Ledger Crash Inspection
+Audit an episodic ledger for truncated tails or abrupt termination without mutating file bytes:
+```bash
+python implementation/ario_cli.py --inspect-ledger --ledger agent-events.jsonl
+```
+
+### C. Continuous Integration Workflow
+The test suite is enforced on every push and pull request via `.github/workflows/implementation-regression.yml`:
+1. `m0-regression`: Full repository test suite (1,217 tests).
+2. `cognitive-memory-invariants`: Dedicated check verifying all 76 memory consolidation, source monitoring, prospective registry, security boundary, and crash recovery tests.
+3. `windows-differential-advisory`: Cross-platform Windows execution ensuring canonical path handling.
