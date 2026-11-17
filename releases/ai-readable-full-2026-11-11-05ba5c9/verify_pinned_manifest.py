@@ -169,7 +169,7 @@ def read_manifest(path, expected_sha256):
         require(isinstance(item.get("git_blob_sha1"), str) and HEX40.fullmatch(item["git_blob_sha1"]),
                 "invalid manifest Git blob hash")
     require(manifest.get("text_files") is None or
-            manifest["text_files"] == sum(x["encoding"] == "raw-utf8" for x in items),
+            bounded_int(manifest["text_files"], COUNT_LIMIT, "text_files") == sum(x["encoding"] == "raw-utf8" for x in items),
             "manifest text count mismatch")
     require(manifest.get("binary_files") is None or
             bounded_int(manifest["binary_files"], COUNT_LIMIT, "binary_files") == sum(x["encoding"] == "base64" for x in items),
