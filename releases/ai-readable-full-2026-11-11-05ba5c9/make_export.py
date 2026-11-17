@@ -53,15 +53,15 @@ for item in g("ls-tree","-r","-z","--full-tree","HEAD").split(b"\x00"):
  if name in seen_paths or portable_key(name) in all_parents or portable_key(name) in folded_paths:raise ValueError("duplicate, case-colliding, or file/directory-conflicting path")
  parts=p.parts
  for i in range(1,len(parts)+1):
-  prefix="/".join(parts[:i]);key=portable_key(prefix);previous=folded_components.get(key)
+  prefix="/".join(parts[:i]);key=portable_key(prefix)
+  if i<len(parts) and key in folded_paths:raise ValueError("file/directory path conflict")
+  previous=folded_components.get(key)
   if previous is None:
    added=len(key.encode("utf-8"))+len(prefix.encode("utf-8"))
    if path_index_entries>=MAX_PATH_INDEX_ENTRIES or path_index_bytes+added>MAX_PATH_INDEX_BYTES:raise ValueError("path index resource limit")
    folded_components[key]=prefix;path_index_entries+=1;path_index_bytes+=added
   elif previous!=prefix:raise ValueError("case-colliding path component")
-  if i<len(parts):
-   if key in folded_paths:raise ValueError("file/directory path conflict")
-   all_parents.add(key)
+  if i<len(parts):all_parents.add(key)
  seen_paths.add(prefix);folded_paths.add(key)
  raw=g("cat-file","blob",oid)
  if len(raw)!=raw_size:raise ValueError("Git blob size mismatch")
