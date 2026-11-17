@@ -23,9 +23,9 @@ jobs:
           persist-credentials: false
 
       - name: Install pinned Go toolchain
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
-          go-version: "1.23"
+          go-version: "1.25"
           cache: false
 
       - name: Fail-closed offline public-manifest checks
