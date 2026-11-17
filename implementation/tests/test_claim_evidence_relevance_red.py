@@ -20,8 +20,11 @@ from core.source_monitoring import (
 )
 
 
-def _register_successful_synthetic_tool(guard, *, assertion, identifier):
-    stdout = "SYNTHETIC: 3 calculator test cases passed; no astronomy measured"
+def _register_successful_synthetic_tool(
+    guard, *, assertion, identifier, stdout=None,
+):
+    if stdout is None:
+        stdout = "SYNTHETIC: 3 calculator test cases passed; no astronomy measured"
     lock = "SYNTHETIC-LOCK-ONLY"
     return guard.record_empirical_observation(
         assertion=assertion,
@@ -75,8 +78,9 @@ def test_ce03_contradicting_tool_text_cannot_verify_claim():
     )
     receipt = _register_successful_synthetic_tool(
         guard,
-        assertion="SYNTHETIC OBSERVATION: calculator tests report failures",
+        assertion="SYNTHETIC OBSERVATION: calculator tests report 1 failure",
         identifier="CE03-EMP",
+        stdout="SYNTHETIC: calculator tests report 1 failure and 2 passes; no astronomy measured",
     )
     after = _attempt_promotion(guard, claim.attribution_id, [receipt.attribution_id])
     assert after.veracity_state is not VeracityState.VERIFIED_EMPIRICAL, (
