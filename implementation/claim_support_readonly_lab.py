@@ -84,7 +84,10 @@ def _ancestors(
         active.add(node_id)
         stack.append((node_id, True))
         stack.extend((parent, False) for parent in reversed(parents))
-    done.discard(receipt_id)
+    # Include the selected receipt itself. Otherwise A (a supporting receipt)
+    # can be the direct or transitive parent of B (another supporting receipt)
+    # without intersecting B's declared ancestry. That misclassifies a
+    # known-dependent pair as if their recorded lineages were disjoint.
     return done, None
 
 def inspect_claim_support(
