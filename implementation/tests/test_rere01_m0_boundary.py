@@ -71,14 +71,14 @@ def test_rere01_p01_explicit_recorded_mode():
     assert next(iter(engine.nodes.values())).status == NodeEpistemicStatus.RECORDED
 
 
-@pytest.mark.xfail(strict=True, reason="N01: raw testimony defaults to legacy ACCEPTED; #216 HOLD")
+@pytest.mark.xfail(strict=True, raises=AssertionError, reason="N01: raw testimony defaults to legacy ACCEPTED; #216 HOLD")
 def test_rere01_n01_raw_ingestion_does_not_accept_truth():
     engine = ConsolidationEngine()
     _feed(engine, "A", _event("Door was OPEN", source="A"))
     assert next(iter(engine.nodes.values())).status == NodeEpistemicStatus.RECORDED
 
 
-@pytest.mark.xfail(strict=True, reason="N02: ordinary conflicting text without caller negates is not detected")
+@pytest.mark.xfail(strict=True, raises=AssertionError, reason="N02: ordinary conflicting text without caller negates is not detected")
 def test_rere01_n02_plain_open_closed_conflict_is_unknown_or_contested():
     engine = ConsolidationEngine(default_status=NodeEpistemicStatus.RECORDED)
     _feed(engine, "A", _event("Door was OPEN", source="A", value="OPEN"))
@@ -97,14 +97,14 @@ def test_rere01_p02_explicit_negates_is_detected():
     assert engine.validate_lineage_integrity() is True
 
 
-@pytest.mark.xfail(strict=True, reason="N03: caller-chosen SUPPORTED status is accepted without evidence authority")
+@pytest.mark.xfail(strict=True, raises=AssertionError, reason="N03: caller-chosen SUPPORTED status is accepted without evidence authority")
 def test_rere01_n03_untrusted_supported_cannot_promote():
     engine = ConsolidationEngine(default_status=NodeEpistemicStatus.RECORDED)
     _feed(engine, "C", _event("Door was CLOSED", source="C", status="SUPPORTED"))
     assert next(iter(engine.nodes.values())).status != NodeEpistemicStatus.SUPPORTED
 
 
-@pytest.mark.xfail(strict=True, reason="N04: no typed, versioned prior-assessment history interface")
+@pytest.mark.xfail(strict=True, raises=AssertionError, reason="N04: no typed, versioned prior-assessment history interface")
 def test_rere01_n04_previous_assessment_is_retrievable_after_contestation():
     engine = ConsolidationEngine(default_status=NodeEpistemicStatus.RECORDED)
     _feed(engine, "A", _event("Door was OPEN", source="A"))
@@ -116,7 +116,7 @@ def test_rere01_n04_previous_assessment_is_retrievable_after_contestation():
     assert any(item.status == NodeEpistemicStatus.CONTESTED for item in history)
 
 
-@pytest.mark.xfail(strict=True, reason="N05: replay of identical event reinforces saliency/count")
+@pytest.mark.xfail(strict=True, raises=AssertionError, reason="N05: replay of identical event reinforces saliency/count")
 def test_rere01_n05_exact_replay_is_idempotent():
     engine = ConsolidationEngine(default_status=NodeEpistemicStatus.RECORDED)
     event = _event("Door was OPEN", source="A")
@@ -130,7 +130,7 @@ def test_rere01_n05_exact_replay_is_idempotent():
     assert after.source_event_hashes == before.source_event_hashes
 
 
-@pytest.mark.xfail(strict=True, reason="N06: caller-supplied hex hash is registered without source-byte authentication")
+@pytest.mark.xfail(strict=True, raises=AssertionError, reason="N06: caller-supplied hex hash is registered without source-byte authentication")
 def test_rere01_n06_fabricated_digest_is_not_complete_receipt():
     engine = ConsolidationEngine(default_status=NodeEpistemicStatus.RECORDED)
     # A synthetic 64-character string, NOT a hash of authenticated source bytes.
@@ -156,12 +156,12 @@ def _order_outcome(order):
     return tuple(sorted((node.assertion, node.status.value) for node in engine.nodes.values()))
 
 
-@pytest.mark.xfail(strict=True, reason="N07: a forward negates reference is not resolved retroactively")
+@pytest.mark.xfail(strict=True, raises=AssertionError, reason="N07: a forward negates reference is not resolved retroactively")
 def test_rere01_n07_order_swap_does_not_change_conflict():
     assert _order_outcome(("A", "B")) == _order_outcome(("B", "A"))
 
 
-@pytest.mark.xfail(strict=True, reason="N08: caller REVISED value needs no reason or predecessor")
+@pytest.mark.xfail(strict=True, raises=AssertionError, reason="N08: caller REVISED value needs no reason or predecessor")
 def test_rere01_n08_revision_requires_reason_and_prior_assessment():
     engine = ConsolidationEngine(default_status=NodeEpistemicStatus.RECORDED)
     _feed(engine, "T4", _event("Door was CLOSED", source="unauthenticated", status="REVISED"))
@@ -211,12 +211,12 @@ def test_rere01_p05_m0_flags_declared_history_overwrite():
     assert "HISTORY_MUTATION" in result.violations
 
 
-@pytest.mark.xfail(strict=True, reason="N09: source-root independence authentication not implemented in consolidation")
+@pytest.mark.xfail(strict=True, raises=AssertionError, reason="N09: source-root independence authentication not implemented in consolidation")
 def test_rere01_n09_shared_origin_requires_independence_review():
     assert any(field.name == "independently_authenticated_root" for field in fields(SemanticNode))
 
 
-@pytest.mark.xfail(strict=True, reason="N10: recursive assessment target/adjudication API not implemented")
+@pytest.mark.xfail(strict=True, raises=AssertionError, reason="N10: recursive assessment target/adjudication API not implemented")
 def test_rere01_n10_revise_the_previous_assessment():
     engine = ConsolidationEngine(default_status=NodeEpistemicStatus.RECORDED)
     assert callable(getattr(engine, "reassess_prior_assessment", None))
