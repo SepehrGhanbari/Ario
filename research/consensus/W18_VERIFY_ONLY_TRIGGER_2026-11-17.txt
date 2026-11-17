@@ -1,0 +1,1 @@
+W18 OFFLINE CHECK ONLY: this sentinel runs sigsum-verify over published public proof and four corrupted variants. Does not invoke sigsum-submit, any Ario signer, real memory, or trust activation. No scheduled recurrence.
