@@ -72,6 +72,31 @@ Every adapter maps its native representation into a common, loss-minimizing enve
 
 Adapters must preserve native identifiers and raw payload references. Missing fields remain missing; they must not be synthesized as positive evidence. Unsupported native concepts must be represented as unmapped/unknown, not silently discarded.
 
+## 4.1 Composition firewall contract
+
+A complete set of named premises is necessary but not sufficient for a valid composition. The benchmark-side composition evaluator therefore requires an explicit, complete compatibility record before it can return `VALID`.
+
+The composition input must contain:
+- `premises`: unique, non-empty premise identifiers;
+- `requirements`: a non-empty list of unique premise identifiers required by the composition;
+- `composition_checks`: exactly four declared dimensions: `dependency`, `scope`, `temporal`, and `claim_kind`;
+- `composition_checks_complete`: a strict Boolean declaring whether the complete four-dimension check set has been performed.
+
+Allowed check states:
+- `dependency`: `COMPATIBLE`, `SHARED_DEPENDENCY`, `INCOMPATIBLE`, or `UNKNOWN`;
+- `scope`, `temporal`, and `claim_kind`: `COMPATIBLE`, `INCOMPATIBLE`, or `UNKNOWN`.
+
+Decision precedence is conservative:
+1. A known explicit incompatibility, cycle, or composition-firewall bypass yields `INVALID / REJECTED`.
+2. A missing required premise yields `INCOMPLETE / UNKNOWN`.
+3. Missing, malformed, unknown, or incomplete compatibility checks yield `UNKNOWN / UNKNOWN`.
+4. Only a complete check set with every dimension `COMPATIBLE` may yield `VALID / UNKNOWN`.
+5. A declared shared dependency may yield `VALID_WITH_SHARED_DEPENDENCY / UNKNOWN` only after all required premises are present and the full check set is complete. This is not an independent-root, truth, or evidential-admission claim.
+
+Unknown fields and malformed identifiers fail closed. Merely setting a local-validity flag to false, or listing every required premise, cannot substitute for an explicit complete composition check. The proposition status remains `UNKNOWN` even when structural composition is classified as valid.
+
+The v0.2 paired composition fixtures include a one-Boolean counterfactual: the same four compatibility observations produce `UNKNOWN` when the check set is not declared complete and `VALID` when completeness is explicitly declared. The pair tests only this declared completeness transition; it does not independently prove that real-world compatibility checks were performed.
+
 ## 5. Adapter targets and honest comparison boundaries
 
 Implement adapters only when a real, pinned implementation and reproducible invocation exist.
