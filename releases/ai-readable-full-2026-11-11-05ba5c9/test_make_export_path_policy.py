@@ -136,6 +136,42 @@ class ExportPathPolicyTests(unittest.TestCase):
             self.assertEqual(hashlib.sha256(archive.read_bytes()).hexdigest(), first_hash)
             self.assertFalse((release / "artifacts" / "restored-from-txt").exists())
 
+    def test_failed_rebuild_preserves_previous_complete_artifacts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            release = pathlib.Path(tmp) / "release"
+            source = release / "source"
+            source.mkdir(parents=True)
+            shutil.copyfile(SCRIPT_SOURCE, release / "make_export.py")
+            shutil.copyfile(pathlib.Path(__file__).with_name("RESTORE_FROM_TXT_HARDENED.py"),
+                            release / "RESTORE_FROM_TXT_HARDENED.py")
+            shutil.copyfile(pathlib.Path(__file__).with_name("verify_pinned_manifest.py"),
+                            release / "verify_pinned_manifest.py")
+            subprocess.check_call(["git", "init", "-q", str(source)])
+            subprocess.check_call(["git", "-C", str(source), "config", "user.email", "test@example.invalid"])
+            subprocess.check_call(["git", "-C", str(source), "config", "user.name", "Atomic Export Test"])
+            (source / "first.txt").write_bytes(b"first")
+            subprocess.check_call(["git", "-C", str(source), "add", "--all"])
+            subprocess.check_call(["git", "-C", str(source), "commit", "-qm", "valid export fixture"])
+
+            script = release / "make_export.py"
+            first = subprocess.run([sys.executable, str(script)], capture_output=True, text=True)
+            self.assertEqual(first.returncode, 0, first.stderr)
+            archive = release / "artifacts" / "ario-full.zip"
+            txt = release / "artifacts" / "ario-full.txt"
+            old_archive = archive.read_bytes()
+            old_txt = txt.read_bytes()
+
+            source_text = script.read_text(encoding="utf-8")
+            source_text = source_text.replace("MAX_INPUT_BYTES=384*1024*1024", "MAX_INPUT_BYTES=1")
+            script.write_text(source_text, encoding="utf-8")
+            second = subprocess.run([sys.executable, str(script)], capture_output=True, text=True)
+            self.assertNotEqual(second.returncode, 0)
+            self.assertIn("TXT input byte limit", second.stderr)
+            self.assertEqual(archive.read_bytes(), old_archive)
+            self.assertEqual(txt.read_bytes(), old_txt)
+            self.assertEqual(list(release.glob(".artifacts-stage-*")), [])
+            self.assertEqual(list(release.glob(".artifacts-backup-*")), [])
+
     def test_generator_rejects_path_depth_and_index_budget(self):
         for patch_text, filename, expected in (
             ("MAX_PATH_DEPTH=128", "a/b.txt", "path depth limit"),
