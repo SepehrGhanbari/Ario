@@ -11,6 +11,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from bounded_json import loads_bounded
+
 
 MAX_STEPS = 8
 MAX_READ_BYTES = 20_000
@@ -598,7 +600,7 @@ def _ensure_task_id_unused(ledger: Path, task_id: str) -> None:
         if not line.strip():
             continue
         try:
-            event = json.loads(line)
+            event = loads_bounded(line)
         except json.JSONDecodeError as exc:
             raise AgentRequestError(
                 f"existing ledger is malformed at line {line_number}; refusing to start a task"
@@ -809,7 +811,7 @@ def inspect_execution_lock(ledger_path: str | Path) -> dict:
         ),
     }
     try:
-        record = json.loads(raw.decode("utf-8"))
+        record = loads_bounded(raw.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError):
         result["status"] = "UNKNOWN"
         result["error"] = "lock content is not valid UTF-8 JSON"
@@ -849,7 +851,7 @@ def inspect_task_history(task_id: str, ledger_path: str | Path) -> dict:
         if not line.strip():
             continue
         try:
-            event = json.loads(line)
+            event = loads_bounded(line)
         except json.JSONDecodeError:
             return {"task_id": task_id, "status": "UNKNOWN",
                     "error": f"malformed JSONL ledger at line {line_number}",
@@ -999,7 +1001,7 @@ def main(argv=None) -> int:
             return 0 if result["status"] in {"COMPLETED", "STOPPED"} else 2
         if not args.workspace:
             parser.error("--workspace is required with --task")
-        payload = json.loads(Path(args.task).read_text(encoding="utf-8-sig"))
+        payload = loads_bounded(Path(args.task).read_text(encoding="utf-8-sig"))
         result = run_task(payload, args.workspace, args.ledger)
         print(json.dumps(result, ensure_ascii=False, sort_keys=True))
         return 0 if result["status"] == "COMPLETED" else 2
