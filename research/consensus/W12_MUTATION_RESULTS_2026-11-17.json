@@ -1,0 +1,190 @@
+{
+  "schema": "ARIO_W12_SOURCE_PINNED_MUTATION_AUDIT_V1",
+  "execution": "NATIVE_NODE_ON_ORIGINAL_GIT_BLOB_DISPOSABLE_MUTATIONS",
+  "node_version": "v22.16.0",
+  "source_blob_sha1": "63bde301e7f061945dbd2fb43954e817d2182fa6",
+  "source_sha256": "a32c7632ccdd500efa4dad9cefeb91c35985a0fb494fc2497650918a320eb39c",
+  "original_output_blob_sha1": "8950907e7c2c606493f1aa5806d0487957dc3e7d",
+  "original_replay": "36/36; EXACT published JSON Git blob SHA-1",
+  "total_mutants": 14,
+  "killed": 10,
+  "survived": 4,
+  "survivors_killed_by_targeted": 4,
+  "new_targeted_positive_negative_control_count": 6,
+  "mutants": [
+    {
+      "mutant": "M01_NO_GRANT_REQUIRED",
+      "defect": "grant enforcement disabled",
+      "mutation_sha256": "b41e176f030d3da998c3ffffe050de333394329e6b647a4b94b8b9e1e3a4c34f",
+      "killed": true,
+      "exit_code": 1,
+      "first_failed_case": "T01",
+      "first_failure_observed": "ELIGIBLE_FOR_SEPARATE_GATE",
+      "status": "KILLED",
+      "targeted_new_controls": null
+    },
+    {
+      "mutant": "M02_REVOKE_IGNORED",
+      "defect": "revoked grants remain eligible",
+      "mutation_sha256": "f51beeec203263ce16ce36511ee4f3a4bbed9e557b67ae94e3a327e1853a11ac",
+      "killed": true,
+      "exit_code": 1,
+      "first_failed_case": "T15",
+      "first_failure_observed": "ELIGIBLE_FOR_SEPARATE_GATE",
+      "status": "KILLED",
+      "targeted_new_controls": null
+    },
+    {
+      "mutant": "M03_EXPIRY_IGNORED",
+      "defect": "expired grants stay eligible",
+      "mutation_sha256": "b946e6ee82e62ad05b8f8bd2e234df0767625f0e97daf3b1bee707c4bac8afce",
+      "killed": true,
+      "exit_code": 1,
+      "first_failed_case": "T20",
+      "first_failure_observed": "ELIGIBLE_FOR_SEPARATE_GATE",
+      "status": "KILLED",
+      "targeted_new_controls": null
+    },
+    {
+      "mutant": "M04_PRINCIPAL_IGNORED",
+      "defect": "incorrect principal binding",
+      "mutation_sha256": "e6a4b7677218ef863f8c514cb38c09b766ba8b68d409c4cad26904268a0ef325",
+      "killed": true,
+      "exit_code": 1,
+      "first_failed_case": "T18",
+      "first_failure_observed": "ELIGIBLE_FOR_SEPARATE_GATE",
+      "status": "KILLED",
+      "targeted_new_controls": null
+    },
+    {
+      "mutant": "M05_RECIPIENT_IGNORED",
+      "defect": "recipient unbound",
+      "mutation_sha256": "0e44ece42845d463737a2ef49323e701b49d4786ca4dd731f453617ef0eff7af",
+      "killed": true,
+      "exit_code": 1,
+      "first_failed_case": "T12",
+      "first_failure_observed": "ELIGIBLE_FOR_SEPARATE_GATE",
+      "status": "KILLED",
+      "targeted_new_controls": null
+    },
+    {
+      "mutant": "M06_RESOURCE_IGNORED",
+      "defect": "resource unbound",
+      "mutation_sha256": "a9bea917c7b1fcf8e2afe1b5a596d65bebece0b0d21d68ab419f353008559618",
+      "killed": true,
+      "exit_code": 1,
+      "first_failed_case": "T17",
+      "first_failure_observed": "ELIGIBLE_FOR_SEPARATE_GATE",
+      "status": "KILLED",
+      "targeted_new_controls": null
+    },
+    {
+      "mutant": "M07_OPERATION_IGNORED",
+      "defect": "operation unbound",
+      "mutation_sha256": "1ad571c045a63d1aab181d459644f1485799a92a033eb81c7ec99f913a5e7eec",
+      "killed": true,
+      "exit_code": 1,
+      "first_failed_case": "T19",
+      "first_failure_observed": "ELIGIBLE_FOR_SEPARATE_GATE",
+      "status": "KILLED",
+      "targeted_new_controls": null
+    },
+    {
+      "mutant": "M08_UNKNOWN_ORIGIN_ALLOWED",
+      "defect": "unknown roots can reach candidate review",
+      "mutation_sha256": "7aace656647d3b333819a9d51bac152ae353d2c07489e91c5c9e37759d1eb436",
+      "killed": true,
+      "exit_code": 1,
+      "first_failed_case": "T10",
+      "first_failure_observed": "DENY",
+      "status": "KILLED",
+      "targeted_new_controls": null
+    },
+    {
+      "mutant": "M09_HISTORY_AS_GRANT",
+      "defect": "history notes bypass grant requirement",
+      "mutation_sha256": "6c1c3191c25e2d4ea1727cd6eb3b204d077026020d4d865fec2624fc678bd6bf",
+      "killed": true,
+      "exit_code": 1,
+      "first_failed_case": "T04",
+      "first_failure_observed": "ELIGIBLE_FOR_SEPARATE_GATE",
+      "status": "KILLED",
+      "targeted_new_controls": null
+    },
+    {
+      "mutant": "M10_ALL_DERIVED_USER",
+      "defect": "derived-origin type silently recast as trusted user",
+      "mutation_sha256": "280681bd936e7b663d97527710b623fe7d409f04c8d17921d1808780553f0b93",
+      "killed": true,
+      "exit_code": 1,
+      "first_failed_case": "T36",
+      "first_failure_observed": "BAD",
+      "status": "KILLED",
+      "targeted_new_controls": null
+    },
+    {
+      "mutant": "M11_ALL_DERIVED_EXTERNAL",
+      "defect": "derived mixed/unknown types silently overwritten",
+      "mutation_sha256": "f73f5d3a30b9cf274a4db5496dde8093eea9de8826f8e11fbbbe207ee9a9420d",
+      "killed": false,
+      "exit_code": 0,
+      "first_failed_case": null,
+      "first_failure_observed": null,
+      "status": "SURVIVED",
+      "targeted_new_controls": {
+        "killed": true,
+        "failed_case": "P01_MERGED_ROOT_TYPES",
+        "status": "KILLED_BY_NEW_W12_CONTROL"
+      }
+    },
+    {
+      "mutant": "M12_MERGE_DROPS_OTHER_ROOTS",
+      "defect": "multi-parent source ancestry collapsed to first root",
+      "mutation_sha256": "240601c26ef491e34031cb6229d247cfb17f65d7b73a2aeee9c1ef539673221b",
+      "killed": false,
+      "exit_code": 0,
+      "first_failed_case": null,
+      "first_failure_observed": null,
+      "status": "SURVIVED",
+      "targeted_new_controls": {
+        "killed": true,
+        "failed_case": "P02_MERGED_ROOT_IDS",
+        "status": "KILLED_BY_NEW_W12_CONTROL"
+      }
+    },
+    {
+      "mutant": "M13_READ_SUMMARY_ANY_DEST",
+      "defect": "read-only status even with remote destination",
+      "mutation_sha256": "84ecf22ae543adc1b4d60bb8951ca1f9c7990d7e11fe0477b01cc977cdc49a72",
+      "killed": false,
+      "exit_code": 0,
+      "first_failed_case": null,
+      "first_failure_observed": null,
+      "status": "SURVIVED",
+      "targeted_new_controls": {
+        "killed": true,
+        "failed_case": "P03_REMOTE_READ_NOT_DATA_ONLY",
+        "status": "KILLED_BY_NEW_W12_CONTROL"
+      }
+    },
+    {
+      "mutant": "M14_IGNORE_TTL_TYPE",
+      "defect": "bad TTLs accepted",
+      "mutation_sha256": "39e89dc297fa53271507cfbc4eed072b0db97b619b6fd6408f0ffb073051be8d",
+      "killed": false,
+      "exit_code": 0,
+      "first_failed_case": null,
+      "first_failure_observed": null,
+      "status": "SURVIVED",
+      "targeted_new_controls": {
+        "killed": true,
+        "failed_case": "P04_INVALID_TTL_REJECTED",
+        "status": "KILLED_BY_NEW_W12_CONTROL"
+      }
+    }
+  ],
+  "scope": "Mutation survival is a test-sensitivity gap in an intentionally synthetic simulator. No real Ario runtime security or underlying true-world event was tested.",
+  "actual_memory_writes": 0,
+  "actual_external_effects": 0,
+  "independent_external_oracle": false
+}
