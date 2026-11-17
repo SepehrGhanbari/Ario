@@ -20,12 +20,51 @@ HEADER_TOTAL_LIMIT = 16384
 RECORD_LINE_LIMIT = 65536
 MANIFEST_LIMIT = 8 * 1024 * 1024
 INPUT_LIMIT = 384 * 1024 * 1024
-PER_RECORD_LIMIT = 64 * 1024 * 1024
+PER_RECORD_RAW_LIMIT = 64 * 1024 * 1024
+PER_RECORD_PAYLOAD_LIMIT = 90 * 1024 * 1024
+PATH_LIMIT = 4096
+PATH_COMPONENT_LIMIT = 255
 COUNT_LIMIT = 10000
 TOTAL_LIMIT = 256 * 1024 * 1024
 HEX64 = re.compile(r"[0-9a-f]{64}\Z")
 HEX40 = re.compile(r"[0-9a-f]{40}\Z")
 FOOT = re.compile(rb"@@ARIO_COMPLETE files=(\d+) commit=([0-9a-f]{40}) tree=([0-9a-f]{40}) tracked_bytes=(\d+) manifest_sha256=([0-9a-f]{64})\n")
+
+RESERVED = {"CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$",
+            "COM¹", "COM²", "COM³", "LPT¹", "LPT²", "LPT³",
+            *(f"COM{i}" for i in range(1, 10)),
+            *(f"LPT{i}" for i in range(1, 10))}
+
+
+def portable_key(value):
+    import unicodedata
+    return unicodedata.normalize("NFC", value.casefold())
+
+
+def validate_manifest_path(value):
+    require(isinstance(value, str) and bool(value), "invalid manifest path")
+    try:
+        encoded = value.encode("utf-8", "strict")
+    except UnicodeEncodeError as exc:
+        raise VerificationError("invalid manifest path encoding") from exc
+    require(len(encoded) <= PATH_LIMIT and chr(92) not in value and chr(0) not in value,
+            "manifest path length or separator")
+    posix = pathlib.PurePosixPath(value)
+    windows = pathlib.PureWindowsPath(value)
+    require(bool(posix.parts) and posix.as_posix() == value
+            and not posix.is_absolute() and not windows.drive
+            and not windows.root and not windows.is_absolute()
+            and ".." not in posix.parts, "unsafe or non-canonical manifest path")
+    for part in posix.parts:
+        require(len(part.encode("utf-8")) <= PATH_COMPONENT_LIMIT,
+                "manifest path component byte limit")
+        device_base = part.split(".", 1)[0].rstrip(" ").upper()
+        require(part not in ("", ".", "..") and not part.endswith((".", " "))
+                and ":" not in part
+                and not any(ord(ch) < 32 or ch in '<>\"|?*' for ch in part)
+                and device_base not in RESERVED,
+                "non-portable manifest path")
+    return posix
 
 
 class VerificationError(ValueError):
@@ -89,6 +128,7 @@ def read_manifest(path, expected_sha256):
     manifest = strict_json(manifest_text)
     require(isinstance(manifest, dict), "manifest object expected")
     require(manifest.get("format") == "ARIO_FULL_SNAPSHOT_v1", "manifest format mismatch")
+    require(isinstance(manifest.get("source_repo"), str) and manifest["source_repo"].startswith("https://"), "manifest source_repo")
     require(isinstance(manifest.get("commit"), str) and HEX40.fullmatch(manifest["commit"]), "manifest commit")
     require(isinstance(manifest.get("tree"), str) and HEX40.fullmatch(manifest["tree"]), "manifest tree")
     items = manifest.get("files")
@@ -97,14 +137,30 @@ def read_manifest(path, expected_sha256):
     total = bounded_int(manifest.get("tracked_bytes"), TOTAL_LIMIT, "tracked_bytes")
     require(len(items) == count, "manifest record count mismatch")
     require(sum(bounded_int(x.get("bytes") if isinstance(x, dict) else None,
-                            PER_RECORD_LIMIT, "manifest file bytes") for x in items) == total,
+                            PER_RECORD_RAW_LIMIT, "manifest file bytes") for x in items) == total,
             "manifest byte sum mismatch")
     seen = set()
+    all_parents = set()
+    folded_components = {}
     for item in items:
         path_value = item.get("path")
-        require(isinstance(path_value, str) and path_value not in seen and bool(path_value),
-                "invalid or repeated manifest path")
-        seen.add(path_value)
+        path_obj = validate_manifest_path(path_value)
+        key = portable_key(path_value)
+        require(key not in seen and key not in all_parents,
+                "duplicate, case-colliding, or file/directory-conflicting manifest path")
+        parts = path_obj.parts
+        for index in range(1, len(parts) + 1):
+            prefix = "/".join(parts[:index])
+            folded = portable_key(prefix)
+            previous = folded_components.get(folded)
+            require(previous is None or previous == prefix,
+                    "case/Unicode-colliding manifest path component")
+            folded_components[folded] = prefix
+            if index < len(parts):
+                require(prefix not in seen, "file/directory-conflicting manifest path")
+        seen.add(key)
+        for index in range(1, len(parts)):
+            all_parents.add("/".join(parts[:index]))
         require(item.get("mode") in ("100644", "100755", "120000"),
                 "invalid manifest mode")
         require(item.get("encoding") in ("raw-utf8", "base64"), "invalid manifest encoding")
@@ -116,7 +172,7 @@ def read_manifest(path, expected_sha256):
             manifest["text_files"] == sum(x["encoding"] == "raw-utf8" for x in items),
             "manifest text count mismatch")
     require(manifest.get("binary_files") is None or
-            manifest["binary_files"] == sum(x["encoding"] == "base64" for x in items),
+            bounded_int(manifest["binary_files"], COUNT_LIMIT, "binary_files") == sum(x["encoding"] == "base64" for x in items),
             "manifest binary count mismatch")
     return manifest, actual
 
