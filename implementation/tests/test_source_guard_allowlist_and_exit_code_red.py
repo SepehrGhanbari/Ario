@@ -81,3 +81,27 @@ def test_positive_integer_nonzero_exit_code_remains_unsupported():
     guard = SourceMonitoringGuard()
     attr = _record(guard, tool="run_tests", exit_code=1)
     assert attr.veracity_state == VeracityState.UNSUPPORTED
+
+
+@pytest.mark.parametrize("invalid_exit", [False, True, "0", "1", 0.0, None])
+def test_provenance_deserialization_rejects_noninteger_exit_codes(invalid_exit):
+    data = {
+        "tool": "run_tests", "target": "synthetic/not-run",
+        "exit_code": invalid_exit,
+        "execution_lock_sha256": "a" * 64,
+        "stdout_sha256": "b" * 64,
+        "recorded_at": "2026-11-17T00:00:00Z",
+    }
+    with pytest.raises(SourceMonitoringError):
+        EmpiricalProvenance.from_dict(data)
+
+
+def test_provenance_serialization_preserves_strict_integer_exit_code():
+    prov = EmpiricalProvenance(
+        tool="run_tests", target="synthetic",
+        exit_code=0, execution_lock_sha256="a" * 64,
+        stdout_sha256="b" * 64, recorded_at="synthetic-time",
+    )
+    restored = EmpiricalProvenance.from_dict(prov.to_dict())
+    assert type(restored.exit_code) is int
+    assert restored.to_dict() == prov.to_dict()
