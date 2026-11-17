@@ -181,7 +181,44 @@ class W22(unittest.TestCase):
             redirector.shutdown();sink.shutdown();redirector.server_close();sink.server_close()
             s1.join(timeout=3);s2.join(timeout=3)
 
-    def test_08_offline_not_latest(self):
+    def test_08_env_proxy_cannot_intercept_loopback(self):
+        # A real reachable HTTP proxy trap. Default urllib ProxyHandler would
+        # send HTTP requests here if http_proxy is set and no_proxy empty.
+        import importlib,os,threading
+        import w22_note_monitor as mon
+        from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
+        hits=[]
+        class Trap(BaseHTTPRequestHandler):
+            def do_GET(self):
+                hits.append(self.path)
+                self.send_response(502)
+                self.end_headers()
+            def log_message(self,*args): pass
+        trap=ThreadingHTTPServer(('127.0.0.1',0),Trap)
+        thread=threading.Thread(target=trap.serve_forever,daemon=True);thread.start()
+        p,base=spawn_server('normal')
+        keys=['http_proxy','HTTP_PROXY','no_proxy','NO_PROXY','all_proxy','ALL_PROXY']
+        prior={k:os.environ.get(k) for k in keys}
+        try:
+            os.environ['http_proxy']=f'http://127.0.0.1:{trap.server_port}'
+            os.environ['HTTP_PROXY']=f'http://127.0.0.1:{trap.server_port}'
+            os.environ['no_proxy']=''
+            os.environ['NO_PROXY']=''
+            os.environ['all_proxy']=f'http://127.0.0.1:{trap.server_port}'
+            os.environ['ALL_PROXY']=f'http://127.0.0.1:{trap.server_port}'
+            importlib.reload(mon)  # build opener IN the poisoned environment
+            out=mon.observe(base,pinned_vkey=VKEY,retained_prior=PRIOR,retained_highwater=LATEST)
+            self.assertEqual(out['verdict'],'HISTORICAL_CONSISTENT',out)
+            self.assertEqual(hits,[],'HTTP PROXY TRAP WAS CONTACTED')
+        finally:
+            for k,v in prior.items():
+                if v is None:os.environ.pop(k,None)
+                else:os.environ[k]=v
+            importlib.reload(mon)
+            p.terminate();p.wait(timeout=4);p.stdout.close();p.stderr.close()
+            trap.shutdown();trap.server_close();thread.join(timeout=3)
+
+    def test_09_offline_not_latest(self):
         result=observe('http://127.0.0.1:1',pinned_vkey=VKEY,retained_prior=PRIOR,retained_highwater=LATEST)
         self.assertEqual(result['verdict'],'HOLD_UNCERTAIN')
         self.assertEqual(result['operational_authority'],'NONE')

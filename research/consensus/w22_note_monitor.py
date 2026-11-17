@@ -13,7 +13,7 @@ import json
 import re
 import struct
 from urllib.parse import urlsplit
-from urllib.request import Request, build_opener, HTTPRedirectHandler
+from urllib.request import Request, build_opener, HTTPRedirectHandler, ProxyHandler
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from w20_independent_monitor import verify_consistency  # only RFC compact proof logic
@@ -101,7 +101,8 @@ class NoRedirect(HTTPRedirectHandler):
     def redirect_request(self,*args):
         return None
 
-_OPENER=build_opener(NoRedirect)
+# Never honor HTTP_PROXY/ALL_PROXY or a malicious empty NO_PROXY for this loopback lab.
+_OPENER=build_opener(ProxyHandler({}), NoRedirect)
 
 
 def fetch(base,path,content_type,limit):

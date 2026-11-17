@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# W22 no-network reproducibility: Python 8 methods + Go stdlib note verifier
-# + author-selected 10 mutations. DOES NOT publish or create real Ario keys.
+# W22 no-network reproducibility: Python 9 methods + Go stdlib note verifier
+# + author-selected 11 mutations. DOES NOT publish or create real Ario keys.
 set -euo pipefail
 cd "$(dirname "$0")"
 export GOTOOLCHAIN=local GOPROXY=off GO111MODULE=off
@@ -9,8 +9,8 @@ python -B w22_selected_mutation_audit.py > W22_SELECTED_MUTATION_REPLAY.json
 python - <<'PY'
 import json
 r=json.load(open('W22_SELECTED_MUTATION_REPLAY.json'))
-assert r['selected']==10 and r['detected']==10 and not r['survivors'],r
-print('W22_SELECTED_MUTANTS=10/10_Detected (author-selected only)')
+assert r['selected']==11 and r['detected']==11 and not r['survivors'],r
+print('W22_SELECTED_MUTANTS=11/11_Detected (author-selected only)')
 PY
 origin='ario-w22-research.invalid/synthetic-log'
 oldroot='75083d7695c5844879981e3f066c1bddb7d77cebd4e3e9aa71e43aed0a0d3f21'

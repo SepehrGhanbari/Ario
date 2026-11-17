@@ -8,7 +8,7 @@
 
 یک ناظر Python از کد تولیدکننده استفاده نمی‌کند و یک بررسی‌کنندهٔ مستقل از آن با **Go و فقط کتابخانهٔ استاندارد** نیز قالب امضا/کلید/ریشه را بررسی می‌کند. نمونهٔ معتبر پذیرفته شد و چندین نمونهٔ خراب رد شدند. برای سازگاری با نمونهٔ بیرونی، محاسبهٔ `key ID` با **مثال رسمی C2SP** تطبیق داده شد.
 
-**نتیجهٔ محلیِ بازتولیدشده:** ۸ گروه unittest موفق، ۱۰ از ۱۰ خرابکاری انتخاب‌شدهٔ کد توسط تست‌های هدفمند شناسایی شدند؛ بررسی‌کنندهٔ Go دو چک‌پوینت معتبر را قبول و یک اندازهٔ دست‌کاری‌شده را رد کرد. **این‌ها آزمون‌های طراحی‌شده توسط همان پژوهشگرند، نه تأیید انسانی مستقل یا امضای شاهد بیرونی.**
+**نتیجهٔ محلیِ بازتولیدشده:** ۹ گروه unittest موفق، ۱۱ از ۱۱ خرابکاری انتخاب‌شدهٔ کد توسط تست‌های هدفمند شناسایی شدند؛ بررسی‌کنندهٔ Go دو چک‌پوینت معتبر را قبول و یک اندازهٔ دست‌کاری‌شده را رد کرد. **این‌ها آزمون‌های طراحی‌شده توسط همان پژوهشگرند، نه تأیید انسانی مستقل یا امضای شاهد بیرونی.**
 
 نقص بنیادی همچنان آشکار است: اگر ناشر و ناظر هر دو فقط نسخهٔ قدیمیِ **معتبر و امضاشده** را داشته باشند، از رخ‌دادن نسخهٔ تازه مطلع نمی‌شوند. امضای سالم ≠ تازگی واقعی. برای اطمینان از تاریخچه باید آخرین چک‌پوینت را یک ناظر با **نگهداری واقعاً مستقل** از ناشر حفظ کند.
 
@@ -39,8 +39,8 @@ All W22 files are under `research/consensus/`; W20 `w20_independent_monitor.py` 
 | `w22_tile_server.py` | GET-only HTTP loopback facsimile for one tiny size, separate process, no POST writes |
 | `w22_note_monitor.py` | Strict independent-source Python note+tile+entry+local compact proof verifier, explicit prior/high-water input |
 | `w22_note_go_check.go` | Go standard-library-only, separate-language note/public-key/signature/root checker |
-| `test_w22_checkpoint_interop.py` | Eight unittest groups; positive case, official vkey known example, old+old warning, signed fork, real redirect destination never contacted, tampered tile/entry/consistency, outage |
-| `w22_selected_mutation_audit.py` + `W22_SELECTED_MUTATION_RESULTS_2026-11-17.json` | Ten author-selected source mutations against corresponding targeted controls; 10 killed; **not blind adversarial testing** |
+| `test_w22_checkpoint_interop.py` | Nine unittest groups; positive case, official vkey known example, old+old warning, signed fork, real redirect destination never contacted, tampered tile/entry/consistency, outage |
+| `w22_selected_mutation_audit.py` + `W22_SELECTED_MUTATION_RESULTS_2026-11-17.json` | Eleven author-selected source mutations against corresponding targeted controls; 11 killed; **not blind adversarial testing** |
 | `w22_replay_no_egress.sh`, `W22_REPLAY_STDOUT_2026-11-17.txt` | Local one-command replay with no HTTP request outside loopback and Go `GOPROXY=off`; no scheduled tasks |
 | `W22_EXECUTION_RESULTS_2026-11-17.json` | Machine output, exact source Git hashes, negative limitations and separate-runner status |
 
@@ -51,7 +51,7 @@ cd research/consensus
 bash w22_replay_no_egress.sh
 ```
 
-Replays the 8 Python groups, 10 selected source mutation runs, Go old+new positive checks, one Go negative, and no new signing. No private key needed for any replay. The published fixtures were generated once, locally, using a throwaway ephemeral signer; rerunning `w22_note_fixture.py` will necessarily create *different* public keys and signatures.
+Replays the 9 Python groups, 11 selected source mutation runs, Go old+new positive checks, one Go negative, and no new signing. No private key needed for any replay. The published fixtures were generated once, locally, using a throwaway ephemeral signer; rerunning `w22_note_fixture.py` will necessarily create *different* public keys and signatures.
 
 ## 3. Important actual observed controls
 
@@ -62,9 +62,9 @@ Replays the 8 Python groups, 10 selected source mutation runs, Go old+new positi
 - **Failure: coordinated data rewrite:** both tile hashes and entries changed together still fail to match the signed checkpoint root.
 - **Failure: proof corruption:** a changed compact consistency path gets `DENY`.
 - **HTTP security:** redirect target is a second actually reachable local server; hit counter stayed **zero**. Bad signing bytes, leading-zero note size, mismatched tile, malformed/truncated entry, network outage, `POST /checkpoint` and missing key/prior/high-water fail closed.
-- **10 deliberately weakened versions** disabled validation steps such as signature verification, key-ID binding, root check, leaf/tile binding, stale-head refusal, fork refusal, redirect refusal, consistency proof, no-action authority and high-water requirement. All 10 were detected by their respective same-author tests. These are **selected mutation sensitivity**, not a general security percentage.
+- **11 deliberately weakened versions** disabled validation steps such as signature verification, key-ID binding, root check, leaf/tile binding, stale-head refusal, fork refusal, redirect refusal, consistency proof, no-action authority and high-water requirement. All 11 were detected by their respective same-author tests. These are **selected mutation sensitivity**, not a general security percentage.
 
-**Test harness caveat:** an initial parallel mutation full-suite attempt exceeded resource/time limits; it produced **no valid mutation verdict**. The final reported 10/10 run uses **targeted bounded test methods** for each mutation and completed. Both facts should remain in the record, without upgrading the test strength.
+**Test harness caveat:** an initial parallel mutation full-suite attempt exceeded resource/time limits; it produced **no valid mutation verdict**. The final reported 11/11 run uses **targeted bounded test methods** for each mutation and completed. Both facts should remain in the record, without upgrading the test strength.
 
 ## 4. Exact epistemic/administrative boundaries
 
@@ -83,3 +83,10 @@ The founder is the only human in this project. This is **not** a reason to block
 5. Any external test-log submission is a potentially lasting side effect; the founder's earlier consent was specific to W18 and is **not** blanket permission for W22 submissions.
 
 **Issue tracking:** Witness custody/origin [#171](https://github.com/SepehrGhanbari/Ario/issues/171), reproducible adversarial challenges [#259](https://github.com/SepehrGhanbari/Ario/issues/259), protected memory semantics [#216](https://github.com/SepehrGhanbari/Ario/issues/216), research Draft PR [#242](https://github.com/SepehrGhanbari/Ario/pull/242).
+
+
+## 6. W22 targeted loopback proxy hardening (additional reproducible correction)
+
+**New falsifier:** Python `urllib.request.build_opener()` can construct a default proxy handler from untrusted `http_proxy` and an empty `no_proxy`. Even when a URL contains `127.0.0.1`, blindly following these environment settings can route a supposedly loopback-only request through an arbitrary HTTP proxy. W22 was updated to use explicit `ProxyHandler({})` **plus the already tested no-redirect handler**. The new test spawns a reachable local proxy trap, sets `http_proxy`, `HTTP_PROXY`, `ALL_PROXY`, and empty `no_proxy`/`NO_PROXY`, reloads the monitor with those hostile variables, and confirms **successful direct verified observation with exactly zero trap hits**.
+
+The original W22 GitHub one-shot [run 44170398864](https://github.com/SepehrGhanbari/Ario/actions/runs/44170398864) ran source commit `d07620afa5e0e2f69daa6284ba0789b3a5957840` and passed **8 unit methods / 10 selected mutants + Go validation** *before* this proxy hardening. That is real, bounded evidence and must not be relabeled as testing the later patch. The **updated** local source passes **9 unit methods / 11 selected mutants**, including an explicit `M11_ALLOW_HTTP_ENV_PROXY` variant killed by the new test. New source and runner must be pinned separately. The source-mutation model remains same-author, and the test-only loopback restriction is not a deployment-ready TLS/policy solution.

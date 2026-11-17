@@ -2,6 +2,12 @@
   "actual_ario_log_deployment": false,
   "api_scope": "C2SP_SIGNED_NOTE_ED25519_STRICT_SINGLE_SIG; TLOG_TILES_LEVEL0_PARTIAL_ONLY; NONSTANDARD_W22_COMPACT_PROOF_ENDPOINT",
   "date": "2026-11-17",
+  "explicit_http_env_proxy_trap_test": {
+    "monitor_verdict": "HISTORICAL_CONSISTENT",
+    "mutant_proxy_allowed_detected": true,
+    "trap_hits": 0,
+    "trap_reachable": true
+  },
   "external_provider_submission": false,
   "go_local": "go1.23.2",
   "held_negative": "BOTH_OLD_SIGNED_CHECKPOINT_AND_OLD_LOCAL_HIGHWATER_CANNOT_DETECT_MISSING_LATER_EPOCH",
@@ -9,19 +15,26 @@
   "mode": "RESEARCH_ONLY_NO_EGRESS",
   "official_external_c2sp_vkey_known_vector_passed": true,
   "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "pre_hardening_run": {
+    "commit": "d07620afa5e0e2f69daa6284ba0789b3a5957840",
+    "github_actions_run": 44170398864,
+    "observed_methods": 8,
+    "selected_mutants_killed": 10,
+    "source_does_not_include_env_proxy_hardening": true
+  },
   "preliminary_mutant_full_suite_timeout": "UNSCORED; targeted final mutation suite completed",
   "private_keys_saved": false,
   "python": "3.13.5",
-  "python_unittest_methods_passed": 8,
+  "python_unittest_methods_passed": 9,
   "real_actions": 0,
   "real_ario_or_founder_keys_used": false,
   "real_witness_cosignature_for_ario_log": false,
   "same_source_author_tests_not_blinded": true,
   "schema": "ARIO_W22_SYNTHETIC_C2SP_SIGNED_NOTE_TILES_EXECUTION_V1",
-  "selected_mutants": 10,
-  "selected_mutants_killed": 10,
+  "selected_mutants": 11,
+  "selected_mutants_killed": 11,
   "selected_mutants_survived": [],
-  "separate_runner_status": "NOT_YET_EXECUTED",
+  "separate_runner_status": "PRE_HARDENING_VERIFIED_POST_HARDENING_PENDING",
   "source_files": {
     "W22_CURRENT_CHECKPOINT.note": {
       "bytes": 225,
@@ -44,9 +57,9 @@
       "sha256": "be371ee59d8f4979ca779af497d11b82cacaaf05aaa93b551e1bc1f38e1c4b1a"
     },
     "W22_REPLAY_STDOUT_2026-11-17.txt": {
-      "bytes": 1466,
-      "git_blob_sha1": "8fdf0a0f7c71360679d41f6c2410d510afeb2f09",
-      "sha256": "b28570cbcfb73ecf3c3879a14664974ac96c2e7664eaad69fd587a0f3a75714b"
+      "bytes": 1595,
+      "git_blob_sha1": "2c1290adddf21e1abd23f5c2e1fee2b08f7021a8",
+      "sha256": "3ed6c49a5b467dbb27ef0cfce9f30dac5d58228716185b6d2a5cca12737bcf00"
     },
     "W22_SAME_SIGNER_FORK.note": {
       "bytes": 225,
@@ -54,14 +67,14 @@
       "sha256": "1ccc3d84219ff4551ab859fb84a1b36e514aa6abeee776755b3692fbb1c6c8e1"
     },
     "W22_SELECTED_MUTATION_RESULTS_2026-11-17.json": {
-      "bytes": 4072,
-      "git_blob_sha1": "4d13329ab6d240a05d7603eaf4f2a14cb577a28e",
-      "sha256": "1d23ca14bf90ace2a4b76f6d4aefc12b7ab011a48158901a2ca00b003a4e72f9"
+      "bytes": 4440,
+      "git_blob_sha1": "cc15f229645233caa18d03973d279f158ab7f650",
+      "sha256": "78b213670e40a8b767e7e3f191d208c44ae521bac388b025649a1613b89d3199"
     },
     "test_w22_checkpoint_interop.py": {
-      "bytes": 10390,
-      "git_blob_sha1": "b21911ea8c76dd405cf3ccc7b586b048a3cb8e8e",
-      "sha256": "204ef1b890b5bd463978a36958c601a0f08ca4d90053c0da8d346e968c0b0019"
+      "bytes": 12358,
+      "git_blob_sha1": "9592a59fa5dd1713864f50b7b9c30353ba993315",
+      "sha256": "6f9130c50811ae2375eced78c1127e8cb16be302ee72092401a4be80c88b4751"
     },
     "w22_note_fixture.py": {
       "bytes": 3771,
@@ -74,19 +87,19 @@
       "sha256": "a50877068d67a1637d3d5170e9b17f272deeae9bfd1372e06e7ae2abb70911d1"
     },
     "w22_note_monitor.py": {
-      "bytes": 10125,
-      "git_blob_sha1": "5b5e70714f55592c85503f3f5dda23225b9ef342",
-      "sha256": "cfd35540d670ef7d29cde08f87d4f9d8e29a57e306c5139e76c5e33b28e896bb"
+      "bytes": 10245,
+      "git_blob_sha1": "e1718d31638a42522aed21372176c3f363c3e9f2",
+      "sha256": "d97b646008317bb52ccfc6bf55ba844627cf0ccc667fee0618901cc305e33d92"
     },
     "w22_replay_no_egress.sh": {
       "bytes": 1847,
-      "git_blob_sha1": "e8d7af771bb62b3a965eb6f72d07265db06bf8ed",
-      "sha256": "df1fcf4170f9bad19526e3c30e565bfc576f45642bdd7ba29b8fc4b5e3e659a3"
+      "git_blob_sha1": "f6d7fc107c36fabe068749bd03ac7505bbe7d831",
+      "sha256": "81358e1d1f283dfbb2a6fec1cbe71db37fb0a6029bd9195baffbf298c581d96d"
     },
     "w22_selected_mutation_audit.py": {
-      "bytes": 4421,
-      "git_blob_sha1": "21afb3714e81515396e8297c56cc1578fe62b163",
-      "sha256": "d92dc5b70cb35e13cb06739918bf53a74f7143f0ad814f6eb9eeddd7490c9c23"
+      "bytes": 4706,
+      "git_blob_sha1": "f0f4d27ec7add1b79fed6ee8eb3e9df1b8c7c081",
+      "sha256": "00f38e922c314298974cad642a21859beb30c2e4284fa86787eb7b118c538125"
     },
     "w22_tile_server.py": {
       "bytes": 4683,

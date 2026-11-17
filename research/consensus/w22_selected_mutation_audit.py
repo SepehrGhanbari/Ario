@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Research-only mutation audit against W22. No real keys or external network.
 
-10 author-chosen mutations of only W22 note monitor; 7 test methods rerun
+11 author-chosen mutations of only W22 note monitor; 7 test methods rerun
 in disposable, isolated temp directories. This is NOT external human review.
 """
 from pathlib import Path
@@ -25,10 +25,11 @@ MUTANTS=[
  ('M04_SKIP_LEAF_TILE_BINDING',"if hashlib.sha256(b'\\x00'+event).digest()!=hashes[i]:","if False:"),
  ('M05_ALLOW_HISTORY_ROLLBACK',"if n<highwater['size']:","if False:"),
  ('M06_ALLOW_SAME_SIZE_FORK',"if n==highwater['size'] and candidate['root']!=highwater['root']:","if False:"),
- ('M07_FOLLOW_HTTP_REDIRECTS',"        return None\n\n_OPENER=build_opener(NoRedirect)","        return super().redirect_request(*args)\n\n_OPENER=build_opener(NoRedirect)"),
+ ('M07_FOLLOW_HTTP_REDIRECTS',"class NoRedirect(HTTPRedirectHandler):\n    def redirect_request(self,*args):\n        return None","class NoRedirect(HTTPRedirectHandler):\n    def redirect_request(self,*args):\n        return super().redirect_request(*args)"),
  ('M08_SKIP_COMPACT_CONSISTENCY',"or not verify_consistency(prior['size'],n,prior['root'],candidate['root'],proof['nodes'])):","or False):"),
  ('M09_FAKE_ACTION_AUTHORITY',"'operational_authority':'NONE'","'operational_authority':'GRANTED'"),
- ('M10_DROP_HIGHWATER_REQUIRED',"if retained_highwater is None:return result('HOLD_UNCERTAIN','NO_RETAINED_HIGHWATER')", "if False:return result('HOLD_UNCERTAIN','NO_RETAINED_HIGHWATER')")
+ ('M10_DROP_HIGHWATER_REQUIRED',"if retained_highwater is None:return result('HOLD_UNCERTAIN','NO_RETAINED_HIGHWATER')", "if False:return result('HOLD_UNCERTAIN','NO_RETAINED_HIGHWATER')"),
+ ('M11_ALLOW_HTTP_ENV_PROXY', '_OPENER=build_opener(ProxyHandler({}), NoRedirect)', '_OPENER=build_opener(NoRedirect)')
 ]
 
 def blob_sha(s):
@@ -45,7 +46,8 @@ CASES = {
     'M07_FOLLOW_HTTP_REDIRECTS':'test_07_redirect_target_was_not_contacted',
     'M08_SKIP_COMPACT_CONSISTENCY':'test_06_signed_fork_and_malformed_bytes',
     'M09_FAKE_ACTION_AUTHORITY':'test_03_valid_partial_tiles_and_continuity',
-    'M10_DROP_HIGHWATER_REQUIRED':'test_05_wrong_trust_inputs_hold'
+    'M10_DROP_HIGHWATER_REQUIRED':'test_05_wrong_trust_inputs_hold',
+    'M11_ALLOW_HTTP_ENV_PROXY':'test_08_env_proxy_cannot_intercept_loopback'
 }
 
 def check(name,old,new):
