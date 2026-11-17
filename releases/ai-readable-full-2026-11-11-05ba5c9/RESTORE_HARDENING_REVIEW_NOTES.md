@@ -82,3 +82,15 @@
 - Both hardened restore consumer and independently implemented pinned-manifest verifier now compact Base64 whitespace using bytes.translate instead of creating a list of tokens. Nonwhitespace invalid characters remain untouched and are rejected by `base64.b64decode(..., validate=True)`.
 - Negative controls: bounded allocation under the ~1 MiB adversarial sample on both implementations; invalid non-whitespace character remains invalid; malformed non-UTF8 manifest is converted to controlled `VerificationError`.
 - The verifier does not call the restore consumer; only the review test compares their resource behavior. Exact PR-head run 44082361685 passed all 10 jobs, and implementation regression run 44082361668 also passed. Candidate remains unpublished.
+
+
+## Path-index memory amplification defense (2026-11-17)
+
+- Audit found that a bounded TXT size and a per-path 4096-byte limit did not by themselves bound the memory cost of indexing every full path prefix. Repeatedly joining and retaining all prefixes can make stored prefix strings substantially larger than the path bytes in the input.
+- Restore consumer, exporter, and independent manifest verifier now share explicit policy ceilings: maximum 128 path components, 100,000 unique indexed prefixes, and 8 MiB combined UTF-8 bytes of normalized prefix keys plus original prefix spellings. Exceeding a ceiling rejects the candidate before it can be published/restored. The exporter queries blob sizes before materializing blob content as before.
+- The path-index implementation reuses the same normalized keys and original prefix strings in lookup sets where possible, rather than rebuilding a second copy of every prefix for the parent/file conflict sets.
+- A separate normalized-prefix conflict check in the independent verifier was corrected: a previously recorded file at a Unicode-decomposed path must also block a child path under that NFC-equivalent prefix. The new regression verifies file-first / child-second rejection.
+- New regression controls cover depth, index entry count, and aggregate index bytes in restore, generator, and manifest verifier.
+- Exact PR HEAD: 771f39d522f8d6da1d7a6b28c86889f6418c505d. GitHub Actions [Published TXT Restore Security #44083268037](https://github.com/SepehrGhanbari/Ario/actions/runs/44083268037) completed **10/10 jobs SUCCESS**; [Implementation Regression #44083272246](https://github.com/SepehrGhanbari/Ario/actions/runs/44083272246) completed SUCCESS. Restore workflow reports **82 test methods / OK on Ubuntu** and **82 test methods / OK (3 platform-specific skips) on Windows**, in both Python 3.11 and 3.12 restore matrix jobs. Manifest and pinned roundtrip matrices also passed.
+- Limits are explicit V1 candidate policy, not a general guarantee that all historical TXT snapshots satisfy the new bounds. macOS remains untested.
+
