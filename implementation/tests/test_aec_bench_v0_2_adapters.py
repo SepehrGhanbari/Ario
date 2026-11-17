@@ -103,6 +103,6 @@ def test_prov_round_trip_handles_arbitrary_utf8_source_and_root_ids():
     )
     provn = serialize_prov_n(fixture)
     # UTF-8 hex encoding is reversible and keeps generated PROV local IDs safe.
-    assert "source_41202f2042" in provn
+    assert "agent_41202f2042" in provn
     assert "root_52202f2031" in provn
     assert round_trip_prov_n(fixture) is True
