@@ -7,7 +7,9 @@ direct registry API remains usable by separately authorized callers.
 Disposable synthetic JSONL and action dictionaries only; no real action runs.
 """
 import json
+import pytest
 
+from ario_cli import main as cli_main
 from core.ledger_memory_bridge import EpistemicLedgerBridge
 from core.prospective_memory import IntentionStatus, ProspectiveMemoryRegistry
 
@@ -98,3 +100,23 @@ def test_no_silent_drop_two_reported_finishes_are_counted(tmp_path):
     assert summary.reported_task_finishes_count == 2
     assert summary.triggered_intentions == ()
     assert len(reg.get_pending_intentions()) == 1
+
+
+@pytest.mark.parametrize("fmt", ["markdown", "json"])
+def test_cli_explicitly_reports_unauthenticated_finish_without_action(tmp_path, capsys, fmt):
+    ledger, _, _ = _setup(tmp_path)
+    before = ledger.read_bytes()
+    code = cli_main([
+        "--bridge-agent-ledger", "--ledger", str(ledger), "--format", fmt,
+    ])
+    assert code == 0
+    assert ledger.read_bytes() == before
+    out = capsys.readouterr().out
+    if fmt == "markdown":
+        assert "Reported Task Finishes (Unverified):** 1" in out
+        assert "Triggered Intentions:** 0" in out
+    else:
+        data = json.loads(out)
+        assert data["reported_task_finishes_count"] == 1
+        assert data["triggered_intentions_count"] == 0
+        assert data["triggered_intentions"] == []
