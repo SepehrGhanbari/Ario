@@ -1,0 +1,290 @@
+{
+  "schema": "ARIO_W17_SELF_AUTHORED_TEST_RESULTS_V1",
+  "tests": 30,
+  "all_expected_matched": true,
+  "fixture_type": "SYNTHETIC_AND_SELF_DECLARED",
+  "no_real_operator_review": true,
+  "real_log_key_present": false,
+  "actual_witness_signatures_verified": 0,
+  "external_actions": 0,
+  "note": "Structural completeness is NOT public witness-network approval. R17 eight fields are internal Ario preapplication checks, not mandatory official log-application fields. Even fully populated claimed independence never grants authority.",
+  "cases": [
+    {
+      "id": "W17-01",
+      "official_fields": true,
+      "internal_r17_fields": true,
+      "reason": "DECLARED_PAPERWORK_PRESENT_BUT_NO_AUTHENTICATED_INDEPENDENT_OPERATOR",
+      "missing_official": [],
+      "missing_internal": []
+    },
+    {
+      "id": "W17-02",
+      "official_fields": true,
+      "internal_r17_fields": true,
+      "reason": "DECLARED_PAPERWORK_PRESENT_BUT_NO_AUTHENTICATED_INDEPENDENT_OPERATOR",
+      "missing_official": [],
+      "missing_internal": []
+    },
+    {
+      "id": "W17-03",
+      "official_fields": false,
+      "internal_r17_fields": true,
+      "reason": "OFFICIAL_FORM_FIELDS_MISSING_OR_INVALID",
+      "missing_official": [
+        "origin_line"
+      ],
+      "missing_internal": []
+    },
+    {
+      "id": "W17-04",
+      "official_fields": false,
+      "internal_r17_fields": true,
+      "reason": "OFFICIAL_FORM_FIELDS_MISSING_OR_INVALID",
+      "missing_official": [
+        "log_vkey"
+      ],
+      "missing_internal": []
+    },
+    {
+      "id": "W17-05",
+      "official_fields": false,
+      "internal_r17_fields": true,
+      "reason": "OFFICIAL_FORM_FIELDS_MISSING_OR_INVALID",
+      "missing_official": [],
+      "missing_internal": []
+    },
+    {
+      "id": "W17-06",
+      "official_fields": false,
+      "internal_r17_fields": true,
+      "reason": "OFFICIAL_FORM_FIELDS_MISSING_OR_INVALID",
+      "missing_official": [],
+      "missing_internal": []
+    },
+    {
+      "id": "W17-07",
+      "official_fields": false,
+      "internal_r17_fields": true,
+      "reason": "OFFICIAL_FORM_FIELDS_MISSING_OR_INVALID",
+      "missing_official": [],
+      "missing_internal": []
+    },
+    {
+      "id": "W17-08",
+      "official_fields": false,
+      "internal_r17_fields": true,
+      "reason": "OFFICIAL_FORM_FIELDS_MISSING_OR_INVALID",
+      "missing_official": [],
+      "missing_internal": []
+    },
+    {
+      "id": "W17-09",
+      "official_fields": false,
+      "internal_r17_fields": true,
+      "reason": "OFFICIAL_FORM_FIELDS_MISSING_OR_INVALID",
+      "missing_official": [],
+      "missing_internal": []
+    },
+    {
+      "id": "W17-10",
+      "official_fields": true,
+      "internal_r17_fields": true,
+      "reason": "DECLARED_PAPERWORK_PRESENT_BUT_NO_AUTHENTICATED_INDEPENDENT_OPERATOR",
+      "missing_official": [],
+      "missing_internal": []
+    },
+    {
+      "id": "W17-11",
+      "official_fields": false,
+      "internal_r17_fields": true,
+      "reason": "OFFICIAL_FORM_FIELDS_MISSING_OR_INVALID",
+      "missing_official": [
+        "contact"
+      ],
+      "missing_internal": []
+    },
+    {
+      "id": "W17-12",
+      "official_fields": false,
+      "internal_r17_fields": true,
+      "reason": "OFFICIAL_FORM_FIELDS_MISSING_OR_INVALID",
+      "missing_official": [],
+      "missing_internal": []
+    },
+    {
+      "id": "W17-13",
+      "official_fields": false,
+      "internal_r17_fields": true,
+      "reason": "OFFICIAL_FORM_FIELDS_MISSING_OR_INVALID",
+      "missing_official": [],
+      "missing_internal": []
+    },
+    {
+      "id": "W17-14",
+      "official_fields": true,
+      "internal_r17_fields": false,
+      "reason": "INTERNAL_R17_EVIDENCE_NOT_DOCUMENTED",
+      "missing_official": [],
+      "missing_internal": [
+        "real_log_origin"
+      ]
+    },
+    {
+      "id": "W17-15",
+      "official_fields": true,
+      "internal_r17_fields": false,
+      "reason": "INTERNAL_R17_EVIDENCE_NOT_DOCUMENTED",
+      "missing_official": [],
+      "missing_internal": [
+        "origin_control_evidence"
+      ]
+    },
+    {
+      "id": "W17-16",
+      "official_fields": true,
+      "internal_r17_fields": false,
+      "reason": "INTERNAL_R17_EVIDENCE_NOT_DOCUMENTED",
+      "missing_official": [],
+      "missing_internal": [
+        "test_key_custody_evidence"
+      ]
+    },
+    {
+      "id": "W17-17",
+      "official_fields": true,
+      "internal_r17_fields": false,
+      "reason": "INTERNAL_R17_EVIDENCE_NOT_DOCUMENTED",
+      "missing_official": [],
+      "missing_internal": [
+        "consistency_url"
+      ]
+    },
+    {
+      "id": "W17-18",
+      "official_fields": true,
+      "internal_r17_fields": false,
+      "reason": "INTERNAL_R17_EVIDENCE_NOT_DOCUMENTED",
+      "missing_official": [],
+      "missing_internal": [
+        "checkpoint_url"
+      ]
+    },
+    {
+      "id": "W17-19",
+      "official_fields": true,
+      "internal_r17_fields": false,
+      "reason": "INTERNAL_R17_EVIDENCE_NOT_DOCUMENTED",
+      "missing_official": [],
+      "missing_internal": [
+        "operator_public_name"
+      ]
+    },
+    {
+      "id": "W17-20",
+      "official_fields": true,
+      "internal_r17_fields": false,
+      "reason": "INTERNAL_R17_EVIDENCE_NOT_DOCUMENTED",
+      "missing_official": [],
+      "missing_internal": [
+        "dedicated_test_log_vkey"
+      ]
+    },
+    {
+      "id": "W17-21",
+      "official_fields": true,
+      "internal_r17_fields": false,
+      "reason": "INTERNAL_R17_EVIDENCE_NOT_DOCUMENTED",
+      "missing_official": [],
+      "missing_internal": [
+        "public_operator_contact"
+      ]
+    },
+    {
+      "id": "W17-22",
+      "official_fields": true,
+      "internal_r17_fields": false,
+      "reason": "INTERNAL_R17_EVIDENCE_NOT_DOCUMENTED",
+      "missing_official": [],
+      "missing_internal": [
+        "operator_public_name",
+        "real_log_origin",
+        "origin_control_evidence",
+        "dedicated_test_log_vkey",
+        "test_key_custody_evidence",
+        "checkpoint_url",
+        "consistency_url",
+        "public_operator_contact"
+      ]
+    },
+    {
+      "id": "W17-23",
+      "official_fields": true,
+      "internal_r17_fields": true,
+      "reason": "DECLARED_PAPERWORK_PRESENT_BUT_NO_AUTHENTICATED_INDEPENDENT_OPERATOR",
+      "missing_official": [],
+      "missing_internal": []
+    },
+    {
+      "id": "W17-24",
+      "official_fields": true,
+      "internal_r17_fields": true,
+      "reason": "DECLARED_PAPERWORK_PRESENT_BUT_NO_AUTHENTICATED_INDEPENDENT_OPERATOR",
+      "missing_official": [],
+      "missing_internal": []
+    },
+    {
+      "id": "W17-25",
+      "official_fields": true,
+      "internal_r17_fields": true,
+      "reason": "DECLARED_PAPERWORK_PRESENT_BUT_NO_AUTHENTICATED_INDEPENDENT_OPERATOR",
+      "missing_official": [],
+      "missing_internal": []
+    },
+    {
+      "id": "W17-26",
+      "official_fields": true,
+      "internal_r17_fields": true,
+      "reason": "DECLARED_PAPERWORK_PRESENT_BUT_NO_AUTHENTICATED_INDEPENDENT_OPERATOR",
+      "missing_official": [],
+      "missing_internal": []
+    },
+    {
+      "id": "W17-27",
+      "official_fields": true,
+      "internal_r17_fields": true,
+      "reason": "DECLARED_PAPERWORK_PRESENT_BUT_NO_AUTHENTICATED_INDEPENDENT_OPERATOR",
+      "missing_official": [],
+      "missing_internal": []
+    },
+    {
+      "id": "W17-28",
+      "official_fields": false,
+      "internal_r17_fields": false,
+      "reason": "OFFICIAL_FORM_FIELDS_MISSING_OR_INVALID",
+      "missing_official": [
+        "requested_list"
+      ],
+      "missing_internal": [
+        "public_operator_contact"
+      ]
+    },
+    {
+      "id": "W17-29",
+      "official_fields": true,
+      "internal_r17_fields": false,
+      "reason": "INTERNAL_R17_EVIDENCE_NOT_DOCUMENTED",
+      "missing_official": [],
+      "missing_internal": [
+        "operator_public_name"
+      ]
+    },
+    {
+      "id": "W17-30",
+      "official_fields": true,
+      "internal_r17_fields": true,
+      "reason": "DECLARED_PAPERWORK_PRESENT_BUT_NO_AUTHENTICATED_INDEPENDENT_OPERATOR",
+      "missing_official": [],
+      "missing_internal": []
+    }
+  ]
+}
