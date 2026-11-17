@@ -271,6 +271,7 @@ def main(argv=None) -> int:
                     f"- **Steps Observed:** {res_dict['steps_observed']}\n"
                     f"- **Nodes Consolidated:** {res_dict['nodes_consolidated']}\n"
                     f"- **Contested Nodes:** {res_dict['contested_nodes_count']}\n"
+                    f"- **Reported Task Finishes (Unverified):** {res_dict['reported_task_finishes_count']}\n"
                     f"- **Triggered Intentions:** {res_dict['triggered_intentions_count']}\n"
                 )
             if args.output:
