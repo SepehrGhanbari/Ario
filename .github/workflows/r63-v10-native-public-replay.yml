@@ -31,6 +31,14 @@ jobs:
           $root=Join-Path $env:RUNNER_TEMP 'r63-public-cng-synthetic'
           & ./research/r63_v10_native_replay_ci/Invoke-NativePublicReceipt.ps1 -Mode Produce -Root $root
           if (-not $?) { throw 'CNG_PRODUCER_FAILED' }
+      - name: Bind receipt payload to current V1 V2 and run 14 positive-negative controls
+        shell: pwsh
+        run: |
+          $root=Join-Path $env:RUNNER_TEMP 'r63-public-cng-synthetic'
+          python -B research/r63_v10_native_replay_ci/verify_durable_snapshot.py $root
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -B research/r63_v10_native_replay_ci/test_snapshot_binding.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Separate verifier process with deleted key - positive replay
         shell: pwsh
         run: |
@@ -66,6 +74,8 @@ jobs:
             ${{ runner.temp }}/r63-public-cng-synthetic/payload.bin
             ${{ runner.temp }}/r63-public-cng-synthetic/metadata.json
             ${{ runner.temp }}/r63-public-cng-synthetic/receipt-public.json
+            ${{ runner.temp }}/r63-public-cng-synthetic/v1.jsonl
+            ${{ runner.temp }}/r63-public-cng-synthetic/v2.jsonl
             ${{ runner.temp }}/r63-public-cng-synthetic/expected-public-pin.sha256
           if-no-files-found: warn
           retention-days: 30
