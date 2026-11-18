@@ -29,17 +29,45 @@ def run(args,timeout=120):
                           stderr=subprocess.PIPE,timeout=timeout)
 
 def replay(root,pin):
+    """Fail closed if the CURRENT durable state differs from the signed fixture.
+
+    This is best-effort read/compare/read, NOT cross-process exclusion,
+    atomicity, anti-ABA or a separately administered witness.
+    """
     receipt=root/"receipt-public.json"
     if not receipt.is_file():
         return b"HOLD_UNCERTAIN\n"
-    cmd=["pwsh","-NoProfile","-NonInteractive","-File",str(VERIFIER),
-         "-Mode","Verify","-Root",str(root),"-ExpectedPublicPin",pin]
-    check=run(cmd,timeout=75)
-    if check.returncode:
+    names=("receipt-public.json","v1.jsonl","v2.jsonl","payload.bin",
+           "metadata.json","use-entered.json","use-returned.json",
+           "expected-public-pin.sha256")
+    try:
+        first={n:(root/n).read_bytes() for n in names}
+        if first["expected-public-pin.sha256"].decode("ascii").strip()!=pin:
+            return b"HOLD_UNCERTAIN\n"
+        use=json.loads(first["use-entered.json"])
+        ret=json.loads(first["use-returned.json"])
+        if (use.get("pid")!=ret.get("pid") or
+            ret.get("enter")!=1 or ret.get("returned")!=1 or
+            use.get("payload_sha256")!=sha(first["payload.bin"])):
+            return b"HOLD_UNCERTAIN\n"
+        # Repeat the full V1/V2/metadata/source-bounded check *per replay*.
+        pre=run([sys.executable,"-B",str(BINDING),str(root)],timeout=45)
+        if pre.returncode:
+            return b"HOLD_UNCERTAIN\n"
+        check=run(["pwsh","-NoProfile","-NonInteractive","-File",str(VERIFIER),
+                   "-Mode","Verify","-Root",str(root),
+                   "-ExpectedPublicPin",pin],timeout=75)
+        if (check.returncode or
+            b"SEPARATE_PUBLIC_ONLY_VERIFIER_PASS" not in check.stdout):
+            return b"HOLD_UNCERTAIN\n"
+        post=run([sys.executable,"-B",str(BINDING),str(root)],timeout=45)
+        if post.returncode:
+            return b"HOLD_UNCERTAIN\n"
+        if {n:(root/n).read_bytes() for n in names}!=first:
+            return b"HOLD_UNCERTAIN\n"
+        return first["receipt-public.json"]
+    except (OSError,ValueError,TypeError,RuntimeError,subprocess.TimeoutExpired):
         return b"HOLD_UNCERTAIN\n"
-    require(b"SEPARATE_PUBLIC_ONLY_VERIFIER_PASS" in check.stdout,
-            "no positive signature validation marker")
-    return receipt.read_bytes()
 
 def scenario(base,name):
     root=base/name
