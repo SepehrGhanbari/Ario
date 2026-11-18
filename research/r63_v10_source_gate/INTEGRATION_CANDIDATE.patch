@@ -1,0 +1,37 @@
+--- a/Input/guest_driver_r63_v9.py
++++ b/Input/guest_driver_r63_v9.py
+@@ -49,6 +49,7 @@
+ from native import provider,Key,pin,set_acl,raw_attempt,verify_raw
+ from r62 import config_data,secret_mac,message_read,message_write
+ import spend_chain_v2 as spendv2
++from v10_readonly_gate import check_spend_gate
+ from sid_native import resolve_sid
+ 
+ CODE=secrets.token_hex(4)
+@@ -177,6 +178,14 @@
+                     v2path=ROOT/"lab-private"/"spend-v2.jsonl"
+                     prior_v2=v2path.read_bytes() if v2path.exists() else b""
+                     v2state=spendv2.review(prior_v2)
++                    # V10 RESEARCH CANDIDATE: strict disk-to-disk-to-RPC precondition.
++                    # Read-only; caller holds parent.lock. Cross-process exclusion,
++                    # post-check races and whole-state rollback remain unproved.
++                    gate=check_spend_gate(
++                        ROOT/"lab-private"/"spend.jsonl",v2path,parent.spends,before,
++                        expected_prior_v2=prior_v2)
++                    if gate.seq!=v2state.seq or gate.head!=v2state.head:
++                        raise ValueError("V10 spend review disagrees with V9 sidecar")
+                     if [list(pair) for pair in v2state.pairs]!=parent.spends:
+                         raise ValueError("V2 sidecar and V1 append order diverged")
+                     if spendv2.snapshot(v2state.pairs)!=digest(canonical_spend_snapshot):
+@@ -393,6 +402,12 @@
+              lab_root=str(ROOT),broker_service=SVC,
+              host_writes=False,real_keys=False)
+         init_folders()
++        # V10 RESEARCH CANDIDATE: explicitly create both empty journals in a
++        # fresh random guest root. Never interpret a *missing* V1 as genesis.
++        # Do NOT apply to an existing guest root or real signer state.
++        for journal_name in ("spend.jsonl","spend-v2.jsonl"):
++            with (ROOT/"lab-private"/journal_name).open("xb") as stream:
++                stream.flush();os.fsync(stream.fileno())
+         # Guest-only nonadmin account.
+         cmd(["net.exe","user",USER,PASSWORD,"/add","/expires:never"])
