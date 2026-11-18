@@ -1,0 +1,51 @@
+name: W26 disposable Linux UID witness-custody research (one-shot)
+on:
+  pull_request:
+    paths:
+      - 'research/consensus/w26_linux_uid_lab.py'
+      - 'research/consensus/test_w26_linux_uid_lab.py'
+      - '.github/workflows/w26-uid-custody-research.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  policy-only:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Check explicit disposable-runner guard and NO_AUTHORITY policy
+        run: python -B -m unittest discover -s research/consensus -p test_w26_linux_uid_lab.py -v
+  native-linux-uid:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Run explicitly sandboxed native UID + read-only local SO_PEERCRED lab
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Only the ephemeral GitHub-hosted runner is used. Never a user machine.
+          sudo -n env GITHUB_ACTIONS=true ARIO_W26_DISPOSABLE_CI=1 RUNNER_TEMP="$RUNNER_TEMP" \
+            "$(command -v python)" -B research/consensus/w26_linux_uid_lab.py --ci-run \
+            > "$RUNNER_TEMP/w26-native-evidence.json"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p=Path(os.environ["RUNNER_TEMP"])/"w26-native-evidence.json"
+          v=json.loads(p.read_text())
+          assert v["schema"]=="ARIO_W26_NATIVE_UID_EVIDENCE_V1"
+          assert v["passed"]==v["total"]==24, (v["passed"],v["total"])
+          assert v["root_admin_can_override"] is True
+          assert v["independent_operator_custody"]=="NOT_ESTABLISHED"
+          assert v["production"]=="NO_GO"
+          print(json.dumps(v,sort_keys=True))
+          PY
