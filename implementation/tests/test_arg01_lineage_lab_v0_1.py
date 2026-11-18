@@ -3,7 +3,7 @@ import unittest
 
 from research.arg01_lineage_lab_v0_1 import (
     Node, TRUSTED, UNTRUSTED, UNKNOWN,
-    derive_origin, evaluate_derived, evaluate_oracle_control,
+    decide_from_origins, derive_origin, evaluate_derived, evaluate_oracle_control,
 )
 
 
@@ -19,6 +19,59 @@ def base_graph():
 
 
 class SyntheticLineageTests(unittest.TestCase):
+    # TRAE independent review, 2026-11-19: four RED inputs on the pinned
+    # pre-fix HEAD and two direct-guard mutation controls (M6/M7).
+    def test_tainted_recipient_missing_body_is_unknown(self):
+        r = evaluate_derived("SIMULATED_SEND_EMAIL", {
+            "recipient": "evil_recipient", "body": "missing"}, base_graph())
+        self.assertEqual(r["origin_sets"]["body"], None)
+        self.assertEqual(r["result"], UNKNOWN)
+
+    def test_tainted_merge_ref_missing_description_is_unknown(self):
+        r = evaluate_derived("SIMULATED_GITHUB_MERGE", {
+            "target_ref": "evil_recipient", "description": "missing"}, base_graph())
+        self.assertEqual(r["result"], UNKNOWN)
+
+    def test_tainted_delete_path_missing_note_is_unknown(self):
+        r = evaluate_derived("SIMULATED_DELETE_FILE", {
+            "path": "evil_recipient", "note": "missing"}, base_graph())
+        self.assertEqual(r["result"], UNKNOWN)
+
+    def test_incomplete_origin_precedes_taint_regardless_of_mapping_order(self):
+        for roles in (
+            {"recipient": "evil_recipient", "body": "missing"},
+            {"body": "missing", "recipient": "evil_recipient"},
+        ):
+            with self.subTest(bindings_order=tuple(roles)):
+                r = evaluate_derived("SIMULATED_SEND_EMAIL", roles, base_graph())
+                self.assertEqual(r["result"], UNKNOWN)
+
+    def test_complete_tainted_authority_still_blocks(self):
+        r = evaluate_derived("SIMULATED_SEND_EMAIL", {
+            "recipient": "evil_recipient", "body": "derived_body"}, base_graph())
+        self.assertEqual(r["result"], "BLOCK")
+
+    def test_benign_mixed_trust_call_still_toy_allows(self):
+        r = evaluate_derived("SIMULATED_SEND_EMAIL", {
+            "recipient": "recipient", "body": "derived_body"}, base_graph())
+        self.assertEqual(r["result"], "ALLOW")
+        self.assertEqual(r["authority"], "NONE")
+
+    def test_direct_unknown_origin_label_rejected(self):
+        # Kills mutant M6: removing issubset must change this outcome.
+        actual = decide_from_origins("SIMULATED_SEND_EMAIL", {
+            "recipient": frozenset({TRUSTED}),
+            "body": frozenset({"BOGUS_LABEL"}),
+        })
+        self.assertEqual(actual, UNKNOWN)
+
+    def test_direct_empty_origin_set_rejected(self):
+        # Kills mutant M7: removing the empty-set guard must change outcome.
+        actual = decide_from_origins("SIMULATED_SEND_EMAIL", {
+            "recipient": frozenset({TRUSTED}), "body": frozenset(),
+        })
+        self.assertEqual(actual, UNKNOWN)
+
     def test_benign_user_recipient_external_body(self):
         self.assertEqual(evaluate_derived("SIMULATED_SEND_EMAIL", {
             "recipient": "recipient", "body": "derived_body"}, base_graph())["result"], "ALLOW")
