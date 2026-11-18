@@ -38,6 +38,13 @@ jobs:
           Get-Content r63-process-run.log
           if ($rc -ne 0) { exit $rc }
           Get-Content r63-process-report.json
+      - name: Structural receipt replay positive and negative controls
+        shell: pwsh
+        run: |
+          python -B research/r63_v10_process_ci/test_structural_receipt_controls.py *> r63-receipt-controls.log
+          $rc = $LASTEXITCODE
+          Get-Content r63-receipt-controls.log
+          if ($rc -ne 0) { exit $rc }
       - name: Archive successful or failing logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -46,5 +53,6 @@ jobs:
           path: |
             r63-process-run.log
             r63-process-report.json
+            r63-receipt-controls.log
           if-no-files-found: warn
           retention-days: 30
