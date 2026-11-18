@@ -87,6 +87,14 @@ class SyntheticLineageTests(unittest.TestCase):
             g[str(i)] = Node(parents=(str(i-1) if i else "root",))
         self.assertIsNone(derive_origin(g, "1499"))
 
+    def test_malformed_unhashable_parent_fails_unknown_not_exception(self):
+        g = base_graph()
+        g["bad"] = Node(parents=(["unhashable-parent"],))
+        self.assertIsNone(derive_origin(g, "bad"))
+
+    def test_malformed_unhashable_root_label_fails_unknown_not_exception(self):
+        self.assertIsNone(derive_origin({"bad": Node(root_fixture_origin=["pretend-trusted"])}, "bad"))
+
     def test_unrecognized_tool_cannot_be_authorized(self):
         self.assertEqual(evaluate_derived("SEND_REAL_EMAIL", {
             "recipient": "recipient", "body": "summary"}, base_graph())["result"], UNKNOWN)
