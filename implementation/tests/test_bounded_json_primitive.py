@@ -59,6 +59,27 @@ class BoundedJsonPrimitiveTests(unittest.TestCase):
         with self.assertRaises(JSONValueLimitExceeded):
             loads_bounded("9" * 4300)
 
+    def test_explicit_none_int_hook_is_still_bounded(self):
+        # json.loads(parse_int=None) normally selects the interpreter default.
+        with self.assertRaises(JSONValueLimitExceeded):
+            loads_bounded("9" * 5000, parse_int=None)
+
+    @unittest.skipUnless(
+        hasattr(sys, "set_int_max_str_digits") and hasattr(sys, "get_int_max_str_digits"),
+        "interpreter has no configurable integer conversion limit",
+    )
+    def test_lowered_runtime_digit_cap_does_not_reject_within_candidate_bound(self):
+        original = sys.get_int_max_str_digits()
+        try:
+            # CPython minimum nonzero limit is 640 decimal digits.
+            sys.set_int_max_str_digits(640)
+            self.assertIsInstance(loads_bounded("9" * 700), int)
+            self.assertIsInstance(loads_bounded("9" * MAX_JSON_INTEGER_DIGITS), int)
+            with self.assertRaises(JSONValueLimitExceeded):
+                loads_bounded("9" * (MAX_JSON_INTEGER_DIGITS + 1))
+        finally:
+            sys.set_int_max_str_digits(original)
+
     def test_custom_integer_hook_cannot_bypass_limit(self):
         self.assertEqual(loads_bounded('{"n": 12}', parse_int=str), {"n": "12"})
         with self.assertRaises(JSONValueLimitExceeded):
