@@ -1,0 +1,62 @@
+name: R63 V10 ephemeral native CNG public receipt replay
+on:
+  push:
+    branches:
+      - research/r63-v10-windows-ci-smoke-20261117
+    paths:
+      - .github/workflows/r63-v10-native-public-replay.yml
+      - research/r63_v10_native_replay_ci/**
+      - research/r63_v10_source_gate/spend_chain_v2.py
+      - research/r63_v10_source_gate/.gitattributes
+permissions:
+  contents: read
+jobs:
+  native-signed-receipt-replay:
+    runs-on: windows-2022
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - name: Prepare SHA-pinned synthetic V9 journal receipt payload
+        shell: pwsh
+        run: |
+          $root=Join-Path $env:RUNNER_TEMP 'r63-public-cng-synthetic'
+          python -B research/r63_v10_native_replay_ci/prepare_public_payload.py $root
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Separate native CNG producer process - one disposable key and call
+        shell: pwsh
+        run: |
+          $root=Join-Path $env:RUNNER_TEMP 'r63-public-cng-synthetic'
+          & ./research/r63_v10_native_replay_ci/Invoke-NativePublicReceipt.ps1 -Mode Produce -Root $root
+          if (-not $?) { throw 'CNG_PRODUCER_FAILED' }
+      - name: Separate verifier process with deleted key - positive replay
+        shell: pwsh
+        run: |
+          $root=Join-Path $env:RUNNER_TEMP 'r63-public-cng-synthetic'
+          $before=(Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $root 'receipt-public.json')).Hash
+          & ./research/r63_v10_native_replay_ci/Invoke-NativePublicReceipt.ps1 -Mode Verify -Root $root
+          if (-not $?) { throw 'PUBLIC_VERIFY_FAILED' }
+          & ./research/r63_v10_native_replay_ci/Invoke-NativePublicReceipt.ps1 -Mode Verify -Root $root
+          if (-not $?) { throw 'SECOND_PUBLIC_VERIFY_FAILED' }
+          $after=(Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $root 'receipt-public.json')).Hash
+          if ($before -ne $after) { throw 'REPLAY_MODIFIED_PERSISTED_RECEIPT' }
+          Write-Host 'SAME_PERSISTED_RECEIPT_TWICE_WITHOUT_NEW_SIGN=PASS'
+      - name: Separate negative-control verifier process
+        shell: pwsh
+        run: |
+          $root=Join-Path $env:RUNNER_TEMP 'r63-public-cng-synthetic'
+          & ./research/r63_v10_native_replay_ci/Invoke-NativePublicReceipt.ps1 -Mode Negative -Root $root
+          if (-not $?) { throw 'MUTATION_NEGATIVE_CONTROL_FAILED' }
+      - name: Publish only non-secret synthetic receipt evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r63-v10-native-public-replay-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/r63-public-cng-synthetic/payload.bin
+            ${{ runner.temp }}/r63-public-cng-synthetic/metadata.json
+            ${{ runner.temp }}/r63-public-cng-synthetic/receipt-public.json
+          if-no-files-found: warn
+          retention-days: 30
