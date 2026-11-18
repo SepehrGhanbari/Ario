@@ -1,0 +1,43 @@
+name: R63 V10 frozen V9 sidecar crosscheck (research only)
+on:
+  push:
+    branches:
+      - research/r63-v10-windows-ci-smoke-20261117
+    paths:
+      - .github/workflows/r63-v10-frozen-sidecar.yml
+      - research/r63_v10_source_gate/**
+permissions:
+  contents: read
+jobs:
+  frozen-sidecar-crosscheck:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - name: Confirm non-native research scope
+        shell: pwsh
+        run: |
+          Write-Host "RESEARCH_ONLY / NO_REAL_KEYS / NO_CNG / NO_SERVICE / NO_TRUST_ACTIVATION"
+          Write-Host "Frozen V9 spend_chain_v2.py + read-only gate, NOT V9 RPC signer"
+      - name: Run exact-source regression tests
+        shell: pwsh
+        run: |
+          python -B -m unittest discover -s research/r63_v10_source_gate -p "test_*.py" -v *> r63-frozen-source.log
+          $result = $LASTEXITCODE
+          Get-Content r63-frozen-source.log
+          if ($result -ne 0) { exit $result }
+      - name: Preserve logs including failing jobs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r63-frozen-sidecar-${{ matrix.os }}-${{ github.run_id }}
+          path: r63-frozen-source.log
+          if-no-files-found: error
+          retention-days: 30
