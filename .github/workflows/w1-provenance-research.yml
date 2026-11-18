@@ -5,6 +5,9 @@ on:
       - 'research/consensus/w1_adversarial_input_sensitivity_v1.py'
       - 'research/consensus/test_w1_adversarial_input_sensitivity_v1.py'
       - 'research/consensus/test_w1_trae_boundary_controls_v1.py'
+      - 'research/consensus/w1_custody_correlation_probe.py'
+      - 'research/consensus/w1_latent_graph_challenge_v0_1.py'
+      - 'research/consensus/test_w1_custody_axis_counterexample_v0_1.py'
       - 'implementation/witness_provenance_experiment.py'
       - '.gitattributes'
       - '.github/workflows/w1-provenance-research.yml'
@@ -37,3 +40,10 @@ jobs:
         env:
           PYTHONDONTWRITEBYTECODE: '1'
         run: python -B -m unittest discover -s research/consensus -p test_w1_trae_boundary_controls_v1.py -v
+      - name: Exercise third-pass custody axis, latent-graph research and negative xfail controls
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python -B -m unittest discover -s research/consensus -p w1_custody_correlation_probe.py -v
+          python -B -m unittest discover -s research/consensus -p w1_latent_graph_challenge_v0_1.py -v
+          python -B -m unittest discover -s research/consensus -p test_w1_custody_axis_counterexample_v0_1.py -v
