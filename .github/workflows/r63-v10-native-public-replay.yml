@@ -51,6 +51,12 @@ jobs:
           $pin=(Get-Content -LiteralPath (Join-Path $root 'expected-public-pin.sha256') -Raw).Trim()
           & ./research/r63_v10_native_replay_ci/Invoke-NativePublicReceipt.ps1 -Mode Negative -Root $root -ExpectedPublicPin $pin
           if (-not $?) { throw 'MUTATION_NEGATIVE_CONTROL_FAILED' }
+      - name: Persisted receipt mutation fail-closed matrix
+        shell: pwsh
+        run: |
+          $root=Join-Path $env:RUNNER_TEMP 'r63-public-cng-synthetic'
+          python -B research/r63_v10_native_replay_ci/test_persisted_mutations.py $root research/r63_v10_native_replay_ci/Invoke-NativePublicReceipt.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Publish only non-secret synthetic receipt evidence
         if: always()
         uses: actions/upload-artifact@v4
