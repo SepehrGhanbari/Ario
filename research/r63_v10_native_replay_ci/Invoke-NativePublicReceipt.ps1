@@ -1,6 +1,7 @@
 # Windows GitHub-hosted CI only: ephemeral native CNG receipt producer/public-only replay.
 param([Parameter(Mandatory)][ValidateSet('Produce','Verify','Negative')][string]$Mode,
-      [Parameter(Mandatory)][string]$Root)
+      [Parameter(Mandatory)][string]$Root,
+      [string]$ExpectedPublicPin='')
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 if (-not $IsWindows -or $env:RUNNER_OS -ne 'Windows' -or $env:GITHUB_REPOSITORY -ne 'SepehrGhanbari/Ario') { throw 'UNAUTHORIZED_ENVIRONMENT' }
@@ -10,6 +11,7 @@ if (-not $rootPath.StartsWith($runnerTemp+[IO.Path]::DirectorySeparatorChar,[Str
 $payloadFile=Join-Path $rootPath 'payload.bin'
 $receiptFile=Join-Path $rootPath 'receipt-public.json'
 $keyMarker=Join-Path $rootPath 'temporary-key-name.txt'
+$pinFile=Join-Path $rootPath 'expected-public-pin.sha256'
 if (-not (Test-Path -LiteralPath $payloadFile -PathType Leaf)) { throw 'NO_PAYLOAD' }
 $payload=[IO.File]::ReadAllBytes($payloadFile)
 if ($payload.Length -lt 64 -or $payload.Length -gt 8192) { throw 'PAYLOAD_OUT_OF_BOUNDS' }
@@ -17,7 +19,7 @@ $hash=[Security.Cryptography.SHA256]::HashData($payload)
 $provider=[Security.Cryptography.CngProvider]::MicrosoftSoftwareKeyStorageProvider
 
 if ($Mode -eq 'Produce') {
-    if (Test-Path $receiptFile) { throw 'RECEIPT_ALREADY_EXISTS' }
+    if ((Test-Path $receiptFile) -or (Test-Path $pinFile)) { throw 'RECEIPT_OR_PIN_ALREADY_EXISTS' }
     Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
@@ -62,6 +64,8 @@ public static class R63EphemeralSign {
         $json=ConvertTo-Json -InputObject $record -Depth 3 -Compress
         [IO.File]::WriteAllText($receiptFile,$json+[char]10,[Text.UTF8Encoding]::new($false))
         [IO.File]::WriteAllText($keyMarker,$name+[char]10,[Text.UTF8Encoding]::new($false))
+        [IO.File]::WriteAllText($pinFile,$record.public_pin_sha256+[char]10,[Text.UTF8Encoding]::new($false))
+        Write-Host ('SELF_ADMINISTERED_EXPECTED_PUBLIC_PIN='+$record.public_pin_sha256)
         Write-Host ('NCRYPT_ENTER='+$entered)
         Write-Host ('NCRYPT_RETURN='+$returned)
         Write-Host 'NATIVE_RECEIPT_PERSISTED=YES'
@@ -92,6 +96,7 @@ $spki=[Convert]::FromBase64String([string]$r.public_spki_b64)
 $sig=[Convert]::FromBase64String([string]$r.signature_p1363_b64)
 $pin=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($spki)).ToLowerInvariant()
 if ($pin -cne $r.public_pin_sha256 -or $sig.Length -ne 64) { throw 'BAD_PIN_OR_SIG_SIZE' }
+if ($ExpectedPublicPin.Length -ne 64 -or $pin -cne $ExpectedPublicPin) { throw 'SEPARATE_EXPECTED_PIN_MISMATCH' }
 $public=[Security.Cryptography.ECDsa]::Create()
 try {
     $read=0
@@ -107,6 +112,7 @@ try {
     $receiptBytes=[IO.File]::ReadAllBytes($receiptFile)
     Write-Host ('PERSISTED_RECEIPT_SHA256='+[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($receiptBytes)).ToLowerInvariant())
     Write-Host 'NCRYPT_IN_VERIFIER_PATH=NOT_INVOKED_IN_SOURCE'
+    Write-Host 'EXTERNAL_EXPECTED_PIN_PATH=SELF_ADMINISTERED_LOCAL_FILE_ONLY'
     Write-Host 'INDEPENDENT_CUSTODY=NOT_ESTABLISHED'
     Write-Host 'NATIVE_V9_SIGNER=NOT_EXECUTED'
 } finally { $public.Dispose() }
