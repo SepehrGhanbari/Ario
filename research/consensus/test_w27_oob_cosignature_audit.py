@@ -112,8 +112,12 @@ class W27(unittest.TestCase):
         self.packet["witness"]["name"]="someone-else.invalid"
         self.assertEqual(self.run_packet()["reason"],"WITNESS_NAME_MISMATCH")
     def test_17_untrusted_key_algorithm(self):
-        self.packet["witness"]["claimed_vkey"]=self.vkey.replace("+BA","+AA")
-        self.packet["oob"]["pinned_vkey"]=self.packet["witness"]["claimed_vkey"]
+        pub=self.private.public_key().public_bytes(encoding=serialization.Encoding.Raw,format=serialization.PublicFormat.Raw)
+        wrong_type=b"\x01"+pub
+        wrong_id=hashlib.sha256(self.wname.encode()+b"\n"+wrong_type).digest()[:4]
+        wrong_vkey=self.wname+"+"+wrong_id.hex()+"+"+base64.b64encode(wrong_type).decode()
+        self.packet["witness"]["claimed_vkey"]=wrong_vkey
+        self.packet["oob"]["pinned_vkey"]=wrong_vkey
         self.assertNotEqual(self.run_packet()["cryptographic_verification"],"VALID_FOR_PINNED_KEY")
     def test_18_missing_source_id(self):
         self.packet["oob"]["source_id"]=""
