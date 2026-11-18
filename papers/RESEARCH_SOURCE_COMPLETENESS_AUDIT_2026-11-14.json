@@ -1,0 +1,75 @@
+{
+  "date": "2026-11-14",
+  "scope": "Git-tracked public main and verified author-designated public Zenodo research works; excludes unmerged PR-only changes and private or undiscovered works.",
+  "verified_published_records": [
+    "23259916",
+    "23600820",
+    "23771218",
+    "24041161",
+    "24054535",
+    "24136175"
+  ],
+  "new_public_full_text_papers": [
+    "23259916",
+    "24041161",
+    "24054535"
+  ],
+  "book_zenodo_record": "23771218",
+  "book_version_label_conflict": "UNRESOLVED_LABEL_CONFLICT: no separately authenticated sixth-edition PDF was found in source Git or checked local book filenames",
+  "historic_continuation_evidence": "23600820",
+  "creation_notes_record": "24136175; older public appendix ZIP is externally preserved and latest revised files are in current GitHub",
+  "extracted_pdf_reports": {
+    "en-book-v6.pdf": {
+      "pages": 145,
+      "text_chars": 165820,
+      "pages_with_over_80_chars": 140,
+      "near_blank_pages": [
+        1,
+        145
+      ],
+      "persian_chars": 553,
+      "original_sha256": "85f0f4ff5ec5d36c59773e2a7bf5dbcab85d52aee16a92d8848e1a4b226059f1",
+      "page_1_text_excerpt_escaped": ""
+    },
+    "fa-book-v6.pdf": {
+      "pages": 154,
+      "text_chars": 161173,
+      "pages_with_over_80_chars": 148,
+      "near_blank_pages": [
+        1,
+        154
+      ],
+      "persian_chars": 110292,
+      "original_sha256": "b9a1098fe20731ced5bc2ae4387a855af1d126a130e18eb537a22f95df08f495",
+      "page_1_text_excerpt_escaped": ""
+    },
+    "preliminary-framework.pdf": {
+      "pages": 14,
+      "text_chars": 35098,
+      "pages_with_over_80_chars": 14,
+      "near_blank_pages": [],
+      "persian_chars": 0,
+      "original_sha256": "030bf2e2f383c73e2dad28762c4850daf73ecfcda5fb453e5cc28e325724de32",
+      "page_1_text_excerpt_escaped": "#\\n \\nArio:\\n \\nToward\\n \\nan\\n \\nAuditable\\n \\nFramework\\n \\nfor\\n \\nEpistemic\\n \\nIntegrity,\\n \\nMemory,\\n \\nand\\n \\nAI\\n \\nIdentity\\n \\n \\n##\\n \\nA\\n \\nPreliminary\\n \\nDesign\\n \\nand\\n \\nExploratory\\n \\nEvaluation\\n \\nReport\\n \\n \\n**Author:"
+    },
+    "independence-is-not-multiplicity.pdf": {
+      "pages": 8,
+      "text_chars": 30029,
+      "pages_with_over_80_chars": 8,
+      "near_blank_pages": [],
+      "persian_chars": 0,
+      "original_sha256": "2398144dfae874761f1f5358ea7b9493f6f199f6af48019b36a12ffacbb3db9a",
+      "page_1_text_excerpt_escaped": "Ghanbari  |  Experimental preprint  |  5 Nov 2026   \\u2022   1\\nIndependence Is Not Multiplicity: A Reproducible Sixteen-Scenario Study of Witness \\nProvenance in Audit Logs\\nSepehr Ghanbari\\nIndependent Resea"
+    },
+    "provenance-aware-auditing.pdf": {
+      "pages": 5,
+      "text_chars": 13874,
+      "pages_with_over_80_chars": 5,
+      "near_blank_pages": [],
+      "persian_chars": 0,
+      "original_sha256": "4650895c429b4419cae9db7f5245256a96c2f27ec222367ff53dcf0f49380c0f",
+      "page_1_text_excerpt_escaped": "Ghanbari, S. (2026). Ario: Provenance-Aware Auditing of AI Claims. Working paper v0.1. Not peer reviewed.\\n1\\nArio: Provenance-Aware Auditing of AI Claims\\nResearch Summary and Proposed Studies\\nSepehr Gh"
+    }
+  },
+  "universality_not_claimed": "All experiments and research already committed to the selected Git source will be exported. Off-repository, unpublished or pending PR material is outside that guarantee."
+}

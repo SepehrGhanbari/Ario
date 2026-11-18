@@ -6,6 +6,8 @@ The `docs/` directory provides practical documentation for understanding, naviga
 
 Ario is both a research framework and an evolving implementation.
 
+**Deferred, not activated:** [Model-friendly research-corpus segmentation and access-evidence plan](DEFERRED_AI_READER_SHARDING_AND_ACCESS_EVIDENCE_2026-11-15.md) records a proposed future way to split long source texts for context-limited reviewers while retaining original hashes, experiments, negative findings and full provenance. The existing pinned TXT/ZIP remains unchanged; this is not an instruction to activate a new export pipeline.
+
 This documentation therefore maintains an explicit distinction between:
 
 ```text

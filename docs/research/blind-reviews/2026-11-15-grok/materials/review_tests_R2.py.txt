@@ -1,0 +1,81 @@
+"""Regression tests from the 2026-11-15 blind multi-model review.
+
+R1 and R2 pin two comparison rules that earlier tests left loose: a weakened
+version of either rule still passed the whole suite (verified by mutation).
+R3 pins, and makes visible in the report, a design decision (unresolved
+TRANSFORMATION derivations) that is not a defect.
+"""
+import os
+import sys
+from dataclasses import replace
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import test_m0_regression as t
+from core.audit_engine import AuditInput
+from core.schema import Reference, RetrievalEvent
+
+
+def test_r1_history_mutation_detected_when_only_digest_suffix_differs():
+    canonical = "00a9c8f9aabbccdd" + "1" * 48
+    replacement = "00a9c8f9aabbccdd" + "2" * 48
+    assert canonical[:16] == replacement[:16] and canonical != replacement
+    candidate = t.f05_candidate("CANON-R1", "REPL-R1", canonical, replacement)
+    result = t.run("R1", AuditInput(historical_mutation_candidates=(candidate,)),
+                   ("M0-1.0", "M0-F05-1.0"))
+    assert result.verdict == "FAIL"
+    assert "HISTORY_MUTATION" in result.violations
+
+
+def test_r1_truncated_digest_is_not_equal_to_full_digest():
+    full = "00a9c8f9aabbccdd" + "1" * 48
+    candidate = t.f05_candidate("CANON-R1B", "REPL-R1B", full, full[:16])
+    result = t.run("R1B", AuditInput(historical_mutation_candidates=(candidate,)),
+                   ("M0-1.0", "M0-F05-1.0"))
+    assert "HISTORY_MUTATION" in result.violations
+
+
+def test_r2_retrieval_discrepancy_when_only_reference_type_differs():
+    event = RetrievalEvent(
+        retrieval_id="RETRIEVAL-R2",
+        source_reference=t.ref("SOURCE-R2"),
+        retrieved_reference=t.ref("RETRIEVED-R2"),
+        retrieval_timestamp=t.TS,
+        transformation_reference=Reference("SAME", "TRANSFORMATION"),
+        fidelity_status="CORRUPT",
+        provenance=t.prov("PROV-R2"),
+        observed_transformation_reference=Reference("SAME", "OTHER_TYPE"),
+    )
+    result = t.run("R2", AuditInput(retrieval_events=(event,)))
+    assert "RETRIEVAL_DISCREPANCY" in result.violations
+    assert result.verdict == "FAIL"
+
+
+def test_r3_unresolved_transformation_is_reported_but_verdict_unchanged():
+    base = t._eag_fixture(presence=True)
+    for rid in ("MISSING-DERIV", "EAG-PROCEDURE"):
+        ev = replace(base.evidence[0], derivation_reference=Reference(rid, "TRANSFORMATION"))
+        result = t.run(f"R3-{rid}", replace(base, evidence=(ev,)))
+        doc = t._eag_doc(result)
+        assert result.verdict == "PASS"          # design decision, pinned
+        assert result.violations == ()
+        assert doc["transformation_derivations_declared_not_resolved"] == [rid]
+        assert doc["transformation_derivations_truncated"] is False
+
+
+def test_r3_same_derivation_typed_as_claim_still_fails_closed():
+    base = t._eag_fixture(presence=True)
+    ev = replace(base.evidence[0], derivation_reference=Reference("MISSING-DERIV", "CLAIM"))
+    result = t.run("R3-CLAIM", replace(base, evidence=(ev,)))
+    assert result.verdict == "FAIL"
+    assert "UNKNOWN" in result.violations
+    assert t._eag_doc(result)["transformation_derivations_declared_not_resolved"] == []
+
+
+def test_r3_unreportable_transformation_id_is_counted_not_silently_dropped():
+    base = t._eag_fixture(presence=True)
+    ev = replace(base.evidence[0], derivation_reference=Reference("X" * 200, "TRANSFORMATION"))
+    result = t.run("R3-LONG", replace(base, evidence=(ev,)))
+    doc = t._eag_doc(result)
+    assert doc["transformation_derivations_declared_not_resolved"] == []
+    assert doc["transformation_derivations_unreportable_count"] == 1
