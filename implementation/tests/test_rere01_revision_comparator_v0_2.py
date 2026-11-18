@@ -193,3 +193,20 @@ def test_rere02_n12_hash_like_receipt_without_pin_does_not_promote():
     r = project(tuple(fixture[:4]), policy)
     assert r.event_outcome == "UNKNOWN"
     assert r.evidence_authorized_for_real_memory is False
+
+
+# ADDENDUM-01: preregistered after first 17-case GREEN, before patch.
+def test_rere02_n13_unwarranted_t3_not_relabelled_challenged():
+    fixture = list(_records())
+    fixture[2] = replace(fixture[2], observed_at="2026-11-18T00:01:00Z")
+    result = project(tuple(fixture), _policy())
+    assert result.event_outcome == "UNKNOWN"
+    assert _reliability(result)["LAB-T3"] == "NOT_WARRANTED"
+
+
+def test_rere02_n14_calibration_from_wrong_time_cannot_revoke():
+    fixture = list(_records())
+    fixture[4] = replace(fixture[4], observed_at="2020-01-01T00:00:00Z")
+    result = project(tuple(fixture), _policy())
+    assert result.event_outcome == "CONDITIONALLY_REFUTED_IN_LAB"
+    assert _reliability(result)["LAB-T3"] == "CONDITIONALLY_WARRANTED_IN_LAB"
