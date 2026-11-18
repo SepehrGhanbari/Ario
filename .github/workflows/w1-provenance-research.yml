@@ -40,10 +40,15 @@ jobs:
         env:
           PYTHONDONTWRITEBYTECODE: '1'
         run: python -B -m unittest discover -s research/consensus -p test_w1_trae_boundary_controls_v1.py -v
-      - name: Exercise third-pass custody axis, latent-graph research and negative xfail controls
+      - name: Third pass custody correlation scaffold (research only)
         env:
           PYTHONDONTWRITEBYTECODE: '1'
-        run: |
-          python -B -m unittest discover -s research/consensus -p w1_custody_correlation_probe.py -v
-          python -B -m unittest discover -s research/consensus -p w1_latent_graph_challenge_v0_1.py -v
-          python -B -m unittest discover -s research/consensus -p test_w1_custody_axis_counterexample_v0_1.py -v
+        run: python -B -m unittest discover -s research/consensus -p w1_custody_correlation_probe.py -v
+      - name: Third pass masked latent-graph scaffold (research only)
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python -B -m unittest discover -s research/consensus -p w1_latent_graph_challenge_v0_1.py -v
+      - name: Third pass unreachable-edge counterexample (known xfail)
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python -B -m unittest discover -s research/consensus -p test_w1_custody_axis_counterexample_v0_1.py -v
