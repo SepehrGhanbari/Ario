@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://ario-research-independent.vercel.app/ario-causal-demo.html">
+<meta name="description" content="Ario Interactive Epistemic Causal Engine Demo. Directed Acyclic Graph tracking, real-time counterfactual simulation, and claim-evidence provenance audit (Issue #208).">
+<title>Ario Epistemic Causal Engine — Interactive Demo</title>
+<style>
+:root {
+  --ink: #22303c;
+  --paper: #f6f4ee;
+  --card: #ffffff;
+  --line: #d9d3c5;
+  --accent: #0e6b5c;
+  --warn: #9c4a1e;
+  --mut: #555f69;
+  --blue: #23527c;
+  --amber: #8a6208;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.8;
+  font-family: "Segoe UI", Tahoma, system-ui, sans-serif;
+}
+.wrap { max-width: 920px; margin: 0 auto; padding: 0 18px; }
+header { background: var(--ink); color: #fff; padding: 26px 0 20px; }
+header h1 { margin: 0 0 6px; font-size: 1.45rem; }
+header p { margin: 0; opacity: 0.85; font-size: 0.92rem; }
+#langBtn {
+  margin-top: 12px;
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.45);
+  border-radius: 8px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 0.88rem;
+}
+#langBtn:hover { background: rgba(255,255,255,0.12); }
+.banner { background: #fff7e8; border-bottom: 1px solid var(--line); padding: 12px 0; font-size: 0.9rem; color: var(--warn); }
+main { padding: 24px 0 40px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 22px; margin-bottom: 22px; }
+h2 { margin: 0 0 14px; font-size: 1.2rem; color: var(--accent); }
+.scen-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin-top: 14px; }
+.scen-btn {
+  text-align: inherit;
+  font: inherit;
+  border: 2px solid var(--line);
+  background: #fbfaf6;
+  border-radius: 12px;
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.scen-btn:hover { border-color: var(--accent); background: #f2f8f6; }
+.scen-btn.active { border-color: var(--accent); background: #eaf5f2; }
+.scen-btn b { display: block; margin-bottom: 4px; font-size: 0.95rem; color: var(--ink); }
+.scen-btn span { font-size: 0.82rem; color: var(--mut); display: block; line-height: 1.5; }
+.pill {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  letter-spacing: 0.03em;
+}
+.pill-sup { background: #eaf5ee; color: var(--accent); border: 1px solid #b6d9c2; }
+.pill-cont { background: #faecea; color: var(--warn); border: 1px solid #e3c0bc; }
+.pill-hyp { background: #edf4f8; color: var(--blue); border: 1px solid #c0d3e2; }
+.graph-wrap {
+  position: relative;
+  width: 100%;
+  height: 380px;
+  background: #fbfaf6;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 14px 0;
+}
+.svg-graph { width: 100%; height: 100%; }
+.node-circle { cursor: pointer; transition: transform 0.2s; }
+.node-circle:hover { transform: scale(1.05); }
+.inspector {
+  background: #fbfaf6;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 14px;
+}
+.inspector h3 { margin: 0 0 10px; font-size: 1.05rem; }
+.meta-row { display: flex; justify-content: space-between; font-size: 0.82rem; color: var(--mut); margin: 6px 0; border-bottom: 1px dashed var(--line); padding-bottom: 4px; }
+.meta-row code { font-family: monospace; direction: ltr; font-weight: bold; }
+.ledger-box {
+  background: #fbfaf6;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  max-height: 180px;
+  overflow-y: auto;
+  margin-top: 14px;
+  font-size: 0.85rem;
+}
+.ledger-item { padding: 8px 10px; border-radius: 8px; margin: 4px 0; background: #fff; border: 1px solid var(--line); }
+.ledger-item .tag { font-size: 0.72rem; font-weight: bold; color: var(--accent); }
+.expl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-top: 12px; }
+.expl-card { background: #fbfaf6; border: 1px solid var(--line); border-radius: 10px; padding: 14px; font-size: 0.88rem; }
+.expl-card b { display: block; margin-bottom: 6px; color: var(--ink); }
+footer { border-top: 1px solid var(--line); padding: 22px 0; font-size: 0.84rem; color: var(--mut); }
+footer a { color: var(--accent); text-decoration: none; }
+footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1 id="t-title">موتور علّی و منشأ شواهد آریو (Causal DAG)</h1>
+    <p id="t-sub">شبیه‌ساز بصری ردیابی شواهد، ابطال‌پذیری و تفکیک ادعا از سند تجربی (پروپوزال #208)</p>
+    <button id="langBtn" type="button">English</button>
+  </div>
+</header>
+
+<div class="banner">
+  <div class="wrap" id="t-banner">
+    اصل بنیادی آریو: ادعا ≠ مدرک | حافظه ≠ حقیقت | اصلاح ≠ پاک‌کردن (Revision ≠ Erasure)
+  </div>
+</div>
+
+<main class="wrap">
+  <section class="card">
+    <h2 id="t-scen-h">سناریوهای خلاف‌واقع (Counterfactual Experiments)</h2>
+    <div class="scen-grid">
+      <button class="scen-btn active" id="btn-base" type="button" onclick="selectScenario('base')">
+        <b id="t-scen-base-b">۱. شواهد تجربی معتبر (Baseline)</b>
+        <span id="t-scen-base-s">ابزار فایل را خوانده، هش تأیید شده و استنتاج به درستی صورت گرفته است.</span>
+      </button>
+
+      <button class="scen-btn" id="btn-fals" type="button" onclick="selectScenario('fals')">
+        <b id="t-scen-fals-b">۲. ابطال هش (Falsification)</b>
+        <span id="t-scen-fals-s">هش فایل با تعهد ورودی نمی‌خواند؛ تمام گره‌های وابسته ابطال می‌شوند.</span>
+      </button>
+
+      <button class="scen-btn" id="btn-self" type="button" onclick="selectScenario('self')">
+        <b id="t-scen-self-b">۳. ادعای بدون شاهد (Anti-Self-Citation)</b>
+        <span id="t-scen-self-s">مدل فرضیه‌ای را بدون سند تجربی مطرح می‌کند؛ ارتقای ادعا مسدود می‌شود.</span>
+      </button>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2 id="t-graph-h">گراف علّی و درخت وابستگی استنتاج (Causal DAG)</h2>
+    <p style="margin: 0; font-size: 0.82rem; color: var(--mut);" id="t-graph-hint">(برای بازرسی، روی هر گره کلیک کنید)</p>
+    
+    <div class="graph-wrap">
+      <svg id="graphSvg" class="svg-graph" viewBox="0 0 580 340"></svg>
+    </div>
+
+    <div class="inspector"><h3 id="t-inspect-h" style="margin:0 0 10px; font-size:1.05rem; color:var(--ink);"></h3><div id="inspectorBox"></div></div>
+
+    <h2 style="margin-top: 20px;" id="t-ledger-h">دفتر لجر معرفتی (Audit Ledger)</h2>
+    <div class="ledger-box" id="ledgerBox"></div>
+  </section>
+
+  <section class="card">
+    <h2 id="t-why-h">چرا این معماری با مدل‌های زبانی رایج تفاوت دارد؟</h2>
+    <div class="expl-grid">
+      <div class="expl-card">
+        <b id="t-e1-t">۱. برچسب‌گذاری منشأ (Source Tagging)</b>
+        <span id="t-e1-d">شواهد ابزار و فرضیه‌های درونی تگ مجزا دارند و مدل نمی‌تواند توهمات خودش را به عنوان سند جا بزند.</span>
+      </div>
+      <div class="expl-card">
+        <b id="t-e2-t">۲. ابطال زنجیره‌ای خودکار</b>
+        <span id="t-e2-d">رد شدن یک شاهد پایه در DAG فوراً تمام ادعاهای بعدی را مورد مناقشه می‌کند.</span>
+      </div>
+      <div class="expl-card">
+        <b id="t-e3-t">۳. نگهداری شکست‌ها (No Erasure)</b>
+        <span id="t-e3-d">شواهد متناقض پاک نمی‌شوند، بلکه در لجر با برچسب بطلان ثبت می‌مانند تا تکرار نشوند.</span>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap" style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+    <div><strong>پروژه آریو (Ario)</strong> — تحقیق مستقل سپهر قنبری</div>
+    <div>
+      <a href="https://github.com/SepehrGhanbari/Ario" target="_blank">GitHub</a> • 
+      <a href="/ario-demo.html">Teaching Demo</a> • 
+      <a href="/research.html">Research Log</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+var currentLang = 'fa';
+var currentScenario = 'base';
+var selectedNodeId = 'N2';
+
+var I18N = {
+  fa: {
+    title: 'موتور علّی و منشأ شواهد آریو (Causal DAG)',
+    sub: 'شبیه‌ساز بصری ردیابی شواهد، ابطال‌پذیری و تفکیک ادعا از سند تجربی (پروپوزال #208)',
+    banner: 'اصل بنیادی آریو: ادعا ≠ مدرک | حافظه ≠ حقیقت | اصلاح ≠ پاک‌کردن (Revision ≠ Erasure)',
+    scenH: 'سناریوهای خلاف‌واقع (Counterfactual Experiments)',
+    scenBaseB: '۱. شواهد تجربی معتبر (Baseline)',
+    scenBaseS: 'ابزار فایل را خوانده، هش تأیید شده و استنتاج به درستی صورت گرفته است.',
+    scenFalsB: '۲. ابطال هش (Falsification)',
+    scenFalsS: 'هش فایل با تعهد ورودی نمی‌خواند؛ تمام گره‌های وابسته ابطال می‌شوند.',
+    scenSelfB: '۳. ادعای بدون شاهد (Anti-Self-Citation)',
+    scenSelfS: 'مدل فرضیه‌ای را بدون سند تجربی مطرح می‌کند؛ ارتقای ادعا مسدود می‌شود.',
+    graphH: 'گراف علّی و درخت وابستگی استنتاج (Causal DAG)',
+    graphHint: '(برای بازرسی، روی هر گره کلیک کنید)',
+    inspectH: 'بازرس گره (Node Inspector)',
+    ledgerH: 'دفتر لجر معرفتی (Audit Ledger)',
+    whyH: 'چرا این معماری با مدل‌های زبانی رایج تفاوت دارد؟',
+    e1T: '۱. برچسب‌گذاری منشأ (Source Tagging)',
+    e1D: 'شواهد ابزار و فرضیه‌های درونی تگ مجزا دارند و مدل نمی‌تواند توهمات خودش را به عنوان سند جا بزند.',
+    e2T: '۲. ابطال زنجیره‌ای خودکار',
+    e2D: 'رد شدن یک شاهد پایه در DAG فوراً تمام ادعاهای بعدی را مورد مناقشه می‌کند.',
+    e3T: '۳. نگهداری شکست‌ها (No Erasure)',
+    e3D: 'شواهد متناقض پاک نمی‌شوند، بلکه در لجر با برچسب بطلان ثبت می‌مانند تا تکرار نشوند.',
+    resetBtn: 'بازنشانی'
+  },
+  en: {
+    title: 'Ario Epistemic Causal Engine (Causal DAG)',
+    sub: 'Visual simulation of evidence provenance, counterfactual falsifiability & claim-evidence segregation (Issue #208)',
+    banner: 'Core Ario Invariant: Claim ≠ Evidence | Memory ≠ Truth | Revision ≠ Erasure',
+    scenH: 'Counterfactual Falsification Scenarios',
+    scenBaseB: '1. Valid Empirical Grounding',
+    scenBaseS: 'Tool executed, hash verified, and downstream claims are supported.',
+    scenFalsB: '2. Hash Mismatch (Falsification)',
+    scenFalsS: 'Hash contradicts expected lock; all dependent nodes become Contested.',
+    scenSelfB: '3. Unverified Claim (Anti-Self-Citation)',
+    scenSelfS: 'Hypothesis unbacked by tool receipt; promotion to supported is blocked.',
+    graphH: 'Causal Inference Directed Acyclic Graph (DAG)',
+    graphHint: '(Click any node to inspect)',
+    inspectH: 'Node Inspector',
+    ledgerH: 'Epistemic Audit Ledger',
+    whyH: 'Why is this architecture fundamentally different?',
+    e1T: '1. Origin Source Tagging',
+    e1D: 'Tool observations and internal hypotheses are strictly typed. Anti-self-citation is enforced.',
+    e2T: '2. Cascading Falsification',
+    e2D: 'Refuting a foundational observation cascades Contested states across downstream claims.',
+    e3T: '3. Revision != Erasure',
+    e3D: 'Contradictions and refuted claims are never deleted; they are memorialized to prevent recurrent mistakes.',
+    resetBtn: 'Reset'
+  }
+};
+
+var NODES = [
+  { id: 'N1', x: 80, y: 120, labelFa: 'ورودی کاربر', labelEn: 'User Input', type: 'TESTIMONY', status: 'RECORDED', parents: [], hash: 'e3b0c442...7852b855', detailFa: 'درخواست بررسی اصالت فایل backup.json', detailEn: 'Audit request for backup.json' },
+  { id: 'N2', x: 240, y: 70, labelFa: 'اجرای file_fingerprint', labelEn: 'file_fingerprint', type: 'EMPIRICAL', status: 'SUPPORTED', parents: ['N1'], hash: 'a1b2c3d4...9abcdef0', detailFa: 'خروجی ابزار: exit_code=0, sha256=7f83b1...', detailEn: 'Tool exit_code=0, sha256=7f83b1...' },
+  { id: 'N3', x: 240, y: 220, labelFa: 'فرضیه انطباق نسخه', labelEn: 'Hypothesis: Match', type: 'HYPOTHESIS', status: 'RECORDED', parents: ['N1'], hash: '9f86d081...f00a08', detailFa: 'استنتاج درونی مدل درباره انطباق', detailEn: 'Model internal deduction of release match' },
+  { id: 'N4', x: 400, y: 140, labelFa: 'سنتز: تأیید سلامت', labelEn: 'Synthesis: Valid', type: 'SYNTHESIS', status: 'SUPPORTED', parents: ['N2', 'N3'], hash: '4b227777...dabf8a', detailFa: 'ترکیب شواهد N2 و استدلال N3', detailEn: 'Conjunction of receipt N2 and inference N3' },
+  { id: 'N5', x: 500, y: 280, labelFa: 'تثبیت در حافظه', labelEn: 'Memory Commit', type: 'ACTION', status: 'SUPPORTED', parents: ['N4'], hash: 'ef2d127d...fe39d', detailFa: 'نیت آینده‌نگر: تأیید و ثبت در لجر', detailEn: 'Prospective intention: Ledger commit' }
+];
+
+var ledgerEntries = [];
+
+function setLang(lang) {
+  currentLang = lang;
+  document.documentElement.lang = lang;
+  document.documentElement.dir = (lang === 'fa' ? 'rtl' : 'ltr');
+  document.getElementById('langBtn').innerText = (lang === 'fa' ? 'English' : 'فارسی');
+  var t = I18N[lang];
+  document.getElementById('t-title').innerText = t.title;
+  document.getElementById('t-sub').innerText = t.sub;
+  document.getElementById('t-banner').innerText = t.banner;
+  document.getElementById('t-scen-h').innerText = t.scenH;
+  document.getElementById('t-scen-base-b').innerText = t.scenBaseB;
+  document.getElementById('t-scen-base-s').innerText = t.scenBaseS;
+  document.getElementById('t-scen-fals-b').innerText = t.scenFalsB;
+  document.getElementById('t-scen-fals-s').innerText = t.scenFalsS;
+  document.getElementById('t-scen-self-b').innerText = t.scenSelfB;
+  document.getElementById('t-scen-self-s').innerText = t.scenSelfS;
+  document.getElementById('t-graph-h').innerText = t.graphH;
+  document.getElementById('t-graph-hint').innerText = t.graphHint;
+  document.getElementById('t-inspect-h').innerText = t.inspectH;
+  document.getElementById('t-ledger-h').innerText = t.ledgerH;
+  document.getElementById('t-why-h').innerText = t.whyH;
+  document.getElementById('t-e1-t').innerText = t.e1T;
+  document.getElementById('t-e1-d').innerText = t.e1D;
+  document.getElementById('t-e2-t').innerText = t.e2T;
+  document.getElementById('t-e2-d').innerText = t.e2D;
+  document.getElementById('t-e3-t').innerText = t.e3T;
+  document.getElementById('t-e3-d').innerText = t.e3D;
+  renderGraph();
+  renderInspector();
+  renderLedger();
+}
+
+function selectScenario(scen) {
+  currentScenario = scen;
+  var btns = document.querySelectorAll('.scen-btn');
+  for (var b = 0; b < btns.length; b++) { btns[b].classList.remove('active'); }
+  document.getElementById('btn-' + scen).classList.add('active');
+
+  if (scen === 'base') {
+    NODES[1].status = 'SUPPORTED';
+    NODES[3].status = 'SUPPORTED';
+    NODES[4].status = 'SUPPORTED';
+    ledgerEntries.unshift({ tag: 'BASELINE_RESTORED', msgFa: 'شواهد تجربی معتبر و استنتاج استوار', msgEn: 'Valid empirical grounding restored' });
+  } else if (scen === 'fals') {
+    NODES[1].status = 'CONTESTED';
+    NODES[3].status = 'CONTESTED';
+    NODES[4].status = 'BLOCKED';
+    ledgerEntries.unshift({ tag: 'HASH_MISMATCH', msgFa: 'هش روی دیسک تطبیق نداشت؛ گره‌های N2، N4 و N5 ابطال شدند.', msgEn: 'Hash mismatch: N2, N4, N5 contested.' });
+    selectedNodeId = 'N2';
+  } else if (scen === 'self') {
+    NODES[1].status = 'SUPPORTED';
+    NODES[3].status = 'RECORDED_UNVERIFIED';
+    NODES[4].status = 'SUSPENDED';
+    ledgerEntries.unshift({ tag: 'ANTI_SELF_CITATION', msgFa: 'فرضیه بدون سند تجربی است؛ ترفیع به SUPPORTED متوقف شد.', msgEn: 'Hypothesis unverified; promotion suspended.' });
+    selectedNodeId = 'N3';
+  }
+
+  renderGraph();
+  renderInspector();
+  renderLedger();
+}
+
+function selectNode(id) {
+  selectedNodeId = id;
+  renderGraph();
+  renderInspector();
+}
+
+function renderGraph() {
+  var svg = document.getElementById('graphSvg');
+  var html = '<defs>' +
+    '<marker id="arr" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#8c9aa6" /></marker>' +
+    '<marker id="arr-ok" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#0e6b5c" /></marker>' +
+    '<marker id="arr-err" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#9c4a1e" /></marker>' +
+    '</defs>';
+
+  for (var i = 0; i < NODES.length; i++) {
+    var node = NODES[i];
+    for (var j = 0; j < node.parents.length; j++) {
+      var pId = node.parents[j];
+      var parent = null;
+      for (var k = 0; k < NODES.length; k++) {
+        if (NODES[k].id === pId) { parent = NODES[k]; break; }
+      }
+      if (!parent) continue;
+
+      var isErr = (node.status === 'CONTESTED' || parent.status === 'CONTESTED');
+      var color = isErr ? '#9c4a1e' : (node.status === 'SUPPORTED' ? '#0e6b5c' : '#8c9aa6');
+      var dash = isErr ? 'stroke-dasharray="4 4"' : '';
+      var marker = isErr ? 'url(#arr-err)' : (node.status === 'SUPPORTED' ? 'url(#arr-ok)' : 'url(#arr)');
+
+      html += '<line x1="' + parent.x + '" y1="' + parent.y + '" x2="' + node.x + '" y2="' + node.y + '" stroke="' + color + '" stroke-width="2" ' + dash + ' marker-end="' + marker + '" />';
+    }
+  }
+
+  for (var i = 0; i < NODES.length; i++) {
+    var n = NODES[i];
+    var isSel = (n.id === selectedNodeId);
+    var color = '#23527c';
+    if (n.status === 'SUPPORTED') color = '#0e6b5c';
+    else if (n.status === 'CONTESTED' || n.status === 'BLOCKED') color = '#9c4a1e';
+    else if (n.status === 'RECORDED_UNVERIFIED') color = '#8a6208';
+
+    html += '<g class="node-circle" data-id="' + n.id + '" transform="translate(' + n.x + ',' + n.y + ')">';
+    if (isSel) {
+      html += '<circle r="24" fill="none" stroke="' + color + '" stroke-width="2" stroke-dasharray="3 3" opacity="0.8" />';
+    }
+    html += '<circle r="18" fill="' + color + '" stroke="' + (isSel ? '#22303c' : '#ffffff') + '" stroke-width="' + (isSel ? '3' : '2') + '" />';
+    html += '<text text-anchor="middle" dy=".3em" fill="#ffffff" font-size="11px" font-weight="bold">' + n.id + '</text>';
+    var lbl = (currentLang === 'fa' ? n.labelFa : n.labelEn);
+    html += '<text text-anchor="middle" y="32" fill="#22303c" font-size="10px" font-weight="600">' + lbl + '</text>';
+    html += '</g>';
+  }
+
+  svg.innerHTML = html;
+
+  var circles = svg.querySelectorAll('.node-circle');
+  for (var c = 0; c < circles.length; c++) {
+    circles[c].addEventListener('click', function() {
+      selectNode(this.getAttribute('data-id'));
+    });
+  }
+}
+
+function renderInspector() {
+  var node = null;
+  for (var i = 0; i < NODES.length; i++) {
+    if (NODES[i].id === selectedNodeId) { node = NODES[i]; break; }
+  }
+  if (!node) return;
+
+  var container = document.getElementById('inspectorBox');
+  var lbl = (currentLang === 'fa' ? node.labelFa : node.labelEn);
+  var det = (currentLang === 'fa' ? node.detailFa : node.detailEn);
+
+  var pillClass = 'pill-sup';
+  if (node.status === 'CONTESTED' || node.status === 'BLOCKED') pillClass = 'pill-cont';
+  else if (node.type === 'HYPOTHESIS') pillClass = 'pill-hyp';
+
+  var parentsStr = node.parents.length > 0 ? node.parents.join(' -> ') : (currentLang === 'fa' ? 'ریشه ورودی' : 'Root Input');
+
+  container.innerHTML = '<div>' +
+    '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+      '<b>' + node.id + ': ' + lbl + '</b>' +
+      '<span class="pill ' + pillClass + '">' + node.status + '</span>' +
+    '</div>' +
+    '<p style="margin:8px 0; font-size:0.88rem;">' + det + '</p>' +
+    '<div class="meta-row"><span>' + (currentLang === 'fa' ? 'نوع منشأ:' : 'Source Type:') + '</span><code>' + node.type + '</code></div>' +
+    '<div class="meta-row"><span>' + (currentLang === 'fa' ? 'هش منشأ:' : 'Digest:') + '</span><code>' + node.hash + '</code></div>' +
+    '<div class="meta-row"><span>' + (currentLang === 'fa' ? 'پیش‌نیازها:' : 'Precedents:') + '</span><code>' + parentsStr + '</code></div>' +
+  '</div>';
+}
+
+function renderLedger() {
+  var container = document.getElementById('ledgerBox');
+  var html = '';
+  for (var i = 0; i < ledgerEntries.length; i++) {
+    var item = ledgerEntries[i];
+    var m = (currentLang === 'fa' ? item.msgFa : item.msgEn);
+    html += '<div class="ledger-item"><span class="tag">[' + item.tag + ']</span> ' + m + '</div>';
+  }
+  container.innerHTML = html;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  ledgerEntries = [
+    { tag: 'TASK_STARTED', msgFa: 'آغاز ارزیابی اصالت backup.json', msgEn: 'Audit initialized for backup.json' },
+    { tag: 'EMPIRICAL_RECEIPT', msgFa: 'تأیید هش file_fingerprint در لجر', msgEn: 'file_fingerprint digest recorded' }
+  ];
+  setLang('fa');
+  document.getElementById('langBtn').addEventListener('click', function() {
+    setLang(currentLang === 'fa' ? 'en' : 'fa');
+  });
+});
+</script>
+</body>
+</html>
