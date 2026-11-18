@@ -156,6 +156,14 @@ def run_native():
         else: raise RuntimeError("W26_NO_GO: synthetic UID collides with existing account")
     base = Path(tempfile.mkdtemp(prefix="ario-w26-", dir=root))
     base.chmod(0o755)
+    # CI checkout directories can be unreadable to synthetic UIDs. Copy only
+    # this exact source to the scratch root; never widen checkout permissions.
+    worker_source = base / 'w26_worker.py'
+    source_bytes = Path(__file__).read_bytes()
+    worker_source.write_bytes(source_bytes)
+    worker_source.chmod(0o644)
+    if worker_source.read_bytes() != source_bytes:
+        raise AssertionError('W26_PROBE_SOURCE_COPY_MISMATCH')
     pubdir, witdir, ipcdir = [base/x for x in ("publisher", "witness", "ipc")]
     try:
         for path, uid, mode in ((pubdir,PUBLISHER_UID,0o700), (witdir,WITNESS_UID,0o700), (ipcdir,WITNESS_UID,0o711)):
@@ -174,7 +182,7 @@ def run_native():
         environment["ARIO_W26_CI_ROOT"] = str(base)
 
         def run_as(uid, *params):
-            a=subprocess.run([sys.executable,"-B",str(Path(__file__).resolve()),*map(str,params)],
+            a=subprocess.run([sys.executable,"-B",str(worker_source),*map(str,params)],
                              env=environment,capture_output=True,text=True,timeout=8,preexec_fn=drop_uid(uid))
             if a.returncode not in (0,):
                 raise AssertionError(f"child failed exit={a.returncode} err={a.stderr[:500]} stdout={a.stdout[:300]}")
@@ -199,7 +207,7 @@ def run_native():
         check("WITNESS_DENIED_PUBLISHER_STATE",reversed_read["status"]=="DENIED",reversed_read["status"])
         check("ACL_ATTEMPTS_LEFT_LEDGER_UNCHANGED",witness_file.read_bytes()==before,"same SHA256="+hashlib.sha256(before).hexdigest())
         sock=ipcdir/"read_only.sock"
-        server = subprocess.Popen([sys.executable,"-B",str(Path(__file__).resolve()),"--serve",str(sock),str(witness_file),str(PUBLISHER_UID),"5"],
+        server = subprocess.Popen([sys.executable,"-B",str(worker_source),"--serve",str(sock),str(witness_file),str(PUBLISHER_UID),"5"],
                                   env=environment,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,preexec_fn=drop_uid(WITNESS_UID))
         try:
             # No readiness loop via stdout to remain portable in unittest; wait for socket.
