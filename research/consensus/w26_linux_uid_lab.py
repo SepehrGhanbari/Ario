@@ -154,7 +154,10 @@ def run_native():
         try: pwd.getpwuid(uid)
         except KeyError: pass
         else: raise RuntimeError("W26_NO_GO: synthetic UID collides with existing account")
-    base = Path(tempfile.mkdtemp(prefix="ario-w26-", dir=root))
+    # GitHub RUNNER_TEMP itself is intentionally private (0700 to runner).
+    # Use only a fresh root-owned /tmp child (0755) on the disposable runner;
+    # never chmod RUNNER_TEMP, the checkout, or an existing host path.
+    base = Path(tempfile.mkdtemp(prefix="ario-w26-", dir="/tmp"))
     base.chmod(0o755)
     # CI checkout directories can be unreadable to synthetic UIDs. Copy only
     # this exact source to the scratch root; never widen checkout permissions.
@@ -269,7 +272,9 @@ def main():
         if args.extra:raise RuntimeError("unexpected extra args")
         return run_native()
     base=Path(os.environ.get("ARIO_W26_CI_ROOT", "")).absolute()
-    if not base.is_dir() or not base.is_relative_to(root):raise RuntimeError("W26_NO_GO: untrusted test base")
+    scratch = base.parent == Path('/tmp') and base.name.startswith('ario-w26-')
+    if not base.is_dir() or not (base.is_relative_to(root) or scratch):
+        raise RuntimeError("W26_NO_GO: untrusted test base")
     if args.probe:
         if len(args.extra)!=1:raise RuntimeError("probe path required")
         path=within(base,args.extra[0])
