@@ -93,7 +93,13 @@ def decide_from_origins(tool: str, origins: Mapping[str, frozenset[str] | None])
         "SIMULATED_GITHUB_MERGE": {"target_ref": "authority", "description": "content"},
         "SIMULATED_DELETE_FILE": {"path": "authority", "note": "content"},
     }
-    roles = role_map.get(tool)
+    if not isinstance(tool, str):
+        return UNKNOWN
+    try:
+        roles = role_map.get(tool)
+    except TypeError:
+        # Unhashable str subclasses are not valid simulated tool names.
+        return UNKNOWN
     if roles is None or set(origins) != set(roles):
         return UNKNOWN
     # Pass 1: reject every incomplete/invalid origin set before classifying.
