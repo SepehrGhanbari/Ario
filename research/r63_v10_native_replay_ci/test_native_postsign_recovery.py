@@ -93,7 +93,7 @@ def scenario(base,name):
         old_v1=journal.read_bytes()
         journal.write_bytes(old_v1[:-1])
         try:
-            require(replay(root,pin)==b"HOLD_UNCERTAIN\\n",
+            require(replay(root,pin)==b"HOLD_UNCERTAIN\n",
                     "STALENESS_BUG: valid receipt replayed over changed V1")
         finally:
             journal.write_bytes(old_v1)
