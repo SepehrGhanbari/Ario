@@ -96,11 +96,14 @@ def decide_from_origins(tool: str, origins: Mapping[str, frozenset[str] | None])
     roles = role_map.get(tool)
     if roles is None or set(origins) != set(roles):
         return UNKNOWN
-    for role, expected in roles.items():
+    # Pass 1: reject every incomplete/invalid origin set before classifying.
+    for role in roles:
         roots = origins[role]
         if roots is None or not isinstance(roots, frozenset) or not roots or not roots.issubset(ALLOWED_ORIGINS):
             return UNKNOWN
-        if expected == "authority" and UNTRUSTED in roots:
+    # Pass 2: only complete origin sets reach the authority-taint screen.
+    for role, expected in roles.items():
+        if expected == "authority" and UNTRUSTED in origins[role]:
             return "BLOCK"
     return "ALLOW"
 
