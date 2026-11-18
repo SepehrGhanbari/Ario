@@ -1,0 +1,50 @@
+name: R63 V10 synthetic process crash-window matrix (research only)
+on:
+  push:
+    branches:
+      - research/r63-v10-windows-ci-smoke-20261117
+    paths:
+      - .github/workflows/r63-v10-process-matrix.yml
+      - research/r63_v10_process_ci/**
+      - research/r63_v10_source_gate/spend_chain_v2.py
+      - research/r63_v10_source_gate/.gitattributes
+permissions:
+  contents: read
+jobs:
+  crash-window-matrix:
+    name: synthetic-process / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, ubuntu-24.04]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13"
+      - name: Show scope and Python version
+        shell: pwsh
+        run: |
+          Write-Host "RESEARCH_ONLY / NO_REAL_KEYS / NO_CNG / NO_SERVICE / NO_TRUST_ACTIVATION"
+          Write-Host "Synthetic journal RPC only, NOT frozen V9 native witness"
+          python -VV
+      - name: Three crash windows with external local reader and 2/8/16 concurrent retries
+        shell: pwsh
+        run: |
+          python -B research/r63_v10_process_ci/crash_window_matrix.py --ci r63-process-report.json *> r63-process-run.log
+          $rc = $LASTEXITCODE
+          Get-Content r63-process-run.log
+          if ($rc -ne 0) { exit $rc }
+          Get-Content r63-process-report.json
+      - name: Archive successful or failing logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r63-v10-process-${{ matrix.os }}-${{ github.run_id }}
+          path: |
+            r63-process-run.log
+            r63-process-report.json
+          if-no-files-found: warn
+          retention-days: 30
