@@ -1,0 +1,31 @@
+name: W27 offline OOB C2SP witness preparation research (temporary)
+on:
+  pull_request:
+    paths:
+      - 'research/consensus/w27_oob_cosignature_audit.py'
+      - 'research/consensus/test_w27_oob_cosignature_audit.py'
+      - '.github/workflows/w27-oob-research.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  w27:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-2022]
+        python: ['3.13']
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install bounded public verifier (no signer or private keys)
+        run: python -m pip install 'cryptography==46.0.4'
+      - name: Run 28 offline W27 signed-note, OOB pin and negative boundary tests
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python -B -m unittest discover -s research/consensus -p test_w27_oob_cosignature_audit.py -v
