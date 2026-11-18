@@ -14,6 +14,10 @@
 
 ## Latest verified research corpus / کامل‌ترین بستهٔ پژوهشی — 14 November 2026
 
+
+**New book release / انتشار تازهٔ کتاب — 18 November 2026:** [Being With the Other — complete 13-language v7.1 edition (Zenodo DOI 10.5281/zenodo.24343618)](https://doi.org/10.5281/zenodo.24343618). [Official GitHub publication index with direct language PDFs and file inventory](./papers/being-with-the-other/v7.1/zenodo-24343618/README.md). **Persian original; 12 full-text machine-translation drafts** (not professionally proofread). The philosophical book is separate from Ario's software tests and does not establish AI consciousness or production readiness. The author opposed sacralizing the founder or project; that suggestion originated with an AI assistant.
+
+
 **Zenodo official archive / آرشیو رسمی:** [DOI 10.5281/zenodo.24230572](https://doi.org/10.5281/zenodo.24230572) — v19, Dataset, published 14 November 2026. Four deposited assets match the archived Git originals; source commit a39ac06e69c1b5115bca2016698556730bf920cd. This DOI links to the same source snapshot, not a new separately validated study.
 
 **Newest release:** [Complete TXT (3.86 MB)](https://ario-research-independent.vercel.app/downloads/Ario-Latest.txt) · [Original PDF/source ZIP (16.87 MB)](https://ario-research-independent.vercel.app/downloads/Ario-Latest.zip) · [Dated TXT](https://ario-research-independent.vercel.app/downloads/Ario-Research-Complete-2026-11-14.txt) · [Dated ZIP](https://ario-research-independent.vercel.app/downloads/Ario-Research-Complete-2026-11-14.zip) · [Manifest, experiment coverage and SHA-256](https://github.com/SepehrGhanbari/Ario/tree/018fc52285c7c07c770e0894b734e7199f2110ac/releases/complete-research-2026-11-14-a39ac06e).
