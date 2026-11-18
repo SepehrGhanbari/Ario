@@ -115,16 +115,18 @@ def scenario(base,name):
         require(sha((root/n).read_bytes())==digest,
                 "replay mutated journal/payload/metadata "+n)
     if stored is not None:
-        # RED negative control: a valid signature must not authorize replay
-        # after the CURRENT V1 journal differs from the signed snapshot.
-        journal=root/"v1.jsonl"
-        old_v1=journal.read_bytes()
-        journal.write_bytes(old_v1[:-1])
-        try:
-            require(replay(root,pin)==b"HOLD_UNCERTAIN\n",
-                    "STALENESS_BUG: valid receipt replayed over changed V1")
-        finally:
-            journal.write_bytes(old_v1)
+        # Regression negatives: a signed receipt must not supersede
+        # CURRENT journals, metadata, sign-use markers or expected public pin.
+        for filename in ("v1.jsonl","v2.jsonl","metadata.json",
+                         "use-returned.json","expected-public-pin.sha256"):
+            target=root/filename
+            original=target.read_bytes()
+            target.write_bytes(original[:-1])
+            try:
+                require(replay(root,pin)==b"HOLD_UNCERTAIN\n",
+                        "STALE_STATE_ACCEPTED: "+filename)
+            finally:
+                target.write_bytes(original)
         require(receipt.read_bytes()==stored,"stored receipt bytes changed")
         mutated=bytearray(stored)
         mutated[-12]^=1
