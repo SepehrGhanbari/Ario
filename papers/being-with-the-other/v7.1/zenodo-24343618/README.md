@@ -51,3 +51,4 @@ The Zenodo versions of the accompanying license, README files, technical QA repo
 The GitHub copy is a metadata and text companion to the Zenodo record. The Zenodo API lists 18 files, their byte sizes and MD5 values; its uploaded `SHA256SUMS.txt` lists SHA-256 values for 13 PDFs. We **have not independently downloaded and hashed all 13 deposited PDFs** in this check. Some locally retained files of identical names did **not** have matching hashes/byte sizes. Do not claim local byte-identical mirrors; cite Zenodo as the source of the deposited originals. See [SOURCE_INTEGRITY_NOTE.md](./SOURCE_INTEGRITY_NOTE.md).
 
 **Review boundary:** This records a documented public publication, not a research-validation, trust activation, cryptographic owner signature, signer upgrade, or software change.
+undefined
