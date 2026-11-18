@@ -39,6 +39,7 @@ def _connect(path, kind):
             con.execute("CREATE TABLE IF NOT EXISTS requests (rid TEXT PRIMARY KEY, old_size INTEGER NOT NULL, size INTEGER NOT NULL, root TEXT NOT NULL, note_hash TEXT NOT NULL, proof_hash TEXT NOT NULL, state TEXT NOT NULL CHECK(state IN ('PENDING','FINAL')), receipt TEXT)")
         elif kind=='anchor':
             con.execute('CREATE TABLE IF NOT EXISTS anchor (singleton INTEGER PRIMARY KEY CHECK(singleton=1), size INTEGER NOT NULL, root TEXT NOT NULL)')
+            con.execute('CREATE TABLE IF NOT EXISTS history (size INTEGER PRIMARY KEY, root TEXT NOT NULL)')
         else:raise ValueError('invalid store kind')
         return con
     except BaseException:
@@ -133,6 +134,10 @@ def anchor_observe(anchor_path, *, old_size, candidate_note, pinned_vkey, proof=
         if not _consistent(prev,head,proof):
             con.execute('ROLLBACK');return result('DENY','ANCHOR_REJECTED_FORK_OR_PROOF')
         con.execute('INSERT INTO anchor(singleton,size,root) VALUES(1,?,?) ON CONFLICT(singleton) DO UPDATE SET size=excluded.size,root=excluded.root', (head['size'],head['root']))
+        con.execute('INSERT OR IGNORE INTO history(size,root) VALUES(?,?)', (head['size'],head['root']))
+        anchored=con.execute('SELECT root FROM history WHERE size=?',(head['size'],)).fetchone()
+        if anchored is None or anchored[0]!=head['root']:
+            con.execute('ROLLBACK');return result('HOLD','ANCHOR_HISTORY_CONFLICT')
         if crash_stage=='before_anchor_commit':os._exit(82)
         con.execute('COMMIT')
         if crash_stage=='after_anchor_commit':os._exit(83)
@@ -178,7 +183,9 @@ def finalize(publisher_path, anchor_path, *, request_id, crash_stage=None):
     if not Path(anchor_path).exists():return result('HOLD','ANCHOR_UNAVAILABLE')
     try:
         an=_connect(anchor_path,'anchor')
-        try: a=_read(an,'anchor')
+        try:
+            a=_read(an,'anchor')
+            history={size:root for size,root in an.execute('SELECT size,root FROM history')}
         finally:an.close()
     except (sqlite3.DatabaseError, OSError):return result('HOLD','INVALID_ANCHOR_STORAGE')
     if a is None:return result('HOLD','ANCHOR_UNAVAILABLE')
@@ -199,10 +206,11 @@ def finalize(publisher_path, anchor_path, *, request_id, crash_stage=None):
             pub.execute('ROLLBACK');return result('DENY','LOCAL_ROLLBACK_RELATIVE_TO_ANCHOR')
         if state=='FINAL':
             pub.execute('ROLLBACK')
-            if p is None or p!={'size':size,'root':root} or a!={'size':size,'root':root} or stored_receipt!=_receipt(request_id,note_hash,size,root):
+            if (p is None or p!=a or size>p['size'] or history.get(size)!=root
+                or stored_receipt!=_receipt(request_id,note_hash,size,root)):
                 return result('HOLD','FINAL_RECEIPT_HEAD_OR_ANCHOR_MISMATCH')
             return result('FINAL_UNSIGNED_RECEIPT','SAME_STORED_RECEIPT',stored_receipt)
-        if a!={'size':size,'root':root}:
+        if a!={'size':size,'root':root} or history.get(size)!=root:
             pub.execute('ROLLBACK');return result('HOLD','ANCHOR_NOT_EXACTLY_REQUESTED_HEAD')
         if old_size!=(0 if p is None else p['size']):
             pub.execute('ROLLBACK');return result('CONFLICT','PREPARED_OLD_HEAD_CHANGED')
