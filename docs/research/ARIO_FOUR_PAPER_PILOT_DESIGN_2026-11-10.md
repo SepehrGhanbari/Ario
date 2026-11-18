@@ -98,3 +98,27 @@
 4. **IFC-01**: formal-methods follow-up with careful, bounded scope; no large new dependency until utility and trust assumptions are independently reviewed.
 
 **Prepared as a research artifact, not executed or registered as a scientific trial.**
+
+
+## 2026-11-18 supplemental ARG-01 synthetic rehearsal (not pilot adoption)
+
+This is a **dated, additive evidence update** to the original 2026-11-10 design-only note, not a silent claim that the four full proposed pilots were executed or preregistered. The earlier `DESIGN_ONLY / NOT_EXECUTED` language refers to the full pilots; only the *isolated synthetic ARG-01 rehearsal* below has now been executed.
+
+**Source-pinned runnable artifacts:**
+- [`implementation/research/arg01_lineage_lab_v0_1.py`](../../implementation/research/arg01_lineage_lab_v0_1.py) — a standalone, stdlib-only pure-function model of `fixture source → derived summary → tool argument → simulated policy sink`. No imports from Ario's security enforcement runtime.
+- [`implementation/tests/test_arg01_lineage_lab_v0_1.py`](../../implementation/tests/test_arg01_lineage_lab_v0_1.py) — 18 independent *test cases*, including missing body/parent, unknown/cyclic lineage, deep bounded graph, mixed ancestry, synthetic GitHub merge-ref and file-path injection, retry laundering and a legitimate mixed-trust content control.
+
+**Local execution observed 2026-11-18** in a disposable isolated Python environment before GitHub publication: `python -B -m unittest -v test_arg01_lineage_lab_v0_1.py` → **18 tests, OK**. GitHub Actions and repository-integrated execution are **separate validation gates** and are not asserted by this local record.
+
+**The two comparison arms are explicitly separated:**
+
+| Arm | Inputs | Outcome definition | Epistemic limit |
+|---|---|---|---|
+| `SUPPLIED_FIXTURE_LABELS` | Hand-labelled `TRUSTED_USER_FIXTURE`/`UNTRUSTED_EXTERNAL_FIXTURE` argument roots | A direct toy `ALLOW/BLOCK/UNKNOWN` policy decision | These are author-supplied oracle *assumptions*, not authenticated identity or independent expert labels |
+| `DERIVED_LINEAGE` | Synthetic root graph → summary node → derived argument node → same toy policy | Computes transitive root labels; ignores a summary's self-asserted trusted label; UNKNOWN on missing/cyclic/inconsistent/budget-exceeded ancestry | This checks structural propagation **only** from labels whose source attribution is still unverified |
+
+**Concrete falsifiers and results in this synthetic implementation:** an untrusted web summary relabelled as `TRUSTED` cannot bind a simulated recipient, GitHub merge ref or deletion path; mixing trusted and untrusted ancestry on an authority argument is `BLOCK`; missing body, missing parent or a cycle results in `UNKNOWN`; a benign user-fixture recipient plus an external-fixture message body remains a toy `ALLOW`. A 1,500-node graph exceeds the explicit 128-node traversal budget and gives `UNKNOWN` without recursion failure. These labels are *diagnostics inside a no-side-effect sandbox*, not tool permissions.
+
+**Scope and open gates:** This does **not** authenticate a real user's root label, inspect a real LLM's summaries, detect malicious instructions inside permitted content, enforce actual email/GitHub/shell/file operations, prove safety in a deployed wrapper, establish representative accuracy, or satisfy preregistration/independent oracle requirements. No real accounts, keys, merges, file deletions, cloud calls, or evidence-admission permissions are involved. The original four pilots remain **NOT EXECUTED**; their scientific conclusions remain **UNKNOWN**.
+
+This artifact directly supplies the previously missing *testable provenance-propagation* path requested in the CodeRabbit ARG-01 Major review. That review thread remains **OPEN pending independent re-review**. A green synthetic test must not be used as a shortcut to silently resolve the review or grant merge/security authority.
