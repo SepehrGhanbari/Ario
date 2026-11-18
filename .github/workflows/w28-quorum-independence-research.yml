@@ -1,0 +1,31 @@
+name: W28 offline quorum / rollback / independence falsifier (one-shot)
+on:
+  pull_request:
+    paths:
+      - 'research/consensus/w28_quorum_independence_falsifier.py'
+      - 'research/consensus/test_w28_quorum_independence_falsifier.py'
+      - '.github/workflows/w28-quorum-independence-research.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  w28:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-2022]
+        python: ['3.13']
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install bounded crypto verifier
+        run: python -m pip install 'cryptography==46.0.4'
+      - name: Exercise W28 37 cases with original signed W22 fixtures and W27 synthetic cosigners
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python -B -m unittest discover -s research/consensus -p test_w28_quorum_independence_falsifier.py -v
