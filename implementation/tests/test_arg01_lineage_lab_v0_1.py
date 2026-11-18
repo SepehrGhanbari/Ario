@@ -19,6 +19,22 @@ def base_graph():
 
 
 class SyntheticLineageTests(unittest.TestCase):
+    # Lovable report, 2026-11-19: RED controls on original HEAD 33872d4.
+    # Malformed caller-provided tool names must not raise TypeError.
+    def test_malformed_nonstring_tool_names_return_unknown(self):
+        for tool in ([], {}, set(), None, 42):
+            with self.subTest(tool_type=type(tool).__name__):
+                self.assertEqual(decide_from_origins(tool, {}), UNKNOWN)
+
+    def test_unhashable_str_subclass_tool_name_returns_unknown(self):
+        class UnhashableTool(str):
+            __hash__ = None
+
+        self.assertEqual(
+            decide_from_origins(UnhashableTool("SIMULATED_SEND_EMAIL"), {}),
+            UNKNOWN,
+        )
+
     # TRAE independent review, 2026-11-19: four RED inputs on the pinned
     # pre-fix HEAD and two direct-guard mutation controls (M6/M7).
     def test_tainted_recipient_missing_body_is_unknown(self):
