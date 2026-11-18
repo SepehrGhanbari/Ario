@@ -80,6 +80,9 @@ authenticate its factual content or its claimed producer. There was **no
 integration** with `SourceMonitoringGuard`, `ConsolidationEngine`,
 `ProspectiveMemoryRegistry`, real signer, Ruleset or trust activation.
 
+> **Formal table of Established vs NOT_ESTABLISHED** is maintained in  
+> [`R6_STRENGTHENED_LIMITATIONS_AND_PHYSICAL_PROTOCOL.md`](R6_STRENGTHENED_LIMITATIONS_AND_PHYSICAL_PROTOCOL.md) §1.
+
 ## Long-term record and next step
 
 The GitHub Actions artifact is retained for **30 days**, reported to expire
@@ -96,12 +99,21 @@ administrator can change both E/C policies, call the result OS-level
 separation, never administrative independence. In all circumstances,
 `evidence_admission_allowed=false` and production remains NO_GO.
 
-## خلاصهٔ فارسی
+> Detailed executable draft of the physical protocol:  
+> [`R6_STRENGTHENED_LIMITATIONS_AND_PHYSICAL_PROTOCOL.md`](R6_STRENGTHENED_LIMITATIONS_AND_PHYSICAL_PROTOCOL.md) §2.
+
+## خلاصهٔ فارسی (نسخهٔ تقویت‌شده)
 
 هشِ **ساختگی و عمومی** را واقعاً به یک دفتر خارجی فرستادیم؛ رسید گرفتیم،
 امضای شاهدان و مسیر ثبت را با ابزار رسمی به‌صورت آفلاین بررسی کردیم، و
 تغییر یک بایتِ ورودی باعث رد رسید شد. این اولین شاهد بیرونی واقعی برای
 **انتشار هش** است، نه اثبات اجرای واقعی ابزار یا استقلال مدیریت کلید آریو.
 کلید اصلی و حافظه و قواعد اعتماد هیچ تغییری نکرده‌اند.
+
+**جملهٔ ثابت محدودیت (توصیه‌شده برای همهٔ اسناد R6):**
+
+> این آزمایش فقط نشان می‌دهد که یک هشِ ساختگی می‌تواند تحت سیاست تست اعلام‌شده به‌صورت عمومی و با شاهد بیرونی ثبت شود.  
+> استقلال مدیریتی، اجرای واقعی ابزار، اصالت ژورنال، یا هرگونه مجوز برای ورود شواهد به حافظه آریو را ثابت نمی‌کند.  
+> تمام دروازه‌های production و trust همچنان NO_GO هستند.
 
 **DRAFT / HOLD / NOT_ADOPTED / NO_MERGE / PRODUCTION=NO_GO / TRUST_ACTIVATION=NO_GO**
