@@ -1,0 +1,136 @@
+{
+  "schema": "ario-publication-zenodo-v1",
+  "source": "Zenodo public API",
+  "api_url": "https://zenodo.org/api/records/24343618",
+  "retrieved_date": "2026-11-18",
+  "record_id": 24343618,
+  "doi": "10.5281/zenodo.24343618",
+  "title": "Being With the Other: Conscience, Uncertainty, and the Right to Dissent — Complete Multilingual Edition (13 Languages, Version 7.1)",
+  "version": "v7.1",
+  "publication_date": "2026-11-18",
+  "creator": {
+    "name": "Ghanbari, Sepehr",
+    "affiliation": null,
+    "orcid": "0009-0006-4710-3914"
+  },
+  "resource_type": {
+    "title": "Book",
+    "type": "publication",
+    "subtype": "book"
+  },
+  "license": {
+    "id": "cc-by-4.0"
+  },
+  "access_right": "open",
+  "source_limitations": "Metadata and Zenodo-provider checksums observed; no independent byte download verification for all PDFs; local same-name copies do not necessarily match.",
+  "files": [
+    {
+      "name": "Being_With_the_Other_ar_FULL_DRAFT_V7_1_2026-11-18.pdf",
+      "size_bytes": 418403,
+      "checksum_md5": "md5:e9a9310bb692c08f5b3229248fb2a364",
+      "download_url": "https://zenodo.org/records/24343618/files/Being_With_the_Other_ar_FULL_DRAFT_V7_1_2026-11-18.pdf?download=1"
+    },
+    {
+      "name": "Being_With_the_Other_de_FULL_DRAFT_V7_1_2026-11-18.pdf",
+      "size_bytes": 456658,
+      "checksum_md5": "md5:eb4fa13b82e4b35127540a4d8ee01daa",
+      "download_url": "https://zenodo.org/records/24343618/files/Being_With_the_Other_de_FULL_DRAFT_V7_1_2026-11-18.pdf?download=1"
+    },
+    {
+      "name": "Being_With_the_Other_en_FULL_DRAFT_V7_1_2026-11-18.pdf",
+      "size_bytes": 400432,
+      "checksum_md5": "md5:a142ee640fa3f4643eb0180a02d4c91d",
+      "download_url": "https://zenodo.org/records/24343618/files/Being_With_the_Other_en_FULL_DRAFT_V7_1_2026-11-18.pdf?download=1"
+    },
+    {
+      "name": "Being_With_the_Other_es_FULL_DRAFT_V7_1_2026-11-18.pdf",
+      "size_bytes": 426409,
+      "checksum_md5": "md5:1f4d070e381c82e9f309668950dfb826",
+      "download_url": "https://zenodo.org/records/24343618/files/Being_With_the_Other_es_FULL_DRAFT_V7_1_2026-11-18.pdf?download=1"
+    },
+    {
+      "name": "Being_With_the_Other_fr_FULL_DRAFT_V7_1_2026-11-18.pdf",
+      "size_bytes": 447705,
+      "checksum_md5": "md5:f71573bfd19519d5ac17f5cfe50d9eab",
+      "download_url": "https://zenodo.org/records/24343618/files/Being_With_the_Other_fr_FULL_DRAFT_V7_1_2026-11-18.pdf?download=1"
+    },
+    {
+      "name": "Being_With_the_Other_hi_FULL_DRAFT_V7_1_2026-11-18.pdf",
+      "size_bytes": 426259,
+      "checksum_md5": "md5:bbc00fead8fffe3f88fd7bb38ca6b48d",
+      "download_url": "https://zenodo.org/records/24343618/files/Being_With_the_Other_hi_FULL_DRAFT_V7_1_2026-11-18.pdf?download=1"
+    },
+    {
+      "name": "Being_With_the_Other_id_FULL_DRAFT_V7_1_2026-11-18.pdf",
+      "size_bytes": 417503,
+      "checksum_md5": "md5:cc7c0d3c157e31e3abdb3bde598960f4",
+      "download_url": "https://zenodo.org/records/24343618/files/Being_With_the_Other_id_FULL_DRAFT_V7_1_2026-11-18.pdf?download=1"
+    },
+    {
+      "name": "Being_With_the_Other_ja_FULL_DRAFT_V7_1_2026-11-18.pdf",
+      "size_bytes": 890605,
+      "checksum_md5": "md5:c7ed53556d11acc0c89b52c68a092626",
+      "download_url": "https://zenodo.org/records/24343618/files/Being_With_the_Other_ja_FULL_DRAFT_V7_1_2026-11-18.pdf?download=1"
+    },
+    {
+      "name": "Being_With_the_Other_pt_FULL_DRAFT_V7_1_2026-11-18.pdf",
+      "size_bytes": 418447,
+      "checksum_md5": "md5:4eaa52e4a38f2da95246f335625582e7",
+      "download_url": "https://zenodo.org/records/24343618/files/Being_With_the_Other_pt_FULL_DRAFT_V7_1_2026-11-18.pdf?download=1"
+    },
+    {
+      "name": "Being_With_the_Other_ru_FULL_DRAFT_V7_1_2026-11-18.pdf",
+      "size_bytes": 456981,
+      "checksum_md5": "md5:f1b29c779bc94861aa66224158b29881",
+      "download_url": "https://zenodo.org/records/24343618/files/Being_With_the_Other_ru_FULL_DRAFT_V7_1_2026-11-18.pdf?download=1"
+    },
+    {
+      "name": "Being_With_the_Other_tr_FULL_DRAFT_V7_1_2026-11-18.pdf",
+      "size_bytes": 395771,
+      "checksum_md5": "md5:3774a40cabdb49f76b5f405f4b424319",
+      "download_url": "https://zenodo.org/records/24343618/files/Being_With_the_Other_tr_FULL_DRAFT_V7_1_2026-11-18.pdf?download=1"
+    },
+    {
+      "name": "Being_With_the_Other_V7_1_COMPLETE_FA.pdf",
+      "size_bytes": 5388072,
+      "checksum_md5": "md5:67239f1e04417d06951fdee1f1f19eeb",
+      "download_url": "https://zenodo.org/records/24343618/files/Being_With_the_Other_V7_1_COMPLETE_FA.pdf?download=1"
+    },
+    {
+      "name": "Being_With_the_Other_zh_FULL_DRAFT_V7_1_2026-11-18.pdf",
+      "size_bytes": 867787,
+      "checksum_md5": "md5:595c22725d903aba6650fd4d9ba9c60f",
+      "download_url": "https://zenodo.org/records/24343618/files/Being_With_the_Other_zh_FULL_DRAFT_V7_1_2026-11-18.pdf?download=1"
+    },
+    {
+      "name": "LICENSE_BOOK_CC_BY_4_0.md",
+      "size_bytes": 2541,
+      "checksum_md5": "md5:70efc19163865294fe1cd461d1023174",
+      "download_url": "https://zenodo.org/records/24343618/files/LICENSE_BOOK_CC_BY_4_0.md?download=1"
+    },
+    {
+      "name": "QA_COVERAGE.json",
+      "size_bytes": 7315,
+      "checksum_md5": "md5:dfb32170e57ab58ff469d89249cd71ad",
+      "download_url": "https://zenodo.org/records/24343618/files/QA_COVERAGE.json?download=1"
+    },
+    {
+      "name": "README_EN.md",
+      "size_bytes": 1827,
+      "checksum_md5": "md5:80c270040487407b1eddb8cf5a77c7b9",
+      "download_url": "https://zenodo.org/records/24343618/files/README_EN.md?download=1"
+    },
+    {
+      "name": "README_FA.md",
+      "size_bytes": 5361,
+      "checksum_md5": "md5:f716151698a916317a8bedac0b0c4d86",
+      "download_url": "https://zenodo.org/records/24343618/files/README_FA.md?download=1"
+    },
+    {
+      "name": "SHA256SUMS.txt",
+      "size_bytes": 1560,
+      "checksum_md5": "md5:b5fb079dbe7d831e3ecc344086de4485",
+      "download_url": "https://zenodo.org/records/24343618/files/SHA256SUMS.txt?download=1"
+    }
+  ]
+}
