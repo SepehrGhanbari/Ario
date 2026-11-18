@@ -122,3 +122,10 @@ This is a **dated, additive evidence update** to the original 2026-11-10 design-
 **Scope and open gates:** This does **not** authenticate a real user's root label, inspect a real LLM's summaries, detect malicious instructions inside permitted content, enforce actual email/GitHub/shell/file operations, prove safety in a deployed wrapper, establish representative accuracy, or satisfy preregistration/independent oracle requirements. No real accounts, keys, merges, file deletions, cloud calls, or evidence-admission permissions are involved. The original four pilots remain **NOT EXECUTED**; their scientific conclusions remain **UNKNOWN**.
 
 This artifact directly supplies the previously missing *testable provenance-propagation* path requested in the CodeRabbit ARG-01 Major review. That review thread remains **OPEN pending independent re-review**. A green synthetic test must not be used as a shortcut to silently resolve the review or grant merge/security authority.
+
+
+## 2026-11-18 malformed-fixture follow-up (additive test evidence)
+
+A negative probe after the original **18/18** scratch run showed two malformed in-memory fixture inputs (`parents=(["unhashable"],)` or a list-valued `root_fixture_origin`) could produce a Python `TypeError` instead of the intended `UNKNOWN` diagnostic. These inputs are **synthetic malformed object shapes**, not known production/JSON ingestion paths.
+
+The isolated lab now validates parent entry types before traversing the graph and validates fixture-root label types before membership lookup. **Two additional tests** assert a fail-closed `UNKNOWN` return without exceptions, bringing the test module to **20 tests**. A fresh disposable local `python -B -m unittest -q test_arg01_lineage_lab_v0_1.py` run observed **20 tests, OK**. This correction does not touch Ario's runtime, admission logic, protected files, or real tool use. The original 18-test observation above remains a historical record; new exact-HEAD hosted CI is a separate gate.
