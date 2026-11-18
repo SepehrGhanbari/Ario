@@ -1,0 +1,42 @@
+name: R63 V12 known same-admin rollback counterexamples (research only)
+on:
+  push:
+    branches:
+      - research/r63-v12-evidence-rollback-20261118
+    paths:
+      - .github/workflows/r63-v12-rollback-counterexamples.yml
+      - research/r63_v12_evidence_ci/**
+      - research/r63_v10_source_gate/spend_chain_v2.py
+      - research/r63_v10_source_gate/.gitattributes
+permissions:
+  contents: read
+jobs:
+  negative-local-rollback:
+    name: expected-local-bypass / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, ubuntu-24.04]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - name: Exact-frozen V9 V2 — expected same-admin rollback bypass
+        shell: pwsh
+        run: |
+          Write-Host 'RESEARCH_ONLY / NEGATIVE_CONTROLS / NO_SIGNER / NO_INDEPENDENT_CUSTODY'
+          python -B research/r63_v12_evidence_ci/test_known_local_rollback.py *> r63-v12-counterexamples.log
+          $code=$LASTEXITCODE
+          Get-Content r63-v12-counterexamples.log
+          if ($code -ne 0) { exit $code }
+      - name: Preserve complete negative-control log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r63-v12-negative-${{ matrix.os }}-${{ github.run_id }}
+          path: r63-v12-counterexamples.log
+          if-no-files-found: warn
+          retention-days: 30
