@@ -153,7 +153,9 @@ class W25(unittest.TestCase):
         from w23_checkpoint_gossip import read_signed_note
         h=read_signed_note(self.old,self.key)
         c=_connect(self.a,'anchor')
-        try:c.execute('INSERT INTO anchor(singleton,size,root) VALUES(1,?,?)',(h['size'],h['root']))
+        try:
+            c.execute('INSERT INTO anchor(singleton,size,root) VALUES(1,?,?)',(h['size'],h['root']))
+            c.execute('INSERT INTO history(size,root) VALUES(?,?)',(h['size'],h['root']))
         finally:c.close()
         r=self.finish()
         self.assertEqual(r['status'],'FINAL_UNSIGNED_RECEIPT')
@@ -202,6 +204,16 @@ class W25(unittest.TestCase):
         try:c.execute("UPDATE requests SET receipt='UNSIGNED_W25_LAB_RECEIPT:forged' WHERE rid='req1'")
         finally:c.close()
         self.assertEqual(self.finish()['status'],'HOLD')
+
+    def test_28_older_committed_receipt_survives_newer_checkpoint(self):
+        self.first()
+        original=self.finish('req1')['unsigned_lab_receipt']
+        self.assertEqual(self.prep('req2',1,self.new,self.proof)['status'],'PENDING_ANCHOR')
+        self.assertEqual(self.anchor(1,self.new,self.proof)['status'],'ANCHORED_LAB')
+        self.assertEqual(self.finish('req2')['status'],'FINAL_UNSIGNED_RECEIPT')
+        recovered=self.finish('req1')
+        self.assertEqual(recovered['status'],'FINAL_UNSIGNED_RECEIPT',recovered)
+        self.assertEqual(recovered['unsigned_lab_receipt'],original)
 
     def test_23_no_authority_or_real_witness(self):
         self.first();r=self.finish()
