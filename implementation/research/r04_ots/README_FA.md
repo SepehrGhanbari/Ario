@@ -18,7 +18,7 @@
 - `synthetic_checkpoint_r04.ots.b64`: رسید واقعی ۵۴۹ بایتی در قالب Base64 متن (SHA256 باینری: `5b7fc36d470560adbc8fd4620436451ea43ea0578bf50e7ca6104ce0280c3bf6`). صرفاً به دلیل امکان افزودن پروندهٔ متنی به GitHub است.
 - `manifest.json`: هش‌ها، منشأ و محدودیت‌های ادعاها.
 - `verify_r04.py`: ممیز تنهاخواندنی با کتابخانهٔ استاندارد پایتون؛ **خروجی `EXACT_ARCHIVED_BYTES_MATCHED` فقط به معنای تطابق بایت‌های آرشیو است، نه اثبات بیت‌کوین.**
-- `implementation/tests/test_r04_ots_archive.py`: ۱۵ تست مثبت و منفی، شامل دستکاری فایل، رسید، rollback، جعل استقلال شاهد، split view و نبود floor.
+- `implementation/tests/test_r04_ots_archive.py`: ۱۷ تست مثبت و منفی، شامل دستکاری فایل، رسید، rollback، جعل استقلال شاهد، split view و نبود floor.
 - `REVIEW_EN.md`: دستور بازبینی برای همکاران دیگر.
 - `LIVE_RECHECK_2026-11-18.md`: خروجی بررسی مجددِ واقعی، همچنان `PENDING`.
 
@@ -51,6 +51,10 @@ ots upgrade -n synthetic_checkpoint_r04.json.ots
 ```
 
 گزینهٔ `-n` در دستور upgrade نسخهٔ اصلی رسید را تغییر نمی‌دهد. پیش از هر ارتقای غیرآزمایشی، نسخهٔ سالمِ اولیه را جداگانه نگه دارید. برای اثبات مستقل بیت‌کوین، ارزیابی معتبر بلاک/هدر لازم است؛ صرف پاسخ تقویم یا خروجی `ots info` کافی نیست. مستند رسمی: https://github.com/opentimestamps/opentimestamps-client
+
+### نکتهٔ بایت‌به‌بایت در ویندوز
+
+اجرای نخست GitHub Actions روی ویندوز، با وجود PASS لینوکس، چهار تست را به‌خاطر تبدیل خودکار LF به CRLF در فایل JSON رد کرد. به‌جای پذیرش یا نرمال‌سازی بی‌صدا، فقط در همین پوشه، `.gitattributes` برای فایل اصلی `-text` تنظیم شد تا Git دقیقاً همان ۶۱۳ بایت تاریخی را تحویل دهد. دو تست جدید این مرز را بررسی می‌کنند: بایت‌های صحیح باید PASS شوند و نسخهٔ CRLF باید REJECT شود. اجرای نخستین شکست در [CI RED #44391355514](https://github.com/SepehrGhanbari/Ario/actions/runs/44391355514) ثبت و بدون پاک‌کردن سابقه نگه‌داری شده است. اجرای اصلاح‌شده در [CI #44391716450](https://github.com/SepehrGhanbari/Ario/actions/runs/44391716450) روی Linux و Windows **SUCCESS** شد؛ تا زمان تأیید دوبارهٔ همین README، مقدار SHA نهایی PR باید جداگانه کنترل شود.
 
 ## چک‌لیست برای بازبین
 
