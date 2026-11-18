@@ -111,10 +111,12 @@ def serve(socket_path, ledger_path, allowed_uid, expected_calls):
                 try:
                     creds = conn.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, struct.calcsize("3i"))
                     _pid, uid, _gid = struct.unpack("3i", creds)
+                    # Drain one bounded request before responding: prevent an
+                    # unauthorized client's send/close from racing the verdict.
+                    raw = conn.recv(MAX_REQ+1)
                     if uid != allowed_uid:
                         ans = reply("DENIED_PEER_UID", os_peer_uid=uid)
                     else:
-                        raw = conn.recv(MAX_REQ+1)
                         if len(raw) > MAX_REQ or raw != b"HEAD\n":
                             ans = reply("DENIED_UNSUPPORTED_OR_LARGE_REQUEST", os_peer_uid=uid)
                         else:
@@ -183,6 +185,9 @@ def run_native():
         checks = []
         environment = dict(os.environ)
         environment["ARIO_W26_CI_ROOT"] = str(base)
+        # Numeric UIDs cannot traverse the runner-owned RUNNER_TEMP parent.
+        # Scope child guard to the world-traversable, root-created scratch base.
+        environment["RUNNER_TEMP"] = str(base)
 
         def run_as(uid, *params):
             a=subprocess.run([sys.executable,"-B",str(worker_source),*map(str,params)],
