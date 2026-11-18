@@ -1,0 +1,35 @@
+{
+  "experiment": "RERE-01/V0.3",
+  "date": "2026-11-18",
+  "classification": "POST_HOC / EXPLORATORY; N15/N16 were discovered after v0.2, not represented as earlier preregistered tests",
+  "status": "RESEARCH_ONLY / DRAFT / HOLD / NO_MERGE / PRODUCTION=NO_GO",
+  "github_branch": "research/rere01-recursive-memory-20261118",
+  "source_commit": "b5014578c13e24a17285a154b9e557f696d15f2f",
+  "source_path": "implementation/research/rere01/revision_comparator_v0_2.py",
+  "source_blob": "a54e4028e7d38d95a2fd78fb7c72db7a78665216",
+  "oracle_scope": "Frozen toy LAB-E101; synthetic labels/roots/timestamps not an authentication of witnesses or independently operated clocks",
+  "new_findings": [
+    {
+      "id": "N15",
+      "baseline": "CONDITIONALLY_REFUTED_IN_LAB with overwritten OBJECT_REVIEW_NOT_WARRANTED reason",
+      "desired": "Keep reason C_MATCHED_FROZEN_SYNTHETIC_CONTROLLER when later object review is not warranted"
+    },
+    {
+      "id": "N16",
+      "baseline": "After T4 challenged LAB-C, a new C-based object assessment restored CONDITIONALLY_REFUTED_IN_LAB",
+      "desired": "Keep UNKNOWN and T3_JUSTIFICATION_NO_LONGER_RELIABLE; repeated C-based review NOT_WARRANTED"
+    }
+  ],
+  "source_analysis": "M0 AuditEngine on synthetic Assessment T3/T4 actually returned FAIL, EVIDENCE_INADMISSIBLE twice and UNKNOWN. Recording of Assessment is not evidence admission.",
+  "pre_fix_evidence": "Vercel Sandbox exact source b5014578, N15/N16 reproduced using Python 3.14.4 in isolated copied worktree",
+  "isolated_research_patch": "Four narrow hunks (local challenged_evidence set, guard for reused challenged source, reason preservation, mark source after valid CAL)",
+  "patch_validation": "git apply --check passed in copied worktree; T3/T4/N15/N16 patched smoke PASS. Full PR CI pending at time of manifest creation.",
+  "negative_scope": "This in-process set is not persistent, authenticated, anti-rollback, or independent; source custody and time trust remain UNKNOWN",
+  "no_rewrite": "V0.1 and V0.2 preregistrations and failures remain unchanged",
+  "intended_tests": [
+    "T3/T4 as-of positive control",
+    "N15 no invalid reason laundering",
+    "N16 no challenged-witness resurrection",
+    "M0 audit refuses unadmitted synthetic assessments"
+  ]
+}
