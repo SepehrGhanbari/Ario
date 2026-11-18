@@ -61,7 +61,7 @@ def child(root,op,n,k):
 def holder(root):
     with Lock(root,5):
         durable(root/"ready",str(os.getpid()).encode())
-        time.sleep(1.4)
+        time.sleep(3.0)
         os._exit(73)
 
 def launch(root,op,n,k):
@@ -90,6 +90,18 @@ def test():
         with Lock(root,.2):pass
     except TimeoutError:blocked=True
     if not blocked:raise RuntimeError("OS_LOCK_BYPASSED_BY_SECOND_PROCESS")
+    # Counterexample: locking a *different* lockfile does NOT stop
+    # an uncooperative process from modifying a journal file directly.
+    if p.poll() is not None:
+        raise RuntimeError("holder already dead before uncooperative-writer probe")
+    q=subprocess.run([sys.executable,"-B",str(pathlib.Path(__file__)),
+                      "--intruder",str(root)],capture_output=True,timeout=10)
+    if q.returncode!=0 or (root/"v1").read_bytes()!=b"X":
+        raise RuntimeError("uncooperative-writer counterexample not reproduced")
+    if p.poll() is not None:
+        raise RuntimeError("holder exited during uncooperative-writer probe")
+    (root/"v1").write_bytes(b"")
+    print("UNCOOPERATIVE_WRITER_CAN_BYPASS_LOCK=EXPECTED_COUNTEREXAMPLE")
     if p.wait(timeout=10)!=73:raise RuntimeError("wrong holder exit")
     with Lock(root,.5):pass
     print("EXCLUSIVE_WIN32_SECOND_PROCESS_BLOCKED=PASS")
@@ -118,6 +130,11 @@ if __name__=="__main__":
         holder(pathlib.Path(sys.argv[2]))
     elif sys.argv[1:2]==["--client"] and len(sys.argv)==6:
         child(pathlib.Path(sys.argv[2]),sys.argv[3],sys.argv[4],sys.argv[5])
+    elif sys.argv[1:2]==["--intruder"] and len(sys.argv)==3:
+        with (pathlib.Path(sys.argv[2])/"v1").open("ab") as fd:
+            fd.write(b"X")
+            fd.flush()
+            os.fsync(fd.fileno())
     elif sys.argv[1:]==["--ci"]:
         test()
     else:raise SystemExit("invalid args")
