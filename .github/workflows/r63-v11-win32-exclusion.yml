@@ -1,0 +1,37 @@
+name: R63 V11 native Win32 multi-process journal exclusion
+on:
+  push:
+    branches:
+      - research/r63-v10-windows-ci-smoke-20261117
+    paths:
+      - .github/workflows/r63-v11-win32-exclusion.yml
+      - research/r63_v11_win32_lock_ci/**
+      - research/r63_v10_source_gate/spend_chain_v2.py
+      - research/r63_v10_source_gate/.gitattributes
+permissions:
+  contents: read
+jobs:
+  win32-native-exclusion:
+    runs-on: windows-2022
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - name: True Win32 exclusive share lock, killed holder, independent clients
+        shell: pwsh
+        run: |
+          Write-Host "RESEARCH_ONLY / NO_REAL_KEYS / NO_CNG / NO_V9_SERVICE"
+          python -B research/r63_v11_win32_lock_ci/test_win32_cross_process_exclusion.py --ci *> r63-v11-win32-lock.log
+          $result = $LASTEXITCODE
+          Get-Content r63-v11-win32-lock.log
+          if ($result -ne 0) { exit $result }
+      - name: Preserve complete test log including failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r63-v11-win32-native-lock-${{ github.run_id }}
+          path: r63-v11-win32-lock.log
+          if-no-files-found: warn
+          retention-days: 30
