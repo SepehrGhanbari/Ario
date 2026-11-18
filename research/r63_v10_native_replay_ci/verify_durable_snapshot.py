@@ -40,6 +40,8 @@ def verify(root:Path):
     metadata=bounded(root/"metadata.json")
     try:
         obj=json.loads(metadata.decode("utf-8"))
+        if metadata!=(json.dumps(obj,sort_keys=True,indent=2)+"\n").encode("utf-8"):
+            raise Hold("metadata not exact canonical persisted bytes")
         if type(obj) is not dict or set(obj)!={
             "version","nonce","identifier","v1_sha256","v2_sha256",
             "v2_head","v2_event_count","disposition"}:

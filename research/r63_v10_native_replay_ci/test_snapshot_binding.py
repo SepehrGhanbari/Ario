@@ -70,6 +70,11 @@ class BindingTests(unittest.TestCase):
         p=self.root/"payload.bin";b=bytearray(p.read_bytes());b[-1]^=1;p.write_bytes(b)
         with self.assertRaises(Hold):verify(self.root)
 
+    def test_metadata_canonical_terminal_lf_required(self):
+        p=self.root/"metadata.json"
+        p.write_bytes(p.read_bytes()[:-1])
+        with self.assertRaises(Hold):verify(self.root)
+
     def test_missing_metadata(self):
         (self.root/"metadata.json").unlink()
         with self.assertRaises(Hold):verify(self.root)

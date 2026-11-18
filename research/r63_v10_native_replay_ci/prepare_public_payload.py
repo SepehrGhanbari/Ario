@@ -40,7 +40,7 @@ def prepare(path:Path):
     (path/"payload.bin").write_bytes(body)
     (path/"v1.jsonl").write_bytes(legacy)
     (path/"v2.jsonl").write_bytes(journal)
-    (path/"metadata.json").write_text(json.dumps(data,sort_keys=True,indent=2)+"\n",encoding="utf-8")
+    (path/"metadata.json").write_text(json.dumps(data,sort_keys=True,indent=2)+"\n",encoding="utf-8",newline="\n")
     print("SYNTHETIC_V9_V2_SOURCE_PIN=PASS")
     print("SYNTHETIC_V2_EVENTS="+str(state.seq))
     print("PUBLIC_RECEIPT_PAYLOAD_SHA256="+hashlib.sha256(body).hexdigest())

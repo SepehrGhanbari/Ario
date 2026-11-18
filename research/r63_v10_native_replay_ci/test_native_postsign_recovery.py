@@ -42,6 +42,10 @@ def replay(root,pin):
            "expected-public-pin.sha256")
     try:
         first={n:(root/n).read_bytes() for n in names}
+        if (first["expected-public-pin.sha256"]!=(pin+"\n").encode("ascii")
+            or not first["use-entered.json"].endswith(b"\n")
+            or not first["use-returned.json"].endswith(b"\n")):
+            return b"HOLD_UNCERTAIN\n"
         if first["expected-public-pin.sha256"].decode("ascii").strip()!=pin:
             return b"HOLD_UNCERTAIN\n"
         use=json.loads(first["use-entered.json"])
