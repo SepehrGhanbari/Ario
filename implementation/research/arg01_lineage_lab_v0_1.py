@@ -43,11 +43,13 @@ def derive_origin(graph: Mapping[str, Node], target: str, budget: int = MAX_NODE
         node = graph.get(key)
         if not isinstance(node, Node):
             return None
+        if not isinstance(node.parents, tuple) or any(not isinstance(parent, str) or not parent for parent in node.parents):
+            return None
         if finish:
             if not isinstance(node.parents, tuple) or any(not isinstance(p, str) or not p for p in node.parents):
                 return None
             if not node.parents:
-                if node.root_fixture_origin not in ALLOWED_ORIGINS:
+                if not isinstance(node.root_fixture_origin, str) or node.root_fixture_origin not in ALLOWED_ORIGINS:
                     return None
                 lineage[key] = frozenset({node.root_fixture_origin})
             else:
