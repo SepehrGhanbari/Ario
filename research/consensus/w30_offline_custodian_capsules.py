@@ -61,7 +61,7 @@ def _note(value):
 
 
 def _result(reason, **extra):
-    return dict(
+    result = dict(
         status="HOLD", reason=reason, production="NO_GO",
         trust_activation="NO_GO", genesis="NO_GO", authority="NONE",
         memory_admitted=False, signatures_issued=0, external_actions=0,
@@ -70,8 +70,18 @@ def _result(reason, **extra):
         independently_administered_custody="NOT_ESTABLISHED",
         external_retained_floor="NOT_ESTABLISHED",
         source_truth="UNKNOWN", world_freshness="UNKNOWN",
-        **extra,
     )
+    # Allow detailed crypto diagnostics to replace only diagnostic fields.
+    # Never let caller-controlled fields override trust/authority/no-go labels.
+    allowed = {"cryptographic_chain","chain_length","latest_seq",
+               "latest_capsule_sha256","last_signed_checkpoint_size",
+               "last_signed_checkpoint_root","rotations_checked",
+               "revocation_seen","floor_binding","final_active_key_sha256",
+               "at","floor_sequence"}
+    if not set(extra).issubset(allowed):
+        return dict(result, reason="UNEXPECTED_DIAGNOSTIC_FIELD")
+    result.update(extra)
+    return result
 
 
 def verify_chain(capsules, *, pinned_initial_key_b64, pinned_log_vkey,
