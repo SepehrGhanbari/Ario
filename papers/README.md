@@ -1,5 +1,11 @@
 # Ario Research Papers
 
+
+## Published multilingual philosophical book — 18 November 2026 (v7.1)
+
+**[Being With the Other: Conscience, Uncertainty, and the Right to Dissent — 13-language edition](https://doi.org/10.5281/zenodo.24343618)**. Published on Zenodo as an open-access Book (CC BY 4.0), by Sepehr Ghanbari. The original complete Persian PDF and **12 full-text machine-translated working editions** (not native-editor-certified translations) are available with official direct links and an 18-file inventory in the [v7.1 publication record](./being-with-the-other/v7.1/zenodo-24343618/README.md). The old v6 repository originals remain unchanged; see [source/byte-identity caveats](./being-with-the-other/v7.1/zenodo-24343618/SOURCE_INTEGRITY_NOTE.md).
+
+
 ## Latest verified research-source completeness update (14 November 2026)
 
 For AI reading, the latest public-pinned TXT/ZIP release should include **the full
