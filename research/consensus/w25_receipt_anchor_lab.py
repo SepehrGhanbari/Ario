@@ -36,7 +36,7 @@ def _connect(path, kind):
         con.execute('PRAGMA synchronous=FULL')
         if kind=='publisher':
             con.execute('CREATE TABLE IF NOT EXISTS head (singleton INTEGER PRIMARY KEY CHECK(singleton=1), size INTEGER NOT NULL, root TEXT NOT NULL)')
-            con.execute('CREATE TABLE IF NOT EXISTS requests (rid TEXT PRIMARY KEY, old_size INTEGER NOT NULL, size INTEGER NOT NULL, root TEXT NOT NULL, note_hash TEXT NOT NULL, proof_hash TEXT NOT NULL, state TEXT NOT NULL CHECK(state IN ('PENDING','FINAL')), receipt TEXT)')
+            con.execute("CREATE TABLE IF NOT EXISTS requests (rid TEXT PRIMARY KEY, old_size INTEGER NOT NULL, size INTEGER NOT NULL, root TEXT NOT NULL, note_hash TEXT NOT NULL, proof_hash TEXT NOT NULL, state TEXT NOT NULL CHECK(state IN ('PENDING','FINAL')), receipt TEXT)")
         elif kind=='anchor':
             con.execute('CREATE TABLE IF NOT EXISTS anchor (singleton INTEGER PRIMARY KEY CHECK(singleton=1), size INTEGER NOT NULL, root TEXT NOT NULL)')
         else:raise ValueError('invalid store kind')
@@ -92,7 +92,7 @@ def prepare(publisher_path, *, request_id, old_size, candidate_note, pinned_vkey
             con.execute('ROLLBACK')
             if tuple(stored[:5])!=requested:return result('DENY','REQUEST_ID_REUSED_WITH_DIFFERENT_BYTES')
             return result('EXISTING_INTENT','REPLAY_REQUIRES_ANCHOR_CHECK')
-        if con.execute('SELECT 1 FROM requests WHERE state='PENDING' LIMIT 1').fetchone():
+        if con.execute("SELECT 1 FROM requests WHERE state='PENDING' LIMIT 1").fetchone():
             con.execute('ROLLBACK');return result('HOLD','ANOTHER_REQUEST_PENDING')
         previous=_read(con,'head')
         expected=0 if previous is None else previous['size']
@@ -100,7 +100,7 @@ def prepare(publisher_path, *, request_id, old_size, candidate_note, pinned_vkey
             con.execute('ROLLBACK');return result('CONFLICT','LOCAL_OLD_SIZE_MISMATCH')
         if not _consistent(previous,head,proof):
             con.execute('ROLLBACK');return result('DENY','BAD_CONSISTENCY_OR_FORK')
-        con.execute('INSERT INTO requests(rid,old_size,size,root,note_hash,proof_hash,state,receipt) VALUES(?,?,?,?,?,?,'PENDING',NULL)', (request_id,*requested))
+        con.execute("INSERT INTO requests(rid,old_size,size,root,note_hash,proof_hash,state,receipt) VALUES(?,?,?,?,?,?,'PENDING',NULL)", (request_id,*requested))
         con.execute('COMMIT')
         if crash_stage=='after_prepare_commit':os._exit(81)
         return result('PENDING_ANCHOR','DURABLE_REQUEST_INTENT_NO_RECEIPT')
@@ -208,7 +208,7 @@ def finalize(publisher_path, anchor_path, *, request_id, crash_stage=None):
             pub.execute('ROLLBACK');return result('CONFLICT','PREPARED_OLD_HEAD_CHANGED')
         receipt=_receipt(request_id,note_hash,size,root)
         pub.execute('INSERT INTO head(singleton,size,root) VALUES(1,?,?) ON CONFLICT(singleton) DO UPDATE SET size=excluded.size,root=excluded.root', (size,root))
-        pub.execute('UPDATE requests SET state='FINAL',receipt=? WHERE rid=? AND state='PENDING'', (receipt,request_id))
+        pub.execute("UPDATE requests SET state='FINAL',receipt=? WHERE rid=? AND state='PENDING'", (receipt,request_id))
         if crash_stage=='before_final_commit':os._exit(84)
         pub.execute('COMMIT')
         if crash_stage=='after_final_commit':os._exit(85)
