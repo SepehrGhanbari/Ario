@@ -1,0 +1,11 @@
+{
+  "source_repository": "SepehrGhanbari/Ario",
+  "source_branch": "research/consensus-sprint-20261116",
+  "source_path": "research/consensus/W22_PUBLIC_SYNTHETIC_SIGNED_NOTES_2026-11-17.json",
+  "source_git_blob_sha1": "6aaf4b53e4f1e3e88556fcfbbbfddaef3445da8e",
+  "origin": "ario-w22-research.invalid/synthetic-log",
+  "public_vkey": "ario-w22-research.invalid/synthetic-log+299a48f8+ATwbbrVTipswGLovzPlEFnVMsj9Fm//ZOZH5WneKc6Ut",
+  "previous": "ario-w22-research.invalid/synthetic-log\n3\ndQg9dpXFhEh5mB4/Bmwb3bfXfOvU4+mqceQ67QoNPyE=\n\n— ario-w22-research.invalid/synthetic-log KZpI+LGTKj6f4lucQqjJSpie9Mmvf0PB0sGH2uaD7pbvAsN8HTAofcuHIKQ/Dnc2KD307VGXE1wM7vNQ3vx8cYsomg8=\n",
+  "current": "ario-w22-research.invalid/synthetic-log\n8\n/oVYTQgedPrcn6BQx88eKcG8AmOUB7/5vUt4s1vcs5I=\n\n— ario-w22-research.invalid/synthetic-log KZpI+JHnylwrPiTpl3oZ7s3bFTqSz9xlU575hRsu34LR4RlJJwFnvL6edHqvN1Ox5ifzHh1lVygp8EfGKzR2FpfLFgU=\n",
+  "same_size_fork": "ario-w22-research.invalid/synthetic-log\n8\nFXM9uiMWsQx6K588a9F4H2Btnszb8YHIaH/95dIB2vk=\n\n— ario-w22-research.invalid/synthetic-log KZpI+HlRcpDqm0uI62tC8t5v2rhY+A8jsg8ssQUTcUO0w1Lc49PDBI2vv+LkfHevSmTw5x+9g0+JyC2l50zrvMTCHwU=\n"
+}
