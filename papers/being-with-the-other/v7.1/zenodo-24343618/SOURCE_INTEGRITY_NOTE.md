@@ -8,3 +8,4 @@ DOI: https://doi.org/10.5281/zenodo.24343618
 - Local staging copies from earlier drafting iterations sometimes share **names but not bytes** with Zenodo-deposited PDFs (example: published Persian PDF MD5 `67239f1e04417d06951fdee1f1f19eeb`; local later-repacked copy MD5 `9019b704261e5bc244da408a107cc6aa`). This is **not evidence that the Zenodo files are broken**, but a limit on claims of exact binary mirroring.
 - The published SHA256SUMS.txt is included here unchanged as a record artifact; we do not assert it cryptographically matches downloaded PDF bytes until a separate independent download-and-hash audit.
 - Source files preserved as references, not overwritten; no production keys or signature claims.
+undefined
