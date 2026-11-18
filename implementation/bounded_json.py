@@ -17,6 +17,7 @@ assess the content.
 from __future__ import annotations
 
 import json
+from decimal import Decimal
 from typing import Any
 
 MAX_JSON_DEPTH = 64
@@ -70,7 +71,14 @@ def loads_bounded(text: str, *, max_depth: int = MAX_JSON_DEPTH, **kwargs: Any) 
     # CPython 3.11+ can raise ValueError (rather than JSONDecodeError)
     # on an integer exceeding its decimal-digit limit. Enforce a stable
     # input bound even when interpreter digit limits differ or are disabled.
-    parse_int = kwargs.get("parse_int", int)
+    # CPython allows an application to lower its integer conversion limit
+    # (e.g. to 640 digits). The builtin int(str) would then reject otherwise
+    # within-policy tokens, so default numeric decoding must not depend on
+    # the process-global interpreter setting. Decimal parses digits exactly;
+    # int(Decimal) avoids the decimal-string conversion limit.
+    parse_int = kwargs.get("parse_int")
+    if parse_int is None or parse_int is int:
+        parse_int = lambda literal: int(Decimal(literal))
     if callable(parse_int):
         def bounded_parse_int(literal: str) -> Any:
             if len(literal.lstrip("-")) > MAX_JSON_INTEGER_DIGITS:
