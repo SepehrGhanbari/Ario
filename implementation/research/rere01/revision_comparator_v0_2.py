@@ -53,6 +53,7 @@ class SyntheticPolicy:
     event_time: str
     pinned_roots: tuple[tuple[str, str], ...]
     calibration_pairs: tuple[tuple[str, str], ...]
+    calibration_observed_at: str = "2026-11-18T00:05:00Z"  # synthetic fixture pin only
 
 
 @dataclass(frozen=True)
@@ -89,6 +90,8 @@ def _check_policy(policy: SyntheticPolicy) -> dict[str, str]:
         raise LabContractError("unsupported or missing synthetic policy")
     if policy.event_id != EVENT_ID or not policy.event_time:
         raise LabContractError("wrong event scope")
+    if not isinstance(policy.calibration_observed_at, str) or not policy.calibration_observed_at:
+        raise LabContractError("missing synthetic calibration time pin")
     roots: dict[str, str] = {}
     for source_id, root in policy.pinned_roots:
         if not isinstance(source_id, str) or not source_id or not isinstance(root, str) or not root:
@@ -201,6 +204,8 @@ def project(records: tuple[Record, ...], policy: SyntheticPolicy) -> Projection:
             and source.source_id == "CAL"
             and old_source.source_id == "C"
             and source.reported_value == "CLOCK_MISMATCH"
+            and source.observed_at == policy.calibration_observed_at
+            and reliability.get(previous.record_id) == "CONDITIONALLY_WARRANTED_IN_LAB"
             and source.target_record_id == old_source.record_id
             and (source.source_id, old_source.source_id) in policy.calibration_pairs
             and _validated(source, roots)
