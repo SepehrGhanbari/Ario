@@ -109,7 +109,11 @@ def review(bundle):
         seen_names.add(name)
         vkey=pins[name]
         try:
-            encoding=vkey.rsplit("+",1)[1]
+            # A vkey has name + key-id + base64; base64 itself may contain '+'.
+            # Split only the first two separators, never rsplit from the end.
+            parts=vkey.split("+",2)
+            if len(parts)!=3:raise ValueError("invalid vkey separators")
+            encoding=parts[2]
             raw=base64.b64decode(encoding,validate=True)
         except (IndexError,ValueError,base64.binascii.Error):
             return _out("INVALID_EXTERNALLY_SUPPLIED_KEY", verified=valid)
