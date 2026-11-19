@@ -231,7 +231,7 @@ function Read-History([string] $path) {
     }
     return @{head=$head;count=$count;nonces=$seen;revoked=$revoked}
 }
-function Append-History([string]$path,$st,[string]$kind,$nonce,[string]$receiptHash) {
+function Append-History([string]$path,$st,[string]$kind,$nonce,[string]$receiptHash,[string]$publicSha='') {
     if ($st.count -ge $MaxRecords) { throw 'HISTORY_LIMIT' }
     $ev=[ordered]@{index=($st.count+1);previous_sha256=$st.head;kind=$kind;
                    nonce=$nonce;receipt_sha256=$receiptHash}
@@ -241,7 +241,7 @@ function Append-History([string]$path,$st,[string]$kind,$nonce,[string]$receiptH
     $file=[IO.File]::Open($path,[IO.FileMode]::Append,[IO.FileAccess]::Write,[IO.FileShare]::Read)
     try { $file.Write($bytes,0,$bytes.Length); $file.Flush($true) }
     finally { $file.Dispose() }
-    return (New-Report $(if ($kind -eq 'REVOKED') {'SYNTHETIC_REVOKED'} else {'SYNTHETIC_RECEIPT_RECORDED'}) $newhead ($st.count+1))
+    return (New-Report $(if ($kind -eq 'REVOKED') {'SYNTHETIC_REVOKED'} else {'SYNTHETIC_RECEIPT_RECORDED'}) $newhead ($st.count+1) $publicSha)
 }
 function With-CustodianLock([string] $lab,[scriptblock] $operation) {
     $lockpath = Join-Path $lab 'C-research-lock'
@@ -285,14 +285,14 @@ try {
                     } elseif ($st.nonces.Contains($v.nonce)) {
                         New-Report 'REJECT_REPLAY_NONCE' $st.head $st.count $v.publicsha
                     } else {
-                        Append-History $journal $st 'SPENT' $v.nonce $v.receiptsha
+                        Append-History $journal $st 'SPENT' $v.nonce $v.receiptsha $v.publicsha
                     }
                 } elseif ($st.count -ne 0) {
                     New-Report 'HOLD_MISSING_POLICY_PIN' $st.head $st.count
                 } else {
                     # FIRST USE TRUST-ON-FIRST-USE, NOT independent authenticated enrollment.
                     [IO.File]::WriteAllText($publicPin, $v.public, [Text.UTF8Encoding]::new($false))
-                    Append-History $journal $st 'SPENT' $v.nonce $v.receiptsha
+                    Append-History $journal $st 'SPENT' $v.nonce $v.receiptsha $v.publicsha
                 }
             }
         }
