@@ -129,7 +129,7 @@ def _c(f: dict, case_id: str) -> dict:
     keys = {"receipts", "current_head", "current_attempt", "revocations", "evaluation_sequence", "lab_inventory_complete"}
     if set(f) != keys or not isinstance(f["receipts"], list) or not isinstance(f["revocations"], list):
         raise ValueError("invalid C fields")
-    if (not isinstance(f["current_head"], str) or type(f["current_attempt"]) is not int
+    if (not isinstance(f["current_head"], str) or type(f["current_attempt"]) is not int or f["current_attempt"] < 1
         or type(f["evaluation_sequence"]) is not int or type(f["lab_inventory_complete"]) is not bool
         or not (0 <= f["evaluation_sequence"] <= 10000) or len(f["receipts"]) > 12
         or len(f["revocations"]) > 12):
@@ -137,7 +137,8 @@ def _c(f: dict, case_id: str) -> dict:
     receipt_ids: list[str] = []
     for rec in f["receipts"]:
         if (not isinstance(rec, dict) or set(rec) != {"id", "head", "attempt", "witness", "issue_sequence", "basis"}
-            or not isinstance(rec["id"], str) or type(rec["attempt"]) is not int
+            or not isinstance(rec["id"], str) or type(rec["attempt"]) is not int or rec["attempt"] < 1
+            or not isinstance(rec["witness"], str) or not rec["witness"].strip()
             or type(rec["issue_sequence"]) is not int
             or rec["basis"] not in ("LAB_FROZEN", "SELF_DECLARED")):
             raise ValueError("invalid receipt")
@@ -146,6 +147,7 @@ def _c(f: dict, case_id: str) -> dict:
         raise ValueError("duplicate receipt ids")
     for rev in f["revocations"]:
         if (not isinstance(rev, dict) or set(rev) != {"witness", "effective_sequence", "scope", "basis"}
+            or not isinstance(rev["witness"], str) or not rev["witness"].strip()
             or type(rev["effective_sequence"]) is not int
             or rev["basis"] not in ("LAB_FROZEN", "SELF_DECLARED")):
             raise ValueError("invalid revocation")

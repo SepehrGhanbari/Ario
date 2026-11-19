@@ -13,6 +13,8 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass
 
+from pr_ci_github_evidence import links_pr, matches_id, read_bounded_body
+
 REPO = "SepehrGhanbari/Ario"
 HOST = "api.github.com"
 MAX_BYTES = 262144
@@ -59,10 +61,7 @@ class DirectGithubReader:
                 content_type = response.headers.get("Content-Type", "").lower().split(";", 1)[0].strip()
                 if content_type not in ("application/json", "application/vnd.github+json"):
                     raise ValueError("response is not JSON")
-                data = response.read(MAX_BYTES + 1)
-                if len(data) > MAX_BYTES:
-                    raise ValueError("oversized GitHub response")
-                return data
+                return read_bounded_body(response, MAX_BYTES)
         except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError,
                 OSError, http.client.HTTPException) as exc:
             raise ValueError("network response unavailable or redirect blocked") from exc
@@ -121,13 +120,13 @@ def audit(target: Target, reader: object) -> dict:
     for path in paths:
         try:
             replies.append(_decode(reader.get(path)))
-        except (ValueError, TypeError, OSError, TimeoutError, AttributeError,
+        except (ValueError, TypeError, OSError, TimeoutError, http.client.HTTPException, AttributeError,
                 RecursionError, OverflowError) as exc:
             return _base("INCOMPLETE_OR_UNAVAILABLE_READBACK")
     first, run, page, last = replies
     try:
         for p in (first, last):
-            if (p.get("number") != target.pr_number or not _id(p.get("id")) or
+            if (not matches_id(p.get("number"), target.pr_number) or not _id(p.get("id")) or
                     not isinstance(p.get("head"), dict) or
                     not SHA40.fullmatch(p["head"].get("sha", ""))):
                 return _base("INVALID_PR_RESPONSE")
@@ -135,11 +134,13 @@ def audit(target: Target, reader: object) -> dict:
             return _base("PR_HEAD_CHANGED_DURING_READBACK", source="MULTIPLE_PR_VIEWS_OBSERVED")
         if first["head"]["sha"] != target.head_sha:
             return _base("PR_HEAD_DIFFERS_FROM_PINNED_TARGET", source="COMPLETE_RESPONSE_SAMPLED")
-        if (run.get("id") != target.run_id or run.get("head_sha") != target.head_sha or
+        if (not matches_id(run.get("id"), target.run_id) or run.get("head_sha") != target.head_sha or
                 not _id(run.get("workflow_id")) or not _id(run.get("run_attempt")) or
                 run.get("event") != "pull_request" or run.get("status") != "completed" or
                 run.get("conclusion") != "success"):
             return _base("RUN_METADATA_MISMATCH_OR_NOT_SUCCESS", source="COMPLETE_RESPONSE_SAMPLED")
+        if not links_pr(run.get("pull_requests"), target.pr_number, first["id"], target.head_sha):
+            return _base("RUN_NOT_LINKED_TO_PINNED_PR", source="COMPLETE_RESPONSE_SAMPLED")
         jobs = page.get("jobs")
         count = page.get("total_count")
         if (type(jobs) is not list or type(count) is not int or
@@ -149,7 +150,8 @@ def audit(target: Target, reader: object) -> dict:
         seen_names = set()
         for job in jobs:
             if (type(job) is not dict or not _id(job.get("id")) or job["id"] in seen_ids or
-                    job.get("run_id") != target.run_id or job.get("run_attempt") != run["run_attempt"] or
+                    not matches_id(job.get("run_id"), target.run_id) or
+                    not matches_id(job.get("run_attempt"), run["run_attempt"]) or
                     job.get("head_sha") != target.head_sha or
                     job.get("status") != "completed" or job.get("conclusion") != "success" or
                     type(job.get("name")) is not str):
