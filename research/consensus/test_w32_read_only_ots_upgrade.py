@@ -100,11 +100,16 @@ class W32(unittest.TestCase):
         r=lab.check_one(url,commit,det,raw,getter=lambda u,c:{"fetch":"HTTP_200_PROOF_BYTES","http_status":200,"response_bytes":b"bad"})
         self.assertIn(r["result"],("INVALID_REMOTE_PROOF","REMOTE_PROOF_PARSE_FAILED"))
         self.assertFalse(r["independent_bitcoin_consensus_verification"])
-    def test_13_wrong_commitment_cannot_upgrade(self):
+    def test_13_remapped_pending_claim_has_no_crypto_authenticity(self):
         url,commit,det,raw=self.first
+        # Bare pending URI has no cryptographic signature; assigning it to a
+        # different commitment is possible, but is NOT a Bitcoin proof.
         bogus=serialized_timestamp(b"\0"*32,calendar=url)
         r=lab.check_one(url,commit,det,raw,getter=lambda u,c:{"fetch":"HTTP_200_PROOF_BYTES","http_status":200,"response_bytes":bogus})
-        self.assertEqual(r["result"],"INVALID_REMOTE_PROOF")
+        self.assertEqual(r["result"],"PROOF_UPDATED_BUT_STILL_PENDING")
+        self.assertEqual(r["bitcoin_attestations_claimed_by_calendar"],[])
+        self.assertFalse(r["bitcoin_consensus_verified"])
+        self.assertFalse(r["independent_bitcoin_consensus_verification"])
     def test_14_valid_returned_pending_attestation_still_no_bitcoin(self):
         url,commit,det,raw=self.first
         valid=serialized_timestamp(commit,calendar=url)
