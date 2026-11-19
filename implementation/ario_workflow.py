@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from ario_agent import AgentRequestError, _append_event, _ensure_task_id_unused, _inside, parse_task, run_task
+from bounded_json import loads_bounded
 
 
 MAX_WORKFLOW_STAGES = 8
@@ -95,7 +96,7 @@ def _ensure_workflow_id_unused(ledger: Path, workflow_id: str) -> None:
         if not line.strip():
             continue
         try:
-            event = json.loads(line)
+            event = loads_bounded(line)
         except json.JSONDecodeError as exc:
             raise AgentRequestError(
                 f"existing ledger is malformed at line {line_number}; refusing to start workflow"
@@ -257,7 +258,7 @@ def main() -> int:
     parser.add_argument("--ledger", required=True, help="Append-only JSONL event ledger")
     args = parser.parse_args()
     try:
-        payload = json.loads(Path(args.workflow).read_text(encoding="utf-8-sig"))
+        payload = loads_bounded(Path(args.workflow).read_text(encoding="utf-8-sig"))
         result = run_workflow(payload, args.workspace, args.ledger)
     except (OSError, UnicodeError, json.JSONDecodeError, AgentRequestError) as exc:
         print(json.dumps({"status": "UNKNOWN", "error": str(exc)}, ensure_ascii=False, sort_keys=True))

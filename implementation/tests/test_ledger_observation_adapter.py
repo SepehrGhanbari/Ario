@@ -4,7 +4,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ledger_observation_adapter import observe_ledger, MAX_LINE_BYTES
+from ledger_observation_adapter import (
+    MAX_JSON_DEPTH,
+    MAX_LINE_BYTES,
+    json_nesting_exceeds,
+    observe_ledger,
+)
 
 
 class LedgerObservationTests(unittest.TestCase):
@@ -67,8 +72,62 @@ class LedgerObservationTests(unittest.TestCase):
             result = observe_ledger(ledger)
             self.assertEqual(result["status"], "UNKNOWN")
             self.assertEqual(result["observations"], [])
-            self.assertIn("invalid UTF-8 or JSON", result["error"])
+            self.assertIn("JSON nesting-depth limit exceeded", result["error"])
             self.assertEqual(ledger.read_bytes(), raw)
+
+    def _observe_bytes(self, raw):
+        with tempfile.TemporaryDirectory() as directory:
+            ledger = Path(directory) / "events.jsonl"
+            ledger.write_bytes(raw)
+            result = observe_ledger(ledger)
+            self.assertEqual(ledger.read_bytes(), raw)
+            return result
+
+    def test_deep_nesting_in_unrelated_field_is_interpreter_independent(self):
+        """Valid envelope plus deep payload must be UNKNOWN on every CPython.
+
+        Before the explicit bound, CPython 3.12/3.13 returned UNKNOWN via
+        RecursionError while 3.14 returned OBSERVED for the same bytes.
+        """
+        deep = b"[" * 12000 + b"0" + b"]" * 12000
+        raw = b'{"event":"TASK_STARTED","timestamp":"t","payload":' + deep + b"}\n"
+        self.assertLess(len(raw), MAX_LINE_BYTES)
+        result = self._observe_bytes(raw)
+        self.assertEqual(result["status"], "UNKNOWN")
+        self.assertEqual(result["observations"], [])
+        self.assertIn("JSON nesting-depth limit exceeded", result["error"])
+
+    def test_nesting_at_limit_is_observed_and_one_over_is_unknown(self):
+        def line(levels):
+            inner = b"[" * (levels - 1) + b"0" + b"]" * (levels - 1)
+            return b'{"event":"TASK_STARTED","timestamp":"t","payload":' + inner + b"}\n"
+
+        at_limit = self._observe_bytes(line(MAX_JSON_DEPTH))
+        self.assertEqual(at_limit["status"], "OBSERVED")
+        over_limit = self._observe_bytes(line(MAX_JSON_DEPTH + 1))
+        self.assertEqual(over_limit["status"], "UNKNOWN")
+        self.assertIn("JSON nesting-depth limit exceeded", over_limit["error"])
+
+    def test_brackets_inside_strings_do_not_count_toward_depth(self):
+        noisy = "[{" * 200 + '\\"' + "}]" * 200
+        raw = json.dumps(
+            {"event": "TASK_STARTED", "timestamp": "t", "note": noisy}
+        ).encode("utf-8") + b"\n"
+        result = self._observe_bytes(raw)
+        self.assertEqual(result["status"], "OBSERVED")
+        self.assertEqual(result["event_count"], 1)
+
+    def test_integer_limit_is_shared_with_cli_readers(self):
+        for digits, expected in [(4096, "OBSERVED"), (4097, "UNKNOWN")]:
+            with self.subTest(digits=digits):
+                record = b'{"event":"TASK_STARTED","timestamp":"t","n":' + b"1" * digits + b"}\n"
+                self.assertEqual(self._observe_bytes(record)["status"], expected)
+
+    def test_depth_scanner_unit_cases(self):
+        self.assertFalse(json_nesting_exceeds('{"a": [1, 2]}', limit=2))
+        self.assertTrue(json_nesting_exceeds('{"a": [[1]]}', limit=2))
+        self.assertFalse(json_nesting_exceeds('{"a": "[[[[[["}', limit=1))
+        self.assertFalse(json_nesting_exceeds('{"a": "\\"[[["}', limit=1))
 
 
 if __name__ == "__main__":

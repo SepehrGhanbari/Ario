@@ -9,6 +9,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Union, get_args, get_origin, get_type_hints
 
+from bounded_json import loads_bounded
 from core.audit_engine import AuditEngine, AuditInput, parse_evidence_ancestry_findings
 from core.schema import Timestamp
 
@@ -170,7 +171,7 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        payload = json.loads(Path(args.input).read_text(encoding="utf-8-sig"))
+        payload = loads_bounded(Path(args.input).read_text(encoding="utf-8-sig"))
         result = execute_request(payload)
         serialized = json.dumps(result, ensure_ascii=False, sort_keys=True)
         if args.ledger:
