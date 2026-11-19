@@ -1,0 +1,20 @@
+test_aggregate_does_not_infer_population_accuracy (test_w1_adversarial_input_sensitivity_v1.TestW1InputSensitivity.test_aggregate_does_not_infer_population_accuracy) ... ok
+test_aliased_source_nodes_detected (test_w1_adversarial_input_sensitivity_v1.TestW1InputSensitivity.test_aliased_source_nodes_detected) ... ok
+test_candidate_supplied_origin_fails_closed (test_w1_adversarial_input_sensitivity_v1.TestW1InputSensitivity.test_candidate_supplied_origin_fails_closed) ... ok
+test_declared_incompleteness_holds_unknown (test_w1_adversarial_input_sensitivity_v1.TestW1InputSensitivity.test_declared_incompleteness_holds_unknown) ... ok
+test_duplication_and_missing_custody_not_promoted (test_w1_adversarial_input_sensitivity_v1.TestW1InputSensitivity.test_duplication_and_missing_custody_not_promoted) ... ok
+test_exact_source_pin (test_w1_adversarial_input_sensitivity_v1.TestW1InputSensitivity.test_exact_source_pin) ... ok
+test_hidden_dependencies_turn_into_conditional (test_w1_adversarial_input_sensitivity_v1.TestW1InputSensitivity.test_hidden_dependencies_turn_into_conditional) ... ok
+test_honest_controls_detected (test_w1_adversarial_input_sensitivity_v1.TestW1InputSensitivity.test_honest_controls_detected) ... ok
+test_mutant_detector_proves_test_is_sensitive (test_w1_adversarial_input_sensitivity_v1.TestW1InputSensitivity.test_mutant_detector_proves_test_is_sensitive) ... ok
+test_no_operational_authority (test_w1_adversarial_input_sensitivity_v1.TestW1InputSensitivity.test_no_operational_authority) ... ok
+test_order_permutation_metamorphism (test_w1_adversarial_input_sensitivity_v1.TestW1InputSensitivity.test_order_permutation_metamorphism) ... ok
+test_oversized_source_rejected (test_w1_adversarial_input_sensitivity_v1.TestW1InputSensitivity.test_oversized_source_rejected) ... ok
+test_same_observed_graph_ambiguous_truth (test_w1_adversarial_input_sensitivity_v1.TestW1InputSensitivity.test_same_observed_graph_ambiguous_truth) ... ok
+test_tampered_source_rejected_before_exec (test_w1_adversarial_input_sensitivity_v1.TestW1InputSensitivity.test_tampered_source_rejected_before_exec) ... ok
+test_untrusted_self_claim_not_new_witness (test_w1_adversarial_input_sensitivity_v1.TestW1InputSensitivity.test_untrusted_self_claim_not_new_witness) ... ok
+
+----------------------------------------------------------------------
+Ran 15 tests in 0.238s
+
+OK

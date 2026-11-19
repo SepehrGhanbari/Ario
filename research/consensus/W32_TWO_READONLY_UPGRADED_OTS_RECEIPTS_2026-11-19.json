@@ -1,0 +1,79 @@
+{
+  "actual_ario_memory": false,
+  "blockchain_consensus_verified": false,
+  "calendar_post_requests": 0,
+  "calendar_queries": 2,
+  "external_independent_c2sp_witness": "NOT_ESTABLISHED",
+  "genesis": "NO_GO",
+  "mode": "GET_ONLY_EXISTING_COMMITMENTS",
+  "new_stamp_submissions": 0,
+  "original_receipts": 2,
+  "production": "NO_GO",
+  "research_only": true,
+  "results": [
+    {
+      "actual_ario_log": false,
+      "authority": "NONE",
+      "bitcoin_attestations_claimed_by_calendar": [
+        {
+          "height": 976596,
+          "merkle_root_little_endian_hex": "50db53ce360d17aec65c6317d48c370de330d3f6203f41895b01b34110d1b660"
+        }
+      ],
+      "bitcoin_consensus_verified": false,
+      "calendar": "https://alice.btc.calendar.opentimestamps.org",
+      "calendar_reply_b64": "CPAgA+9GSOsy4WH9JJw3AvVb71KI3bBip3K9RkV1i9uWnFsI8SARYkknWdpMGfp105XOWFqrC+vnS9KHZmTGs7zKLNsE+wjwICfGSBgQtc5cojz+i4SuLiW+bBOXThXFuCG/0xqwZIb1CPEg8MRWyT5s1+lwCqxK15j/60uL2Wo6t5VGgOY49V0oka4I8SCNBk+qEFS309G66eRMDtPc6cuz514fxTbGYtEh47HSiwjxIFbq2hf4Ri4Wvvuri6/D7e8GPCiTo00rxte4POGXnJqDCPEgP0/vccnqHmrMz8WrU1K4db4e4p7ezUilRswOsKV6jvgI8CA547rF1WjGt6qHEMaXOHHhhHQJ7677LF0+9z9+wLOjFgjxIHb49IaqMmcThkvYVl/cVmFT6dDwvRZ4/LQ4lA5q9qBwCPAgqmQWTW1AADYHCH9lgKAt6VS0IyzUEiCzhgTMGvjbpO8I8CBX/Y1CNizQYLfrfc39bZbNjZC2IQWo+ktCBvBIQO/0UgjxIMT48MNPXNpA0KoT8gLj12xg0zBO51y2dVcuFY6gtyd6CPAgMZ24hm0apu19MsibTChiC0LFJ58quEHAMt14IeadecAI8CDs3e0XIaXiE+oAxntvLjY70mosusnOu+jSXk2SNxSJ1QjxWQEAAAAB/NYkpw46VwZazC/s3kvmc+EQ0ShxHnTXmVDH9w1adlIAAAAAAP7///8CQXEAAAAAAAAWABR1753IblgCFpBp2cntXnaDI1gb6wAAAAAAAAAAImog8ATT5g4ACAjxIKUV20JqGMK95fDSyh6hTh0gabCYlAHMYlOO1Tl2B5ZWCAjwIHRF55ouQYyLhFkgvSVwAyQnGrgRRig3I4PiW3j9MnAUCAjwICuWW7QYh8809b989si8mvtSi2kN0FjQaH0V9G5rkVI9CAjxIJnNFedQbEXiI4II2yiAm7015ClZWE39HPY/fFwaCXOACAjxIDs3+mM6HTPZFI+CQJmKmuXQGDtkQuXofNf2QeuW5qZhCAjxIPA7PNeAOz8kW2Z7FDzwWnX8ZTxT3xIiV5cILRBT2VurCAjwIDdxF7Oejk+3TqGpZxJ14Sle5JS7P73wcoRPY/szsFLGCAjwIP82y7ALES9Ez4nX2Ehnfu9i2VmIPTQ3a9vBsGg/HqFkCAjwIM+jdoSutjl/xhaoKr4QZhaxdVIWwki+0o9rEOzYGZ0/CAjxIFebM1E/ilqsWxgjnNurLQNRus+RIUj2CCwaGW5DK9S9CAjxIIHV1+5zvzT1qveYnVDpg7P9bCn6p5oKacBvaxzkyVQyCAjwINV3Uu2XMI8OeDBa+TTX+kH+X1pb9u+KfyBs6NdtQ+XFCAgABYiWDXPXGQED1M07",
+      "calendar_reply_sha256": "dc6cce1d85e010e93303565ac0cd65f5e30ac3f8a9c8f7eec748ef5f8671065c",
+      "commitment_bytes": 44,
+      "commitment_hex": "6afef6b3a55e31ff056d5dcfac93834ece7dd7b045b5b5ef16ddda5eb7932ec4c97dcc9789738809e7be3dde",
+      "fetch": "HTTP_200_PROOF_BYTES",
+      "http_status": 200,
+      "independent_admin": "NOT_ESTABLISHED",
+      "independent_bitcoin_consensus_verification": false,
+      "no_post_requests": true,
+      "original_ots_bytes": 202,
+      "original_ots_sha256": "676c0f99d485cb24f1d80354c38bc043dbe51dffe7f0bd6e1dc992d85fdb7ba4",
+      "result": "CALENDAR_BITCOIN_ATTESTATION_UNVERIFIED",
+      "upgraded_ots_b64": "AE9wZW5UaW1lc3RhbXBzAABQcm9vZgC/ieLohOiSlAEIIHi8gFhtDksAr6SOuN6jGrPUdJtJEsV6iX5NXi+0Nt/wCB03t36qhw/XCPAQTx/jqNo6MVzu1l6V0P1x/QjwIG9oFNsGKo4/cepxKfSapto5t1mnM0iO+aAMe5zHh7ONCPEEav72s/AIiXOICee+Pd7/AIPf4w0u+QyOLi1odHRwczovL2FsaWNlLmJ0Yy5jYWxlbmRhci5vcGVudGltZXN0YW1wcy5vcmcI8CAD70ZI6zLhYf0knDcC9VvvUojdsGKncr1GRXWL25acWwjxIBFiSSdZ2kwZ+nXTlc5YWqsL6+dL0odmZMazvMos2wT7CPAgJ8ZIGBC1zlyiPP6LhK4uJb5sE5dOFcW4Ib/TGrBkhvUI8SDwxFbJPmzX6XAKrErXmP/rS4vZajq3lUaA5jj1XSiRrgjxII0GT6oQVLfT0brp5EwO09zpy7PnXh/FNsZi0SHjsdKLCPEgVuraF/hGLha++6uLr8Pt7wY8KJOjTSvG17g84ZecmoMI8SA/T+9xyeoeaszPxatTUrh1vh7int7NSKVGzA6wpXqO+AjwIDnjusXVaMa3qocQxpc4ceGEdAnvrvssXT73P37As6MWCPEgdvj0hqoyZxOGS9hWX9xWYVPp0PC9Fnj8tDiUDmr2oHAI8CCqZBZNbUAANgcIf2WAoC3pVLQjLNQSILOGBMwa+Nuk7wjwIFf9jUI2LNBgt+t9zf1tls2NkLYhBaj6S0IG8EhA7/RSCPEgxPjww09c2kDQqhPyAuPXbGDTME7nXLZ1Vy4VjqC3J3oI8CAxnbiGbRqm7X0yyJtMKGILQsUnnyq4QcAy3Xgh5p15wAjwIOzd7RchpeIT6gDGe28uNjvSaiy6yc676NJeTZI3FInVCPFZAQAAAAH81iSnDjpXBlrML+zeS+Zz4RDRKHEedNeZUMf3DVp2UgAAAAAA/v///wJBcQAAAAAAABYAFHXvnchuWAIWkGnZye1edoMjWBvrAAAAAAAAAAAiaiDwBNPmDgAICPEgpRXbQmoYwr3l8NLKHqFOHSBpsJiUAcxiU47VOXYHllYICPAgdEXnmi5BjIuEWSC9JXADJCcauBFGKDcjg+JbeP0ycBQICPAgK5ZbtBiHzzT1v3z2yLya+1KLaQ3QWNBofRX0bmuRUj0ICPEgmc0V51BsReIjggjbKICbvTXkKVlYTf0c9j98XBoJc4AICPEgOzf6YzodM9kUj4JAmYqa5dAYO2RC5eh81/ZB65bmpmEICPEg8Ds814A7PyRbZnsUPPBadfxlPFPfEiJXlwgtEFPZW6sICPAgN3EXs56OT7dOoalnEnXhKV7klLs/vfByhE9j+zOwUsYICPAg/zbLsAsRL0TPidfYSGd+72LZWYg9NDdr28GwaD8eoWQICPAgz6N2hK62OX/GFqgqvhBmFrF1UhbCSL7Sj2sQ7NgZnT8ICPEgV5szUT+KWqxbGCOc26stA1G6z5EhSPYILBoZbkMr1L0ICPEggdXX7nO/NPWq95idUOmDs/1sKfqnmgppwG9rHOTJVDIICPAg1XdS7Zcwjw54MFr5NNf6Qf5fWlv274p/IGzo121D5cUICAAFiJYNc9cZAQPUzTs=",
+      "upgraded_ots_bytes": 1238,
+      "upgraded_ots_sha256": "5968fd87749621f96c42d1763bd41a8d457187cd55380d2e1ca7132a4518ac35"
+    },
+    {
+      "actual_ario_log": false,
+      "authority": "NONE",
+      "bitcoin_attestations_claimed_by_calendar": [
+        {
+          "height": 976598,
+          "merkle_root_little_endian_hex": "d095c4f3c260fca45d1d01a0c86e9653b349c2de92e5aa9d642271f338389f4a"
+        }
+      ],
+      "bitcoin_consensus_verified": false,
+      "calendar": "https://bob.btc.calendar.opentimestamps.org",
+      "calendar_reply_b64": "CPAgnijzUwItqntHAW8SF4vq5M66h2JGxz5nC4koilTzagwI8SA4nTova69GuLc64BIgy70dibPrQZRzeAitkJKi5Rp81wjwIPI9x2XmwDOY3749VxlVNK5Qq7qHIqRjyFaIKtPJN9e8CPEgE9Ihnix9KEOKc/npGEhpAC3eZeikFFLSrCETVB0YKzAI8CBLu70tOo+Aix3zuUpoj2IJbdOikS+Oa//cc32qvqMpogjwIJeexkljEX2KLYzRh6IDlTwBWHt30AXFbGfP1CGpNdBgCPAgm5QvyfQ17uWTJ1D5cqCVaic/ORd1/SzYkCl5D4nQQWoI8SDUtdBFokQ+lNJ4LiwraiNKo7VyGoaRJ9iAqA1Uo7t4NwjxIP4xSAVfbUWN/XaI9LNiGGFNrHZwjb8ZCeONXkGOSsG8CPAglbhglgIy5KpM2ctWTtDLSnZHiBWkEACnAq1STRRCdooI8CB2k2Pqv/eWAmscBMj7JOpJPgyed/7lZqxWtQxvfcarWQjxID9jpNZsuy/WNyUOcNRIw6fPb3Zn0SCCz/j1HKBv7QoUCPAgAI3goUlIq1JAY/mglMQwS3y4NUihE0fDJN+GVVyVxsQI8CAtwhndLGswbKceVjhbrqewC+sg2XGumQKhc1XdBvY8dwjxWQEAAAABAfJC/zwl/HCXJO0gMVU+UFeQM2IfP8Al5dciZZ4nKKUAAAAAAP7///8Cl0EAAAAAAAAWABRDMFkSF0cLJ2p8tgF8DXosTsZp+AAAAAAAAAAAImog8ATV5g4ACAjwIDbPWTyATERp9LpHPfR/01jm1xhB2jHjGB04aRy60apgCAjwII1SOFL6aLl4R15BjsB650RQeJiX3L2Cbd9Gp3PZjKFjCAjwINQL7ymrGF9nFbVNvEimEh6sPsSYNLBIYcxM1dT9cpiJCAjxIMFC3DOlDkZM36m8xppENcNGY1KFH1f9gbfx/I8AOclUCAjwIEHctMypz2+SJXH495lA8wILJS4PrNoPihL2nXNWGqtzCAjxII6I2Hy2UAq5+IA1wYWisbHcZ8vyYVaAAMTi2KEKg+uhCAjwIGm6K73sBtHQuON8jXMW+2/gR/PJdAxZEWW80hucrTMtCAjxIOOtALF72m36ADHyI/z39sd3cyfYzt7jq6VSPL/VlsvICAjwICv6whHBZnKo9CzNozQ9X5sfFJ2EcnRwMdNA4z3GNg6bCAjwIGVON8Uwp9FN18L/z3QUhUDaVxFsnDMaRN8DDF7Qu9feCAjxINJcDZj5FU5vTou0DnJAx7543jsZGoKgdN3WlpAcd5SFCAgABYiWDXPXGQED1s07",
+      "calendar_reply_sha256": "2a61f4826df2e61a424d0ccfbce9ef2e0f2a58d028e639f974769d6cd0e03261",
+      "commitment_bytes": 44,
+      "commitment_hex": "6afef6b4b46eb76e5c8f1accb827a8ec85e813c7520530f7916ab32eb86c196186965316836ab9ef9a394f6d",
+      "fetch": "HTTP_200_PROOF_BYTES",
+      "http_status": 200,
+      "independent_admin": "NOT_ESTABLISHED",
+      "independent_bitcoin_consensus_verification": false,
+      "no_post_requests": true,
+      "original_ots_bytes": 200,
+      "original_ots_sha256": "7c6442facc66e3ab4cbf7b532ddccbd3fe5a15ce3f321e1b85f2b93d9dff999c",
+      "result": "CALENDAR_BITCOIN_ATTESTATION_UNVERIFIED",
+      "upgraded_ots_b64": "AE9wZW5UaW1lc3RhbXBzAABQcm9vZgC/ieLohOiSlAEIIHi8gFhtDksAr6SOuN6jGrPUdJtJEsV6iX5NXi+0Nt/wCI/i7Gd1h3EUCPAQrSQyRPQqlmOTqYj3BkemewjxIIG2EuYNpSekgxNMfMLmPDiYqpFWMKeM1SvJyHKJaqpECPEEav72tPAIg2q575o5T23/AIPf4w0u+QyOLCtodHRwczovL2JvYi5idGMuY2FsZW5kYXIub3BlbnRpbWVzdGFtcHMub3JnCPAgnijzUwItqntHAW8SF4vq5M66h2JGxz5nC4koilTzagwI8SA4nTova69GuLc64BIgy70dibPrQZRzeAitkJKi5Rp81wjwIPI9x2XmwDOY3749VxlVNK5Qq7qHIqRjyFaIKtPJN9e8CPEgE9Ihnix9KEOKc/npGEhpAC3eZeikFFLSrCETVB0YKzAI8CBLu70tOo+Aix3zuUpoj2IJbdOikS+Oa//cc32qvqMpogjwIJeexkljEX2KLYzRh6IDlTwBWHt30AXFbGfP1CGpNdBgCPAgm5QvyfQ17uWTJ1D5cqCVaic/ORd1/SzYkCl5D4nQQWoI8SDUtdBFokQ+lNJ4LiwraiNKo7VyGoaRJ9iAqA1Uo7t4NwjxIP4xSAVfbUWN/XaI9LNiGGFNrHZwjb8ZCeONXkGOSsG8CPAglbhglgIy5KpM2ctWTtDLSnZHiBWkEACnAq1STRRCdooI8CB2k2Pqv/eWAmscBMj7JOpJPgyed/7lZqxWtQxvfcarWQjxID9jpNZsuy/WNyUOcNRIw6fPb3Zn0SCCz/j1HKBv7QoUCPAgAI3goUlIq1JAY/mglMQwS3y4NUihE0fDJN+GVVyVxsQI8CAtwhndLGswbKceVjhbrqewC+sg2XGumQKhc1XdBvY8dwjxWQEAAAABAfJC/zwl/HCXJO0gMVU+UFeQM2IfP8Al5dciZZ4nKKUAAAAAAP7///8Cl0EAAAAAAAAWABRDMFkSF0cLJ2p8tgF8DXosTsZp+AAAAAAAAAAAImog8ATV5g4ACAjwIDbPWTyATERp9LpHPfR/01jm1xhB2jHjGB04aRy60apgCAjwII1SOFL6aLl4R15BjsB650RQeJiX3L2Cbd9Gp3PZjKFjCAjwINQL7ymrGF9nFbVNvEimEh6sPsSYNLBIYcxM1dT9cpiJCAjxIMFC3DOlDkZM36m8xppENcNGY1KFH1f9gbfx/I8AOclUCAjwIEHctMypz2+SJXH495lA8wILJS4PrNoPihL2nXNWGqtzCAjxII6I2Hy2UAq5+IA1wYWisbHcZ8vyYVaAAMTi2KEKg+uhCAjwIGm6K73sBtHQuON8jXMW+2/gR/PJdAxZEWW80hucrTMtCAjxIOOtALF72m36ADHyI/z39sd3cyfYzt7jq6VSPL/VlsvICAjwICv6whHBZnKo9CzNozQ9X5sfFJ2EcnRwMdNA4z3GNg6bCAjwIGVON8Uwp9FN18L/z3QUhUDaVxFsnDMaRN8DDF7Qu9feCAjxINJcDZj5FU5vTou0DnJAx7543jsZGoKgdN3WlpAcd5SFCAgABYiWDXPXGQED1s07",
+      "upgraded_ots_bytes": 1200,
+      "upgraded_ots_sha256": "886a46e7ffe9bc7dcb4d8a118bf98cc1805fa5df7f6002aa1fb15573648dc70a"
+    }
+  ],
+  "schema": "ARIO_W32_READ_ONLY_OTS_UPGRADE_V1",
+  "trust_activation": "NO_GO",
+  "w31_preimage_sha256": "2078bc80586d0e4b00afa48eb8dea31ab3d4749b4912c57a897e4d5e2fb436df",
+  "evidence_from_run": "https://github.com/SepehrGhanbari/Ario/actions/runs/44567936141",
+  "evidence_job_id": 135714714796,
+  "source_commit": "c7c540565aa51a083336d01211cf09b0190938c6",
+  "captured_status": "CALENDAR_PROVIDED_BITCOIN_ATTESTATIONS_NOT_YET_INDEPENDENTLY_VERIFIED",
+  "valid_for_trust_activation": false,
+  "out_of_band_operator_custody": "NOT_ESTABLISHED",
+  "external_bitcoin_consensus_verification": "NOT_PERFORMED_YET"
+}

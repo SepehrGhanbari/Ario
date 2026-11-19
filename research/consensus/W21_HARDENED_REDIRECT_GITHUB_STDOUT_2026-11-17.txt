@@ -1,0 +1,13 @@
+# W21 hardened HTTP observer actual GitHub runner 44163994803, job 134325027734
+# Exact source checkout ebed96629829705919e8fcec2e7b6d5cdea52f6f
+# https://github.com/SepehrGhanbari/Ario/actions/runs/44163994803
+# This is developer-authored reproduction, not independent human certification.
+2026-11-17T19:56:51.4779573Z test_http_end_to_end_cases (test_w21_http_monitor.WebLab.test_http_end_to_end_cases) ... ok
+2026-11-17T19:56:51.4785976Z test_network_unavailability_and_nonlocal_url (test_w21_http_monitor.WebLab.test_network_unavailability_and_nonlocal_url) ... ok
+2026-11-17T19:56:52.4803167Z test_redirect_cannot_escape_single_allowed_origin (test_w21_http_monitor.WebLab.test_redirect_cannot_escape_single_allowed_origin) ... ok
+2026-11-17T19:56:52.5902018Z test_server_rejects_mutating_request (test_w21_http_monitor.WebLab.test_server_rejects_mutating_request) ... ok
+2026-11-17T19:56:52.5904798Z Ran 4 tests in 2.324s
+2026-11-17T19:56:52.5922572Z OK
+2026-11-17T19:56:52.9922953Z Ran 6 tests in 0.282s
+2026-11-17T19:56:52.9923312Z OK
+2026-11-17T19:56:53.0080672Z W21_HARDENED_REDIRECT_REPLAY=PASS / W20_INTEGRITY=PASS / REAL_ARIO_WITNESS=NO / AUTHORITY=NONE

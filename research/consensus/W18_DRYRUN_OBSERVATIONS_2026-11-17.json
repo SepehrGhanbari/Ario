@@ -1,0 +1,52 @@
+{
+  "schema": "ARIO_W18_SIGSUM_EXTERNAL_QUORUM_DRY_RUN_V1",
+  "date": "2026-11-17",
+  "status": "DRY_RUN_ONLY_EXTERNAL_PROOF_NOT_OBTAINED",
+  "public_manifest_sha256": "ee83050bff68f9b73afb115949bca8c46bb09462a6f000eecb9ed07bf2855769",
+  "public_manifest_git_blob_sha1": "52c009c22c5cbaca686c18498bb395f863a33f44",
+  "submit_script_git_blob_sha1": "2cd9c130d984eb33555e2e10610bde01f9caaa56",
+  "test_script_git_blob_sha1": "e094f5f6744ae735e26d9750769c448f476caad1",
+  "tested_environment": "ephemeral ChatGPT Linux container; Bash and Python; no outbound DNS to GitHub; Sigsum binaries unavailable",
+  "tested_cases": [
+    {
+      "id": "W18-D01",
+      "description": "bash -n syntax for submit script",
+      "status": "PASS"
+    },
+    {
+      "id": "W18-D02",
+      "description": "manifest SHA256 pin and public-only JSON schema",
+      "status": "PASS"
+    },
+    {
+      "id": "W18-D03",
+      "description": "default --dry-run emits EXTERNAL_PROOF=NOT_OBTAINED, no network",
+      "status": "PASS"
+    },
+    {
+      "id": "W18-D04",
+      "description": "--submit without exact opt-in exits 2 and produces no receipt folder",
+      "status": "PASS"
+    },
+    {
+      "id": "W18-D05",
+      "description": "--verify without public key+nonempty proof exits 2",
+      "status": "PASS"
+    },
+    {
+      "id": "W18-D06",
+      "description": "one-byte-modified manifest is denied in dry-run and with submit opt-in",
+      "status": "PASS"
+    }
+  ],
+  "actually_submitted_to_sigsum": false,
+  "real_sigsum_quorum_receipt_obtained": false,
+  "independent_operator_custody_audited": false,
+  "real_ario_transparency_log_witnessed": false,
+  "memory_admitted": false,
+  "actual_signer_used": false,
+  "real_effects": 0,
+  "human_approval_required_for_public_submission": true,
+  "next_proof": "sigsum-submit -P sigsum-test1-2025 and sigsum-verify -P sigsum-test1-2025 must actually succeed on the published public-only W18 manifest; resulting proof verified by a separate runner before recording success.",
+  "note": "No externally verified proof can be inferred from a passed dry-run. Two-of-three is the published Sigsum test trust policy; actual independent administration of these witnesses has not been audited."
+}

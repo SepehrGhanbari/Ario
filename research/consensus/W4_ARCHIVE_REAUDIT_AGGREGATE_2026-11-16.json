@@ -1,0 +1,84 @@
+{
+  "caution": "Correctness flags were supplied by archived benchmark, not independently adjudicated; historic XERJ and live SQLite ran on different hosts/versions. No causal, external-world, security or production claims.",
+  "metrics": {
+    "archived_xerj_bm25": {
+      "distractor_hit5_of_10": 10,
+      "exact_hit5_of_25": 25,
+      "hit1_n_of_75": 41,
+      "hit5_n_of_75": 55,
+      "paraphrase_hit5_of_25": 6,
+      "update_hit5_of_15": 14,
+      "update_newest_first_of_15": 2
+    },
+    "archived_xerj_hybrid": {
+      "distractor_hit5_of_10": 10,
+      "exact_hit5_of_25": 25,
+      "hit1_n_of_75": 45,
+      "hit5_n_of_75": 70,
+      "paraphrase_hit5_of_25": 21,
+      "update_hit5_of_15": 14,
+      "update_newest_first_of_15": 2
+    },
+    "archived_xerj_hybrid_recency": {
+      "distractor_hit5_of_10": 10,
+      "exact_hit5_of_25": 18,
+      "hit1_n_of_75": 33,
+      "hit5_n_of_75": 51,
+      "paraphrase_hit5_of_25": 9,
+      "update_hit5_of_15": 14,
+      "update_newest_first_of_15": 14
+    },
+    "archived_xerj_semantic": {
+      "distractor_hit5_of_10": 10,
+      "exact_hit5_of_25": 25,
+      "hit1_n_of_75": 49,
+      "hit5_n_of_75": 71,
+      "paraphrase_hit5_of_25": 21,
+      "update_hit5_of_15": 15,
+      "update_newest_first_of_15": 2
+    },
+    "sqlite_fts5_all": {
+      "distractor_hit5_of_10": 10,
+      "exact_hit5_of_25": 25,
+      "hit1_n_of_75": 41,
+      "hit5_n_of_75": 56,
+      "paraphrase_hit5_of_25": 7,
+      "update_hit5_of_15": 14,
+      "update_newest_first_of_15": 3
+    },
+    "sqlite_fts5_stop": {
+      "distractor_hit5_of_10": 10,
+      "exact_hit5_of_25": 25,
+      "hit1_n_of_75": 40,
+      "hit5_n_of_75": 56,
+      "paraphrase_hit5_of_25": 7,
+      "update_hit5_of_15": 14,
+      "update_newest_first_of_15": 3
+    }
+  },
+  "never_hit5_ids": [
+    "p04",
+    "p20",
+    "p21"
+  ],
+  "paired_top5_disagreements": {
+    "archived_xerj_hybrid_recency_vs_archived_xerj_semantic": {
+      "a_only_hit5": 1,
+      "b_only_hit5": 21
+    },
+    "archived_xerj_semantic_vs_sqlite_fts5_all": {
+      "a_only_hit5": 16,
+      "b_only_hit5": 1
+    }
+  },
+  "question_count": 75,
+  "question_families": {
+    "distractor": 10,
+    "exact": 25,
+    "paraphrase": 25,
+    "update": 15
+  },
+  "source_reported_dataset_sha256": "bac616fb74bafeccff94c5b990b343c9a972ceed87b91dbf7346fa15ca7d4cb4",
+  "source_sha256": "20a0dba360de42d8a7659496728cbdcad2e0a48fb728eb5e04eca2f8cbbb21de",
+  "status": "ARCHIVED_RESULTS_REAUDITED_NOT_LIVE_ENGINES_OR_INDEPENDENT_GOLD"
+}

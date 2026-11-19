@@ -1,0 +1,96 @@
+{
+  "actual_authority": false,
+  "independent_oracle": false,
+  "mutations": [
+    {
+      "first_failure": "FAIL: test_cases (test_w16_custody_preflight.TestW16.test_cases) (name='W16-01')",
+      "id": "M01_SAME_OWNER_AS_INDEPENDENT",
+      "killed": true,
+      "mutant_sha256": "958fa856f3caa421c477a90a89186e4f79d50983db3236dd94b935c9398ecb3a"
+    },
+    {
+      "first_failure": "FAIL: test_cases (test_w16_custody_preflight.TestW16.test_cases) (name='W16-04')",
+      "id": "M02_ROLLBACK_UNDETECTED",
+      "killed": true,
+      "mutant_sha256": "c2f23933730cdf495beaa7bd18176ca2075046ef1c71c28a04bf9b06dcb1ca2c"
+    },
+    {
+      "first_failure": "FAIL: test_cases (test_w16_custody_preflight.TestW16.test_cases) (name='W16-05')",
+      "id": "M03_FORGET_LOCAL_HIGHWATER",
+      "killed": true,
+      "mutant_sha256": "3e7e6eef31c3d7d765a7b0268a36f2e85901a6217ee2e159f8af5d5d77f51475"
+    },
+    {
+      "first_failure": "FAIL: test_cases (test_w16_custody_preflight.TestW16.test_cases) (name='W16-06')",
+      "id": "M04_FORGET_REMOTE_HIGHWATER",
+      "killed": true,
+      "mutant_sha256": "92c7871c22ec5740e5c9e0ac48bef0c93c68bdfa39aeed8456d6a7a6cdf86c37"
+    },
+    {
+      "first_failure": "FAIL: test_cases (test_w16_custody_preflight.TestW16.test_cases) (name='W16-09')",
+      "id": "M05_SPLIT_VIEW_IGNORED",
+      "killed": true,
+      "mutant_sha256": "ccfa736a6e8d71792fa0d2a5008d42ba81173240e10248836702c826ff3f7304"
+    },
+    {
+      "first_failure": "FAIL: test_cases (test_w16_custody_preflight.TestW16.test_cases) (name='W16-12')",
+      "id": "M06_DUPLICATE_KEY_ACCEPTED",
+      "killed": true,
+      "mutant_sha256": "71a8085307448a41ae19c379f667c41f4265bbea3e051aa01324ed276fb39afb"
+    },
+    {
+      "first_failure": "FAIL: test_cases (test_w16_custody_preflight.TestW16.test_cases) (name='W16-07')",
+      "id": "M07_REMOTE_LAG_IGNORED",
+      "killed": true,
+      "mutant_sha256": "d1dee4329c6d8afb71f2a75bc4f00c99ef0b61f7c4dabf5800a6654ae9710a89"
+    },
+    {
+      "first_failure": "FAIL: test_cases (test_w16_custody_preflight.TestW16.test_cases) (name='W16-08')",
+      "id": "M08_SAME_EPOCH_HEAD_CONFUSION",
+      "killed": true,
+      "mutant_sha256": "8cb87731241171a880d35e58e7aa83d0dc5c413d0a8177e4cd7306c677244468"
+    },
+    {
+      "first_failure": "FAIL: test_cases (test_w16_custody_preflight.TestW16.test_cases) (name='W16-01')",
+      "id": "M09_FAKE_OPERATION_PERMISSION",
+      "killed": true,
+      "mutant_sha256": "17cc05a34e16d4d96ed782ffb4320f192b0f61d89742d330fdd1b15d53812dba"
+    },
+    {
+      "first_failure": "FAIL: test_false_claim_of_independence_never_grants_authority (test_w16_custody_preflight.TestW16.test_false_claim_of_independence_never_grants_authority)",
+      "id": "M10_FAKE_VERIFIED_CURRENTNESS",
+      "killed": true,
+      "mutant_sha256": "ec906bb0ea1f717950af999c4d5eeb1ea320cc0b6673e8aa1b800b595f273742"
+    },
+    {
+      "first_failure": "FAIL: test_cases (test_w16_custody_preflight.TestW16.test_cases) (name='W16-01')",
+      "id": "M11_FAKE_IND_ADMIN_TRUST",
+      "killed": true,
+      "mutant_sha256": "b1948979c38f9db182f2200057b371e2bf8b4f38d5536643dc22d181cf4268a5"
+    },
+    {
+      "first_failure": "FAIL: test_cases (test_w16_custody_preflight.TestW16.test_cases) (name='W16-04')",
+      "id": "M12_ALL_PREVIEWS_ALLOWED",
+      "killed": true,
+      "mutant_sha256": "bcc722aa79c8db7a6aea7826952964759b4ea80c94e84012d4a055cc6208433e"
+    },
+    {
+      "first_failure": "FAIL: test_cases (test_w16_custody_preflight.TestW16.test_cases) (name='W16-13')",
+      "id": "M13_FALSE_SIGNED_REFERENCE",
+      "killed": true,
+      "mutant_sha256": "a2f77f7eed30109371a45ad64fbdd1d23e537b4e1180b29b498d55da544be852"
+    }
+  ],
+  "note": "All mutations and tests are same-author design; passing does not imply independent administrative custody.",
+  "research_only": true,
+  "run": {
+    "case_matrix_rows": 24,
+    "killed": 13,
+    "selected_mutants": 13,
+    "survived": 0,
+    "unittest_groups": 3
+  },
+  "schema": "ARIO_W16_PRECONDITION_MUTATION_AUDIT_V1",
+  "source_git_blob_sha1": "5aa44491c6dfd7649a9b7372312985c233b155fc",
+  "source_sha256": "61c9fbe7fbff12af147070906e6a01d63634dcfdfed745180b9ed72f74c01314"
+}

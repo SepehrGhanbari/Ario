@@ -1,0 +1,107 @@
+{
+  "baseline_tests": "PASS",
+  "baseline_unit_methods": 6,
+  "mutants": [
+    {
+      "exit_code": 1,
+      "first_failing_group": "FAIL: test_fixture_and_monitor_policy_boundaries (test_w20_native_log.W20Tests.test_fixture_and_monitor_policy_boundaries)",
+      "id": "M01_IGNORE_CONSISTENCY",
+      "killed": true,
+      "mutant_git_blob_sha1": "a52bc10cbafee3068ddfd3dcbc0f85fbbbcfc2d5"
+    },
+    {
+      "exit_code": 1,
+      "first_failing_group": "FAIL: test_fixture_and_monitor_policy_boundaries (test_w20_native_log.W20Tests.test_fixture_and_monitor_policy_boundaries)",
+      "id": "M02_IGNORE_INCLUSION",
+      "killed": true,
+      "mutant_git_blob_sha1": "616c007a607160cc735bfcbb20e5c4bf4f0b2a35"
+    },
+    {
+      "exit_code": 1,
+      "first_failing_group": "FAIL: test_compact_inclusion_all_prefixes (test_w20_native_log.W20Tests.test_compact_inclusion_all_prefixes)",
+      "id": "M03_UNPREFIXED_LEAF",
+      "killed": true,
+      "mutant_git_blob_sha1": "6b41f5212e2123a315ac488eaaa5eba8c922ac4f"
+    },
+    {
+      "exit_code": 1,
+      "first_failing_group": "FAIL: test_compact_consistency_all_prefix_pairs (test_w20_native_log.W20Tests.test_compact_consistency_all_prefix_pairs)",
+      "id": "M04_UNPREFIXED_BRANCH",
+      "killed": true,
+      "mutant_git_blob_sha1": "4363098f1095ededb208e55f78837a61d92cf440"
+    },
+    {
+      "exit_code": 1,
+      "first_failing_group": "FAIL: test_fixture_and_monitor_policy_boundaries (test_w20_native_log.W20Tests.test_fixture_and_monitor_policy_boundaries)",
+      "id": "M05_IGNORE_RETAINED_PRIOR",
+      "killed": true,
+      "mutant_git_blob_sha1": "a65e6a92ad7127f2d718d64d652a305ad1280dac"
+    },
+    {
+      "exit_code": 1,
+      "first_failing_group": "FAIL: test_fixture_and_monitor_policy_boundaries (test_w20_native_log.W20Tests.test_fixture_and_monitor_policy_boundaries)",
+      "id": "M06_IGNORE_SIZE_ROLLBACK",
+      "killed": true,
+      "mutant_git_blob_sha1": "4fa3501dd93e0af13e52965c137b9f22fce8723b"
+    },
+    {
+      "exit_code": 1,
+      "first_failing_group": "FAIL: test_same_issuer_signed_fork_and_signed_wrong_origin (test_w20_native_log.W20Tests.test_same_issuer_signed_fork_and_signed_wrong_origin)",
+      "id": "M07_IGNORE_FORK",
+      "killed": true,
+      "mutant_git_blob_sha1": "e461593a631106d32d038e14ba842a685fc5d6a8"
+    },
+    {
+      "exit_code": 1,
+      "first_failing_group": "FAIL: test_fixture_and_monitor_policy_boundaries (test_w20_native_log.W20Tests.test_fixture_and_monitor_policy_boundaries)",
+      "id": "M08_FALSE_ACTION_AUTHORITY",
+      "killed": true,
+      "mutant_git_blob_sha1": "4f66db9a70b566d2934df40be1a1df43ddfd58b1"
+    },
+    {
+      "exit_code": 1,
+      "first_failing_group": "FAIL: test_fixture_and_monitor_policy_boundaries (test_w20_native_log.W20Tests.test_fixture_and_monitor_policy_boundaries)",
+      "id": "M09_FALSE_NATIVE_LOG_WITNESS",
+      "killed": true,
+      "mutant_git_blob_sha1": "d98770a8a8ff770b7c3c66342379ae5c424ba17d"
+    },
+    {
+      "exit_code": 1,
+      "first_failing_group": "FAIL: test_fixture_and_monitor_policy_boundaries (test_w20_native_log.W20Tests.test_fixture_and_monitor_policy_boundaries)",
+      "id": "M10_IGNORE_EVENT_SCHEMA",
+      "killed": true,
+      "mutant_git_blob_sha1": "b4ef9b6ccbdae9ecab94b635a331a376b99f8d78"
+    },
+    {
+      "exit_code": 1,
+      "first_failing_group": "FAIL: test_same_issuer_signed_fork_and_signed_wrong_origin (test_w20_native_log.W20Tests.test_same_issuer_signed_fork_and_signed_wrong_origin)",
+      "id": "M11_IGNORE_ORIGIN_BINDING",
+      "killed": true,
+      "mutant_git_blob_sha1": "3237e26dc3c440aeb4407ef8ff9dce251090ed24"
+    },
+    {
+      "exit_code": 0,
+      "first_failing_group": null,
+      "id": "M12_OMIT_FULL_INCLUSION_SET_CHECK",
+      "killed": false,
+      "mutant_git_blob_sha1": "d2aefb9cfc31205bdbaa901a58c3226af66911a1"
+    },
+    {
+      "exit_code": 1,
+      "first_failing_group": "FAIL: test_fixture_and_monitor_policy_boundaries (test_w20_native_log.W20Tests.test_fixture_and_monitor_policy_boundaries)",
+      "id": "M13_IGNORE_SIGNATURE_ERRORS",
+      "killed": true,
+      "mutant_git_blob_sha1": "68bac40c99432184a4989c487917824f114ebe1a"
+    }
+  ],
+  "mutants_killed": 12,
+  "mutants_selected": 13,
+  "mutants_survived": 1,
+  "note": "Mutant survival may indicate redundant defenses or insufficient controls; do not call 100% security if all selected mutants die.",
+  "operational_authority": "NONE",
+  "real_ario_memory_events": 0,
+  "real_external_signatures": 0,
+  "research_status": "SAME_AUTHOR_NONBLIND",
+  "schema": "ARIO_W20_SELECTED_MUTATION_RESULTS_V1",
+  "source_verifier_git_blob_sha1": "e0e1132a19fe5774460ccea48ef055eb1787653e"
+}

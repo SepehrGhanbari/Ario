@@ -1,0 +1,95 @@
+{
+  "schema": "ARIO_W18_ACTUAL_EXTERNAL_SIGSUM_PUBLIC_PROOF_V1",
+  "event_date": "2026-11-17",
+  "observed_utc": "2026-11-17T17:56:41Z",
+  "status": "REAL_PUBLIC_SIGSUM_INCLUSION_PROOF_VERIFIED",
+  "mode": "ONE_SHOT_PUBLIC_SYNTHETIC_RESEARCH_ANCHOR",
+  "manifest": {
+    "path": "research/consensus/W18_PUBLIC_RESEARCH_ANCHOR_MANIFEST_2026-11-17.json",
+    "git_blob_sha1": "52c009c22c5cbaca686c18498bb395f863a33f44",
+    "raw_sha256": "ee83050bff68f9b73afb115949bca8c46bb09462a6f000eecb9ed07bf2855769",
+    "publication_scope": "public W17 research file references and hashes only; no actual Ario log or private memory"
+  },
+  "sigsum": {
+    "log": "barreleye",
+    "service": "https://test.sigsum.org/barreleye",
+    "policy": "sigsum-test1-2025",
+    "policy_named_witnesses": 3,
+    "policy_required_distinct_cosignatures": 2,
+    "proof_format_version": 2,
+    "observed_receipt_log_field": "4e89cc51651f0d95f3c6127c15e1a42e3ddf7046c5b17b752689c402e773bb4d",
+    "observed_tree_size": 279020,
+    "receipt_cosignature_lines": 15,
+    "cryptographic_policy_verifier": "sigsum-verify from sigsum-go v0.14.1",
+    "cryptographic_policy_verification": "PASS",
+    "quorum_operator_administrative_independence": "NOT_INDEPENDENTLY_AUDITED"
+  },
+  "receipt": {
+    "path": "research/consensus/W18_SIGSUM_VERIFIED_INCLUSION_PROOF_2026-11-17.proof",
+    "git_blob_sha1": "5544110468e1b20f499181411bf231aaddda74d6",
+    "raw_sha256": "edae4603b5f8a32a3ab9f989ebf499f31fb12864708e5fc675308cf6d847d8b6",
+    "public_submitter_key": "research/consensus/W18_SIGSUM_VERIFIED_SUBMITTER_PUBLIC_KEY_2026-11-17.pub",
+    "submitter_public_key_git_blob_sha1": "b6da232fa48149cb5a96cb84fac4a2a8c28de6d4",
+    "private_submitter_key_retained": false,
+    "no_actual_ario_signer_used": true
+  },
+  "runs": [
+    {
+      "name": "first attempt failed at Go installation; no external submit",
+      "id": 44142184472,
+      "url": "https://github.com/SepehrGhanbari/Ario/actions/runs/44142184472",
+      "conclusion": "failure",
+      "submitted": false,
+      "reason": "Go 1.23 provided; pinned Sigsum v0.14.1 requires Go >=1.25"
+    },
+    {
+      "name": "one-time public submission and official built-in policy verification",
+      "id": 44142359329,
+      "url": "https://github.com/SepehrGhanbari/Ario/actions/runs/44142359329",
+      "conclusion": "success",
+      "submitted": true,
+      "verified": true,
+      "artifact_id": 14355096991,
+      "workflow_commit": "c9dd0038cc1496a82b2a8a29fdc859b1d4be56e4"
+    },
+    {
+      "name": "separate ephemeral GitHub runner offline verification + four negative controls; zero further submissions",
+      "id": 44143155573,
+      "url": "https://github.com/SepehrGhanbari/Ario/actions/runs/44143155573",
+      "conclusion": "success",
+      "submitted": false,
+      "verified": true,
+      "artifact_id": 14355870780,
+      "source_snapshot_commit": "6aa96d34b2547ac3b55cb63327e94caf8103efeb"
+    }
+  ],
+  "offline_negative_controls": {
+    "legitimate_exact_manifest_pubkey_proof": "PASS",
+    "one_byte_manifest_change": "REJECTED",
+    "all_witness_cosignatures_removed": "REJECTED",
+    "first_inclusion_node_hash_modified": "REJECTED",
+    "ed25519_submitter_public_key_payload_modified": "REJECTED",
+    "verification_runner": "GITHUB_HOSTED_DISPOSABLE_SECOND_RUNNER",
+    "same_repo_owner_control": "YES",
+    "independent_human_reviewer": "NOT_ESTABLISHED"
+  },
+  "workflow_cleanup": {
+    "temporary_execution_branch": "research/w18-sigsum-one-shot-run-20261117",
+    "one_shot_submission_workflow_removed": true,
+    "one_shot_verification_workflow_removed": true,
+    "scheduled_triggers_created": false,
+    "main_branch_modified": false
+  },
+  "explicit_nonclaims": {
+    "ario_native_log_witnessed": false,
+    "every_ario_event_included": false,
+    "currently_latest_ario_epoch": "UNKNOWN",
+    "human_consent_cryptographically_attested": false,
+    "memory_fact_proven": false,
+    "trust_activation_allowed": false,
+    "signer_activation_allowed": false,
+    "operational_action_authority": "NONE",
+    "witness_admin_independence_proven": false
+  },
+  "github_research_draft_pr": "https://github.com/SepehrGhanbari/Ario/pull/242"
+}
