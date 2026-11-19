@@ -1,0 +1,150 @@
+{
+  "cached_w32_anchor_heights": [
+    976596,
+    976598
+  ],
+  "fetched_heights": [
+    976597,
+    976599,
+    976600
+  ],
+  "full_consensus_verified": false,
+  "full_node_bitcoin_core_rpc_used": false,
+  "get_requests_max": 12,
+  "http_posts": 0,
+  "mode": "GET_ONLY_2_PUBLIC_APIS",
+  "raw_provider_observations": [
+    {
+      "header_hex": "00e000202dab6430ac7512902300c4fd4a3383fd995b9168c1a600000000000000000000eaaa3ff2cbf288b5c88cd93b4b9054a123669c3c3b99215a207173f7747fab0fd514ff6a731602174151ba43",
+      "height": 976597,
+      "info": {
+        "bits": 386012787,
+        "hash": "00000000000000000000c8f4825684592b14f460d33508cddad2a6d6f0a2534b",
+        "header_sha256": "f4fe3a2d6911cd2d9687a1eea5f6c235bdbca8451fb6bdc7de3c3bef6e8eae93",
+        "merkle_root_raw": "eaaa3ff2cbf288b5c88cd93b4b9054a123669c3c3b99215a207173f7747fab0f",
+        "nonce": 1136283969,
+        "prev_hash": "00000000000000000000a6c168915b99fd83334afdc40023901275ac3064ab2d",
+        "time": 1795101909
+      },
+      "provider": "blockstream",
+      "status": "HEADER_HASH_POW_PASS"
+    },
+    {
+      "header_hex": "00e000202dab6430ac7512902300c4fd4a3383fd995b9168c1a600000000000000000000eaaa3ff2cbf288b5c88cd93b4b9054a123669c3c3b99215a207173f7747fab0fd514ff6a731602174151ba43",
+      "height": 976597,
+      "info": {
+        "bits": 386012787,
+        "hash": "00000000000000000000c8f4825684592b14f460d33508cddad2a6d6f0a2534b",
+        "header_sha256": "f4fe3a2d6911cd2d9687a1eea5f6c235bdbca8451fb6bdc7de3c3bef6e8eae93",
+        "merkle_root_raw": "eaaa3ff2cbf288b5c88cd93b4b9054a123669c3c3b99215a207173f7747fab0f",
+        "nonce": 1136283969,
+        "prev_hash": "00000000000000000000a6c168915b99fd83334afdc40023901275ac3064ab2d",
+        "time": 1795101909
+      },
+      "provider": "mempool",
+      "status": "HEADER_HASH_POW_PASS"
+    },
+    {
+      "header_hex": "0060e839b1c5e0d8a3990514208bcf72efe7f9ece97f890852cc0000000000000000000026343685b2f78d7f33f7066852bdeccf97397f9bf4edb776d95f4c1600ab7bedce15ff6a7316021717d80706",
+      "height": 976599,
+      "info": {
+        "bits": 386012787,
+        "hash": "000000000000000000015c517743911a76b2df8b354bf877b6c249c623695713",
+        "header_sha256": "415f5c4e83545ae85f91f2076bd4aeeadfab2ab4320e20b3c51b65c3700b067a",
+        "merkle_root_raw": "26343685b2f78d7f33f7066852bdeccf97397f9bf4edb776d95f4c1600ab7bed",
+        "nonce": 101177367,
+        "prev_hash": "00000000000000000000cc5208897fe9ecf9e7ef72cf8b20140599a3d8e0c5b1",
+        "time": 1795102158
+      },
+      "provider": "blockstream",
+      "status": "HEADER_HASH_POW_PASS"
+    },
+    {
+      "header_hex": "0060e839b1c5e0d8a3990514208bcf72efe7f9ece97f890852cc0000000000000000000026343685b2f78d7f33f7066852bdeccf97397f9bf4edb776d95f4c1600ab7bedce15ff6a7316021717d80706",
+      "height": 976599,
+      "info": {
+        "bits": 386012787,
+        "hash": "000000000000000000015c517743911a76b2df8b354bf877b6c249c623695713",
+        "header_sha256": "415f5c4e83545ae85f91f2076bd4aeeadfab2ab4320e20b3c51b65c3700b067a",
+        "merkle_root_raw": "26343685b2f78d7f33f7066852bdeccf97397f9bf4edb776d95f4c1600ab7bed",
+        "nonce": 101177367,
+        "prev_hash": "00000000000000000000cc5208897fe9ecf9e7ef72cf8b20140599a3d8e0c5b1",
+        "time": 1795102158
+      },
+      "provider": "mempool",
+      "status": "HEADER_HASH_POW_PASS"
+    },
+    {
+      "header_hex": "00800e2013576923c649c2b677f84b358bdfb2761a914377515c01000000000000000000b39d9a5eab3b9edae48949c0e6b48d3a00f04e89972146d055219f711c47cde78918ff6a73160217df4de7ca",
+      "height": 976600,
+      "info": {
+        "bits": 386012787,
+        "hash": "00000000000000000001fbea30dad96a9449de2ac465309922f20cfe2b09eb86",
+        "header_sha256": "6f9a0c1667abf3015d7d06f7bbe654ab94a47fb5c5429a9223b6302241e45395",
+        "merkle_root_raw": "b39d9a5eab3b9edae48949c0e6b48d3a00f04e89972146d055219f711c47cde7",
+        "nonce": 3404156383,
+        "prev_hash": "000000000000000000015c517743911a76b2df8b354bf877b6c249c623695713",
+        "time": 1795102857
+      },
+      "provider": "blockstream",
+      "status": "HEADER_HASH_POW_PASS"
+    },
+    {
+      "header_hex": "00800e2013576923c649c2b677f84b358bdfb2761a914377515c01000000000000000000b39d9a5eab3b9edae48949c0e6b48d3a00f04e89972146d055219f711c47cde78918ff6a73160217df4de7ca",
+      "height": 976600,
+      "info": {
+        "bits": 386012787,
+        "hash": "00000000000000000001fbea30dad96a9449de2ac465309922f20cfe2b09eb86",
+        "header_sha256": "6f9a0c1667abf3015d7d06f7bbe654ab94a47fb5c5429a9223b6302241e45395",
+        "merkle_root_raw": "b39d9a5eab3b9edae48949c0e6b48d3a00f04e89972146d055219f711c47cde7",
+        "nonce": 3404156383,
+        "prev_hash": "000000000000000000015c517743911a76b2df8b354bf877b6c249c623695713",
+        "time": 1795102857
+      },
+      "provider": "mempool",
+      "status": "HEADER_HASH_POW_PASS"
+    }
+  ],
+  "real_ario_data": false,
+  "research_only": true,
+  "schema": "ARIO_W33_FIVE_HEADER_CHAIN_RESEARCH_V1",
+  "verdict": {
+    "authority": "NONE",
+    "bitcoin_consensus_full_node": "NOT_ESTABLISHED",
+    "bitcoin_tx_sent": false,
+    "block_hashes": [
+      "00000000000000000000a6c168915b99fd83334afdc40023901275ac3064ab2d",
+      "00000000000000000000c8f4825684592b14f460d33508cddad2a6d6f0a2534b",
+      "00000000000000000000cc5208897fe9ecf9e7ef72cf8b20140599a3d8e0c5b1",
+      "000000000000000000015c517743911a76b2df8b354bf877b6c249c623695713",
+      "00000000000000000001fbea30dad96a9449de2ac465309922f20cfe2b09eb86"
+    ],
+    "explorer_operator_independence": "NOT_ESTABLISHED",
+    "genesis": "NO_GO",
+    "header_linkage": "FIVE_CONTIGUOUS_HEADERS_LINKED",
+    "heights": [
+      976596,
+      976597,
+      976598,
+      976599,
+      976600
+    ],
+    "independent_c2sp_witness": "NOT_ESTABLISHED",
+    "memory_admitted": false,
+    "nbits": 386012787,
+    "new_timestamp_posts": 0,
+    "no_full_chain_validation": true,
+    "production": "NO_GO",
+    "public_explorer_corroboration": "TWO_PUBLIC_API_IDENTICAL_FOR_FETCHED_HEIGHTS",
+    "reason": "BOUNDED_FIVE_HEADER_LINK_AND_TWO_API_POW_PASS",
+    "status": "HOLD",
+    "trust_activation": "NO_GO"
+  },
+  "action_log": "https://github.com/SepehrGhanbari/Ario/actions/runs/44571141267",
+  "job_id": 135726195028,
+  "source_commit": "b9eb235c56f8fea6f7891c271ef837eaff968b44",
+  "pinned_w32_evidence_blob": "dab717f48a9483a7909f70f86b174cadce0ca171",
+  "research_result": "FIVE_CONTIGUOUS_HEADERS_HASH_POW_LINKAGE_WITH_TWO_PUBLIC_APIS; NOT_FULL_CHAIN",
+  "head_or_custody_independence": "NOT_ESTABLISHED",
+  "own_bitcoin_core_mainnet_consensus_verification": "NOT_DONE"
+}
