@@ -16,6 +16,7 @@ class FixtureReader:
         pr = {"id": 128800, "number":270,"head":{"sha":SHA}}
         run = {"id": TARGET.run_id, "head_sha":SHA, "run_attempt":1,
                "workflow_id":379498305, "event":"pull_request", "status":"completed", "conclusion":"success"}
+        run["pull_requests"] = [copy.deepcopy(pr)]
         def job(n, name):
             return {"id":n,"name":name,"run_id":TARGET.run_id,"run_attempt":1,
                     "head_sha":SHA,"status":"completed","conclusion":"success"}
@@ -71,6 +72,26 @@ class D10Tests(unittest.TestCase):
     def test_pinned_target_stale(self):
         self.r.rows[0]['head']['sha']='b'*40; self.r.rows[3]['head']['sha']='b'*40
         self.assertReject()
+    def test_run_links_the_sampled_pr(self):
+        link = self.r.rows[1]["pull_requests"][0]
+        for membership in (None, [], [dict(link, number=271)], [dict(link, id=999)],
+                           [dict(link, head={"sha": "a" * 40})]):
+            with self.subTest(membership=membership):
+                self.r = FixtureReader()
+                if membership is None:
+                    del self.r.rows[1]["pull_requests"]
+                else:
+                    self.r.rows[1]["pull_requests"] = membership
+                self.assertReject()
+
+    def test_response_ids_have_exact_integer_type(self):
+        for row, field in ((0, "number"), (1, "id"), (2, "run_attempt"), (2, "run_id")):
+            with self.subTest(row=row, field=field):
+                self.r = FixtureReader()
+                record = self.r.rows[2]["jobs"][0] if row == 2 else self.r.rows[row]
+                record[field] = float(record[field])
+                self.assertReject()
+
     def test_run_wrong_head(self):
         self.r.rows[1]['head_sha']='f'*40;self.assertReject()
     def test_run_wrong_attempt(self):
@@ -102,7 +123,8 @@ class D10Tests(unittest.TestCase):
             r=FixtureReader();r.error_index=n; x=m.audit(TARGET,r)
             self.assertUnknown(x);self.assertEqual(x['reason'],'INCOMPLETE_OR_UNAVAILABLE_READBACK')
     def test_duplicate_json_key(self):
-        self.r.raw_override[1]=b'{"id":44392429462,"id":44392429462}'
+        valid = json.dumps(self.r.rows[1]).encode("utf-8")
+        self.r.raw_override[1] = b'{"id":1,' + valid[1:]
         self.assertReject()
     def test_json_not_object(self):
         self.r.raw_override[1]=b'[1,2,3]';self.assertReject()

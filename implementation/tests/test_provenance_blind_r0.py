@@ -81,6 +81,20 @@ class PublicNoOracleContract(unittest.TestCase):
             self.assertTrue(out["history_preserved"])
             self.assertIn(out["current_state"], {"UNRESOLVED", "LAB_CONDITIONALLY_CURRENT"})
 
+    def test_conditional_currency_requires_witness_and_positive_attempts(self):
+        original = next(case for case in public_cases() if case["case_id"] == "C-03")
+        self.assertEqual(evaluator.evaluate(original)["current_state"], "LAB_CONDITIONALLY_CURRENT")
+        for witness, current, issued in ((None, 1, 1), ("  ", 1, 1), ("W2", -1, -1),
+                                         ("W2", 0, 1), ("W2", 1, 0)):
+            with self.subTest(witness=witness, current=current, issued=issued):
+                case = copy.deepcopy(original)
+                facts = case["facts"]
+                facts["current_attempt"] = current
+                facts["receipts"][0].update(witness=witness, attempt=issued)
+                out = evaluator.evaluate(case)
+                self.assertEqual(out["status"], "UNKNOWN")
+                self.assertEqual(out.get("reason"), "INVALID_OR_UNSUPPORTED_OBSERVATION")
+
     def test_injected_oracle_refused(self):
         case = copy.deepcopy(public_cases()[0])
         case["oracle"] = {"historical_truth": "hidden"}
