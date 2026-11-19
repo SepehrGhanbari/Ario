@@ -290,12 +290,13 @@ def main():
     except (OSError,ValueError,TypeError,subprocess.CalledProcessError):
         output=verdict("W34_INPUT_OR_EXECUTION_ERROR_NO_GO")
     print("W34_CORE_EVIDENCE_JSON="+json.dumps(output,sort_keys=True))
-    if output["reason"] not in (
-        "VALID_ORIGINAL_PUBLIC_W31_OTS_INPUT_ONLY",
-        "LOCAL_CORE_RPC_CLAIMS_MATCH_ORIGINAL_OTS_PROOFS_BUT_OPERATOR_UNATTESTED"
-    ):
-        # Invalid or missing local Core is an execution failure, never a green
-        # acceptance. All result fields still remain HOLD / NO_GO.
+    if output["reason"] == "LOCAL_CORE_RPC_CLAIMS_MATCH_ORIGINAL_OTS_PROOFS_BUT_OPERATOR_UNATTESTED":
+        # Even perfect-looking caller-supplied RPC is NOT independent Core
+        # validation. Exit distinctly nonzero; do not let CI turn this
+        # diagnostic agreement into a green verification check.
+        raise SystemExit(3)
+    if output["reason"] != "VALID_ORIGINAL_PUBLIC_W31_OTS_INPUT_ONLY":
+        # Invalid or unavailable node / malformed input is an actual error.
         raise SystemExit(2)
 
 
