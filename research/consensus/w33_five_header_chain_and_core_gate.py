@@ -40,7 +40,7 @@ def result(reason,**extra):
         "bitcoin_tx_sent":False,"new_timestamp_posts":0,
     }
     allowed = {"header_linkage", "public_explorer_corroboration",
-               "heights", "block_hashes", "nbits",
+               "heights", "height", "block_hashes", "nbits",
                "no_full_chain_validation", "rpc_snapshot_fields",
                "full_node_verification"}
     if not set(extra).issubset(allowed):
