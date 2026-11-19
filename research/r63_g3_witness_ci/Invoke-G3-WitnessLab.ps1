@@ -159,7 +159,8 @@ function CheckDirect([string]$case,[bool]$flag,[string]$tag) {
     $r=Reader @('--direct',$case,$readerSid,$mode) $tag
     if ($r.token.sid -ne $readerSid) {throw 'NOT_ACTUAL_READER_TOKEN'}
     $expected=if($flag){5}else{4}
-    if ($r.denials.PSObject.Properties.Count -ne $expected) {throw 'WRONG_DIRECT_DENIAL_COUNT'}
+    $denialNames=@($r.denials.PSObject.Properties | ForEach-Object { $_.Name })
+    if ($denialNames.Count -ne $expected) {throw 'WRONG_DIRECT_DENIAL_COUNT'}
     foreach($entry in $r.denials.PSObject.Properties) {
         if ($entry.Value -ne 'ACCESS_DENIED') {throw ('UNAUTHORIZED_DIRECT_WRITE_ACCEPTED_'+$entry.Name)}
     }
