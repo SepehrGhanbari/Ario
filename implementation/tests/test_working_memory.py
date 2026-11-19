@@ -196,12 +196,22 @@ def test_metacognitive_assessment_scenarios():
     report2 = buf.metacognitive_assessment()
     assert report2.verdict == MetacognitiveVerdict.UNGROUNDED_HYPOTHESIS
 
-    # 3. Grounded empirical focus
-    emp_attr = make_attribution("proof 1", veracity=VeracityState.VERIFIED_EMPIRICAL, attr_id="e1")
-    buf.ingest(concept="e_concept", assertion="proof 1", source_attribution=emp_attr, salience=0.8)
-    report3 = buf.metacognitive_assessment()
+    # 3. Grounded empirical focus requires guard-admitted execution evidence.
+    guard = SourceMonitoringGuard()
+    empirical = guard.record_empirical_observation(
+        assertion="proof 1",
+        tool="run_tests",
+        target="synthetic-memory-test",
+        exit_code=0,
+        stdout="PASS",
+        execution_lock="sandbox-execution-lock",
+        attribution_id="e1",
+    )
+    verified_buf = WorkingMemoryBuffer(capacity=4, source_guard=guard)
+    verified_buf.ingest(concept="e_concept", assertion=empirical.assertion, source_attribution=empirical, salience=0.8)
+    report3 = verified_buf.metacognitive_assessment()
     assert report3.verdict == MetacognitiveVerdict.FOCUSED_SUFFICIENCY
-    assert report3.empirical_ratio >= 0.5
+    assert report3.empirical_ratio == 1.0
 
     # 4. Active contradiction between two chunks on the same concept
     contra_attr1 = make_attribution("target service is active", veracity=VeracityState.VERIFIED_EMPIRICAL, attr_id="c1")

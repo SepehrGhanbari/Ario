@@ -15,6 +15,7 @@ Core Invariants:
 
 from __future__ import annotations
 
+import copy
 import dataclasses
 import hashlib
 import json
@@ -121,12 +122,20 @@ class WorkingMemoryBuffer:
 
         self._active_chunks: Dict[str, WorkingMemoryChunk] = {}
         self._eviction_history: List[EvictionRecord] = []
+        # Each source-evidence unit may be structurally consolidated once.
+        self._consolidated_chunk_ids: Set[str] = set()
         self._current_step: int = 0
 
     @property
     def active_chunks(self) -> List[WorkingMemoryChunk]:
         """Returns active chunks sorted by salience descending."""
-        return sorted(self._active_chunks.values(), key=lambda c: (c.salience, c.last_accessed_step), reverse=True)
+        return [
+            copy.deepcopy(chunk) for chunk in sorted(
+                self._active_chunks.values(),
+                key=lambda c: (c.salience, c.last_accessed_step),
+                reverse=True,
+            )
+        ]
 
     @property
     def active_count(self) -> int:
@@ -134,7 +143,8 @@ class WorkingMemoryBuffer:
 
     @property
     def eviction_history(self) -> List[EvictionRecord]:
-        return list(self._eviction_history)
+        # Inspection must never mutate internal audit entries.
+        return copy.deepcopy(self._eviction_history)
 
     def ingest(
         self,
@@ -153,6 +163,17 @@ class WorkingMemoryBuffer:
         if not isinstance(source_attribution, SourceAttribution):
             raise SourceMonitoringError("Working memory requires a verified SourceAttribution")
 
+        # Dataclass shape is not provenance. A configured guard must recognize
+        # the *exact* attribution and accept it before eviction or rehearsal.
+        if self.source_guard is not None:
+            canonical = self.source_guard.attributions.get(source_attribution.attribution_id)
+            if canonical is None or canonical != source_attribution:
+                raise SourceMonitoringError("Source attribution not admitted by configured guard")
+            if not self.source_guard.filter_working_memory_candidates(
+                [source_attribution.attribution_id]
+            ):
+                raise SourceMonitoringError("Configured source guard refused attribution")
+
         if step is not None:
             self._current_step = max(self._current_step, step)
 
@@ -165,8 +186,8 @@ class WorkingMemoryBuffer:
             chunk.last_accessed_step = self._current_step
             chunk.salience = min(1.0, max(chunk.salience, salience) + self.REHEARSAL_SALIENCE_BOOST)
             if metadata:
-                chunk.metadata.update(metadata)
-            return chunk
+                chunk.metadata.update(copy.deepcopy(metadata))
+            return copy.deepcopy(chunk)
 
         # Capacity management: Evict before inserting if full
         if len(self._active_chunks) >= self.capacity:
@@ -177,16 +198,16 @@ class WorkingMemoryBuffer:
             chunk_id=chunk_id,
             concept=concept.strip(),
             assertion=assertion.strip(),
-            source_attribution=source_attribution,
+            source_attribution=copy.deepcopy(source_attribution),
             salience=clamped_salience,
             created_step=self._current_step,
             last_accessed_step=self._current_step,
             access_count=1,
             state=ChunkState.ACTIVE,
-            metadata=dict(metadata or {}),
+            metadata=copy.deepcopy(metadata or {}),
         )
         self._active_chunks[chunk_id] = chunk
-        return chunk
+        return copy.deepcopy(chunk)
 
     def access(self, chunk_id: str, step: Optional[int] = None) -> Optional[WorkingMemoryChunk]:
         """Accesses an active chunk, applying attentional rehearsal boost."""
@@ -200,7 +221,7 @@ class WorkingMemoryBuffer:
         chunk.access_count += 1
         chunk.last_accessed_step = self._current_step
         chunk.salience = min(1.0, chunk.salience + self.REHEARSAL_SALIENCE_BOOST)
-        return chunk
+        return copy.deepcopy(chunk)
 
     def step_tick(self, step: Optional[int] = None) -> List[EvictionRecord]:
         """Advances time/step, applying salience decay and pruning decayed chunks."""
@@ -235,21 +256,24 @@ class WorkingMemoryBuffer:
         recalled_chunks: List[WorkingMemoryChunk] = []
 
         for node in ltm_nodes:
-            # Reconstruct attribution
-            v_state = (
-                VeracityState.EXTERNAL_ASSERTION
-                if node.status == NodeEpistemicStatus.ACCEPTED
-                else VeracityState.UNVERIFIED_HYPOTHESIS
-            )
-            attribution = SourceAttribution(
-                attribution_id=f"recall_{node.node_id}",
-                source_type=SourceType.INTERNAL_HYPOTHESIS,
-                assertion=node.assertion,
-                veracity_state=v_state,
-                provenance=None,
-                parent_attribution_ids=(node.node_id,),
-                created_at=datetime.now(timezone.utc).isoformat(),
-            )
+            # Remembering an ACCEPTED node is not a new empirical verification.
+            # The recall is a hypothesis linked to its historical semantic node.
+            if self.source_guard is not None:
+                attribution = self.source_guard.create_hypothesis(
+                    node.assertion,
+                    attribution_id=f"recall_{node.node_id}",
+                    parent_attribution_ids=(node.node_id,),
+                )
+            else:
+                attribution = SourceAttribution(
+                    attribution_id=f"recall_{node.node_id}",
+                    source_type=SourceType.INTERNAL_HYPOTHESIS,
+                    assertion=node.assertion,
+                    veracity_state=VeracityState.UNVERIFIED_HYPOTHESIS,
+                    provenance=None,
+                    parent_attribution_ids=(node.node_id,),
+                    created_at=datetime.now(timezone.utc).isoformat(),
+                )
             # Re-ingest into working memory with recall salience
             chunk = self.ingest(
                 concept=node.concept,
@@ -269,7 +293,7 @@ class WorkingMemoryBuffer:
 
         consolidated_ids: List[str] = []
         for cid, chunk in list(self._active_chunks.items()):
-            if chunk.salience >= min_salience:
+            if chunk.salience >= min_salience and cid not in self._consolidated_chunk_ids:
                 self._promote_to_ltm(chunk)
                 chunk.state = ChunkState.CONSOLIDATED_TO_LTM
                 consolidated_ids.append(cid)
@@ -291,9 +315,23 @@ class WorkingMemoryBuffer:
 
         chunks = list(self._active_chunks.values())
         total = len(chunks)
-        empirical_count = sum(
-            1 for c in chunks if c.source_attribution.veracity_state == VeracityState.VERIFIED_EMPIRICAL
-        )
+        # Only a currently admitted empirical record counts as grounding.
+        # Without a configured guard, source claims may remain visible but
+        # cannot make a FOCUSED_SUFFICIENCY readiness assertion.
+        empirical_count = 0
+        if self.source_guard is not None:
+            for chunk in chunks:
+                attr = chunk.source_attribution
+                canonical = self.source_guard.attributions.get(attr.attribution_id)
+                if (
+                    attr.source_type == SourceType.EMPIRICAL_OBSERVATION
+                    and attr.veracity_state == VeracityState.VERIFIED_EMPIRICAL
+                    and canonical == attr
+                    and self.source_guard.filter_working_memory_candidates(
+                        [attr.attribution_id], require_verified=True
+                    )
+                ):
+                    empirical_count += 1
         empirical_ratio = empirical_count / total
         avg_salience = sum(c.salience for c in chunks) / total
 
@@ -389,8 +427,12 @@ class WorkingMemoryBuffer:
         """Synthesizes a structured observation event and submits it to ConsolidationEngine."""
         if not self.consolidation_engine:
             return
+        if chunk.chunk_id in self._consolidated_chunk_ids:
+            return
 
         event_payload = {
+            # Structural recording has no implied proof/support.
+            "status": NodeEpistemicStatus.RECORDED.value,
             "concept": chunk.concept,
             "assertion": chunk.assertion,
             "saliency_score": chunk.salience,
@@ -398,9 +440,34 @@ class WorkingMemoryBuffer:
             "source_type": chunk.source_attribution.source_type.value,
             "veracity_state": chunk.source_attribution.veracity_state.value,
             "promoted_from_working_memory": True,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            # A repeated flush must not manufacture a new independent event.
+            "timestamp": chunk.source_attribution.created_at,
         }
-        event_bytes = json.dumps(event_payload, sort_keys=True).encode("utf-8")
-        event_hash = hashlib.sha256(event_bytes).hexdigest()
+        # Salience is an attentional score, NOT a new empirical source.
+        # Stable identity is independent of rehearsal/decay.
+        prov = chunk.source_attribution.provenance
+        identity = {
+            "concept": chunk.concept,
+            "assertion": chunk.assertion,
+            "attribution_id": chunk.source_attribution.attribution_id,
+            "source_type": chunk.source_attribution.source_type.value,
+            "veracity_state": chunk.source_attribution.veracity_state.value,
+            "source_created_at": chunk.source_attribution.created_at,
+            "provenance": None if prov is None else {
+                "tool": prov.tool,
+                "target": prov.target,
+                "exit_code": prov.exit_code,
+                "execution_lock_sha256": prov.execution_lock_sha256,
+                "stdout_sha256": prov.stdout_sha256,
+                "recorded_at": prov.recorded_at,
+            },
+        }
+        event_hash = hashlib.sha256(
+            json.dumps(identity, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
 
-        self.consolidation_engine.ingest_event_stream([(event_hash, event_payload)])
+        # A new WM instance must not manufacture an independent source when
+        # the receiving engine has already seen this evidence identity.
+        if event_hash not in self.consolidation_engine.known_ledger_hashes:
+            self.consolidation_engine.ingest_event_stream([(event_hash, event_payload)])
+        self._consolidated_chunk_ids.add(chunk.chunk_id)

@@ -145,8 +145,12 @@ class TestWorkingMemoryBoundaries:
         for _ in range(50):
             wm.access(chunk.chunk_id)
 
-        assert chunk.salience == 1.0
-        assert chunk.access_count == 51
+        # Returned chunks are snapshots; only canonical internal state rehearses.
+        current = wm.active_chunks[0]
+        assert chunk.salience == 0.5
+        assert chunk.access_count == 1
+        assert current.salience == 1.0
+        assert current.access_count == 51
 
     def test_metacognitive_empty_buffer(self):
         """Empty buffer returns diagnostic assessment without division by zero."""
