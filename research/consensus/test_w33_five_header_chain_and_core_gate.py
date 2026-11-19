@@ -120,6 +120,16 @@ class W33(unittest.TestCase):
     def test_26_full_chain_from_five_headers_is_not_mainnet_consensus(self):
         self.assertEqual(lab.result("fake")["bitcoin_consensus_full_node"],"NOT_ESTABLISHED")
         self.assertEqual(lab.result("fake")["independent_c2sp_witness"],"NOT_ESTABLISHED")
+    def test_27_caller_substitution_of_w32_anchor_is_refused(self):
+        forged=copy.deepcopy(self.pinned)
+        forged[976596]["header_hex"]=self.b["header_hex"]
+        self.assertEqual(lab.validate_five(forged,self.fake)["reason"],
+                         "PINNED_W32_ANCHOR_SUBSTITUTION")
+    def test_28_external_code_cannot_override_no_go_result(self):
+        x=lab.result("fake",production="YES",trust_activation="YES")
+        self.assertEqual(x["reason"],"UNEXPECTED_DIAGNOSTIC_FIELD")
+        self.assertEqual(x["production"],"NO_GO")
+        self.assertEqual(x["trust_activation"],"NO_GO")
 
 if __name__=="__main__":
     unittest.main(verbosity=2)
