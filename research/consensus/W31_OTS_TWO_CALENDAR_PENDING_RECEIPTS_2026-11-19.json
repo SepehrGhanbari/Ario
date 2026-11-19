@@ -1,0 +1,50 @@
+{
+  "actual_ario_log": false,
+  "btc_anchor_confirmed": false,
+  "calendar_results": [
+    {
+      "c2sp_witness_cosignature": false,
+      "calendar_url": "https://alice.btc.calendar.opentimestamps.org",
+      "http_status": 200,
+      "independent_administration": "NOT_ESTABLISHED",
+      "is_pending_not_bitcoin_verified": true,
+      "pending_proof_b64": "8AgdN7d+qocP1wjwEE8f46jaOjFc7tZeldD9cf0I8CBvaBTbBiqOP3HqcSn0mqbaObdZpzNIjvmgDHucx4ezjQjxBGr+9rPwCIlziAnnvj3eAIPf4w0u+QyOLi1odHRwczovL2FsaWNlLmJ0Yy5jYWxlbmRhci5vcGVudGltZXN0YW1wcy5vcmc=",
+      "pending_proof_sha256": "030343de6dfcc98a6915557249aff35fe45a19fb664a3356dec163ed3d8f71f2",
+      "proof_bytes": 137,
+      "response_content_type": "application/vnd.opentimestamps.v1",
+      "status": "HTTP_200_PENDING_RESPONSE_UNVALIDATED"
+    },
+    {
+      "c2sp_witness_cosignature": false,
+      "calendar_url": "https://bob.btc.calendar.opentimestamps.org",
+      "http_status": 200,
+      "independent_administration": "NOT_ESTABLISHED",
+      "is_pending_not_bitcoin_verified": true,
+      "pending_proof_b64": "8AiP4uxndYdxFAjwEK0kMkT0KpZjk6mI9wZHpnsI8SCBthLmDaUnpIMTTHzC5jw4mKqRVjCnjNUrychyiWqqRAjxBGr+9rTwCINque+aOU9tAIPf4w0u+QyOLCtodHRwczovL2JvYi5idGMuY2FsZW5kYXIub3BlbnRpbWVzdGFtcHMub3Jn",
+      "pending_proof_sha256": "d560880e03078f60e9363fd929a1ab6ffd1b1f95e245a872c6606f1a5da20a38",
+      "proof_bytes": 135,
+      "response_content_type": "application/vnd.opentimestamps.v1",
+      "status": "HTTP_200_PENDING_RESPONSE_UNVALIDATED"
+    }
+  ],
+  "confirmed_200_responses": 2,
+  "external_public_irreversible_submission": true,
+  "externally_retained_c2sp_witness": "NOT_ESTABLISHED",
+  "genesis": "NO_GO",
+  "mode": "EXPLICIT_ONE_SHOT_PUBLIC_SYNTHETIC_SUBMISSION",
+  "preimage_bytes": 765,
+  "preimage_sha256": "2078bc80586d0e4b00afa48eb8dea31ab3d4749b4912c57a897e4d5e2fb436df",
+  "production": "NO_GO",
+  "schema": "ARIO_W31_EXTERNAL_OTS_EXPERIMENT_EVIDENCE_V1",
+  "source_truth": "UNKNOWN",
+  "submitted_data": "RAW_SHA256_DIGEST_ONLY_32_BYTES",
+  "synthetic_public_preimage": "W31_PUBLIC_SYNTHETIC_TIMESTAMP_PREIMAGE_2026-11-19.json",
+  "trust_activation": "NO_GO",
+  "evidence_extracted_from": "https://github.com/SepehrGhanbari/Ario/actions/runs/44531802958",
+  "github_actions_job_id": 135586756893,
+  "claim_boundary": "TWO_HTTPS_CALENDAR_PENDING_RESPONSES_ONLY; NOT Bitcoin-anchored or independent C2SP witness; receipt parsers NOT YET independently verified",
+  "external_ownership_assertion": "UNKNOWN_NO_INDEPENDENT_ADMIN_ATTESTATION",
+  "browser_session_replay": "NOT_ATTEMPTED",
+  "verification_status": "PENDING_REPLY_CAPTURED_NOT_BLOCKCHAIN_CONFIRMED",
+  "no_private_data_uploaded": true
+}
