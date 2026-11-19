@@ -74,7 +74,7 @@ def test_final_change_discards_positive_diagnostics(field, value):
     f.next_pr = copy.deepcopy(f.pr)
     f.next_pr[field] = value
     r = call(f)
-    assert r["reason"] == "PR_CHANGED_BETWEEN_SAMPLES"
+    assert r["reason"] == ("INVALID_PR_IDENTITY" if field == "number" else "PR_CHANGED_BETWEEN_SAMPLES")
     assert r["required_check_observation"] == "NOT_CONFIRMED"
     assert "checks" not in r
 
