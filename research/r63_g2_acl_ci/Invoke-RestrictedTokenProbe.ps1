@@ -4,7 +4,7 @@ param([Parameter(Mandatory)][ValidateSet('AuthorizedWriter','RestrictedReader')]
       [Parameter(Mandatory)][string]$Root)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-if (-not $IsWindows) { throw 'WINDOWS_ONLY' }
+if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) { throw 'WINDOWS_ONLY' }
 $rootPath = [IO.Path]::GetFullPath($Root)
 if ((Split-Path -Leaf $rootPath) -ne 'journal') { throw 'REFUSE_NON_LAB_JOURNAL_DIRECTORY' }
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
