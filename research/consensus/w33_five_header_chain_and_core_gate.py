@@ -12,6 +12,7 @@ import json
 import os
 from pathlib import Path
 import re
+import subprocess
 import urllib.error
 import urllib.request
 
@@ -38,6 +39,12 @@ def result(reason,**extra):
         "memory_admitted":False,"authority":"NONE",
         "bitcoin_tx_sent":False,"new_timestamp_posts":0,
     }
+    allowed = {"header_linkage", "public_explorer_corroboration",
+               "heights", "block_hashes", "nbits",
+               "no_full_chain_validation", "rpc_snapshot_fields",
+               "full_node_verification"}
+    if not set(extra).issubset(allowed):
+        return dict(state, reason="UNEXPECTED_DIAGNOSTIC_FIELD")
     state.update(extra)
     return state
 
@@ -68,7 +75,14 @@ def header_info(hex_data):
 
 
 def stored_w32():
-    obj=json.loads((ROOT/W32).read_text("utf-8"))
+    # Read the immutable W32 Git blob (the actual reviewed evidence image),
+    # not a mutable worktree copy. No environment-controlled path or ref.
+    pinned_blob = "dab717f48a9483a7909f70f86b174cadce0ca171"
+    raw = subprocess.run(
+        ["git", "cat-file", "blob", pinned_blob],
+        cwd=str(ROOT.parents[1]), check=True, capture_output=True
+    ).stdout
+    obj=json.loads(raw.decode("utf-8"))
     if (obj.get("verified_w31_preimage_sha256") !=
         "2078bc80586d0e4b00afa48eb8dea31ab3d4749b4912c57a897e4d5e2fb436df"
         or type(obj.get("results")) is not list or len(obj["results"])!=2):
@@ -90,6 +104,12 @@ def stored_w32():
             or h["hash"]!=checks[1]["derived_block_hash"]
             or h["merkle_root_raw"]!=row["proof_merkle_root_raw_hex"]):
             raise ValueError("W32_HEADER_NOT_BOUND_TO_OTS")
+        expected_hash = {
+            976596:"00000000000000000000a6c168915b99fd83334afdc40023901275ac3064ab2d",
+            976598:"00000000000000000000cc5208897fe9ecf9e7ef72cf8b20140599a3d8e0c5b1"
+        }
+        if h["hash"] != expected_hash[height]:
+            raise ValueError("W32_ANCHOR_HASH_NOT_PINNED")
         if height in found:
             raise ValueError("W32_DUPLICATE_ANCHOR")
         found[height]={"height":height,"header_hex":checks[0]["header_hex"],
@@ -151,6 +171,13 @@ def validate_five(pinned,new_responses):
     """Validate bounded 5-block linking and PoW, not full Bitcoin consensus."""
     if type(pinned) is not dict or set(pinned)!={976596,976598}:
         return result("ANCHOR_LIST_INCOMPLETE")
+    # Caller-supplied anchor objects are not trustworthy by name alone.
+    # Recompute from fixed Git object and reject substituted bitlevel views.
+    immutable=stored_w32()
+    if any(type(pinned.get(k)) is not dict
+           or pinned[k].get("header_hex")!=immutable[k]["header_hex"]
+           for k in immutable):
+        return result("PINNED_W32_ANCHOR_SUBSTITUTION")
     if type(new_responses) is not list or len(new_responses)!=6:
         return result("EXPECTED_SIX_EXTERNAL_HEADER_RESPONSES")
     found={}
