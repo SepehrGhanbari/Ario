@@ -143,7 +143,8 @@ class WorkingMemoryBuffer:
 
     @property
     def eviction_history(self) -> List[EvictionRecord]:
-        return list(self._eviction_history)
+        # Inspection must never mutate internal audit entries.
+        return copy.deepcopy(self._eviction_history)
 
     def ingest(
         self,
@@ -442,8 +443,31 @@ class WorkingMemoryBuffer:
             # A repeated flush must not manufacture a new independent event.
             "timestamp": chunk.source_attribution.created_at,
         }
-        event_bytes = json.dumps(event_payload, sort_keys=True).encode("utf-8")
-        event_hash = hashlib.sha256(event_bytes).hexdigest()
+        # Salience is an attentional score, NOT a new empirical source.
+        # Stable identity is independent of rehearsal/decay.
+        prov = chunk.source_attribution.provenance
+        identity = {
+            "concept": chunk.concept,
+            "assertion": chunk.assertion,
+            "attribution_id": chunk.source_attribution.attribution_id,
+            "source_type": chunk.source_attribution.source_type.value,
+            "veracity_state": chunk.source_attribution.veracity_state.value,
+            "source_created_at": chunk.source_attribution.created_at,
+            "provenance": None if prov is None else {
+                "tool": prov.tool,
+                "target": prov.target,
+                "exit_code": prov.exit_code,
+                "execution_lock_sha256": prov.execution_lock_sha256,
+                "stdout_sha256": prov.stdout_sha256,
+                "recorded_at": prov.recorded_at,
+            },
+        }
+        event_hash = hashlib.sha256(
+            json.dumps(identity, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
 
-        self.consolidation_engine.ingest_event_stream([(event_hash, event_payload)])
+        # A new WM instance must not manufacture an independent source when
+        # the receiving engine has already seen this evidence identity.
+        if event_hash not in self.consolidation_engine.known_ledger_hashes:
+            self.consolidation_engine.ingest_event_stream([(event_hash, event_payload)])
         self._consolidated_chunk_ids.add(chunk.chunk_id)
