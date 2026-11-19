@@ -1,0 +1,406 @@
+"""Ario Unified Cognitive Memory: Working Memory Buffer (Module 4).
+
+Operationalizes the Central Executive and Episodic Buffer (Baddeley & Hitch;
+Nelson Cowan 4-chunk capacity model) over Ario's epistemically monitored cognition.
+
+Core Invariants:
+1. Bounded Attentional Focus: Working memory capacity is strictly bounded (default K=4 chunks).
+2. Epistemic Provenance Required: Every chunk must carry a validated SourceAttribution.
+3. Dual Eviction Fate:
+   - High-salience / rehearsed chunks undergo consolidation to Long-Term Memory (LTM).
+   - Low-salience transient noise undergoes adaptive decay/forgetting without LTM pollution.
+4. Metacognitive Calibration: Real-time monitoring of empirical vs hypothetical balance
+   and active contradiction detection before downstream action commitment.
+"""
+
+from __future__ import annotations
+
+import dataclasses
+import hashlib
+import json
+from datetime import datetime, timezone
+from enum import Enum
+from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
+
+from core.memory_consolidation import (
+    ConsolidationEngine,
+    NodeEpistemicStatus,
+    SemanticNode,
+)
+from core.source_monitoring import (
+    SourceAttribution,
+    SourceMonitoringGuard,
+    SourceType,
+    VeracityState,
+    SourceMonitoringError,
+)
+
+
+class ChunkState(str, Enum):
+    ACTIVE = "ACTIVE"
+    CONSOLIDATED_TO_LTM = "CONSOLIDATED_TO_LTM"
+    DECAYED_FORGOTTEN = "DECAYED_FORGOTTEN"
+    DISPLACED = "DISPLACED"
+
+
+class MetacognitiveVerdict(str, Enum):
+    FOCUSED_SUFFICIENCY = "FOCUSED_SUFFICIENCY"
+    PARTIAL_NEEDS_RECALL = "PARTIAL_NEEDS_RECALL"
+    CONTRADICTION_DETECTED = "CONTRADICTION_DETECTED"
+    UNGROUNDED_HYPOTHESIS = "UNGROUNDED_HYPOTHESIS"
+
+
+@dataclasses.dataclass
+class WorkingMemoryChunk:
+    chunk_id: str
+    concept: str
+    assertion: str
+    source_attribution: SourceAttribution
+    salience: float
+    created_step: int
+    last_accessed_step: int
+    access_count: int = 1
+    state: ChunkState = ChunkState.ACTIVE
+    metadata: Dict[str, Any] = dataclasses.field(default_factory=dict)
+
+    @classmethod
+    def compute_chunk_id(cls, concept: str, assertion: str, attribution_id: str) -> str:
+        payload = json.dumps(
+            {"concept": concept.strip().lower(), "assertion": assertion.strip(), "attribution_id": attribution_id},
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        return hashlib.sha256(payload).hexdigest()[:16]
+
+
+@dataclasses.dataclass
+class EvictionRecord:
+    chunk_id: str
+    concept: str
+    assertion: str
+    final_salience: float
+    eviction_step: int
+    fate: ChunkState
+    reason: str
+
+
+@dataclasses.dataclass
+class MetacognitiveAssessment:
+    verdict: MetacognitiveVerdict
+    active_chunk_count: int
+    empirical_ratio: float
+    average_salience: float
+    contradiction_count: int
+    recommended_action: str
+    diagnostics: List[str] = dataclasses.field(default_factory=list)
+
+
+class WorkingMemoryBuffer:
+    """Bounded Working Memory Buffer implementing Cowan's 4-chunk capacity."""
+
+    DEFAULT_CAPACITY: int = 4
+    DEFAULT_SALIENCE_DECAY: float = 0.05
+    DEFAULT_CONSOLIDATION_THRESHOLD: float = 0.65
+    REHEARSAL_SALIENCE_BOOST: float = 0.15
+
+    def __init__(
+        self,
+        capacity: int = DEFAULT_CAPACITY,
+        consolidation_engine: Optional[ConsolidationEngine] = None,
+        source_guard: Optional[SourceMonitoringGuard] = None,
+        salience_decay_rate: float = DEFAULT_SALIENCE_DECAY,
+        consolidation_threshold: float = DEFAULT_CONSOLIDATION_THRESHOLD,
+    ) -> None:
+        if capacity < 1:
+            raise ValueError("Working memory capacity must be at least 1")
+        self.capacity = capacity
+        self.consolidation_engine = consolidation_engine
+        self.source_guard = source_guard
+        self.salience_decay_rate = salience_decay_rate
+        self.consolidation_threshold = consolidation_threshold
+
+        self._active_chunks: Dict[str, WorkingMemoryChunk] = {}
+        self._eviction_history: List[EvictionRecord] = []
+        self._current_step: int = 0
+
+    @property
+    def active_chunks(self) -> List[WorkingMemoryChunk]:
+        """Returns active chunks sorted by salience descending."""
+        return sorted(self._active_chunks.values(), key=lambda c: (c.salience, c.last_accessed_step), reverse=True)
+
+    @property
+    def active_count(self) -> int:
+        return len(self._active_chunks)
+
+    @property
+    def eviction_history(self) -> List[EvictionRecord]:
+        return list(self._eviction_history)
+
+    def ingest(
+        self,
+        concept: str,
+        assertion: str,
+        source_attribution: SourceAttribution,
+        salience: float = 0.5,
+        step: Optional[int] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> WorkingMemoryChunk:
+        """Ingests an observation/assertion into working memory, enforcing bounds and provenance."""
+        if not concept or not concept.strip():
+            raise ValueError("Concept cannot be empty")
+        if not assertion or not assertion.strip():
+            raise ValueError("Assertion cannot be empty")
+        if not isinstance(source_attribution, SourceAttribution):
+            raise SourceMonitoringError("Working memory requires a verified SourceAttribution")
+
+        if step is not None:
+            self._current_step = max(self._current_step, step)
+
+        chunk_id = WorkingMemoryChunk.compute_chunk_id(concept, assertion, source_attribution.attribution_id)
+
+        # Re-ingestion / Rehearsal of existing active chunk
+        if chunk_id in self._active_chunks:
+            chunk = self._active_chunks[chunk_id]
+            chunk.access_count += 1
+            chunk.last_accessed_step = self._current_step
+            chunk.salience = min(1.0, max(chunk.salience, salience) + self.REHEARSAL_SALIENCE_BOOST)
+            if metadata:
+                chunk.metadata.update(metadata)
+            return chunk
+
+        # Capacity management: Evict before inserting if full
+        if len(self._active_chunks) >= self.capacity:
+            self._evict_least_salient()
+
+        clamped_salience = max(0.0, min(1.0, float(salience)))
+        chunk = WorkingMemoryChunk(
+            chunk_id=chunk_id,
+            concept=concept.strip(),
+            assertion=assertion.strip(),
+            source_attribution=source_attribution,
+            salience=clamped_salience,
+            created_step=self._current_step,
+            last_accessed_step=self._current_step,
+            access_count=1,
+            state=ChunkState.ACTIVE,
+            metadata=dict(metadata or {}),
+        )
+        self._active_chunks[chunk_id] = chunk
+        return chunk
+
+    def access(self, chunk_id: str, step: Optional[int] = None) -> Optional[WorkingMemoryChunk]:
+        """Accesses an active chunk, applying attentional rehearsal boost."""
+        if step is not None:
+            self._current_step = max(self._current_step, step)
+
+        if chunk_id not in self._active_chunks:
+            return None
+
+        chunk = self._active_chunks[chunk_id]
+        chunk.access_count += 1
+        chunk.last_accessed_step = self._current_step
+        chunk.salience = min(1.0, chunk.salience + self.REHEARSAL_SALIENCE_BOOST)
+        return chunk
+
+    def step_tick(self, step: Optional[int] = None) -> List[EvictionRecord]:
+        """Advances time/step, applying salience decay and pruning decayed chunks."""
+        if step is not None:
+            self._current_step = max(self._current_step, step)
+        else:
+            self._current_step += 1
+
+        evicted: List[EvictionRecord] = []
+        to_purge: List[str] = []
+
+        for cid, chunk in self._active_chunks.items():
+            if chunk.last_accessed_step < self._current_step:
+                chunk.salience = max(0.0, chunk.salience - self.salience_decay_rate)
+
+            if chunk.salience <= 0.0:
+                to_purge.append(cid)
+
+        for cid in to_purge:
+            chunk = self._active_chunks.pop(cid)
+            record = self._handle_chunk_exit(chunk, reason="salience_decay_to_zero")
+            evicted.append(record)
+
+        return evicted
+
+    def recall_from_long_term(self, concept_cue: str) -> List[WorkingMemoryChunk]:
+        """Directed recall from Long-Term Memory (ConsolidationEngine) into Working Memory."""
+        if not self.consolidation_engine:
+            return []
+
+        ltm_nodes = self.consolidation_engine.retrieve_active_context(concept_cue)
+        recalled_chunks: List[WorkingMemoryChunk] = []
+
+        for node in ltm_nodes:
+            # Reconstruct attribution
+            v_state = (
+                VeracityState.EXTERNAL_ASSERTION
+                if node.status == NodeEpistemicStatus.ACCEPTED
+                else VeracityState.UNVERIFIED_HYPOTHESIS
+            )
+            attribution = SourceAttribution(
+                attribution_id=f"recall_{node.node_id}",
+                source_type=SourceType.INTERNAL_HYPOTHESIS,
+                assertion=node.assertion,
+                veracity_state=v_state,
+                provenance=None,
+                parent_attribution_ids=(node.node_id,),
+                created_at=datetime.now(timezone.utc).isoformat(),
+            )
+            # Re-ingest into working memory with recall salience
+            chunk = self.ingest(
+                concept=node.concept,
+                assertion=node.assertion,
+                source_attribution=attribution,
+                salience=node.saliency_score,
+                metadata={"recalled_from_ltm": True, "ltm_node_id": node.node_id},
+            )
+            recalled_chunks.append(chunk)
+
+        return recalled_chunks
+
+    def flush_to_long_term(self, min_salience: float = 0.0) -> List[str]:
+        """Explicitly flushes/consolidates qualifying active chunks into Long-Term Memory."""
+        if not self.consolidation_engine:
+            return []
+
+        consolidated_ids: List[str] = []
+        for cid, chunk in list(self._active_chunks.items()):
+            if chunk.salience >= min_salience:
+                self._promote_to_ltm(chunk)
+                chunk.state = ChunkState.CONSOLIDATED_TO_LTM
+                consolidated_ids.append(cid)
+
+        return consolidated_ids
+
+    def metacognitive_assessment(self) -> MetacognitiveAssessment:
+        """Evaluates epistemic health and readiness of current active working memory."""
+        if not self._active_chunks:
+            return MetacognitiveAssessment(
+                verdict=MetacognitiveVerdict.PARTIAL_NEEDS_RECALL,
+                active_chunk_count=0,
+                empirical_ratio=0.0,
+                average_salience=0.0,
+                contradiction_count=0,
+                recommended_action="Working memory is empty; initiate perception or LTM recall.",
+                diagnostics=["EMPTY_WORKING_MEMORY"],
+            )
+
+        chunks = list(self._active_chunks.values())
+        total = len(chunks)
+        empirical_count = sum(
+            1 for c in chunks if c.source_attribution.veracity_state == VeracityState.VERIFIED_EMPIRICAL
+        )
+        empirical_ratio = empirical_count / total
+        avg_salience = sum(c.salience for c in chunks) / total
+
+        # Check for active contradictions across concepts
+        contradiction_pairs: List[Tuple[str, str]] = []
+        concept_map: Dict[str, List[WorkingMemoryChunk]] = {}
+        for c in chunks:
+            concept_map.setdefault(c.concept.strip().lower(), []).append(c)
+
+        for concept, group in concept_map.items():
+            if len(group) > 1:
+                # Check for direct assertion conflicts
+                for i in range(len(group)):
+                    for j in range(i + 1, len(group)):
+                        a1 = group[i].assertion.strip().lower()
+                        a2 = group[j].assertion.strip().lower()
+                        if a1 != a2 and (
+                            ("not " in a1 and a1.replace("not ", "") in a2)
+                            or ("not " in a2 and a2.replace("not ", "") in a1)
+                            or ("false" in a1 and "true" in a2)
+                            or ("true" in a1 and "false" in a2)
+                        ):
+                            contradiction_pairs.append((group[i].chunk_id, group[j].chunk_id))
+
+        diagnostics: List[str] = []
+        if contradiction_pairs:
+            verdict = MetacognitiveVerdict.CONTRADICTION_DETECTED
+            recommended = "Halt automated action; resolve active contradictions in working memory."
+            diagnostics.append(f"CONTRADICTIONS_DETECTED: {len(contradiction_pairs)} pair(s)")
+        elif empirical_ratio >= 0.5 and avg_salience >= 0.4:
+            verdict = MetacognitiveVerdict.FOCUSED_SUFFICIENCY
+            recommended = "Sufficient grounded empirical focus; proceed with planned task."
+            diagnostics.append("HIGH_EMPIRICAL_GROUNDING")
+        elif empirical_count == 0:
+            verdict = MetacognitiveVerdict.UNGROUNDED_HYPOTHESIS
+            recommended = "Active focus lacks empirical grounding; execute verification probe."
+            diagnostics.append("NO_EMPIRICAL_PROVENANCE")
+        else:
+            verdict = MetacognitiveVerdict.PARTIAL_NEEDS_RECALL
+            recommended = "Partial grounding; query Long-Term Memory or sensory tools for reinforcement."
+            diagnostics.append("LOW_EMPIRICAL_RATIO_OR_SALIENCE")
+
+        return MetacognitiveAssessment(
+            verdict=verdict,
+            active_chunk_count=total,
+            empirical_ratio=round(empirical_ratio, 3),
+            average_salience=round(avg_salience, 3),
+            contradiction_count=len(contradiction_pairs),
+            recommended_action=recommended,
+            diagnostics=diagnostics,
+        )
+
+    def _evict_least_salient(self) -> EvictionRecord:
+        """Picks victim based on lowest salience and least recent access."""
+        victim_id = min(
+            self._active_chunks.keys(),
+            key=lambda cid: (
+                self._active_chunks[cid].salience,
+                self._active_chunks[cid].last_accessed_step,
+                self._active_chunks[cid].access_count,
+            ),
+        )
+        victim = self._active_chunks.pop(victim_id)
+        return self._handle_chunk_exit(victim, reason="capacity_limit_exceeded")
+
+    def _handle_chunk_exit(self, chunk: WorkingMemoryChunk, reason: str) -> EvictionRecord:
+        """Determines whether evicted chunk is consolidated to LTM or adaptively forgotten."""
+        should_consolidate = (
+            chunk.salience >= self.consolidation_threshold
+            or chunk.access_count >= 2
+            or chunk.source_attribution.veracity_state == VeracityState.VERIFIED_EMPIRICAL
+        )
+
+        if should_consolidate and self.consolidation_engine is not None:
+            self._promote_to_ltm(chunk)
+            fate = ChunkState.CONSOLIDATED_TO_LTM
+        else:
+            fate = ChunkState.DECAYED_FORGOTTEN
+
+        record = EvictionRecord(
+            chunk_id=chunk.chunk_id,
+            concept=chunk.concept,
+            assertion=chunk.assertion,
+            final_salience=chunk.salience,
+            eviction_step=self._current_step,
+            fate=fate,
+            reason=reason,
+        )
+        self._eviction_history.append(record)
+        return record
+
+    def _promote_to_ltm(self, chunk: WorkingMemoryChunk) -> None:
+        """Synthesizes a structured observation event and submits it to ConsolidationEngine."""
+        if not self.consolidation_engine:
+            return
+
+        event_payload = {
+            "concept": chunk.concept,
+            "assertion": chunk.assertion,
+            "saliency_score": chunk.salience,
+            "attribution_id": chunk.source_attribution.attribution_id,
+            "source_type": chunk.source_attribution.source_type.value,
+            "veracity_state": chunk.source_attribution.veracity_state.value,
+            "promoted_from_working_memory": True,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        event_bytes = json.dumps(event_payload, sort_keys=True).encode("utf-8")
+        event_hash = hashlib.sha256(event_bytes).hexdigest()
+
+        self.consolidation_engine.ingest_event_stream([(event_hash, event_payload)])
