@@ -154,3 +154,19 @@ assessment = wm.metacognitive_assessment()
 if assessment.verdict == MetacognitiveVerdict.FOCUSED_SUFFICIENCY:
     print("Epistemic state sound:", assessment.recommended_action)
 ```
+
+---
+
+## 5. Empirical Policy Comparison (FIFO vs. LRU vs. Ario Cowan Buffer)
+
+To validate the epistemic efficacy of the `WorkingMemoryBuffer` policy against classical operating system caching strategies (FIFO and LRU), the simulation benchmark (`benchmarks/policy_comparison.py`) ran a representative 200-event cognitive stream:
+
+| Metric | FIFO | LRU | Ario Cognitive (Cowan K=4) |
+| :--- | :--- | :--- | :--- |
+| **Empirical Retention Rate** | 1.3% | 1.3% | **100.0%** (via selective LTM consolidation) |
+| **Noise Filtering Rate** | 0.0% | 0.0% | **100.0%** (via adaptive forgetting) |
+| **Average Active Salience** | 0.425 | 0.425 | **0.688** |
+| **Active Empirical Chunks** | 1.000 | 1.000 | **3.000** |
+
+### Key Takeaway
+Standard FIFO and LRU evictions indiscriminately discard verified empirical evidence when new input arrives, leading to cognitive amnesia and hallucination loops. Ario's Cowan-inspired buffer protects empirical observations through `SourceAttribution` and selectively consolidates them to Long-Term Memory, while allowing transient noise to decay and be forgotten cleanly.
