@@ -116,8 +116,7 @@ function New-Bundle([string] $lab) {
     try {
         $rsa.FromXmlString($pri)
         if ($rsa.ToXmlString($false) -cne $pub) { throw 'PUBLIC_PRIVATE_TEST_KEY_MISMATCH' }
-        # Only two public RSA XML fields may cross devices; no private test key.
-    if ($pub -cnotmatch '^<RSAKeyValue><Modulus>[A-Za-z0-9+/=]+</Modulus><Exponent>[A-Za-z0-9+/=]+</Exponent></RSAKeyValue>
+        $pubsha = Hash-Text $pub
         $nonce = [guid]::NewGuid().ToString('N')
         $epoch = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() + $IssuedOffsetSeconds
         $payload = Make-Payload $pubsha $nonce $epoch
@@ -170,6 +169,10 @@ function Decode-Bundle([string] $zipfile) {
 }
 function Verify-Synthetic($bundle) {
     $pub = [string] $bundle.public
+    # Canonical PUBLIC-only XML; reject injected synthetic private key material.
+    if ($pub -cnotmatch '^<RSAKeyValue><Modulus>[A-Za-z0-9+/=]+</Modulus><Exponent>[A-Za-z0-9+/=]+</Exponent></RSAKeyValue>$') {
+        throw 'REFUSE_NONPUBLIC_RSA_XML'
+    }
     $pubsha = Hash-Text $pub
     $receipt = ConvertFrom-Json -InputObject $bundle.receipt
     if ($null -eq $receipt -or $null -eq $receipt.payload) { throw 'INVALID_RECEIPT_SHAPE' }
@@ -306,203 +309,6 @@ try {
               'INVALID_NONCE','INVALID_EPOCH','INVALID_PAYLOAD_FIELDS',
               'INVALID_SYNTHETIC_DATA','INVALID_RECEIPT_SIGNATURE','UNPINNED_EXECUTOR_KEY',
               'REFUSE_NONPUBLIC_RSA_XML','CUSTODIAN_CLOCK_SKEW','HISTORY_CHAIN_GAP','HISTORY_DIGEST_MISMATCH',
-              'TRUNCATED_HISTORY','INVALID_NONCE_HISTORY','C_LOCK_BUSY',
-              'REFUSE_NONEMPTY_UNMARKED_ROOT','INVALID_RECEIPT_FIELDS')
-    if (-not ($safe -ccontains $reason)) { $reason='HOLD_ERROR_FAIL_CLOSED' }
-    To-Json (New-Report $reason)
-}
-) {
-        throw 'REFUSE_NONPUBLIC_RSA_XML'
-    }
-    $pubsha = Hash-Text $pub
-        $nonce = [guid]::NewGuid().ToString('N')
-        $epoch = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() + $IssuedOffsetSeconds
-        $payload = Make-Payload $pubsha $nonce $epoch
-        $signed = To-Bytes ($Domain + (To-Json $payload))
-        $sig = [Convert]::ToBase64String($rsa.SignData($signed, 'SHA256'))
-    } finally { $rsa.Dispose() }
-    $out = Join-Path $lab 'public-handoff'
-    [IO.Directory]::CreateDirectory($out) | Out-Null
-    $pubout = Join-Path $out 'r6-public.xml'
-    $recout = Join-Path $out 'r6-receipt.json'
-    [IO.File]::WriteAllText($pubout, $pub, [System.Text.UTF8Encoding]::new($false))
-    $receipt = [ordered]@{payload=$payload; signature_base64=$sig}
-    [IO.File]::WriteAllText($recout, (To-Json $receipt), [System.Text.UTF8Encoding]::new($false))
-    $bundle = Join-Path $lab ('R6-public-handoff-' + $nonce + '.zip')
-    Compress-Archive -Path $pubout,$recout -DestinationPath $bundle -CompressionLevel Optimal
-    return (New-Report 'SYNTHETIC_BUNDLE_CREATED' $Zero 0 $pubsha $bundle)
-}
-function Read-ZipEntry($zip,[string]$name,[int]$max) {
-    $entry = $zip.GetEntry($name)
-    if ($null -eq $entry -or $entry.Length -le 0 -or $entry.Length -gt $max) { throw 'INVALID_PUBLIC_BUNDLE_ENTRY' }
-    $stream = $entry.Open()
-    try {
-        $mem = New-Object IO.MemoryStream
-        try {
-            $buf = New-Object byte[] 1024
-            while (($got = $stream.Read($buf,0,$buf.Length)) -gt 0) {
-                if ($mem.Length + $got -gt $max) { throw 'BUNDLE_UNCOMPRESSED_TOO_LARGE' }
-                $mem.Write($buf,0,$got)
-            }
-            return [Text.Encoding]::UTF8.GetString($mem.ToArray())
-        } finally { $mem.Dispose() }
-    } finally { $stream.Dispose() }
-}
-function Decode-Bundle([string] $zipfile) {
-    if (-not [IO.File]::Exists($zipfile)) { throw 'BUNDLE_NOT_FOUND' }
-    $fi = [IO.FileInfo]::new($zipfile)
-    if ($fi.Length -gt 32768 -or $fi.Length -le 0) { throw 'INVALID_BUNDLE_SIZE' }
-    Add-Type -AssemblyName System.IO.Compression.FileSystem
-    $zip = [IO.Compression.ZipFile]::OpenRead($zipfile)
-    try {
-        if ($zip.Entries.Count -ne 2) { throw 'BUNDLE_MUST_HAVE_TWO_PUBLIC_FILES' }
-        foreach ($entry in $zip.Entries) {
-            if ($entry.FullName -cne 'r6-public.xml' -and $entry.FullName -cne 'r6-receipt.json') {
-                throw 'UNEXPECTED_BUNDLE_ENTRY'
-            }
-        }
-        return @{ public=(Read-ZipEntry $zip 'r6-public.xml' 2048);
-                  receipt=(Read-ZipEntry $zip 'r6-receipt.json' 4096) }
-    } finally { $zip.Dispose() }
-}
-function Verify-Synthetic($bundle) {
-    $pub = [string] $bundle.public
-    $pubsha = Hash-Text $pub
-    $receipt = ConvertFrom-Json -InputObject $bundle.receipt
-    if ($null -eq $receipt -or $null -eq $receipt.payload) { throw 'INVALID_RECEIPT_SHAPE' }
-    $fieldNames = @($receipt.PSObject.Properties.Name)
-    if ($fieldNames.Count -ne 2 -or -not ($fieldNames -contains 'payload') -or
-        -not ($fieldNames -contains 'signature_base64')) { throw 'INVALID_RECEIPT_FIELDS' }
-    $p = $receipt.payload
-    $keys = @($p.PSObject.Properties.Name)
-    $expected = @('profile','key_id','nonce','issued_epoch','request_sha256','synthetic_result_sha256','role')
-    if ($keys.Count -ne $expected.Count) { throw 'INVALID_PAYLOAD_FIELDS' }
-    foreach ($k in $expected) { if (-not ($keys -contains $k)) { throw 'INVALID_PAYLOAD_FIELDS' } }
-    if ($p.profile -cne $ProfileId -or $p.role -cne 'SYNTHETIC_TEST_ONLY') { throw 'INVALID_SYNTHETIC_PROFILE' }
-    if ($p.key_id -cne $pubsha) { throw 'UNPINNED_EXECUTOR_KEY' }
-    if ($p.nonce -isnot [string] -or $p.nonce -cnotmatch '^[0-9a-f]{32}$') { throw 'INVALID_NONCE' }
-    if ($p.issued_epoch -isnot [long] -and $p.issued_epoch -isnot [int]) { throw 'INVALID_EPOCH' }
-    if ($p.request_sha256 -cne ('a' * 64) -or $p.synthetic_result_sha256 -cne ('b' * 64)) {
-        throw 'INVALID_SYNTHETIC_DATA'
-    }
-    $rsa = New-Rsa
-    try {
-        $rsa.FromXmlString($pub)
-        $normalized = Make-Payload $pubsha $p.nonce ([long] $p.issued_epoch)
-        $signed = To-Bytes ($Domain + (To-Json $normalized))
-        $sig = [Convert]::FromBase64String([string]$receipt.signature_base64)
-        if (-not $rsa.VerifyData($signed, 'SHA256', $sig)) { throw 'INVALID_RECEIPT_SIGNATURE' }
-    } finally { $rsa.Dispose() }
-    $now = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
-    if ([Math]::Abs($now - [long]$p.issued_epoch) -gt $MaxAge) { throw 'CUSTODIAN_CLOCK_SKEW' }
-    return @{ public=$pub; publicsha=$pubsha; nonce=[string]$p.nonce;
-              receiptsha=(Hash-Text $bundle.receipt) }
-}
-function Read-History([string] $path) {
-    $seen = New-Object 'System.Collections.Generic.HashSet[string]'
-    $head = $Zero; $count = 0; $revoked = $false
-    if ([IO.File]::Exists($path)) {
-        $raw = Safe-Text $path 65536
-        if (-not $raw.EndsWith([Environment]::NewLine)) { throw 'TRUNCATED_HISTORY' }
-        $lines = @($raw.Split([string[]]@([Environment]::NewLine), [StringSplitOptions]::RemoveEmptyEntries))
-        if ($lines.Count -gt $MaxRecords) { throw 'HISTORY_LIMIT' }
-        foreach ($line in $lines) {
-            $item = ConvertFrom-Json -InputObject $line
-            if ($null -eq $item -or $null -eq $item.event) { throw 'INVALID_HISTORY' }
-            $ev = $item.event
-            if ($ev.index -ne ($count+1) -or $ev.previous_sha256 -cne $head) { throw 'HISTORY_CHAIN_GAP' }
-            if ($ev.kind -cne 'SPENT' -and $ev.kind -cne 'REVOKED') { throw 'INVALID_HISTORY_KIND' }
-            $fixed = [ordered]@{index=[int]$ev.index; previous_sha256=[string]$ev.previous_sha256;
-                               kind=[string]$ev.kind; nonce=$ev.nonce; receipt_sha256=[string]$ev.receipt_sha256}
-            $nextHead = Hash-Text ('ARIO-R6-WINDOWS-LEDGER-1|' + (To-Json $fixed))
-            if ($item.head_sha256 -cne $nextHead) { throw 'HISTORY_DIGEST_MISMATCH' }
-            if ($ev.kind -ceq 'REVOKED') {
-                if ($revoked -or $null -ne $ev.nonce) { throw 'INVALID_REVOCATION_HISTORY' }
-                $revoked = $true
-            } else {
-                if ($revoked -or $ev.nonce -isnot [string] -or -not $seen.Add($ev.nonce)) {
-                    throw 'INVALID_NONCE_HISTORY'
-                }
-            }
-            $head=$nextHead; $count++
-        }
-    }
-    return @{head=$head;count=$count;nonces=$seen;revoked=$revoked}
-}
-function Append-History([string]$path,$st,[string]$kind,$nonce,[string]$receiptHash,[string]$publicSha='') {
-    if ($st.count -ge $MaxRecords) { throw 'HISTORY_LIMIT' }
-    $ev=[ordered]@{index=($st.count+1);previous_sha256=$st.head;kind=$kind;
-                   nonce=$nonce;receipt_sha256=$receiptHash}
-    $newhead = Hash-Text ('ARIO-R6-WINDOWS-LEDGER-1|' + (To-Json $ev))
-    $record=To-Json ([ordered]@{event=$ev;head_sha256=$newhead})
-    $bytes=To-Bytes ($record + [Environment]::NewLine)
-    $file=[IO.File]::Open($path,[IO.FileMode]::Append,[IO.FileAccess]::Write,[IO.FileShare]::Read)
-    try { $file.Write($bytes,0,$bytes.Length); $file.Flush($true) }
-    finally { $file.Dispose() }
-    return (New-Report $(if ($kind -eq 'REVOKED') {'SYNTHETIC_REVOKED'} else {'SYNTHETIC_RECEIPT_RECORDED'}) $newhead ($st.count+1) $publicSha)
-}
-function With-CustodianLock([string] $lab,[scriptblock] $operation) {
-    $lockpath = Join-Path $lab 'C-research-lock'
-    $lock = $null
-    for ($attempt=0;$attempt -lt 30;$attempt++) {
-        try {
-            $lock=[IO.File]::Open($lockpath,[IO.FileMode]::OpenOrCreate,
-                                 [IO.FileAccess]::ReadWrite,[IO.FileShare]::None)
-            break
-        } catch [IO.IOException] { Start-Sleep -Milliseconds 100 }
-    }
-    if ($null -eq $lock) { throw 'C_LOCK_BUSY' }
-    try { return (& $operation) }
-    finally { $lock.Dispose() }
-}
-
-try {
-    $lab = Ensure-LabRoot
-    if ($Mode -eq 'Make') {
-        $result=New-Bundle $lab
-    } else {
-        $publicPin = Join-Path $lab 'C-pinned-public-test-only.xml'
-        $journal = Join-Path $lab 'C-synthetic-history.jsonl'
-        $result=With-CustodianLock $lab {
-            $st = Read-History $journal
-            if ($Mode -eq 'Status') {
-                New-Report 'SYNTHETIC_STATE_INSPECTED' $st.head $st.count
-            } elseif ($Mode -eq 'Revoke') {
-                if (-not [IO.File]::Exists($publicPin)) { New-Report 'HOLD_NOT_PINNED' $st.head $st.count }
-                elseif ($st.revoked) { New-Report 'REJECT_ALREADY_REVOKED' $st.head $st.count }
-                else { Append-History $journal $st 'REVOKED' $null $Zero }
-            } else {
-                if ([string]::IsNullOrWhiteSpace($BundleZip)) { throw 'BUNDLE_PATH_REQUIRED' }
-                $data = Decode-Bundle $BundleZip
-                $v = Verify-Synthetic $data
-                if ([IO.File]::Exists($publicPin)) {
-                    if ((Safe-Text $publicPin 2048) -cne $v.public) {
-                        New-Report 'REJECT_UNPINNED_EXECUTOR_KEY' $st.head $st.count $v.publicsha
-                    } elseif ($st.revoked) {
-                        New-Report 'REJECT_REVOKED_EXECUTOR' $st.head $st.count $v.publicsha
-                    } elseif ($st.nonces.Contains($v.nonce)) {
-                        New-Report 'REJECT_REPLAY_NONCE' $st.head $st.count $v.publicsha
-                    } else {
-                        Append-History $journal $st 'SPENT' $v.nonce $v.receiptsha $v.publicsha
-                    }
-                } elseif ($st.count -ne 0) {
-                    New-Report 'HOLD_MISSING_POLICY_PIN' $st.head $st.count
-                } else {
-                    # FIRST USE TRUST-ON-FIRST-USE, NOT independent authenticated enrollment.
-                    [IO.File]::WriteAllText($publicPin, $v.public, [Text.UTF8Encoding]::new($false))
-                    Append-History $journal $st 'SPENT' $v.nonce $v.receiptsha $v.publicsha
-                }
-            }
-        }
-    }
-    To-Json $result
-} catch {
-    $reason = [string]$_.Exception.Message
-    $safe = @('INVALID_FILE_LENGTH','INVALID_PUBLIC_BUNDLE_ENTRY','UNEXPECTED_BUNDLE_ENTRY',
-              'INVALID_BUNDLE_SIZE','BUNDLE_NOT_FOUND','INVALID_SYNTHETIC_PROFILE',
-              'INVALID_NONCE','INVALID_EPOCH','INVALID_PAYLOAD_FIELDS',
-              'INVALID_SYNTHETIC_DATA','INVALID_RECEIPT_SIGNATURE','UNPINNED_EXECUTOR_KEY',
-              'CUSTODIAN_CLOCK_SKEW','HISTORY_CHAIN_GAP','HISTORY_DIGEST_MISMATCH',
               'TRUNCATED_HISTORY','INVALID_NONCE_HISTORY','C_LOCK_BUSY',
               'REFUSE_NONEMPTY_UNMARKED_ROOT','INVALID_RECEIPT_FIELDS')
     if (-not ($safe -ccontains $reason)) { $reason='HOLD_ERROR_FAIL_CLOSED' }
