@@ -182,6 +182,18 @@ class EpistemicEconomyTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "invalid slot id"):
                     evaluate(ReceiptObservation(ids, signed_receipts=1))
 
+    def test_invalid_slot_id_precedes_duplicate_detection(self):
+        # Reviewer follow-up from #153: both defects are present in one input.
+        # Validation must reject the invalid type before duplicate-set logic.
+        for ids in (
+            ("slot", "slot", None),
+            ("slot", "slot", ["unhashable"]),
+            ("slot", "slot", ""),
+        ):
+            with self.subTest(ids=repr(ids)):
+                with self.assertRaisesRegex(ValueError, "^invalid slot id$"):
+                    evaluate(ReceiptObservation(ids, signed_receipts=len(ids)))
+
     def test_slot_id_contract_rejects_unhashable_string_subclass(self):
         class UnhashableString(str):
             __hash__ = None
