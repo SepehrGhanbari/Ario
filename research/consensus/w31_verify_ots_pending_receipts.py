@@ -9,6 +9,7 @@ import base64
 import hashlib
 from io import BytesIO
 import json
+import subprocess
 from pathlib import Path
 
 from opentimestamps.core.timestamp import Timestamp, DetachedTimestampFile
@@ -28,7 +29,14 @@ EXPECT={
 
 
 def validate():
-    manifest=(ROOT/MANIFEST).read_bytes()
+    # Use immutable repository OBJECT bytes, not OS-dependent working-tree bytes:
+    # Git for Windows may CRLF-normalize the text fixture on checkout.
+    # This precise blob is the byte image originally sent to both calendars.
+    pinned_blob = "138c8b056dd3387f31f5a0facedf43b0f221b742"
+    manifest=subprocess.run(
+        ["git","cat-file","blob",pinned_blob],
+        cwd=str(ROOT.parents[1]), capture_output=True, check=True
+    ).stdout
     digest=hashlib.sha256(manifest).digest()
     data=json.loads((ROOT/EVIDENCE).read_text("utf-8"))
     assert data["preimage_sha256"]==digest.hex()
