@@ -7,10 +7,12 @@ Even a genuine GitHub TLS response can contain author-controlled log text.
 from __future__ import annotations
 
 import argparse
+import http.client
 import json
 import urllib.error
 from typing import Any
 
+from pr_ci_github_evidence import matches_id
 from pr_claim_audit_github_v0_3 import (
     MAX_JOBS, MAX_PAGES, OriginUnknown, PublicGitHubReader,
     assess_github_pr as assess_v03,
@@ -37,7 +39,7 @@ def _recheck_run_and_job(reader: Any, owner: str, repo: str,
     rid, attempt, jid = binding["run_id"], binding["run_attempt"], binding["job_id"]
     run = reader.get_json(f"{api}/actions/runs/{rid}")
     if not isinstance(run, dict) or (
-        run.get("id") != rid or run.get("run_attempt") != attempt or
+        not matches_id(run.get("id"), rid) or not matches_id(run.get("run_attempt"), attempt) or
         run.get("head_sha") != binding["head_sha"] or
         run.get("status") != "completed" or
         run.get("event") != "pull_request" or
@@ -66,13 +68,13 @@ def _recheck_run_and_job(reader: Any, owner: str, repo: str,
     if any(not isinstance(j, dict) for j in jobs):
         raise OriginUnknown("JOB_COLLECTION_INVALID_ON_RECHECK")
     ids = [j.get("id") for j in jobs]
-    if len(ids) != len(set(ids)):
+    if not all(type(i) is int and i > 0 for i in ids) or len(ids) != len(set(ids)):
         raise OriginUnknown("DUPLICATE_JOBS_ON_RECHECK")
     selected = [j for j in jobs if j["id"] == jid]
     if len(selected) != 1:
         raise OriginUnknown("JOB_CHANGED_OR_MISSING_ON_RECHECK")
     job = selected[0]
-    if (job.get("run_id") != rid or job.get("run_attempt") != attempt or
+    if (not matches_id(job.get("run_id"), rid) or not matches_id(job.get("run_attempt"), attempt) or
             job.get("head_sha") != binding["head_sha"] or
             job.get("status") != "completed" or
             job.get("name") != binding["job_name"] or
@@ -114,7 +116,7 @@ def assess_github_pr(owner: str, repo: str, pr_number: int, *,
         out["workflow_overall_conclusion"] = _recheck_run_and_job(
             check_reader, owner, repo, binding, observed
         )
-    except (OriginUnknown, urllib.error.URLError, OSError, KeyError,
+    except (OriginUnknown, urllib.error.URLError, OSError, http.client.HTTPException, KeyError,
             ValueError, TypeError, OverflowError, RecursionError) as exc:
         out["workflow_overall_conclusion"] = "UNKNOWN"
         out["correspondence_status"] = "UNKNOWN"

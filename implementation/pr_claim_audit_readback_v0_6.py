@@ -56,6 +56,9 @@ class _TracingReader:
         self.samples: list[dict[str, Any]] = []
 
     def get_json(self, url: str) -> dict[str, Any]:
+        if self.reader is None:
+            # Initialize inside the guarded assessment, before recording a request.
+            self.reader = PublicGitHubReader()
         if url != self.pr_url:
             return self.reader.get_json(url)
         begin = _stamp()
@@ -99,9 +102,8 @@ def assess_github_pr(owner: str, repo: str, pr_number: int, *,
     have no independent provenance claim in this output.
     """
     mode = "PUBLIC_READER_CONFIGURED" if reader is None else "CALLER_INJECTED_READER"
-    base_reader = PublicGitHubReader() if reader is None else reader
     pr_url = f"https://api.github.com/repos/{owner}/{repo}/pulls/{pr_number}"
-    traced = _TracingReader(base_reader, pr_url)
+    traced = _TracingReader(reader, pr_url)
     result = assess_v05(owner, repo, pr_number, reader=traced)
     result = {
         **result, "schema": SCHEMA, "status": "UNKNOWN",

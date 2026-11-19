@@ -6,11 +6,13 @@ Preserve all pre-v0.5 modules byte-for-byte; this is an additive sidecar.
 from __future__ import annotations
 
 import argparse
+import http.client
 import json
 import hashlib
 import urllib.error
 from typing import Any
 
+from pr_ci_github_evidence import matches_id
 from pr_claim_audit_github_v0_3 import OriginUnknown, PublicGitHubReader
 from pr_claim_audit_log_boundary_v0_4 import assess_github_pr as assess_v04
 
@@ -110,8 +112,8 @@ def assess_github_pr(owner: str, repo: str, pr_number: int, *,
             return _hold(result, "FINAL_PR_RECHECK_UNAVAILABLE", "UNKNOWN")
         head = final_pr.get("head")
         final_head = head.get("sha") if isinstance(head, dict) else None
-        if (final_pr.get("id") != first_pr["id"] or
-                final_pr.get("number") != first_pr["number"] or
+        if (not matches_id(final_pr.get("id"), first_pr["id"]) or
+                not matches_id(final_pr.get("number"), first_pr["number"]) or
                 final_head != binding.get("head_sha") or final_head != first_pr["head"] or
                 final_pr.get("body") != first_pr["body"]):
             return _hold(result, "PR_CHANGED_AFTER_V04_READBACK", "PR_CHANGED")
@@ -130,7 +132,7 @@ def assess_github_pr(owner: str, repo: str, pr_number: int, *,
         result["reason"] = "LOG_EXECUTION_NOT_ATTESTED"
         return result
     except (OriginUnknown, KeyError, TypeError, ValueError, UnicodeError, OSError,
-            urllib.error.URLError, OverflowError, RecursionError) as exc:
+            urllib.error.URLError, http.client.HTTPException, OverflowError, RecursionError) as exc:
         return {
             "schema": SCHEMA, "status": "UNKNOWN", "reason": "FINAL_PR_RECHECK_UNAVAILABLE",
             "claim_correspondence": "UNKNOWN", "correspondence_status": "UNKNOWN",

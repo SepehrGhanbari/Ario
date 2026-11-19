@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import http.client
 import json
 import re
 import ssl
@@ -16,7 +17,8 @@ import urllib.parse
 import urllib.request
 from typing import Any
 
-from pr_claim_audit import Invalid, assess as assess_snapshot, read_claim
+from pr_claim_audit import Invalid, _decode_json, assess as assess_snapshot, read_claim
+from pr_ci_github_evidence import links_pr, matches_id, read_bounded_body
 
 SCHEMA = "ARIO-PR-CI-0.3"
 OWNER_RE = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?\Z")
@@ -86,15 +88,16 @@ class PublicGitHubReader:
                 method="GET",
             )
             with self.opener.open(request, timeout=self.timeout) as response:
-                data = response.read(cap + 1)
-                if len(data) > cap:
-                    raise OriginUnknown("GitHub response exceeds byte cap")
+                try:
+                    data = read_bounded_body(response, cap)
+                except ValueError as exc:
+                    raise OriginUnknown(str(exc)) from exc
                 return response.status, data, None
         except urllib.error.HTTPError as exc:
             if exc.code in (301, 302, 303, 307, 308):
                 return exc.code, b"", exc.headers.get("Location")
             raise OriginUnknown("GitHub HTTP error " + str(exc.code)) from exc
-        except (urllib.error.URLError, OSError, TimeoutError) as exc:
+        except (urllib.error.URLError, OSError, TimeoutError, http.client.HTTPException) as exc:
             raise OriginUnknown("GitHub network response unavailable") from exc
 
     def get_json(self, url: str) -> dict[str, Any]:
@@ -104,8 +107,8 @@ class PublicGitHubReader:
         if status != 200 or redirect:
             raise OriginUnknown("untrusted API metadata redirect")
         try:
-            return _object(json.loads(data.decode("utf-8")), "GitHub response")
-        except (ValueError, UnicodeError, RecursionError) as exc:
+            return _object(_decode_json(data.decode("utf-8")), "GitHub response")
+        except (Invalid, ValueError, UnicodeError, RecursionError) as exc:
             raise OriginUnknown("invalid GitHub API JSON") from exc
 
     @staticmethod
@@ -172,7 +175,7 @@ def assess_github_pr(owner: str, repo: str, pr_number: int, *,
         api = f"https://api.github.com/repos/{owner}/{repo}"
         pr_url = f"{api}/pulls/{pr_number}"
         pr = _object(reader.get_json(pr_url), "pull request")
-        if pr.get("number") != pr_number or not _integer(pr.get("id")):
+        if not matches_id(pr.get("number"), pr_number) or not _integer(pr.get("id")):
             raise OriginUnknown("PR identity mismatch")
         pr_id = pr["id"]
         current_head = _object(pr.get("head"), "PR head").get("sha")
@@ -190,19 +193,13 @@ def assess_github_pr(owner: str, repo: str, pr_number: int, *,
         run_id, attempt, job_id = claim["run_id"], claim["run_attempt"], claim["job_id"]
         run_url = f"{api}/actions/runs/{run_id}"
         run = _object(reader.get_json(run_url), "workflow run")
-        if run.get("id") != run_id or run.get("run_attempt") != attempt:
+        if not matches_id(run.get("id"), run_id) or not matches_id(run.get("run_attempt"), attempt):
             raise OriginUnknown("run/attempt mismatch")
         if run.get("head_sha") != current_head:
             raise OriginUnknown("run commit differs from current PR head")
         if run.get("event") != "pull_request" or run.get("status") != "completed":
             raise OriginUnknown("wrong event or incomplete run")
-        linked = run.get("pull_requests")
-        if not isinstance(linked, list) or not any(
-            isinstance(x, dict) and x.get("number") == pr_number and
-            x.get("id") == pr_id and isinstance(x.get("head"), dict) and
-            x["head"].get("sha") == current_head
-            for x in linked
-        ):
+        if not links_pr(run.get("pull_requests"), pr_number, pr_id, current_head):
             raise OriginUnknown("run is not linked to this exact PR head")
         # GitHub exposes the latest-attempt job list elsewhere. Always ask for
         # jobs of THIS attempt, so rerun jobs cannot be mistaken for prior jobs.
@@ -224,13 +221,13 @@ def assess_github_pr(owner: str, repo: str, pr_number: int, *,
         if total is None or len(jobs) != total:
             raise OriginUnknown("incomplete job pagination")
         ids = [x.get("id") for x in jobs if isinstance(x, dict)]
-        if len(ids) != len(set(ids)) or len(ids) != len(jobs):
+        if len(ids) != len(jobs) or not all(_integer(i) for i in ids) or len(ids) != len(set(ids)):
             raise OriginUnknown("duplicate or invalid job records")
         selected = [x for x in jobs if x.get("id") == job_id]
         if len(selected) != 1:
             raise OriginUnknown("job not in specified run attempt")
         job = _object(selected[0], "job")
-        if (job.get("run_id") != run_id or job.get("run_attempt") != attempt or
+        if (not matches_id(job.get("run_id"), run_id) or not matches_id(job.get("run_attempt"), attempt) or
                 job.get("head_sha") != current_head or job.get("status") != "completed"):
             raise OriginUnknown("job/run/attempt/head relation invalid")
         # The log is fetched using the job ID obtained from the attempt-specific
@@ -240,7 +237,8 @@ def assess_github_pr(owner: str, repo: str, pr_number: int, *,
             raise OriginUnknown("missing job log")
         # Recheck PR head after bounded retrieval: if it moved, no stale MATCH.
         second = _object(reader.get_json(pr_url), "PR head recheck")
-        if (_object(second.get("head"), "new PR head").get("sha") != current_head
+        if (not matches_id(second.get("id"), pr_id) or not matches_id(second.get("number"), pr_number)
+                or _object(second.get("head"), "new PR head").get("sha") != current_head
                 or second.get("body") != body):
             raise OriginUnknown("PR head moved during evidence retrieval")
         evidence = {
@@ -272,7 +270,7 @@ def assess_github_pr(owner: str, repo: str, pr_number: int, *,
         }
     except (OriginUnknown, Invalid, ValueError, TypeError, UnicodeError, OverflowError, RecursionError, KeyError) as exc:
         return _unknown(str(exc) if isinstance(exc, OriginUnknown) else "malformed source evidence")
-    except (OSError, urllib.error.URLError) as exc:
+    except (OSError, urllib.error.URLError, http.client.HTTPException):
         return _unknown("GitHub read unavailable")
 
 

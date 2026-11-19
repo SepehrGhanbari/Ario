@@ -63,14 +63,15 @@ def test_reader_init_failure_preserves_zero_sample_report():
 
 
 @pytest.mark.parametrize("version", ["v03", "d10"])
-@pytest.mark.parametrize(("header", "complete"), [
-    (b"Content-Length: 2\r\n", True), (b"", True),
-    (b"Content-Length: 8\r\n", False), (b"Content-Length: bad\r\n", False),
-    (b"Content-Length: 8\r\nContent-Length: 2\r\n", False),
-    (b"Transfer-Encoding: chunked\r\n", False),
+@pytest.mark.parametrize(("header", "payload", "complete"), [
+    (b"Content-Length: 2\r\n", b"{}", True), (b"", b"{}", True),
+    (b"Content-Length: 8\r\n", b"{}", False), (b"Content-Length: bad\r\n", b"{}", False),
+    (b"Content-Length: 8\r\nContent-Length: 2\r\n", b"{}", False),
+    (b"Transfer-Encoding: chunked\r\n", b"2\r\n{}\r\n0\r\n\r\n", True),
+    (b"Transfer-Encoding: chunked\r\n", b"2\r\n{", False),
 ])
-def test_http_body_completeness(version, header, complete):
-    wire = b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n" + header + b"\r\n{}"
+def test_http_body_completeness(version, header, payload, complete):
+    wire = b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n" + header + b"\r\n" + payload
     response = http.client.HTTPResponse(Mock(makefile=Mock(return_value=io.BytesIO(wire))))
     response.begin()
     with patch("urllib.request.OpenerDirector.open", return_value=response):
