@@ -113,12 +113,30 @@ def _strip_log_prefix(line: str) -> str:
     return STAMP.sub("", ANSI.sub("", line)).strip()
 
 
+def _check_summary_step(lines: list[str], summary_index: int) -> None:
+    marker = "##[group]Run " + RUN_COMMAND
+    if lines.count(marker) != 1:
+        raise Invalid("expected exactly one pytest invocation")
+    start = lines.index(marker) + 1
+    preceding = lines[start:summary_index]
+    if summary_index < start or any(
+        line.startswith("##[group]") or line == "Post job cleanup." for line in preceding
+    ):
+        raise Invalid("pytest summary outside the claimed command")
+    # Expanded Actions headers echo the script, then shell metadata. Output
+    # follows endgroup. Compact snapshots can omit the whole header body.
+    if preceding[:1] == [RUN_COMMAND] or "##[endgroup]" in preceding:
+        if (len(preceding) < 3 or preceding[0] != RUN_COMMAND
+                or not preceding[1].startswith("shell: ") or "##[endgroup]" not in preceding):
+            raise Invalid("ambiguous pytest command header")
+
+
 def _extract_log(log: str) -> dict[str, Any]:
     if not isinstance(log, str) or len(log) > MAX_LOG_CHARS:
         raise Invalid("missing or oversize job log")
     lines = [_strip_log_prefix(l) for l in log.splitlines()]
     summaries = []
-    for line in lines:
+    for index, line in enumerate(lines):
         m = SUMMARY.search(line)
         if m:
             stats = {k: 0 for k in COUNT_KEYS}
@@ -135,16 +153,17 @@ def _extract_log(log: str) -> dict[str, Any]:
                 stats[key] = int(count)
             if "passed" not in seen and "failed" not in seen:
                 raise Invalid("no test outcome count")
-            summaries.append(stats)
+            if m.start() != 0:
+                raise Invalid("expected a complete pytest summary line")
+            summaries.append((index, stats))
     if len(summaries) != 1:
         raise Invalid("missing or ambiguous pytest summary")
     versions = {m.group(1) for line in lines for m in VERSION.finditer(line)}
     if len(versions) != 1:
         raise Invalid("missing or conflicting python version in log")
-    commands = [line.removeprefix("##[group]Run ") for line in lines if line.startswith("##[group]Run ")]
-    if commands.count(RUN_COMMAND) != 1:
-        raise Invalid("expected exactly one pytest invocation")
-    return {**summaries[0], "python_version": next(iter(versions)), "pytest_command": RUN_COMMAND}
+    summary_index, stats = summaries[0]
+    _check_summary_step(lines, summary_index)
+    return {**stats, "python_version": next(iter(versions)), "pytest_command": RUN_COMMAND}
 
 
 def _evidence(evidence: Any, claim: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -169,6 +188,8 @@ def _evidence(evidence: Any, claim: dict[str, Any]) -> tuple[dict[str, Any], dic
         raise Invalid("unknown run conclusion")
     if job.get("id") != claim["job_id"] or job.get("run_id") != claim["run_id"]:
         raise Invalid("job identity mismatch")
+    if "head_sha" in job and job["head_sha"] != run["head_sha"]:
+        raise Invalid("job head not bound to run head")
     if job.get("status") != "completed" or job.get("conclusion") not in ("success", "failure"):
         raise Invalid("job incomplete or inconclusive")
     if not isinstance(job.get("name"), str) or not job["name"]:

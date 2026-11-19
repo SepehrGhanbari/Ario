@@ -66,6 +66,32 @@ class ClaimComparisonTests(unittest.TestCase):
         self.assertEqual(got["observed"]["passed"], 1140)
         self.assertEqual(got["observed"]["subtests_passed"], 121)
 
+    def test_job_head_must_agree_with_run_head(self):
+        self.e["job"]["head_sha"] = "0" * 40
+        self.check("UNKNOWN")
+
+    def test_summary_must_belong_to_claimed_command(self):
+        version, command, summary = LOG.splitlines()
+        for name, step_lines in (
+            ("before command", (summary, command)),
+            ("other step", (command, "##[group]Run python -m unittest", summary)),
+            ("cleanup", (command, "Post job cleanup.", summary)),
+            ("multiple commands", (command, CLAIM["pytest_command"], "python -m unittest",
+                                   "shell: /bin/bash {0}", "##[endgroup]", summary)),
+            ("unterminated header", (command, CLAIM["pytest_command"], "shell: /bin/bash {0}", summary)),
+        ):
+            with self.subTest(name=name):
+                self.e = evidence("\n".join((version, *step_lines)))
+                self.check("UNKNOWN")
+
+    def test_runner_header_can_end_before_summary_and_conclusions_can_differ(self):
+        version, command, summary = LOG.splitlines()
+        self.e = evidence("\n".join((version, command, CLAIM["pytest_command"],
+                                     "shell: /bin/bash {0}", "##[endgroup]", summary)))
+        self.e["job"]["head_sha"] = SHA
+        self.e["run"]["conclusion"] = "success"
+        self.check("MATCH")  # The claim describes a failing advisory job.
+
     def test_false_success_claim_turns_mismatch_not_match(self):
         claim = dict(CLAIM, failed=0)
         self.source = body(claim)
