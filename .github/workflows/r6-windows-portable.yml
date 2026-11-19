@@ -1,0 +1,84 @@
+name: Ario R6-B Windows portable synthetic receipt (HOLD)
+
+on:
+  push:
+    branches:
+      - research/r6-two-principal-external-anchor-protocol-20261118
+    paths:
+      - 'implementation/research/r6/windows/**'
+      - '.github/workflows/r6-windows-portable.yml'
+  pull_request:
+    paths:
+      - 'implementation/research/r6/windows/**'
+      - '.github/workflows/r6-windows-portable.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-native:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Windows PowerShell 5.1 local RSA signed receipt and synthetic C-history
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $script = Join-Path $env:GITHUB_WORKSPACE 'implementation/research/r6/windows/R6-Windows-Portable.ps1'
+          $pc = Join-Path $env:RUNNER_TEMP 'ario-r6-win-pc'
+          $pc2 = Join-Path $env:RUNNER_TEMP 'ario-r6-win-alternate-identity'
+          $c = Join-Path $env:RUNNER_TEMP 'ario-r6-win-custodian'
+          function Check($condition, $message) {
+              if (-not $condition) { throw "R6_TEST_FAILED: $message" }
+          }
+          $first = (& $script -Mode Make -Root $pc | ConvertFrom-Json)
+          Check ($first.reason_code -eq 'SYNTHETIC_BUNDLE_CREATED') ('bundle: '+$first.reason_code)
+          Check ([IO.File]::Exists($first.bundle_path)) 'missing bundle'
+          # No private key bytes or XML filename appear in the public zip.
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $z = [IO.Compression.ZipFile]::OpenRead($first.bundle_path)
+          try {
+              $names=@($z.Entries | ForEach-Object { $_.FullName } | Sort-Object)
+              Check ($names.Count -eq 2) 'wrong public entry count'
+              Check ($names[0] -eq 'r6-public.xml') 'missing public key'
+              Check ($names[1] -eq 'r6-receipt.json') 'missing signed receipt'
+          } finally { $z.Dispose() }
+          $accepted = (& $script -Mode Inspect -Root $c -BundleZip $first.bundle_path | ConvertFrom-Json)
+          Check ($accepted.reason_code -eq 'SYNTHETIC_RECEIPT_RECORDED') ('first receipt: '+$accepted.reason_code)
+          Check ($accepted.record_count -eq 1) 'first record count'
+          Check ($accepted.evidence_admission_allowed -eq $false) 'evidence flag'
+          Check ($accepted.memory_write_allowed -eq $false) 'memory flag'
+          Check ($accepted.signing_authority_allowed -eq $false) 'signer flag'
+          Check ($accepted.trust_activation_allowed -eq $false) 'trust flag'
+          $replay = (& $script -Mode Inspect -Root $c -BundleZip $first.bundle_path | ConvertFrom-Json)
+          Check ($replay.reason_code -eq 'REJECT_REPLAY_NONCE') ('replay: '+$replay.reason_code)
+          Check ($replay.record_count -eq 1) 'replay modified journal'
+          $other = (& $script -Mode Make -Root $pc2 | ConvertFrom-Json)
+          Check ($other.reason_code -eq 'SYNTHETIC_BUNDLE_CREATED') 'alternate bundle make failed'
+          $untrusted = (& $script -Mode Inspect -Root $c -BundleZip $other.bundle_path | ConvertFrom-Json)
+          Check ($untrusted.reason_code -eq 'REJECT_UNPINNED_EXECUTOR_KEY') ('key switch: '+$untrusted.reason_code)
+          $stale = (& $script -Mode Make -Root $pc -IssuedOffsetSeconds -3600 | ConvertFrom-Json)
+          Check ($stale.reason_code -eq 'SYNTHETIC_BUNDLE_CREATED') 'stale maker failed'
+          $staleResult = (& $script -Mode Inspect -Root $c -BundleZip $stale.bundle_path | ConvertFrom-Json)
+          Check ($staleResult.reason_code -eq 'CUSTODIAN_CLOCK_SKEW') ('stale: '+$staleResult.reason_code)
+          $next = (& $script -Mode Make -Root $pc | ConvertFrom-Json)
+          $ok2 = (& $script -Mode Inspect -Root $c -BundleZip $next.bundle_path | ConvertFrom-Json)
+          Check ($ok2.reason_code -eq 'SYNTHETIC_RECEIPT_RECORDED') ('second: '+$ok2.reason_code)
+          Check ($ok2.record_count -eq 2) 'second count'
+          $revoked = (& $script -Mode Revoke -Root $c | ConvertFrom-Json)
+          Check ($revoked.reason_code -eq 'SYNTHETIC_REVOKED') ('revoke: '+$revoked.reason_code)
+          Check ($revoked.record_count -eq 3) 'revocation count'
+          $after = (& $script -Mode Make -Root $pc | ConvertFrom-Json)
+          $denied = (& $script -Mode Inspect -Root $c -BundleZip $after.bundle_path | ConvertFrom-Json)
+          Check ($denied.reason_code -eq 'REJECT_REVOKED_EXECUTOR') ('after revocation: '+$denied.reason_code)
+          $status = (& $script -Mode Status -Root $c | ConvertFrom-Json)
+          Check ($status.record_count -eq 3) 'status count'
+          Check ($status.head_sha256 -eq $revoked.head_sha256) 'head changed after rejected receipt'
+          Write-Output ('R6_WIN_PS51_SYNTHETIC: PASS; records='+$status.record_count)
+          Write-Output 'R6_NO_PYTHON_CRYPTOGRAPHY_REQUIRED: true'
+          Write-Output 'R6_PHYSICAL_TWO_HOST_EACCES: NOT_TESTED'
+          Write-Output 'R6_PUBLIC_KEY_ENROLLMENT: SELF_PINNED_NOT_AUTHENTICATED'
+          Write-Output 'R6_ADMINISTRATIVE_INDEPENDENCE: NOT_ESTABLISHED'
+          Write-Output 'R6_PRODUCTION_TRUST_ACTIVATION: NO_GO'
