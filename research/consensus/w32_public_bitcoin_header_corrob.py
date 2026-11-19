@@ -167,7 +167,7 @@ def run(*,offline=False,getter=get_plain_text):
         "bitcoin_node_connected":False,
         "explorer_operators_independently_authenticated":False,
         "full_bitcoin_header_chain_validated":False,
-        "public_explorer_gets":0 if offline else 8,
+        "public_explorer_gets_max":0 if offline else 8,
         "calendar_posts":0,"new_timestamp_submissions":0,
         "trust_activation":"NO_GO","genesis":"NO_GO","production":"NO_GO",
         "research_only":True,
