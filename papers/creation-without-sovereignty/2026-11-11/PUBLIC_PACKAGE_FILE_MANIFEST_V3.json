@@ -1,0 +1,141 @@
+{
+  "correction_log": [
+    {
+      "diagnosis": "V2_HASH_MATCHED_LF_TO_CRLF_CONVERSION",
+      "git_blob_v3": {
+        "bytes": 5902,
+        "git_blob_sha1": "133d32e61c2dcb0f57316d5f35594b4ff5bae85d",
+        "sha256": "a6f6d7abc6ebdaa034d9d2da903214c717eaaaf7d7b3fd6e9d9d96e035bfa9e2"
+      },
+      "path": "evidence/CLAIM_EVIDENCE_LEDGER.md",
+      "previous_v2": {
+        "bytes": 5939,
+        "sha256": "4c62576c6cbab478ab0ca11feb153d585bc9b2fdf4bcd4dd2830a5401a97b0d9"
+      }
+    },
+    {
+      "diagnosis": "V2_HASH_MATCHED_LF_TO_CRLF_CONVERSION",
+      "git_blob_v3": {
+        "bytes": 3655,
+        "git_blob_sha1": "7e1e086bb586e929b7af1e61ab4c1767dff29d14",
+        "sha256": "d29c4cb151665a488d478b918ba593e28911d4ccea73a9e22aa0ad4be1320825"
+      },
+      "path": "evidence/RIGHTS_PRIVACY_AND_SOURCE_LIMITS.md",
+      "previous_v2": {
+        "bytes": 3693,
+        "sha256": "133f3b776b0581ef6398c30668dd60573ce4c87e169c05c64fd75fdfe048c0c4"
+      }
+    },
+    {
+      "diagnosis": "V2_HASH_MATCHED_LF_TO_CRLF_CONVERSION",
+      "git_blob_v3": {
+        "bytes": 9497,
+        "git_blob_sha1": "98ca9ca45b564055be55f6dbdc48a0e4d1d94031",
+        "sha256": "15ae5b6ae942554ea6546c8d0cb3be3bae6f3c54bcc695500c52120f5e47abcf"
+      },
+      "path": "paper/LLM_ETHICAL_REVISION_PROTOCOL_B_v0.1.md",
+      "previous_v2": {
+        "bytes": 9569,
+        "sha256": "e519f0784e56ae2ba86284adf816e61b9b828dcd190cee4431191515e4891d9c"
+      }
+    },
+    {
+      "diagnosis": "V2_HASH_MATCHED_LF_TO_CRLF_CONVERSION",
+      "git_blob_v3": {
+        "bytes": 3000,
+        "git_blob_sha1": "b8c9a384cf58a7c14c678b38d302358f8f1545d5",
+        "sha256": "67abac656333b9985a66b701bbd365f6196a4d5168653c61f36b74cf4cbdbcbc"
+      },
+      "path": "zenodo/ZENODO_METADATA_DRAFT.json",
+      "previous_v2": {
+        "bytes": 3035,
+        "sha256": "26be0005fecfe85e51dd4cfafa0144ecadf0fb7e2962ff6623fd395cbd21884f"
+      }
+    }
+  ],
+  "doi": "10.5281/zenodo.24136175",
+  "excluded_external_asset": "notes.zip (available only on Zenodo; not re-uploaded)",
+  "file_count_excluding_self": 14,
+  "files": {
+    "PUBLIC_EDITORIAL_CHANGELOG_2026-11-12.md": {
+      "bytes": 3166,
+      "git_blob_sha1": "a9b29c8f3cdccbc7341f617eec47b801c4f0a2d8",
+      "sha256": "12e6d878ef90197d6fb2754590a26aa5f17fced574c334fc035571e34b6e0624"
+    },
+    "README.md": {
+      "bytes": 3580,
+      "git_blob_sha1": "3093c0df438ad04eb0ea409062a84510b7f9f27a",
+      "sha256": "1fd8f5312dda3e9be3ecfbaaaa84abd9d6641e616aacd86a5ad82f05a6141508"
+    },
+    "evidence/CLAIM_EVIDENCE_LEDGER.md": {
+      "bytes": 5902,
+      "git_blob_sha1": "133d32e61c2dcb0f57316d5f35594b4ff5bae85d",
+      "sha256": "a6f6d7abc6ebdaa034d9d2da903214c717eaaaf7d7b3fd6e9d9d96e035bfa9e2"
+    },
+    "evidence/DIALOGUE_PROCESS_RECORD_FA.md": {
+      "bytes": 29428,
+      "git_blob_sha1": "635c64889866a70b0f17378783614113a5835864",
+      "sha256": "86b27579feecf827151eab654b767745c39947913976b81be10c6262076d7dbd"
+    },
+    "evidence/RIGHTS_PRIVACY_AND_SOURCE_LIMITS.md": {
+      "bytes": 3655,
+      "git_blob_sha1": "7e1e086bb586e929b7af1e61ab4c1767dff29d14",
+      "sha256": "d29c4cb151665a488d478b918ba593e28911d4ccea73a9e22aa0ad4be1320825"
+    },
+    "evidence/VERBATIM_USER_ANCHORS_2026-11-11.md": {
+      "bytes": 9757,
+      "git_blob_sha1": "e54c3b04c06eac2dad2c7f45487fbffd70c7db20",
+      "sha256": "b4e4976068c3c9d4ad6482eba562460e96734a4e1ec821a03cb61d935577bdab"
+    },
+    "paper/CREATION_WITHOUT_SOVEREIGNTY_EN_v0.1.md": {
+      "bytes": 50404,
+      "git_blob_sha1": "4f1804af0c9eb98b12f6d4d11f21288329775f95",
+      "sha256": "564fa3259269d29ad517fd55b3b7b98eb47189fa0eb5c6649c747f01d64809e6"
+    },
+    "paper/CREATION_WITHOUT_SOVEREIGNTY_FA_v0.1.md": {
+      "bytes": 46645,
+      "git_blob_sha1": "a375c72756e12b22f1252bed6cd4fa314acf2d0e",
+      "sha256": "b6497e4cd948c34c114407a9814859546a0da6d0958712e359004afb90143809"
+    },
+    "paper/LLM_ETHICAL_REVISION_PROTOCOL_B_v0.1.md": {
+      "bytes": 9497,
+      "git_blob_sha1": "98ca9ca45b564055be55f6dbdc48a0e4d1d94031",
+      "sha256": "15ae5b6ae942554ea6546c8d0cb3be3bae6f3c54bcc695500c52120f5e47abcf"
+    },
+    "published/en.pdf": {
+      "bytes": 229470,
+      "git_blob_sha1": "e60bd7388569ce72f38a9be2425e7e0b150ae223",
+      "sha256": "b268dbc5476040d7b84db7253dc468a8342341c62a533ba0ab7d14f17820169c"
+    },
+    "published/fa.pdf": {
+      "bytes": 212341,
+      "git_blob_sha1": "96e7468e8ee082ac8f87a4c1fa96301170d49c0b",
+      "sha256": "1b63e6ae1a0f9c84978b5b36759f197eb150f9046ce98d08675fedae137d8f5c"
+    },
+    "source/ARCHIVE_EXTRACTION_MANIFEST.json": {
+      "bytes": 2750,
+      "git_blob_sha1": "f2566100dc27cba2bd9a903edd3ae8d8b19bf9cd",
+      "sha256": "3c4c7ed49fb39bc66e576d7cf76b6421789902ee34ee4a6ebcd05872b0fe176c"
+    },
+    "zenodo/ZENODO_METADATA_DRAFT.json": {
+      "bytes": 3000,
+      "git_blob_sha1": "b8c9a384cf58a7c14c678b38d302358f8f1545d5",
+      "sha256": "67abac656333b9985a66b701bbd365f6196a4d5168653c61f36b74cf4cbdbcbc"
+    },
+    "zenodo/ZENODO_PUBLICATION_RECORD_2026-11-12.json": {
+      "bytes": 1386,
+      "git_blob_sha1": "46089ab1966a977f6051df6649027fc485689f77",
+      "sha256": "2723d0c735a796387e026a1e4ac9c24c47f35b3364ed89f506f4843aad74c0a3"
+    }
+  },
+  "format": "PUBLIC_PACKAGE_FILE_MANIFEST_V3",
+  "hash_basis": "Exact bytes read from Git blob objects using git cat-file; not checkout/worktree bytes.",
+  "line_ending_policy": "No normalization. LF, CRLF, and all other bytes are hashed exactly as stored in the selected Git blob.",
+  "revision_date": "2026-11-16",
+  "self_hash_excluded": true,
+  "source": "GitHub PR #181, archived v0.1 Zenodo 2026-11-11",
+  "source_git_commit": "2e7f83c6c7518012bed7fedfb12103ce9b7222ea",
+  "source_privacy": "Private conversation transcript not distributed; public selection reproduction INCOMPLETE",
+  "status": "AUTHOR_PUBLISHED_WORKING_PAPER_NOT_PEER_REVIEWED",
+  "supersedes": "PUBLIC_PACKAGE_FILE_MANIFEST.json (V2 retained unchanged)"
+}
