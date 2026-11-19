@@ -20,13 +20,14 @@ class Fake:
         }
         self.checks = {"total_count": 2, "check_runs": [
             {"id": 1, "name": "m0-regression", "head_sha": HEAD,
-             "status": "completed", "conclusion": "success", "app": {"id": 15368}},
+             "status": "completed", "conclusion": "success", "app": {"id": 15368},
+             "details_url": "https://github.com/SepehrGhanbari/Ario/actions/runs/100/job/1"},
             {"id": 2, "name": "advisory", "head_sha": HEAD,
              "status": "in_progress", "conclusion": None, "app": {"id": 15368}},
         ]}
         self.runs = {"total_count": 1, "workflow_runs": [{
             "id": 100, "run_attempt": 1, "head_sha": HEAD,
-            "event": "pull_request", "status": "in_progress", "conclusion": None,
+            "event": "pull_request", "status": "completed", "conclusion": "success",
             "pull_requests": [{"id": 987, "number": PR, "head": {"sha": HEAD}}],
         }]}
         self.calls = []
@@ -57,7 +58,7 @@ def test_bound_pr_and_checks_remain_non_authoritative():
     result = call(f)
     assert len(f.calls) == 4
     assert result["pr_sample_consistency"] == "SAME_AT_TWO_SAMPLED_READS"
-    assert result["required_check_observation"] == "REPORTED_SUCCESS_BY_GITHUB_APP"
+    assert result["required_check_observation"] == "REPORTED_SUCCESS_BY_LINKED_PR_RUN"
     assert result["linked_run_count"] == 1
     assert result["status"] == "UNKNOWN"
     assert result["execution_attestation"] == "NOT_ESTABLISHED"
@@ -188,3 +189,93 @@ def test_bad_sha_cli_never_reads_network(monkeypatch, capsys):
     assert mod.main(["--pr", "295", "--expected-head", "invalid"]) == 0
     value = json.loads(capsys.readouterr().out)
     assert value["status"] == "UNKNOWN" and value["merge_authorized"] is False
+
+
+# Security regression: a passing push job cannot masquerade as the PR job.
+def test_push_success_does_not_mask_failed_pr_job():
+    f = Fake()
+    f.checks["check_runs"][0]["details_url"] = (
+        "https://github.com/SepehrGhanbari/Ario/actions/runs/200/job/1"
+    )
+    f.checks["check_runs"].append({
+        "id": 3, "name": "m0-regression", "head_sha": HEAD,
+        "status": "completed", "conclusion": "failure", "app": {"id": 15368},
+        "details_url": "https://github.com/SepehrGhanbari/Ario/actions/runs/100/job/3",
+    })
+    f.checks["total_count"] = 3
+    f.runs["workflow_runs"][0]["conclusion"] = "failure"
+    assert call(f)["required_check_observation"] == "NOT_CONFIRMED"
+
+
+def test_push_success_cannot_mask_in_progress_pr_job():
+    f = Fake()
+    f.checks["check_runs"][0]["details_url"] = (
+        "https://github.com/SepehrGhanbari/Ario/actions/runs/200/job/1"
+    )
+    f.checks["check_runs"].append({
+        "id": 3, "name": "m0-regression", "head_sha": HEAD,
+        "status": "in_progress", "conclusion": None, "app": {"id": 15368},
+        "details_url": "https://github.com/SepehrGhanbari/Ario/actions/runs/100/job/3",
+    })
+    f.checks["total_count"] = 3
+    f.runs["workflow_runs"][0].update(status="in_progress", conclusion=None)
+    assert call(f)["required_check_observation"] == "NOT_CONFIRMED"
+
+
+@pytest.mark.parametrize("url", [
+    "https://example.org/actions/runs/100/job/1",
+    "https://github.com/SepehrGhanbari/Ario/actions/runs/999/job/1",
+    "https://github.com/SepehrGhanbari/Ario/actions/runs/100/job/123",
+    "https://github.com/Other/Ario/actions/runs/100/job/1",
+    None,
+])
+def test_mismatched_job_details_not_a_success(url):
+    f = Fake()
+    f.checks["check_runs"][0]["details_url"] = url
+    assert call(f)["required_check_observation"] == "NOT_CONFIRMED"
+
+
+def test_completed_pr_run_failure_not_confirmed_even_with_success_job():
+    f = Fake()
+    f.runs["workflow_runs"][0]["conclusion"] = "failure"
+    assert call(f)["required_check_observation"] == "NOT_CONFIRMED"
+
+
+def test_more_than_one_pr_regression_job_is_not_a_unique_success():
+    f = Fake()
+    f.checks["check_runs"].append({
+        "id": 3, "name": "m0-regression", "head_sha": HEAD,
+        "status": "completed", "conclusion": "success", "app": {"id": 15368},
+        "details_url": "https://github.com/SepehrGhanbari/Ario/actions/runs/100/job/3",
+    })
+    f.checks["total_count"] = 3
+    assert call(f)["required_check_observation"] == "NOT_CONFIRMED"
+
+
+def test_duplicate_run_id_is_rejected():
+    f = Fake()
+    f.runs["workflow_runs"].append(copy.deepcopy(f.runs["workflow_runs"][0]))
+    f.runs["total_count"] = 2
+    result = call(f)
+    assert result["reason"] == "INVALID_RUN"
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+
+
+@pytest.mark.parametrize(("status", "conclusion"), [
+    ("in_progress", "success"),
+    ("completed", None),
+])
+def test_incoherent_check_state_is_unknown(status, conclusion):
+    f = Fake()
+    f.checks["check_runs"][0].update(status=status, conclusion=conclusion)
+    assert call(f)["reason"] == "INVALID_OR_DUPLICATE_CHECK"
+
+
+@pytest.mark.parametrize(("status", "conclusion"), [
+    ("in_progress", "success"),
+    ("completed", None),
+])
+def test_incoherent_pr_run_state_is_unknown(status, conclusion):
+    f = Fake()
+    f.runs["workflow_runs"][0].update(status=status, conclusion=conclusion)
+    assert call(f)["reason"] == "INVALID_RUN"

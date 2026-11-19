@@ -19,6 +19,12 @@ REPOSITORY = "SepehrGhanbari/Ario"
 API = "https://api.github.com/repos/" + REPOSITORY
 SCHEMA = "ARIO-REPO-SELF-AUDIT-0.1"
 SHA = re.compile(r"[0-9a-f]{40}\Z")
+# GitHub check-run details URLs bind the named job to its actual workflow run.
+# A push check with the same name is NOT evidence of a PR job.
+CHECK_JOB = re.compile(
+    r"https://github[.]com/SepehrGhanbari/Ario/actions/runs/"
+    r"([1-9][0-9]*)/job/([1-9][0-9]*)\Z"
+)
 ALLOWED = (
     re.compile(r"pulls/[1-9][0-9]*\Z"),
     re.compile(r"commits/[0-9a-f]{40}/check-runs\?per_page=100\Z"),
@@ -160,12 +166,15 @@ def observe(pr_number: int, expected_head: str, *,
                     or item.get("status") not in ("queued", "in_progress", "completed")
                     or item.get("conclusion") not in (
                         None, "success", "failure", "neutral", "skipped",
-                        "cancelled", "timed_out", "action_required", "stale")):
+                        "cancelled", "timed_out", "action_required", "stale")
+                    or (item["status"] == "completed")
+                       != (item.get("conclusion") is not None)):
                 raise ReadUnknown("INVALID_OR_DUPLICATE_CHECK")
             ids.add(item["id"])
             observed_checks.append({
-                "name": item["name"], "status": item["status"],
+                "id": item["id"], "name": item["name"], "status": item["status"],
                 "conclusion": item.get("conclusion"), "app_id": app["id"],
+                "details_url": item.get("details_url"),
             })
         runs_obj = _object(
             source.get_json(API + "/actions/runs?head_sha=" + expected_head
@@ -178,18 +187,49 @@ def observe(pr_number: int, expected_head: str, *,
                 or not isinstance(runs, list) or len(runs) != run_count):
             raise ReadUnknown("RUNS_INCOMPLETE")
         linked = []
+        run_ids = set()
         for record in runs:
             run = _object(record, "RUN")
             if (not _positive(run.get("id")) or not _positive(run.get("run_attempt"))
                     or run.get("head_sha") != expected_head
                     or run.get("event") != "pull_request"
-                    or run.get("status") not in ("queued", "in_progress", "completed")):
+                    or run["id"] in run_ids
+                    or run.get("status") not in ("queued", "in_progress", "completed")
+                    or run.get("conclusion") not in (
+                        None, "success", "failure", "neutral", "skipped", "cancelled",
+                        "timed_out", "action_required", "stale", "startup_failure")
+                    or (run["status"] == "completed")
+                       != (run.get("conclusion") is not None)):
                 raise ReadUnknown("INVALID_RUN")
+            run_ids.add(run["id"])
             if links_pr(run.get("pull_requests"), pr_number, first["id"], expected_head):
                 linked.append({
                     "id": run["id"], "attempt": run["run_attempt"],
                     "status": run["status"], "conclusion": run.get("conclusion"),
                 })
+        # Correlate a named GitHub Actions check to a PR-linked workflow run.
+        # Merely seeing a success check on the same SHA is insufficient:
+        # push and pull_request events can publish identically named checks.
+        linked_by_id = {run["id"]: run for run in linked}
+        pr_regression_jobs = []
+        for check in observed_checks:
+            if check["name"] != "m0-regression" or check["app_id"] != 15368:
+                continue
+            details = check.get("details_url")
+            match = CHECK_JOB.fullmatch(details) if isinstance(details, str) else None
+            if match is None or int(match.group(2)) != check["id"]:
+                continue
+            linked_run = linked_by_id.get(int(match.group(1)))
+            if linked_run is not None:
+                pr_regression_jobs.append((check, linked_run))
+        named_regression_confirmed = (
+            len(pr_regression_jobs) == 1
+            and all(
+                check["status"] == "completed" and check["conclusion"] == "success"
+                and run["status"] == "completed" and run["conclusion"] == "success"
+                for check, run in pr_regression_jobs
+            )
+        )
         last = _identity(source.get_json(url), pr_number)
         if last != first:
             raise ReadUnknown("PR_CHANGED_BETWEEN_SAMPLES")
@@ -201,11 +241,8 @@ def observe(pr_number: int, expected_head: str, *,
             "linked_run_count": len(linked),
             "linked_runs": linked,
             "required_check_observation": (
-                "REPORTED_SUCCESS_BY_GITHUB_APP"
-                if any(c["name"] == "m0-regression"
-                       and c["app_id"] == 15368 and c["status"] == "completed"
-                       and c["conclusion"] == "success" for c in observed_checks)
-                else "NOT_CONFIRMED"
+                "REPORTED_SUCCESS_BY_LINKED_PR_RUN"
+                if named_regression_confirmed else "NOT_CONFIRMED"
             ),
         })
     except (ReadUnknown, ValueError, TypeError, OSError, UnicodeError,

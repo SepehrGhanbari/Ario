@@ -21,3 +21,21 @@ Offline tests:
 The already-existing adapter ario_self_audit_adapter.py connects two local claim/evidence files to the real bounded Ario agent. This NEW module adds real GitHub metadata collection; it is not an Ollama conversational attachment. Neither executable changes core memory, identity, signer, or M0 admission.
 
 The Actions run emits one bounded JSON observation in its log and job summary. The workflow result being green only indicates that the reporting command completed; inspect the JSON reason and UNKNOWN. The owner can later disable the advisory workflow or revise this reader without changing historical evidence.
+## v0.1.1 fail-closed hardening (2026-11-20)
+
+The original reporter had a **cross-event ambiguity**: a successful push-event
+`m0-regression` check could be mistaken for a successful PR-event
+`m0-regression` check on the same commit. The hardening requires a unique
+named GitHub Actions job whose numeric job ID and run ID are bound by its
+canonical `details_url` to a PR-linked `pull_request` workflow run.
+Both job and run must report completed/success; conflicting or still-running
+PR jobs, invalid states, duplicate runs and incomplete pages never confirm
+success. The observation field can now be
+`REPORTED_SUCCESS_BY_LINKED_PR_RUN`, rather than
+`REPORTED_SUCCESS_BY_GITHUB_APP`. Neither is evidence of an independent
+witness or branch protection. Check-run metadata remains GitHub-reported.
+
+This is a metadata-only improvement: no trust or production gate is
+enabled, no checks are marked required, and no existing M0/agent/memory
+file or original workflow is modified. All v0.1 observations remain
+historical; no retroactive reinterpretation of their sampled time.
