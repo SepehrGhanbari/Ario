@@ -130,6 +130,22 @@ def get_existing_timestamp(calendar_url, commitment, *, opener=None):
             "response_bytes":body,"content_type":media}
 
 
+def _find_exact_pending_node(stamp, commitment, calendar_url):
+    # The root of a detached .ots is the ORIGINAL file digest; the upgraded
+    # calendar response attests a derived child commitment reached via OTS
+    # operations. Merging into the file-digest root would be incorrect.
+    if (stamp.msg == commitment and any(
+        isinstance(att,PendingAttestation) and att.uri==calendar_url
+        for att in stamp.attestations
+    )):
+        return stamp
+    for child in stamp.ops.values():
+        found=_find_exact_pending_node(child,commitment,calendar_url)
+        if found is not None:
+            return found
+    return None
+
+
 def check_one(calendar_url, commitment, detached, original, *, getter=get_existing_timestamp):
     result={
         "calendar":calendar_url,"commitment_hex":commitment.hex(),
@@ -156,8 +172,11 @@ def check_one(calendar_url, commitment, detached, original, *, getter=get_existi
         upgraded=Timestamp.deserialize(ctx,commitment)
         ctx.assert_eof()
         if upgraded.msg!=commitment:raise ValueError("incorrect returned commitment")
-        # Only merge a proof bound to exactly the same pending-commitment bytes.
-        detached.timestamp.merge(upgraded)
+        # Only merge into the matching *leaf* (NOT the file hash root).
+        pending_leaf=_find_exact_pending_node(detached.timestamp,commitment,calendar_url)
+        if pending_leaf is None:
+            raise ValueError("unrecognized pending witness branch")
+        pending_leaf.merge(upgraded)
         after=_serialize_detached(detached)
         roundtrip=_parse_detached(after)
         if roundtrip.file_digest.hex()!=EXPECTED_DIGEST:
