@@ -290,6 +290,13 @@ def main():
     except (OSError,ValueError,TypeError,subprocess.CalledProcessError):
         output=verdict("W34_INPUT_OR_EXECUTION_ERROR_NO_GO")
     print("W34_CORE_EVIDENCE_JSON="+json.dumps(output,sort_keys=True))
+    if output["reason"] not in (
+        "VALID_ORIGINAL_PUBLIC_W31_OTS_INPUT_ONLY",
+        "LOCAL_CORE_RPC_CLAIMS_MATCH_ORIGINAL_OTS_PROOFS_BUT_OPERATOR_UNATTESTED"
+    ):
+        # Invalid or missing local Core is an execution failure, never a green
+        # acceptance. All result fields still remain HOLD / NO_GO.
+        raise SystemExit(2)
 
 
 if __name__=="__main__":
