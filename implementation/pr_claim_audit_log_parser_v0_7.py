@@ -45,8 +45,8 @@ def extract_log(log: str) -> dict[str, Any]:
     if not isinstance(log, str) or len(log) > v01.MAX_LOG_CHARS:
         raise v01.Invalid("missing or oversize job log")
     lines = [v01._strip_log_prefix(x) for x in log.splitlines()]
-    summaries: list[dict[str, int]] = []
-    for line in lines:
+    summaries: list[tuple[int, dict[str, int]]] = []
+    for index, line in enumerate(lines):
         match = SUMMARY_LINE.fullmatch(line)
         if not match:
             continue
@@ -63,11 +63,12 @@ def extract_log(log: str) -> dict[str, Any]:
             if key in seen:
                 raise v01.Invalid("duplicate pytest summary field")
             seen.add(key)
+            count = v01._parse_count(parsed.group("count"))
             if key in COUNT_KEYS:
-                stats[key] = int(parsed.group("count"))
+                stats[key] = count
         if not ({"passed", "failed"} & seen):
             raise v01.Invalid("no test outcome count")
-        summaries.append(stats)
+        summaries.append((index, stats))
     if len(summaries) != 1:
         raise v01.Invalid("missing or ambiguous pytest summary")
 
@@ -81,10 +82,9 @@ def extract_log(log: str) -> dict[str, Any]:
             versions.add(setup.group("version"))
     if len(versions) != 1:
         raise v01.Invalid("missing or conflicting python version in log")
-    commands = [x.removeprefix("##[group]Run ") for x in lines if x.startswith("##[group]Run ")]
-    if commands.count(RUN_COMMAND) != 1:
-        raise v01.Invalid("expected exactly one pytest invocation")
-    return {**summaries[0], "python_version": next(iter(versions)), "pytest_command": RUN_COMMAND}
+    summary_index, stats = summaries[0]
+    v01._check_summary_step(lines, summary_index)
+    return {**stats, "python_version": next(iter(versions)), "pytest_command": RUN_COMMAND}
 
 
 def _compare_bound_snapshot(pr_text: str, evidence: Any) -> dict[str, Any]:
@@ -111,7 +111,7 @@ def _compare_bound_snapshot(pr_text: str, evidence: Any) -> dict[str, Any]:
             type(job.get("run_id")) is not int or job["run_id"] != claim["run_id"] or
             job.get("status") != "completed" or job.get("conclusion") not in ("success", "failure") or
             not isinstance(job.get("name"), str) or not job["name"] or
-            ("run_attempt" in job and job["run_attempt"] != claim["run_attempt"]) or
+            ("run_attempt" in job and not v01.matches_id(job["run_attempt"], claim["run_attempt"])) or
             ("head_sha" in job and job["head_sha"] != claim["head_sha"])):
         raise v01.Invalid("job identity or status unavailable")
     observed = extract_log(raw)

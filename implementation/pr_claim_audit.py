@@ -9,8 +9,11 @@ import argparse
 import hashlib
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Any
+
+from pr_ci_github_evidence import matches_id
 
 SCHEMA = "ARIO-PR-CI-0.1"
 OPEN = "<!-- ARIO-CI-CLAIM-V0.1"
@@ -131,6 +134,15 @@ def _check_summary_step(lines: list[str], summary_index: int) -> None:
             raise Invalid("ambiguous pytest command header")
 
 
+def _parse_count(text: str) -> int:
+    if len(text) > sys.int_info.default_max_str_digits:
+        raise Invalid("pytest count exceeds digit limit")
+    try:
+        return int(text)
+    except ValueError as exc:
+        raise Invalid("invalid pytest count") from exc
+
+
 def _extract_log(log: str) -> dict[str, Any]:
     if not isinstance(log, str) or len(log) > MAX_LOG_CHARS:
         raise Invalid("missing or oversize job log")
@@ -150,7 +162,7 @@ def _extract_log(log: str) -> dict[str, Any]:
                 if key in seen:
                     raise Invalid("duplicate pytest summary field")
                 seen.add(key)
-                stats[key] = int(count)
+                stats[key] = _parse_count(count)
             if "passed" not in seen and "failed" not in seen:
                 raise Invalid("no test outcome count")
             if m.start() != 0:
@@ -178,7 +190,7 @@ def _evidence(evidence: Any, claim: dict[str, Any]) -> tuple[dict[str, Any], dic
         raise Invalid("missing log digest")
     if not isinstance(log, str) or hashlib.sha256(log.encode("utf-8")).hexdigest() != checksum:
         raise Invalid("log digest mismatch")
-    if run.get("id") != claim["run_id"] or run.get("run_attempt") != claim["run_attempt"]:
+    if not matches_id(run.get("id"), claim["run_id"]) or not matches_id(run.get("run_attempt"), claim["run_attempt"]):
         raise Invalid("run identity mismatch")
     if run.get("head_sha") != claim["head_sha"]:
         raise Invalid("run head not bound to claim head")
@@ -186,7 +198,7 @@ def _evidence(evidence: Any, claim: dict[str, Any]) -> tuple[dict[str, Any], dic
         raise Invalid("run incomplete or not a PR run")
     if run.get("conclusion") not in ("success", "failure"):
         raise Invalid("unknown run conclusion")
-    if job.get("id") != claim["job_id"] or job.get("run_id") != claim["run_id"]:
+    if not matches_id(job.get("id"), claim["job_id"]) or not matches_id(job.get("run_id"), claim["run_id"]):
         raise Invalid("job identity mismatch")
     if "head_sha" in job and job["head_sha"] != run["head_sha"]:
         raise Invalid("job head not bound to run head")
@@ -194,7 +206,7 @@ def _evidence(evidence: Any, claim: dict[str, Any]) -> tuple[dict[str, Any], dic
         raise Invalid("job incomplete or inconclusive")
     if not isinstance(job.get("name"), str) or not job["name"]:
         raise Invalid("job name absent")
-    if "run_attempt" in job and job["run_attempt"] != claim["run_attempt"]:
+    if "run_attempt" in job and not matches_id(job["run_attempt"], claim["run_attempt"]):
         raise Invalid("job attempt mismatch")
     observed = _extract_log(log)
     observed["job_conclusion"] = job["conclusion"]
