@@ -1,4 +1,4 @@
-name: W31 READ-ONLY parse two external pending OTS receipts
+name: W31 READ-ONLY parse two external pending OTS receipts (pinned blob rerun)
 on:
   pull_request:
     paths:
@@ -25,3 +25,4 @@ jobs:
         env:
           PYTHONDONTWRITEBYTECODE: '1'
         run: python -B research/consensus/w31_verify_ots_pending_receipts.py
+# W31 deliberate second format-only run; NO POST/digest in this workflow.
