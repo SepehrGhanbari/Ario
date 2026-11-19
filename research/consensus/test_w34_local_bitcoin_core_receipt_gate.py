@@ -2,7 +2,10 @@
 """W34 synthetic RPC falsifiers. A simulated response NEVER verifies Bitcoin Core."""
 from __future__ import annotations
 import copy
+from contextlib import redirect_stdout
+from io import StringIO
 import hashlib
+import sys
 import json
 import subprocess
 import unittest
@@ -207,6 +210,54 @@ class W34(unittest.TestCase):
     def test_40_invalid_raw_header_bitcoin_not_trusted(self):
         self.assertFalse(lab.check_header("0"*160,lab.EXPECTED[976596]["blockhash"],
                                           self.roots[976596]["raw_merkle_root"]))
+
+    def test_41_cli_offline_only_passes_input_validation(self):
+        out=StringIO()
+        with patch.object(sys,"argv",["w34","--offline"]), patch.object(
+            lab,"load_receipt_roots",return_value=self.roots
+        ),redirect_stdout(out):
+            lab.main()
+        record=json.loads(out.getvalue().split("W34_CORE_EVIDENCE_JSON=")[1])
+        self.assertEqual(record["reason"],"VALID_ORIGINAL_PUBLIC_W31_OTS_INPUT_ONLY")
+        self.assertEqual(record["authority"],"NONE")
+        self.assertFalse(record["fully_validated_bitcoin_node_independently_attested"])
+
+    def test_42_cli_missing_real_node_exits_nonzero_and_hold(self):
+        out=StringIO()
+        with patch.object(sys,"argv",["w34","--local-rpc"]), patch.object(
+            lab,"load_receipt_roots",return_value=self.roots
+        ), patch.object(lab,"local_bitcoin_cli",side_effect=RuntimeError("ABSENT")),redirect_stdout(out):
+            with self.assertRaises(SystemExit) as caught:
+                lab.main()
+        self.assertEqual(caught.exception.code,2)
+        record=json.loads(out.getvalue().split("W34_CORE_EVIDENCE_JSON=")[1])
+        self.assertEqual(record["reason"],"CORE_RPC_UNAVAILABLE_OR_UNTRUSTED")
+        self.assertEqual(record["production"],"NO_GO")
+        self.assertFalse(record["fully_validated_bitcoin_node_independently_attested"])
+
+    def test_43_cli_perfect_fake_core_exits_nonzero_and_hold(self):
+        out=StringIO()
+        with patch.object(sys,"argv",["w34","--local-rpc"]), patch.object(
+            lab,"load_receipt_roots",return_value=self.roots
+        ), patch.object(lab,"local_bitcoin_cli",side_effect=self.rpc),redirect_stdout(out):
+            with self.assertRaises(SystemExit) as caught:
+                lab.main()
+        self.assertEqual(caught.exception.code,3)
+        record=json.loads(out.getvalue().split("W34_CORE_EVIDENCE_JSON=")[1])
+        self.assertEqual(record["reason"],"LOCAL_CORE_RPC_CLAIMS_MATCH_ORIGINAL_OTS_PROOFS_BUT_OPERATOR_UNATTESTED")
+        self.assertEqual(record["authority"],"NONE")
+        self.assertFalse(record["fully_validated_bitcoin_node_independently_attested"])
+
+    def test_44_cli_corrupt_receipts_exit_nonzero(self):
+        out=StringIO()
+        with patch.object(sys,"argv",["w34","--offline"]), patch.object(
+            lab,"load_receipt_roots",side_effect=ValueError("TAMPERED")
+        ),redirect_stdout(out):
+            with self.assertRaises(SystemExit) as caught:
+                lab.main()
+        self.assertEqual(caught.exception.code,2)
+        self.assertEqual(json.loads(out.getvalue().split("W34_CORE_EVIDENCE_JSON=")[1])["reason"],
+                         "W34_INPUT_OR_EXECUTION_ERROR_NO_GO")
 
 if __name__=="__main__":
     unittest.main(verbosity=2)
