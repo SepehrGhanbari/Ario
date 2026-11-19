@@ -1,0 +1,42 @@
+name: R63 G3 Windows PowerShell 5.1 compatibility (research only)
+on:
+  push:
+    branches:
+      - research/r63-g3-restricted-witness-20261119
+    paths:
+      - .github/workflows/r63-g3-windowsps51.yml
+      - research/r63_g3_witness_ci/Invoke-G3-WitnessLab.ps1
+      - research/r63_g3_witness_ci/witness_g3.py
+      - research/r63_g3_witness_ci/spend_chain_v2.py
+permissions:
+  contents: read
+jobs:
+  reproduce-guest-ps51:
+    runs-on: windows-2022
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13"
+      - name: Native PowerShell 5.1 runner compatibility probe
+        shell: pwsh
+        run: |
+          Write-Host 'RESEARCH_ONLY: same syntax as disposable Windows Sandbox PowerShell 5.1'
+          $exe=Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+          & $exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .\research\r63_g3_witness_ci\Invoke-G3-WitnessLab.ps1 -Mode CI *> r63-g3-ps51-compat.log
+          $rc=$LASTEXITCODE
+          Get-Content r63-g3-ps51-compat.log
+          if ($rc -ne 0) { exit $rc }
+      - name: Preserve red and green logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r63-g3-ps51-${{ github.run_id }}
+          path: |
+            r63-g3-ps51-compat.log
+            R63-G3-Run-*.txt
+            R63-G3-Report-*.json
+            R63-G3-Evidence-*.zip
+          if-no-files-found: warn
+          retention-days: 30
