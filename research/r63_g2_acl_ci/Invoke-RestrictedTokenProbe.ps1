@@ -33,12 +33,21 @@ function Attempt([string]$label, [scriptblock]$body) {
         & $body
         $results.operations[$label] = 'ALLOWED'
     } catch {
-        $e = $_.Exception
-        if ($e -is [UnauthorizedAccessException] -or $e.HResult -eq -2147024891) {
-            $results.operations[$label] = 'ACCESS_DENIED'
-        } else {
-            throw ('INCONCLUSIVE_' + $label + '_' + $e.GetType().FullName + '_' + $e.Message)
+        # Windows PowerShell 5.1 wraps static .NET method errors inside
+        # MethodInvocationException. Only genuine AccessDenied in the nested
+        # exception chain qualifies; a sharing/IO error is INCONCLUSIVE.
+        $outer=$_.Exception
+        $inner=$outer
+        $denied=$false
+        while ($null -ne $inner) {
+            if ($inner -is [UnauthorizedAccessException] -or $inner.HResult -eq -2147024891) {
+                $denied=$true
+                break
+            }
+            $inner=$inner.InnerException
         }
+        if ($denied) { $results.operations[$label] = 'ACCESS_DENIED' }
+        else { throw ('INCONCLUSIVE_' + $label + '_' + $outer.GetType().FullName + '_' + $outer.Message) }
     }
 }
 if ($Mode -eq 'AuthorizedWriter') {
