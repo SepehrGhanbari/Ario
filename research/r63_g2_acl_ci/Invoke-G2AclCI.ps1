@@ -76,8 +76,11 @@ try {
     [IO.File]::WriteAllText($v2, "G2_ACL_ONLY_DISPOSABLE_V2"+[char]10)
     [IO.File]::WriteAllText($flag, "G2_ACL_ONLY_DISPOSABLE_FLAG"+[char]10)
 
-    $aclBefore=& icacls.exe $journal $v1 $v2 $flag
-    MustSuccess 'READBACK_DACLS'
+    $aclBefore=@()
+    foreach ($target in @($journal,$v1,$v2,$flag)) {
+        $aclBefore+=& icacls.exe $target
+        MustSuccess 'READBACK_DACLS'
+    }
     $writerResult=LaunchProbe $writerCred 'AuthorizedWriter' $writerOutput $writerError
     if ($writerResult.current_token_sid -ne $writerSid -or $writerResult.is_admin) {
         throw 'AUTHORIZED_WRITER_TOKEN_NOT_DISTINCT_UNPRIVILEGED'
