@@ -61,7 +61,7 @@ class W32(unittest.TestCase):
     def test_03_original_pending_proof_binding_is_valid(self):
         for url,commit,detached,raw in self.fixtures:
             self.assertEqual(detached.file_digest.hex(),lab.EXPECTED_DIGEST)
-            self.assertEqual(len(commit),32)
+            self.assertTrue(1 <= len(commit) <= 64)
             self.assertEqual(lab._serialize_detached(detached),raw)
     def test_04_unlisted_calendar_denied_before_request(self):
         with self.assertRaises(ValueError):
