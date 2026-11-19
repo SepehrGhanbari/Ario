@@ -228,7 +228,13 @@ def server(case:Path,phase:str,count:int,expected_sid:str):
     if phase not in ('normal','recovery',*PHASES):
         raise RuntimeError('INVALID_PHASE')
     with WitnessServer(('127.0.0.1',0),handler(case,phase)) as s:
-        (case/'port.txt').write_text(str(s.server_address[1]),encoding='ascii')
+        # Atomic readiness publication: parent must never read a half-open file.
+        port_temp=case/'port.publish.tmp'
+        with port_temp.open('x',encoding='ascii') as f:
+            f.write(str(s.server_address[1]))
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(port_temp,case/'port.txt')
         (case/'writer-identity.json').write_text(json.dumps(identity),encoding='ascii')
         for _ in range(count):
             s.handle_request()
