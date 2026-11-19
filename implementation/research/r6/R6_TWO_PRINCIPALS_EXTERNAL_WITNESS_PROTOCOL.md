@@ -57,7 +57,10 @@ Preflight manually record: device/OS build, E and C OS principal identifiers, AC
 
 **Do not launch any script on the host or change OS ACLs on real Ario directories without specific consent.** Use disposable research-only accounts, directories and keys. Avoid unsafe elevated operations outside a disposable sandbox.
 
-## Stage R6-C — external witness quorum using public Sigsum (NOT executed)
+> **See also the more detailed executable draft of R6-B** in  
+> [`R6_STRENGTHENED_LIMITATIONS_AND_PHYSICAL_PROTOCOL.md`](R6_STRENGTHENED_LIMITATIONS_AND_PHYSICAL_PROTOCOL.md) §2.
+
+## Stage R6-C — external witness quorum using public Sigsum (partially executed for synthetic case)
 
 The official Sigsum getting-started flow supports Ed25519 signing of a file digest, public log submission, collecting an inclusion proof co-signed by external witnesses, and **offline proof verification**. The documented `sigsum-test1-2025` policy includes an external 2-of-3 witness quorum. This is a **TEST policy/service**, not a production reliability guarantee.
 
@@ -68,7 +71,7 @@ Official source: https://www.sigsum.org/getting-started/
 - Verify the proof on another machine with `sigsum-verify` under the predefined test policy and separately observe the public log using `sigsum-monitor`.
 - Store checkpoint file, public key, proof, verification stdout/exit code, policy hash, runner/operator IDs and a manifest of SHA-256 hashes. Maintain at least two observations to check monotonicity and detect equivocation. A proof of inclusion is **not proof of latest state**; monitor/compare heads and require an explicitly bounded freshness policy.
 
-### Reference commands (NOT run by this PR)
+### Reference commands (NOT run by this PR on real material)
 
 These commands come from the current official Sigsum getting-started page. They require **Go >= 1.23** and network access. Run only on disposable **test-only data** when explicitly authorized, never on real keys or private logs.
 
@@ -96,6 +99,9 @@ sigsum-monitor --interval 10s -P sigsum-test1-2025 r6-SYNTHETIC-anchor-key.pub
 
 **Next hard gates:** a separately administered policy/revocation signer A (not the user pretending to be another person), truly external C custody or HSM/managed key with scoped non-exportability and audit, independent monitoring, and mandatory sink re-verification. Same person managing all machines cannot honestly claim independent *administration*; a cloud provider operating its own transparency witnesses gives independence of log operators, but not policy-source identity.
 
+> **See the formal table of Established vs NOT_ESTABLISHED** in  
+> [`R6_STRENGTHENED_LIMITATIONS_AND_PHYSICAL_PROTOCOL.md`](R6_STRENGTHENED_LIMITATIONS_AND_PHYSICAL_PROTOCOL.md) §1.
+
 ## Pre-registered STOP/GO matrix
 
 | Evidence | PASS means | What it NEVER proves |
@@ -107,3 +113,8 @@ sigsum-monitor --interval 10s -P sigsum-test1-2025 r6-SYNTHETIC-anchor-key.pub
 | Independent policy admin, nonextractable custody, sink gate | future candidate for stronger security under explicit model | unconditional truth or resistance to compromise of all roles |
 
 **Final verdict even with all R6-A tests green: `RESEARCH_ONLY / ADMIN_INDEPENDENCE_NOT_ESTABLISHED / PRODUCTION=NO_GO / TRUST_ACTIVATION=NO_GO`.**
+
+---
+
+**Related strengthened note (same branch):**  
+[`R6_STRENGTHENED_LIMITATIONS_AND_PHYSICAL_PROTOCOL.md`](R6_STRENGTHENED_LIMITATIONS_AND_PHYSICAL_PROTOCOL.md)
