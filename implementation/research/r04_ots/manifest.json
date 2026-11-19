@@ -1,0 +1,33 @@
+{
+  "experiment": "Ario-RERE01-R04-OTS",
+  "date": "2026-11-18",
+  "source": "https://github.com/SepehrGhanbari/Ario/issues/280#issuecomment-6990276287",
+  "parent_source_commit": "7e1891abbe3532da7fdb1f1c1ea4daa4997f6156",
+  "classification": "RESEARCH_ONLY / PENDING_AT_FIRST_OBSERVATION / HOLD / NO_MERGE / PRODUCTION=NO_GO",
+  "synthetic_checkpoint": {
+    "filename": "synthetic_checkpoint_r04.json",
+    "bytes": 613,
+    "sha256": "c37da68d045da9c85a90dc679857c017ed0bbd1454e51d9033ef9a48e799a68a"
+  },
+  "pending_receipt": {
+    "filename_in_repo": "synthetic_checkpoint_r04.ots.b64",
+    "decoded_filename": "synthetic_checkpoint_r04.json.ots",
+    "decoded_bytes": 549,
+    "sha256": "5b7fc36d470560adbc8fd4620436451ea43ea0578bf50e7ca6104ce0280c3bf6",
+    "original_calendars": [
+      "https://alice.btc.calendar.opentimestamps.org",
+      "https://bob.btc.calendar.opentimestamps.org",
+      "https://finney.calendar.eternitywall.com"
+    ],
+    "bitcoin_inclusion_at_capture": "PENDING_NOT_VERIFIED",
+    "recorded_utc_date": "2026-11-18"
+  },
+  "synthetic_history_sha256": "519b9b0b20b06256ed77b1a24059ea8ec3f244d7fa1ad8f545c08d6d6ab5c780",
+  "trust": {
+    "real_history": false,
+    "bitcoin_finality_proved_by_this_manifest": false,
+    "witness_administrator_independence": "UNKNOWN",
+    "external_monotonic_floor": "MISSING",
+    "can_activate_genesis_or_signer": false
+  }
+}

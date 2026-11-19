@@ -1,0 +1,3 @@
+# Preserve the exact byte-level fixture that was publicly time-stamped.
+# No Git LF/CRLF conversion on Windows: digest refers to the ORIGINAL 613 bytes.
+synthetic_checkpoint_r04.json -text
