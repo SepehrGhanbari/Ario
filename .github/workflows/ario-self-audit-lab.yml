@@ -1,0 +1,46 @@
+name: Ario Repo Self Audit Research (advisory)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  actions: read
+  checks: read
+  pull-requests: read
+
+jobs:
+  repository-readback-research:
+    name: self-audit-readback-research
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    defaults:
+      run:
+        working-directory: implementation
+    steps:
+      - name: Checkout PR source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.13'
+      - name: Install pinned research test dependencies
+        run: python -m pip install -r requirements-research.txt
+      - name: Run local regression negative controls
+        run: python -B -m pytest -p no:cacheprovider -q tests/test_ario_repo_self_audit.py
+      - name: Sample actual GitHub PR, checks and workflow runs
+        shell: bash
+        env:
+          ARIO_GITHUB_READ_TOKEN: ${{ github.token }}
+          ARIO_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+          ARIO_PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          python -B ario_repo_self_audit.py --repository SepehrGhanbari/Ario --pr "$ARIO_PR_NUMBER" --expected-head "$ARIO_EXPECTED_HEAD" > "$RUNNER_TEMP/ario-self-audit.json"
+          cat "$RUNNER_TEMP/ario-self-audit.json"
+          {
+            echo '### Ario self-audit advisory; top-level UNKNOWN is expected'
+            echo '~~~json'
+            cat "$RUNNER_TEMP/ario-self-audit.json"
+            echo '~~~'
+          } >> "$GITHUB_STEP_SUMMARY"
