@@ -80,6 +80,16 @@ function StartAs([PSCredential]$cred,[string[]]$a,[string]$tag,[bool]$wait) {
               WindowStyle='Hidden';RedirectStandardOutput=$out;RedirectStandardError=$err}
     if ($wait) { $kwargs['Wait']=$true }
     $p=Start-Process @kwargs
+    # Windows PowerShell 5.1 / Start-Process -Credential can lose
+    # the ExitCode after WaitForExit unless the handle is cached early.
+    # Null exit codes are never interpreted as success.
+    if (-not $wait) {
+        try { $savedHandle=$p.Handle }
+        catch { throw ('HOLD_PROCESS_HANDLE_NOT_AVAILABLE_'+$tag+'_'+$_.Exception.Message) }
+        if ($null -eq $savedHandle -or $savedHandle -eq [IntPtr]::Zero) {
+            throw ('HOLD_PROCESS_HANDLE_NULL_'+$tag)
+        }
+    }
     if ($wait) {
         if ($p.ExitCode -ne 0) {
             $detail=if ([IO.File]::Exists($err)) { [IO.File]::ReadAllText($err) } else { '<NO_CHILD_STDERR>' }
