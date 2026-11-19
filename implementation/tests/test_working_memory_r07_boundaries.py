@@ -213,3 +213,41 @@ def test_reingest_existing_chunk_must_still_validate_source():
     assert a.access_count == 1
     assert a.salience == 0.4
     assert a.chunk_id == original.chunk_id
+
+
+def test_fresh_working_memory_replay_cannot_reinforce_same_engine_evidence():
+    """New buffer instance, same event anchor: still only one semantic source."""
+    engine = ConsolidationEngine(node_id_version="v2")
+    h = SourceAttribution(
+        attribution_id="HYP-STABLE-CROSS-BUFFER",
+        assertion="one stable unverified observation",
+        source_type=SourceType.INTERNAL_HYPOTHESIS,
+        veracity_state=VeracityState.UNVERIFIED_HYPOTHESIS,
+    )
+    for _ in range(2):
+        wm = WorkingMemoryBuffer(consolidation_engine=engine)
+        wm.ingest("stable-topic", h.assertion, h, salience=0.95)
+        assert len(wm.flush_to_long_term()) == 1
+    node = next(iter(engine.nodes.values()))
+    assert node.reinforcement_count == 1
+    assert len(node.source_event_hashes) == 1
+    assert node.status == NodeEpistemicStatus.RECORDED
+
+
+def test_eviction_history_returns_defensive_snapshot_not_mutable_authority():
+    """Inspection may not mutate even volatile research eviction history."""
+    wm = WorkingMemoryBuffer(capacity=1)
+    for i in range(2):
+        a = SourceAttribution(
+            attribution_id=f"UNCHECKED-{i}",
+            assertion=f"synthetic claim {i}",
+            source_type=SourceType.INTERNAL_HYPOTHESIS,
+            veracity_state=VeracityState.UNVERIFIED_HYPOTHESIS,
+        )
+        wm.ingest(f"concept-{i}", a.assertion, a, salience=0.1)
+    assert len(wm.eviction_history) == 1
+    snapshot = wm.eviction_history[0]
+    snapshot.reason = "FORGED_REWRITE_OF_REASON"
+    snapshot.final_salience = 1.0
+    assert wm.eviction_history[0].reason == "capacity_limit_exceeded"
+    assert wm.eviction_history[0].final_salience == 0.1
