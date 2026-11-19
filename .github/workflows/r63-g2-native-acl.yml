@@ -30,5 +30,7 @@ jobs:
           path: |
             r63-g2-acl-run.log
             r63-g2-acl-report.json
+            research/r63_g2_acl_ci/Invoke-G2AclCI.ps1
+            research/r63_g2_acl_ci/Invoke-RestrictedTokenProbe.ps1
           if-no-files-found: warn
           retention-days: 30
