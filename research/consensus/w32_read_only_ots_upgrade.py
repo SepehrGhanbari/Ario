@@ -83,7 +83,9 @@ def originals():
                  if isinstance(att,PendingAttestation)]
         if len(pending)!=1 or pending[0][1].uri != c["calendar"]:
             raise ValueError("W31_CALENDAR_COMMITMENT_MISMATCH")
-        if len(pending[0][0])!=32:
+        # A calendar may attest an OTS operation output of bounded variable
+        # length, not necessarily exactly the original 32-byte file digest.
+        if not 1 <= len(pending[0][0]) <= 64:
             raise ValueError("W31_BAD_CALENDAR_COMMITMENT")
         if any(isinstance(att,BitcoinBlockHeaderAttestation)
                for _,att in detached.timestamp.all_attestations()):
@@ -94,8 +96,12 @@ def originals():
 
 def get_existing_timestamp(calendar_url, commitment, *, opener=None):
     """Only one allowlisted HTTPS GET per calendar. NEVER stamp/submit."""
-    if calendar_url not in ALLOWLIST or type(commitment) is not bytes or len(commitment)!=32:
+    if calendar_url not in ALLOWLIST or type(commitment) is not bytes or not (1 <= len(commitment) <= 64):
         raise ValueError("W32_NOT_ALLOWLISTED")
+    # Match the *actual* commitment embedded in the previously recorded proof.
+    # Arbitrary GET probes are not part of this experiment.
+    if commitment not in {msg for host,msg,_,_ in originals() if host==calendar_url}:
+        raise ValueError("W32_UNRECOGNIZED_ORIGIN_COMMITMENT")
     url=calendar_url+"/timestamp/"+commitment.hex()
     request=urllib.request.Request(
         url,headers={"Accept":"application/vnd.opentimestamps.v1",
@@ -126,7 +132,8 @@ def get_existing_timestamp(calendar_url, commitment, *, opener=None):
 
 def check_one(calendar_url, commitment, detached, original, *, getter=get_existing_timestamp):
     result={
-        "calendar":calendar_url,"commitment_sha256":commitment.hex(),
+        "calendar":calendar_url,"commitment_hex":commitment.hex(),
+        "commitment_bytes":len(commitment),
         "original_ots_sha256":hashlib.sha256(original).hexdigest(),
         "original_ots_bytes":len(original),
         "no_post_requests":True,"independent_admin":"NOT_ESTABLISHED",
@@ -181,7 +188,8 @@ def run(*, offline=False):
     for host,commitment,detached,raw in sources:
         if offline:
             results.append({
-                "calendar":host,"commitment_sha256":commitment.hex(),
+                "calendar":host,"commitment_hex":commitment.hex(),
+                "commitment_bytes":len(commitment),
                 "original_ots_sha256":hashlib.sha256(raw).hexdigest(),
                 "result":"OFFLINE_ORIGINAL_PENDING_VALIDATED",
                 "bitcoin_consensus_verified":False,"no_post_requests":True
