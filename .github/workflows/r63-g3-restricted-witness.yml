@@ -1,0 +1,61 @@
+name: R63 G3 restricted witness and V9 V2 state recovery (research only)
+on:
+  push:
+    branches:
+      - research/r63-g3-restricted-witness-20261119
+    paths:
+      - .github/workflows/r63-g3-restricted-witness.yml
+      - research/r63_g3_witness_ci/**
+permissions:
+  contents: read
+jobs:
+  readonly-model-and-audit:
+    name: frozen-V9-V2-source+auditor / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, ubuntu-24.04]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13"
+      - name: Pure journal model, audit positive/negative controls and incomplete evidence
+        shell: pwsh
+        run: |
+          python -B research/r63_g3_witness_ci/witness_g3.py --test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -B research/r63_g3_witness_ci/test_audit_g3.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -B research/r63_g3_witness_ci/audit_g3.py --self-test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+  native-restricted-witness-synthetic:
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13"
+      - name: Nonadmin witness writer and restricted clients with Win32 DACL and 3 crash windows
+        shell: pwsh
+        run: |
+          Write-Host 'RESEARCH_ONLY / NO_REAL_KEYS / NO_CNG / NO_V9_SERVICE / NO_TRUST_ACTIVATION'
+          & ./research/r63_g3_witness_ci/Invoke-G3-WitnessLab.ps1 -Mode CI *> r63-g3-ci-run.log
+          $code = if ($?) { 0 } else { 1 }
+          Get-Content r63-g3-ci-run.log
+          if ($code -ne 0) { exit $code }
+      - name: Archive source-linked outputs even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r63-g3-native-${{ github.run_id }}
+          path: |
+            r63-g3-ci-run.log
+            R63-G3-Run-*.txt
+            R63-G3-Report-*.json
+            R63-G3-Evidence-*.zip
+          if-no-files-found: warn
+          retention-days: 30
