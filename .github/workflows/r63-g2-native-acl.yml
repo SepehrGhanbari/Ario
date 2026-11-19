@@ -1,0 +1,34 @@
+name: R63 G2 native Windows SID-DACL direct journal access
+on:
+  push:
+    branches:
+      - research/r63-g2-acl-20261119
+    paths:
+      - .github/workflows/r63-g2-native-acl.yml
+      - research/r63_g2_acl_ci/**
+permissions:
+  contents: read
+jobs:
+  native-sid-dacl-g2:
+    runs-on: windows-2022
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Test two ephemeral non-admin SIDs against actual file/folder DACL
+        shell: pwsh
+        run: |
+          Write-Host 'RESEARCH_ONLY / CI-EPHEMERAL / NO_REAL_ARIO_JOURNALS / NO_SIGNER'
+          & ./research/r63_g2_acl_ci/Invoke-G2AclCI.ps1 *> r63-g2-acl-run.log
+          $code = if ($?) { 0 } else { 1 }
+          Get-Content r63-g2-acl-run.log
+          if ($code -ne 0) { exit $code }
+      - name: Preserve bounded report and all failure output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r63-g2-native-acl-${{ github.run_id }}
+          path: |
+            r63-g2-acl-run.log
+            r63-g2-acl-report.json
+          if-no-files-found: warn
+          retention-days: 30
