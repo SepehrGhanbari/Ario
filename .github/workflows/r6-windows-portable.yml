@@ -48,6 +48,7 @@ jobs:
           $accepted = (& $script -Mode Inspect -Root $c -BundleZip $first.bundle_path | ConvertFrom-Json)
           Check ($accepted.reason_code -eq 'SYNTHETIC_RECEIPT_RECORDED') ('first receipt: '+$accepted.reason_code)
           Check ($accepted.record_count -eq 1) 'first record count'
+          Check ($accepted.public_key_sha256 -eq $first.public_key_sha256) 'cross-device public key fingerprint mismatch'
           Check ($accepted.evidence_admission_allowed -eq $false) 'evidence flag'
           Check ($accepted.memory_write_allowed -eq $false) 'memory flag'
           Check ($accepted.signing_authority_allowed -eq $false) 'signer flag'
@@ -55,6 +56,21 @@ jobs:
           $replay = (& $script -Mode Inspect -Root $c -BundleZip $first.bundle_path | ConvertFrom-Json)
           Check ($replay.reason_code -eq 'REJECT_REPLAY_NONCE') ('replay: '+$replay.reason_code)
           Check ($replay.record_count -eq 1) 'replay modified journal'
+          # A signed payload modified after signature generation must be denied.
+          $unpack = Join-Path $env:RUNNER_TEMP 'r6-tamper-unpacked'
+          [IO.Directory]::CreateDirectory($unpack) | Out-Null
+          Expand-Archive -Path $first.bundle_path -DestinationPath $unpack
+          $tamperReceipt = Join-Path $unpack 'r6-receipt.json'
+          $originalReceipt = [IO.File]::ReadAllText($tamperReceipt)
+          $mutant = $originalReceipt.Replace('"request_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"', '"request_sha256":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"')
+          Check ($mutant -cne $originalReceipt) 'tamper mutation not applied'
+          [IO.File]::WriteAllText($tamperReceipt,$mutant,[Text.UTF8Encoding]::new($false))
+          $tamperedZip = Join-Path $env:RUNNER_TEMP 'r6-mutant-public-handoff.zip'
+          Compress-Archive -Path (Join-Path $unpack 'r6-public.xml'),$tamperReceipt -DestinationPath $tamperedZip
+          $altered = (& $script -Mode Inspect -Root $c -BundleZip $tamperedZip | ConvertFrom-Json)
+          Check ($altered.reason_code -eq 'INVALID_SYNTHETIC_DATA') ('modified payload: '+$altered.reason_code)
+          Check ($altered.evidence_admission_allowed -eq $false) 'tampered evidence flag'
+          # Fresh new role/key pair must not be silently adopted by custodian C.
           $other = (& $script -Mode Make -Root $pc2 | ConvertFrom-Json)
           Check ($other.reason_code -eq 'SYNTHETIC_BUNDLE_CREATED') 'alternate bundle make failed'
           $untrusted = (& $script -Mode Inspect -Root $c -BundleZip $other.bundle_path | ConvertFrom-Json)
@@ -82,3 +98,13 @@ jobs:
           Write-Output 'R6_PUBLIC_KEY_ENROLLMENT: SELF_PINNED_NOT_AUTHENTICATED'
           Write-Output 'R6_ADMINISTRATIVE_INDEPENDENCE: NOT_ESTABLISHED'
           Write-Output 'R6_PRODUCTION_TRUST_ACTIVATION: NO_GO'
+      - name: Package audited portable files (NO keys, NO receipts)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r6-windows-ps51-public-kit
+          path: |
+            implementation/research/r6/windows/R6-Windows-Portable.ps1
+            implementation/research/r6/windows/README_FA.md
+          if-no-files-found: error
+          retention-days: 90
