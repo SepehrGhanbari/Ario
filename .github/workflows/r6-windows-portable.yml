@@ -70,6 +70,22 @@ jobs:
           $altered = (& $script -Mode Inspect -Root $c -BundleZip $tamperedZip | ConvertFrom-Json)
           Check ($altered.reason_code -eq 'INVALID_SYNTHETIC_DATA') ('modified payload: '+$altered.reason_code)
           Check ($altered.evidence_admission_allowed -eq $false) 'tampered evidence flag'
+          # Simulate accidental placement of E's (synthetic!) private XML
+          # into the public-key slot. The C verifier MUST reject it; never
+          # upload this deliberately private-key-containing negative fixture.
+          $leakDir = Join-Path $env:RUNNER_TEMP 'r6-private-key-leak-negative'
+          [IO.Directory]::CreateDirectory($leakDir) | Out-Null
+          Expand-Archive -Path $first.bundle_path -DestinationPath $leakDir
+          [IO.File]::WriteAllText(
+              (Join-Path $leakDir 'r6-public.xml'),
+              [IO.File]::ReadAllText((Join-Path $pc 'executor-private-test-only.xml')),
+              [Text.UTF8Encoding]::new($false)
+          )
+          $leakZip = Join-Path $env:RUNNER_TEMP 'r6-private-in-public-slot-negative.zip'
+          Compress-Archive -Path (Join-Path $leakDir 'r6-public.xml'),(Join-Path $leakDir 'r6-receipt.json') -DestinationPath $leakZip
+          $leaked = (& $script -Mode Inspect -Root $c -BundleZip $leakZip | ConvertFrom-Json)
+          Check ($leaked.reason_code -eq 'REFUSE_NONPUBLIC_RSA_XML') ('private XML leak: '+$leaked.reason_code)
+          Check ($leaked.evidence_admission_allowed -eq $false) 'private XML leak authority'
           # Fresh new role/key pair must not be silently adopted by custodian C.
           $other = (& $script -Mode Make -Root $pc2 | ConvertFrom-Json)
           Check ($other.reason_code -eq 'SYNTHETIC_BUNDLE_CREATED') 'alternate bundle make failed'
