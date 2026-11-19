@@ -35,7 +35,9 @@ jobs:
             tests/test_cognitive_memory_cli.py \
             tests/test_cognitive_memory_crash_recovery.py \
             tests/test_ledger_memory_bridge.py \
-            tests/test_working_memory.py
+            tests/test_working_memory.py \
+            tests/test_working_memory_boundaries.py \
+            tests/test_working_memory_benchmark.py
 
   cognitive-memory-invariants:
     name: Cognitive Memory Invariants, Crash Recovery & Security
@@ -63,7 +65,9 @@ jobs:
             tests/test_cognitive_memory_cli.py \
             tests/test_cognitive_memory_crash_recovery.py \
             tests/test_ledger_memory_bridge.py \
-            tests/test_working_memory.py
+            tests/test_working_memory.py \
+            tests/test_working_memory_boundaries.py \
+            tests/test_working_memory_benchmark.py
 
   windows-differential-advisory:
     # Informational pilot. Do not configure this as a required status check.
