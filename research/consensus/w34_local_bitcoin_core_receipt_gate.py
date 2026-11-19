@@ -13,6 +13,7 @@ W31 is PUBLIC SYNTHETIC ONLY — never infer claims about real Ario events.
 from __future__ import annotations
 import argparse
 import base64
+import binascii
 import hashlib
 from io import BytesIO
 import json
@@ -104,7 +105,10 @@ def load_receipt_roots(*, raw_loader=git_blob_raw):
         b64=item.get("upgraded_ots_b64")
         if type(b64) is not str or len(b64)>8192:
             raise ValueError("MALFORMED_OTS_BASE64")
-        raw=base64.b64decode(b64,validate=True)
+        try:
+            raw=base64.b64decode(b64,validate=True)
+        except (ValueError,binascii.Error):
+            raise ValueError("MALFORMED_OTS_BASE64") from None
         if base64.b64encode(raw).decode("ascii")!=b64 or len(raw)>4096:
             raise ValueError("UNSAFE_OR_NONCANONICAL_OTS")
         stamp=_parse_ots(raw)
