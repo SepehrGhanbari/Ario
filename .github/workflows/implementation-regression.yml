@@ -72,8 +72,8 @@ jobs:
             tests/test_working_memory_fuzz.py
       - name: Monitor cognitive working memory performance & policy comparison
         run: |
-          python benchmarks/benchmark_working_memory.py
-          python benchmarks/policy_comparison.py
+          PYTHONPATH=. python benchmarks/benchmark_working_memory.py
+          PYTHONPATH=. python benchmarks/policy_comparison.py
 
   windows-differential-advisory:
     # Informational pilot. Do not configure this as a required status check.
