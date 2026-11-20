@@ -15,12 +15,16 @@ assess the content.
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any
 
 MAX_JSON_DEPTH = 64
 # Below CPython's default decimal-int conversion limit (4300 digits).
 # Applied through parse_int so custom hooks cannot bypass the input bound.
 MAX_JSON_INTEGER_DIGITS = 4096
+
+# Research candidate: CLI request file cap, not an event-ledger or Ollama cap.
+MAX_JSON_FILE_BYTES = 4 * 1024 * 1024
 
 
 class JSONDepthExceeded(json.JSONDecodeError):
@@ -98,3 +102,24 @@ def loads_bounded(text: str, *, max_depth: int = MAX_JSON_DEPTH, **kwargs: Any) 
         raise JSONValueLimitExceeded("JSON value rejected by decoder", text, 0) from exc
     except RecursionError as exc:  # defensive: runtime limit below max_depth
         raise JSONDepthExceeded("JSON recursion limit reached", text, 0) from exc
+
+
+def load_json_file_bounded(
+    path: str | Path, *, max_bytes: int = MAX_JSON_FILE_BYTES
+) -> Any:
+    """Read one UTF-8(-BOM) JSON request file within the shared byte ceiling.
+
+    The one-byte lookahead rejects oversized files before decoding/parsing.
+    This bounds the request buffer, not disk IO or the shared JSON decoder's
+    output allocation. It does not change ledger JSONL or Ollama limits.
+    """
+    if type(max_bytes) is not int or not 1 <= max_bytes <= MAX_JSON_FILE_BYTES:
+        raise ValueError(f"max_bytes must be between 1 and {MAX_JSON_FILE_BYTES}")
+    with Path(path).open("rb") as stream:
+        raw = stream.read(max_bytes + 1)
+    if len(raw) > max_bytes:
+        # Do not retain or echo caller input in a decode error.
+        raise JSONValueLimitExceeded(
+            f"JSON input byte limit {max_bytes} exceeded", "", 0
+        )
+    return loads_bounded(raw.decode("utf-8-sig"))

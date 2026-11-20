@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from ario_agent import AgentRequestError, _append_event, _ensure_task_id_unused, _inside, parse_task, run_task
-from bounded_json import loads_bounded
+from bounded_json import load_json_file_bounded, loads_bounded
 
 
 MAX_WORKFLOW_STAGES = 8
@@ -258,7 +258,7 @@ def main() -> int:
     parser.add_argument("--ledger", required=True, help="Append-only JSONL event ledger")
     args = parser.parse_args()
     try:
-        payload = loads_bounded(Path(args.workflow).read_text(encoding="utf-8-sig"))
+        payload = load_json_file_bounded(args.workflow)
         result = run_workflow(payload, args.workspace, args.ledger)
     except (OSError, UnicodeError, json.JSONDecodeError, AgentRequestError) as exc:
         print(json.dumps({"status": "UNKNOWN", "error": str(exc)}, ensure_ascii=False, sort_keys=True))

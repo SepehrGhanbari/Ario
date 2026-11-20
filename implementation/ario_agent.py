@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from bounded_json import loads_bounded
+from bounded_json import load_json_file_bounded, loads_bounded
 
 
 MAX_STEPS = 8
@@ -1001,7 +1001,7 @@ def main(argv=None) -> int:
             return 0 if result["status"] in {"COMPLETED", "STOPPED"} else 2
         if not args.workspace:
             parser.error("--workspace is required with --task")
-        payload = loads_bounded(Path(args.task).read_text(encoding="utf-8-sig"))
+        payload = load_json_file_bounded(args.task)
         result = run_task(payload, args.workspace, args.ledger)
         print(json.dumps(result, ensure_ascii=False, sort_keys=True))
         return 0 if result["status"] == "COMPLETED" else 2
