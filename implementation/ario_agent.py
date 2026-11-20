@@ -13,10 +13,13 @@ from typing import Any
 
 from bounded_json import loads_bounded
 from bounded_json import load_json_file_bounded
+from ledger_streaming import LedgerLineLimitExceeded, iter_bounded_ledger_lines
 
 
 MAX_STEPS = 8
 MAX_READ_BYTES = 20_000
+# Research-only history budget; legitimate bounded agent tasks emit <= 26 lifecycle events.
+MAX_TASK_HISTORY_EVENTS = 128
 ALLOWED_TOOLS = {"inspect_directory", "read_text", "file_fingerprint", "inspect_backup", "recovery_preflight", "git_status", "compile_python", "run_tests", "replace_text", "restore_backup", "verify_text"}
 
 
@@ -590,30 +593,33 @@ def _append_event(ledger: Path, event: dict) -> None:
 
 
 def _ensure_task_id_unused(ledger: Path, task_id: str) -> None:
-    """Refuse duplicate task IDs before any task action or ledger append."""
+    """Refuse duplicate task IDs before any action, without loading the entire ledger."""
     if not ledger.exists():
         return
     try:
-        lines = ledger.read_text(encoding="utf-8-sig").splitlines()
+        for line_number, line in iter_bounded_ledger_lines(ledger):
+            if not line.strip():
+                continue
+            try:
+                event = loads_bounded(line)
+            except json.JSONDecodeError as exc:
+                raise AgentRequestError(
+                    f"existing ledger is malformed at line {line_number}; refusing to start a task"
+                ) from exc
+            if not isinstance(event, dict):
+                raise AgentRequestError(
+                    f"existing ledger has an invalid event at line {line_number}; refusing to start a task"
+                )
+            if event.get("task_id") == task_id:
+                raise AgentRequestError(
+                    f"task_id {task_id!r} already exists in the ledger; refusing duplicate execution"
+                )
     except OSError as exc:
         raise AgentRequestError(f"cannot inspect existing ledger before execution: {exc}") from exc
-    for line_number, line in enumerate(lines, start=1):
-        if not line.strip():
-            continue
-        try:
-            event = loads_bounded(line)
-        except json.JSONDecodeError as exc:
-            raise AgentRequestError(
-                f"existing ledger is malformed at line {line_number}; refusing to start a task"
-            ) from exc
-        if not isinstance(event, dict):
-            raise AgentRequestError(
-                f"existing ledger has an invalid event at line {line_number}; refusing to start a task"
-            )
-        if event.get("task_id") == task_id:
-            raise AgentRequestError(
-                f"task_id {task_id!r} already exists in the ledger; refusing duplicate execution"
-            )
+    except UnicodeError as exc:
+        raise AgentRequestError("existing ledger has invalid UTF-8; refusing to start a task") from exc
+    except LedgerLineLimitExceeded as exc:
+        raise AgentRequestError(str(exc)) from exc
 
 
 def run_task(payload: Any, workspace: str | Path, ledger_path: str | Path) -> dict:
@@ -842,27 +848,36 @@ def inspect_task_history(task_id: str, ledger_path: str | Path) -> dict:
     if not isinstance(task_id, str) or not task_id.strip():
         raise AgentRequestError("task_id must be a non-empty string")
     ledger = Path(ledger_path)
+    events = []
+    # Retain only fields used by lifecycle validation/output. Large observation
+    # payloads must not accumulate in memory while scanning historical events.
+    relevant_fields = (
+        "event", "status", "step_id", "tool", "timestamp", "goal",
+        "step_ids", "success_criteria_ids", "criterion_id",
+    )
     try:
-        raw_lines = ledger.read_text(encoding="utf-8-sig").splitlines()
-    except OSError as exc:
+        for line_number, line in iter_bounded_ledger_lines(ledger):
+            if not line.strip():
+                continue
+            try:
+                event = loads_bounded(line)
+            except json.JSONDecodeError:
+                return {"task_id": task_id, "status": "UNKNOWN",
+                        "error": f"malformed JSONL ledger at line {line_number}",
+                        "automatic_resume": False, "write_performed": False}
+            if not isinstance(event, dict) or not isinstance(event.get("event"), str):
+                return {"task_id": task_id, "status": "UNKNOWN",
+                        "error": f"invalid event shape at line {line_number}",
+                        "automatic_resume": False, "write_performed": False}
+            if event.get("task_id") == task_id:
+                if len(events) >= MAX_TASK_HISTORY_EVENTS:
+                    return {"task_id": task_id, "status": "UNKNOWN",
+                            "error": "task history event-count limit exceeded",
+                            "automatic_resume": False, "write_performed": False}
+                events.append({key: event[key] for key in relevant_fields if key in event})
+    except (OSError, UnicodeError, LedgerLineLimitExceeded) as exc:
         return {"task_id": task_id, "status": "UNKNOWN", "error": str(exc),
                 "automatic_resume": False, "write_performed": False}
-    events = []
-    for line_number, line in enumerate(raw_lines, start=1):
-        if not line.strip():
-            continue
-        try:
-            event = loads_bounded(line)
-        except json.JSONDecodeError:
-            return {"task_id": task_id, "status": "UNKNOWN",
-                    "error": f"malformed JSONL ledger at line {line_number}",
-                    "automatic_resume": False, "write_performed": False}
-        if not isinstance(event, dict) or not isinstance(event.get("event"), str):
-            return {"task_id": task_id, "status": "UNKNOWN",
-                    "error": f"invalid event shape at line {line_number}",
-                    "automatic_resume": False, "write_performed": False}
-        if event.get("task_id") == task_id:
-            events.append(event)
     starts = [event for event in events if event["event"] == "TASK_STARTED"]
     finishes = [event for event in events if event["event"] == "TASK_FINISHED"]
     steps = [event for event in events if event["event"] == "STEP_OBSERVED"]

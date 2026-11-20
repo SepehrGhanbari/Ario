@@ -11,6 +11,7 @@ from typing import Any
 from ario_agent import AgentRequestError, _append_event, _ensure_task_id_unused, _inside, parse_task, run_task
 from bounded_json import loads_bounded
 from bounded_json import load_json_file_bounded
+from ledger_streaming import LedgerLineLimitExceeded, iter_bounded_ledger_lines
 
 
 MAX_WORKFLOW_STAGES = 8
@@ -87,29 +88,33 @@ def parse_workflow(payload: Any) -> dict:
 
 
 def _ensure_workflow_id_unused(ledger: Path, workflow_id: str) -> None:
+    """Refuse duplicate workflow IDs without materializing historical JSONL."""
     if not ledger.exists():
         return
     try:
-        lines = ledger.read_text(encoding="utf-8-sig").splitlines()
+        for line_number, line in iter_bounded_ledger_lines(ledger):
+            if not line.strip():
+                continue
+            try:
+                event = loads_bounded(line)
+            except json.JSONDecodeError as exc:
+                raise AgentRequestError(
+                    f"existing ledger is malformed at line {line_number}; refusing to start workflow"
+                ) from exc
+            if not isinstance(event, dict):
+                raise AgentRequestError(
+                    f"existing ledger has an invalid event at line {line_number}; refusing to start workflow"
+                )
+            if event.get("workflow_id") == workflow_id:
+                raise AgentRequestError(
+                    f"workflow_id {workflow_id!r} already exists in the ledger; refusing duplicate execution"
+                )
     except OSError as exc:
         raise AgentRequestError(f"cannot inspect existing ledger before workflow: {exc}") from exc
-    for line_number, line in enumerate(lines, start=1):
-        if not line.strip():
-            continue
-        try:
-            event = loads_bounded(line)
-        except json.JSONDecodeError as exc:
-            raise AgentRequestError(
-                f"existing ledger is malformed at line {line_number}; refusing to start workflow"
-            ) from exc
-        if not isinstance(event, dict):
-            raise AgentRequestError(
-                f"existing ledger has an invalid event at line {line_number}; refusing to start workflow"
-            )
-        if event.get("workflow_id") == workflow_id:
-            raise AgentRequestError(
-                f"workflow_id {workflow_id!r} already exists in the ledger; refusing duplicate execution"
-            )
+    except UnicodeError as exc:
+        raise AgentRequestError("existing ledger has invalid UTF-8; refusing to start workflow") from exc
+    except LedgerLineLimitExceeded as exc:
+        raise AgentRequestError(str(exc)) from exc
 
 
 def run_workflow(payload: Any, workspace: str | Path, ledger_path: str | Path) -> dict:
