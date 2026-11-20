@@ -9,7 +9,8 @@ from pathlib import Path
 from typing import Any
 
 from ario_agent import AgentRequestError, _append_event, _ensure_task_id_unused, _inside, parse_task, run_task
-from bounded_json import load_json_file_bounded, loads_bounded
+from bounded_json import loads_bounded
+from bounded_json import load_json_file_bounded
 
 
 MAX_WORKFLOW_STAGES = 8
