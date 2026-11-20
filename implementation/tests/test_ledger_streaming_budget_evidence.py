@@ -117,3 +117,74 @@ class StreamingBudgetEvidence(unittest.TestCase):
         self.assertEqual(profile["status"], "UNKNOWN")
         self.assertEqual(profile["error_class"], "SOURCE_CHANGED_DURING_SCAN")
         self.assertEqual(self.ledger.read_bytes(), record * 2)
+
+    def test_research_memory_envelope_128_retained_events(self):
+        """Safely exercises projected-field retention; no RSS guarantee implied.
+
+        The 64-MiB tracemalloc threshold applies ONLY to this 8-MiB fixture
+        and one in-process history scan, not to the 16-Mi-char hard line cap.
+        """
+        import gc
+        import hashlib
+        import tracemalloc
+
+        payload = "T" * (64 * 1024)
+        with self.ledger.open("w", encoding="utf-8", newline="\n") as stream:
+            stream.write(json.dumps({
+                "event": "TASK_STARTED", "task_id": "BUDGET-128", "goal": "g"
+            }) + "\n")
+            for index in range(126):
+                stream.write(json.dumps({
+                    "event": "STEP_OBSERVED", "task_id": "BUDGET-128",
+                    "step_id": str(index), "tool": payload,
+                    "status": "SUCCEEDED",
+                }) + "\n")
+            stream.write(json.dumps({
+                "event": "TASK_FINISHED", "task_id": "BUDGET-128",
+                "status": "STOPPED"
+            }) + "\n")
+        before = hashlib.sha256(self.ledger.read_bytes()).hexdigest()
+        gc.collect()
+        tracemalloc.start()
+        try:
+            history = ario_agent.inspect_task_history("BUDGET-128", self.ledger)
+            current, peak = tracemalloc.get_traced_memory()
+        finally:
+            tracemalloc.stop()
+        self.assertEqual((history["status"], history["event_count"]), ("STOPPED", 128))
+        self.assertFalse(history["automatic_resume"])
+        self.assertFalse(history["write_performed"])
+        # A research-only reproducibility guard on one 8-MiB synthetic corpus.
+        self.assertLess(peak, 64 * 1024 * 1024)
+        self.assertEqual(hashlib.sha256(self.ledger.read_bytes()).hexdigest(), before)
+
+    def test_bounded_one_mib_utf8_record_research_envelope(self):
+        """One Unicode observation near 1 MiB raw: no global ledger cap."""
+        import hashlib
+        import tracemalloc
+
+        text = "\U0001f642" * (250 * 1024)
+        records = [
+            {"event": "TASK_STARTED", "task_id": "UTF8", "goal": "g", "step_ids": ["a"]},
+            {"event": "STEP_OBSERVED", "task_id": "UTF8", "step_id": "a",
+             "tool": "read_text", "status": "SUCCEEDED",
+             "observation": {"content": text}},
+            {"event": "TASK_FINISHED", "task_id": "UTF8", "status": "STOPPED"},
+        ]
+        with self.ledger.open("w", encoding="utf-8", newline="\n") as out:
+            for event in records:
+                out.write(json.dumps(event, ensure_ascii=False) + "\n")
+        self.assertGreater(self.ledger.stat().st_size, 950 * 1024)
+        self.assertLess(self.ledger.stat().st_size, 1024 * 1024)
+        before = hashlib.sha256(self.ledger.read_bytes()).hexdigest()
+        tracemalloc.start()
+        try:
+            outcome = ario_agent.inspect_task_history("UTF8", self.ledger)
+            _, peak = tracemalloc.get_traced_memory()
+        finally:
+            tracemalloc.stop()
+        self.assertEqual((outcome["status"], outcome["event_count"]), ("STOPPED", 3))
+        self.assertFalse(outcome["automatic_resume"])
+        # This is traced Python heap on a controlled ~1-MiB record, not RSS.
+        self.assertLess(peak, 64 * 1024 * 1024)
+        self.assertEqual(hashlib.sha256(self.ledger.read_bytes()).hexdigest(), before)
