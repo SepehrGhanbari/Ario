@@ -85,6 +85,13 @@ try {
     $grants=@('*S-1-5-18:(OI)(CI)F','*S-1-5-32-544:(OI)(CI)F',
       ('*'+$writerSid+':(OI)(CI)M'),('*'+$readerSid+':(OI)(CI)RX'),('*'+$rogueSid+':(OI)(CI)RX'))
     & icacls.exe $root /grant:r $grants | Out-Null;NativeOk 'EXPLICIT_G4_DACL'
+    # Compile once as ephemeral administrator, using Windows PowerShell 5.1
+    # (Framework 4.8). Readers LOAD a fixed DLL; they never compile in admin TEMP.
+    $asm=Join-Path $root 'G4PipeGate.dll'
+    $cs=Join-Path $PSScriptRoot 'G4PipeGate.cs'
+    $compile='Add-Type -Path "'+$cs+'" -OutputAssembly "'+$asm+'" -ErrorAction Stop'
+    & $psExe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command $compile
+    Need ($LASTEXITCODE -eq 0 -and [IO.File]::Exists($asm)) 'NATIVE_DOTNET_FRAMEWORK_COMPILATION_FAILED'
     $baseline=& $python -I -B $journalPy --prepare $journal
     Need ($LASTEXITCODE -eq 0) 'JOURNAL_PREPARE_FAILURE'
     $observations['baseline']=(ConvertFrom-Json -InputObject ($baseline|Out-String))
