@@ -621,3 +621,11 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - **Exact-head PR regression:** [GitHub Actions run 44936106437](https://github.com/SepehrGhanbari/Ario/actions/runs/44936106437) **SUCCESS**. Linux Python 3.13: 1634 passed / 2 skipped / 2 warnings / 227 subtests passed. Windows Python 3.13: 1631 passed / 5 skipped / 2 warnings / 227 subtests passed. Python 3.14 differential advisory: SUCCESS. The extra 3 Windows skips are explicitly POSIX-only test methods (openat file/dir race injection and FIFO nonblocking refusal), not unexplained drops.
 - **Preserved limitations:** Windows ancestor replacement during the precheck-to-open interval is NOT_PROVEN_CLOSED. Any concurrent file content changes are not atomically snapshotted. A successful pinned synthetic W35 receipt does not prove Ario historical truth, provenance, freshness, or independent cross-artifact authorization. Remain RESEARCH_ONLY; no real signer/trust/Genesis/production effects.
 - **Preservation:** append-only log; previous log blob \`ba1036bc45ef0dd4edc2a207a48ed58a1ea40fc1\` retained verbatim; no unrelated files changed. Final exact-head CI is required after the accompanying documentation change.
+
+
+## 2026-11-21 — W39 Windows ordinary-ancestor substitution probe (DRAFT / RESEARCH_ONLY)
+
+- Base main `3d2e17374359eb28778fbd74ec520215c0bb2a6b`; W38 reader remains unchanged at Git blob `175462932cbc3f0d89d69318e2faa01f625b6284`.
+- Add a native-Windows-only deterministic probe using temporary **ordinary directories**, swapping one after all ancestor prechecks but just before leaf `CreateFileW`. The diagnostic is `pytest.xfail` with `W39_VERIFIED_RED` if the replacement's public synthetic bytes are read, not a false PASS. No symlinks, production files, private keys or external network.
+- On non-Windows hosts this probe is deliberately SKIP. CI evidence is required before concluding RED; a skipped Windows probe is not proof. No remediation or main merge authorized from the test alone.
+- The baseline regular-file test preserves byte-for-byte output; no signer, memory, genesis, trust, or production authority changed. Previous engineering log bytes preserved as exact prefix.
