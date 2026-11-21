@@ -6,7 +6,7 @@ import pytest
 
 import ario_repo_self_audit as selfaudit
 from research import guard_v2_live_link as link
-from test_guard_v2_pr_scope import BASE, HEAD, PR14_ID, PR15_ID, REPO, checks, pin, snapshot
+from test_guard_v2_pr_scope import BASE, HEAD, PR14_ID, PR15_ID, PR16_ID, REPO, checks, pin, snapshot
 
 
 class FakeReader:
@@ -113,13 +113,29 @@ def test_unchanged_forged_snapshots_are_not_independent_attestation():
     assert r["review_freshness"] == "NOT_ATTESTED_BY_LIVE_GITHUB_READ"
 
 
-def test_real_shared_sha_app_check_bound_to_old_pr_is_hold():
+@pytest.mark.parametrize("pr_number,pr_id", [(15, PR15_ID), (16, PR16_ID)])
+def test_real_shared_sha_app_check_bound_to_old_pr_is_hold(pr_number, pr_id, monkeypatch):
+    """Must reach Guard Check matching, not fail the earlier PR-identity read."""
     fake = FakeReader()
-    fake.raw["id"] = PR15_ID
-    fake.raw["number"] = 15
-    r = evaluate(fake)
-    assert r["reason"] in {"LIVE_PR_IDENTITY_MISMATCH", "INVALID_PR_IDENTITY"}
+    fake.raw["id"] = pr_id
+    fake.raw["number"] = pr_number
+    seen = []
+    original_assess = link.guard.assess
+
+    def trace_assess(pin_arg, first_arg, last_arg, checks_arg, self_audit=None):
+        seen.append((pin_arg["pr_number"], pin_arg["pr_id"]))
+        return original_assess(pin_arg, first_arg, last_arg, checks_arg,
+                               self_audit=self_audit)
+
+    monkeypatch.setattr(link.guard, "assess", trace_assess)
+    r = link.examine(pin(pr_number, pr_id), reader=fake,
+                     first=snapshot(pr_number, pr_id),
+                     last=snapshot(pr_number, pr_id), checks=checks())
+    assert r["reason"] == "GUARD_CHECK_PR_ID_MISMATCH"
     assert r["disposition"] == "HOLD"
+    assert r["merge_authorized"] is False
+    assert seen == [(pr_number, pr_id)]
+    assert fake.pr_reads == 4
 
 
 def test_stale_head_just_before_decision_is_hold():
