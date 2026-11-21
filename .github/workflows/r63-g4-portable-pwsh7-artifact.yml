@@ -1,0 +1,39 @@
+name: R63 G4 portable Microsoft PowerShell fallback artifact (research only)
+on:
+  push:
+    branches:
+      - research/r63-g4-guest-external-floor-20261121
+    paths:
+      - .github/workflows/r63-g4-portable-pwsh7-artifact.yml
+permissions:
+  contents: read
+jobs:
+  export-verified-existing-windows-runtime:
+    runs-on: windows-2022
+    timeout-minutes: 10
+    steps:
+      - name: Identify signed PowerShell executable and archive full portable runtime
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $exe=(Get-Command pwsh -ErrorAction Stop).Source
+          $sig=Get-AuthenticodeSignature -LiteralPath $exe
+          if ($sig.Status -ne 'Valid') {throw 'MICROSOFT_PWSH_AUTHENTICODE_NOT_VALID'}
+          $root=Split-Path -Parent $exe
+          if(-not (Test-Path (Join-Path $root 'pwsh.runtimeconfig.json'))) {throw 'MISSING_PORTABLE_RUNTIME_CONFIG'}
+          $version=& $exe -NoProfile -Command '$PSVersionTable.PSVersion.ToString()'
+          $manifest=[ordered]@{scope='RESEARCH_ONLY_SYNTHETIC_WINDOWS_SANDBOX';pwsh_version=$version;executable_sha256=(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant();signer=$sig.SignerCertificate.Subject;signature_status=$sig.Status.ToString();publisher_admin_custody='NOT_ESTABLISHED';production='NO_GO'}
+          $manifest | ConvertTo-Json | Set-Content 'R63-G4-PortablePWSH7-Manifest.json' -Encoding utf8
+          Compress-Archive -Path (Join-Path $root '*') -DestinationPath 'R63-G4-PortablePWSH7-Windows-x64.zip' -CompressionLevel Optimal
+          if(-not (Test-Path 'R63-G4-PortablePWSH7-Windows-x64.zip')) {throw 'PORTABLE_ARCHIVE_MISSING'}
+          Write-Host ('SIGNED_MICROSOFT_PWSH='+$version)
+          Write-Host ('PORTABLE_ARCHIVE_BYTES='+(Get-Item 'R63-G4-PortablePWSH7-Windows-x64.zip').Length)
+      - name: Preserve matching signed-runtime package and provenance
+        uses: actions/upload-artifact@v4
+        with:
+          name: r63-g4-portable-pwsh7-${{ github.run_id }}
+          path: |
+            R63-G4-PortablePWSH7-Windows-x64.zip
+            R63-G4-PortablePWSH7-Manifest.json
+          if-no-files-found: error
+          retention-days: 30
