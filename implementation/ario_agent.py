@@ -18,6 +18,9 @@ from ledger_streaming import LedgerLineLimitExceeded, iter_bounded_ledger_lines
 
 MAX_STEPS = 8
 MAX_READ_BYTES = 20_000
+# Lock PID is an OS process identifier, not an unbounded JSON integer.
+# Bound to the portable 32-bit unsigned PID representation on Windows/Linux.
+MAX_LOCK_PID = (1 << 32) - 1
 # Research-only history budget; legitimate bounded agent tasks emit <= 26 lifecycle events.
 MAX_TASK_HISTORY_EVENTS = 128
 ALLOWED_TOOLS = {"inspect_directory", "read_text", "file_fingerprint", "inspect_backup", "recovery_preflight", "git_status", "compile_python", "run_tests", "replace_text", "restore_backup", "verify_text"}
@@ -34,6 +37,20 @@ RUN_TEST_MODULES = {
 
 class AgentRequestError(ValueError):
     pass
+
+
+def _integers_fit_json_output(value: Any) -> bool:
+    """Check decimal output without building a second serialized report."""
+    if isinstance(value, dict):
+        return all(_integers_fit_json_output(item) for item in value.values())
+    if isinstance(value, list):
+        return all(_integers_fit_json_output(item) for item in value)
+    if isinstance(value, int):
+        try:
+            int.__repr__(value)  # The standard JSON encoder uses the base int representation.
+        except ValueError:
+            return False
+    return True
 
 
 def _test_target(action: dict) -> str:
@@ -140,6 +157,8 @@ def parse_task(payload: Any) -> dict:
             start_line = action["start_line"]
             if isinstance(start_line, bool) or not isinstance(start_line, int) or start_line < 1:
                 raise AgentRequestError(f"actions[{index}].start_line must be a positive integer")
+            if not _integers_fit_json_output(start_line):
+                raise AgentRequestError(f"actions[{index}].start_line exceeds the integer output limit")
         if "expected_next_start_line" in action or "expected_truncated" in action:
             if tool != "read_text":
                 raise AgentRequestError(f"actions[{index}] chunk expectations are valid only for read_text")
@@ -150,6 +169,8 @@ def parse_task(payload: Any) -> dict:
             expected_next = action["expected_next_start_line"]
             if isinstance(expected_next, bool) or not isinstance(expected_next, int) or expected_next < 1:
                 raise AgentRequestError(f"actions[{index}].expected_next_start_line must be a positive integer")
+            if not _integers_fit_json_output(expected_next):
+                raise AgentRequestError(f"actions[{index}].expected_next_start_line exceeds the integer output limit")
             if not isinstance(action["expected_truncated"], bool):
                 raise AgentRequestError(f"actions[{index}].expected_truncated must be a boolean")
         seen.add(step_id)
@@ -828,6 +849,7 @@ def inspect_execution_lock(ledger_path: str | Path) -> dict:
         or not isinstance(record.get("pid"), int)
         or isinstance(record.get("pid"), bool)
         or record["pid"] <= 0
+        or record["pid"] > MAX_LOCK_PID
         or not isinstance(record.get("task_id"), str)
         or not record["task_id"].strip()
         or not isinstance(record.get("started_at"), str)
@@ -975,7 +997,7 @@ def inspect_task_history(task_id: str, ledger_path: str | Path) -> dict:
     else:
         status = "INCOMPLETE"
         next_state = "UNKNOWN"
-    return {
+    report = {
         "task_id": task_id,
         "status": status,
         "goal": starts[0].get("goal"),
@@ -995,6 +1017,11 @@ def inspect_task_history(task_id: str, ledger_path: str | Path) -> dict:
             "Execution may have stopped between an action and its ledger observation. Inspect actual workspace and backup state before creating a new task; never replay the old task automatically."
         ),
     }
+    if not _integers_fit_json_output(report):
+        return {"task_id": task_id, "status": "UNKNOWN",
+                "error": "task history contains an integer exceeding the output limit",
+                "event_count": len(events), "automatic_resume": False, "write_performed": False}
+    return report
 
 
 def _write_inspection_json(value: dict) -> None:
