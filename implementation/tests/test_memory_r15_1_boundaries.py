@@ -72,3 +72,40 @@ def test_same_hash_modified_source_fields_must_be_rejected():
     forged=dict(sample(.2),attribution_id="fake")
     with pytest.raises(ConsolidationError,match="REUSED_HASH"):
         engine.ingest_event_stream([(h("identity"),forged)])
+
+
+def test_ledger_file_loader_stops_before_consuming_unbounded_lines(tmp_path, monkeypatch):
+    import builtins
+    import json
+    from pathlib import Path
+    original_open = builtins.open
+    ledger = tmp_path / "large_fixture.jsonl"
+    with original_open(ledger, "w", encoding="utf8") as out:
+        for i in range(4200):
+            out.write(json.dumps({"concept": "x", "assertion": str(i)}) + "\n")
+    seen = [0]
+    class CountedInput:
+        def __init__(self, file):
+            self.file = file
+            self.iterator = iter(file)
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            self.file.close()
+        def __iter__(self):
+            return self
+        def __next__(self):
+            seen[0] += 1
+            if seen[0] > 4097:
+                raise RuntimeError("file stream consumed past memory limit")
+            return next(self.iterator)
+    def guarded_open(path, mode="r", *args, **kwargs):
+        f = original_open(path, mode, *args, **kwargs)
+        return CountedInput(f) if str(path) == str(ledger) and mode == "rb" else f
+    monkeypatch.setattr(builtins, "open", guarded_open)
+    engine = ConsolidationEngine()
+    with pytest.raises(ConsolidationError, match="HOLD_BATCH_TOO_LARGE"):
+        engine.ingest_ledger_file(ledger)
+    assert seen[0] <= 4097
+    assert engine.nodes == {}
+    assert engine.known_ledger_hashes == set()
