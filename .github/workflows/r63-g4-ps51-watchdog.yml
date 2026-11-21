@@ -10,7 +10,7 @@ permissions:
 jobs:
   diagnostic-reproduction:
     runs-on: windows-2022
-    timeout-minutes: 8
+    timeout-minutes: 9
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
@@ -27,7 +27,7 @@ jobs:
           $p=Start-Process -FilePath $exe -ArgumentList $args -PassThru -WindowStyle Hidden -RedirectStandardOutput R63-G4-Watchdog-Stdout.txt -RedirectStandardError R63-G4-Watchdog-Stderr.txt
           $handle=$p.Handle
           $last=''
-          for($i=0;$i -lt 36;$i++) {
+          for($i=0;$i -lt 72;$i++) {
             Start-Sleep -Seconds 5
             $runs=@(Get-ChildItem -Path 'R63-G4-Run-*.txt' -ErrorAction SilentlyContinue)
             foreach($f in $runs) {
