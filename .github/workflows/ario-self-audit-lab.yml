@@ -44,6 +44,8 @@ jobs:
             cat "$RUNNER_TEMP/ario-self-audit.json"
             echo '~~~'
           } >> "$GITHUB_STEP_SUMMARY"
+      - name: Run Guard V2 shared-SHA and late-mutation negative controls
+        run: python -B -m pytest -p no:cacheprovider -q tests/test_guard_v2_pr_scope.py tests/test_guard_v2_live_link.py
       - name: Guard V2 live PR identity predecision preview (advisory only)
         shell: bash
         env:
@@ -54,7 +56,7 @@ jobs:
           ARIO_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
           ARIO_EXPECTED_BASE: ${{ github.event.pull_request.base.sha }}
         run: |
-          python -B research/guard_v2_live_link.py --repo-id "$ARIO_REPO_ID" --pr-id "$ARIO_PR_ID" --pr "$ARIO_PR_NUMBER" --expected-head "$ARIO_EXPECTED_HEAD" --expected-base "$ARIO_EXPECTED_BASE" > "$RUNNER_TEMP/guard-v2-live-link.json"
+          python -B -m research.guard_v2_live_link --repo-id "$ARIO_REPO_ID" --pr-id "$ARIO_PR_ID" --pr "$ARIO_PR_NUMBER" --expected-head "$ARIO_EXPECTED_HEAD" --expected-base "$ARIO_EXPECTED_BASE" > "$RUNNER_TEMP/guard-v2-live-link.json"
           cat "$RUNNER_TEMP/guard-v2-live-link.json"
           {
             echo '### Guard V2 live link advisory; HOLD is expected'
