@@ -136,3 +136,47 @@ All #306 source history remains intact. Exact-head GREEN hosted tests are
 reported in the PR review handoff; this log entry is limited to the
 RED-falsifier and implemented patch provenance, not a claim of live GraphQL
 or atomic historical review evidence.
+
+## 2026-11-22 — Independent R19 typed-values review (Draft #295 only)
+
+Source basis: independent Perplexity R19 document, `R19 proposed patch.patch`,
+and `R19 RED tests.py` supplied by the founder. Starting PR HEAD
+`7577b7c8440d31d6934a98b1d7e0bb99292e30af` (Draft/HOLD). Its R17
+validator closed the *key set* but did not constrain every allowed key's
+*value*, particularly on nonzero-exit reports. An apparent authority claim
+could be embedded as `review_graph_reason: {"merge_authorized": true}`,
+`review_graph_reason: "APPROVED_BY_FOUNDER"`, or `error_type: ["MERGE_OK"]`.
+Error-HOLD records also admitted mismatched source SHA/PR identity, malformed
+digest types, and control/bidi characters in the reason. These are report-
+format failures, **not evidence of authorized merges**.
+
+A test-only commit `a5dec0890f8d4b178be848b0f9e6c492ecb0f03b`
+preserves the exact 17 original R19 tests (8 negative and 9 positive,
+Git blob `0c7e3476143fefa4b9e6f35363271933e527787e`). Actual
+[GitHub Actions RED 44958673546](https://github.com/SepehrGhanbari/Ario/actions/runs/44958673546):
+**8 failed, 1871 passed, 7 skipped, 273 subtests passed**. All eight
+new adversarial counterexamples failed as expected, while the original
+unmodified reader outputs stayed acceptable.
+
+The authorized patch modifies only
+`research/guard_v2_manual_report.py` plus the single erroneous R17
+positive-fixture string: `review_graph_reason="STABLE"` replaced with
+actual `"TWO_COMPLETE_GRAPH_SAMPLES_MATCH"`. The reviewer patch fixes:
+token-only `reason`/graph metadata, typed optional digests/errors on *both*
+exit paths, fixed freshness, source and live-identity binding even for
+failed reads, and exclusion of `error_type` on success. Success still
+means a well-formed **HOLD**, never a merge or Check authorization.
+As in R19, a missing success graph-reason key remains tolerated for the
+legacy workflow fixture; changing that requires a separately reviewed
+contract update.
+
+Limitations preserved: reason vocabulary remains open even when token-shaped
+(`MERGE_APPROVED` is syntactically possible on a failed report); equal
+digest strings are not independently recomputed; a workflow_dispatch
+branch selector and workflow run color are not independently verified custody;
+the protected-main manual workflow has not been deployed/exercised live.
+Real GraphQL token scope, historic review truth, atomicity, independent
+custody and merge authority remain **UNKNOWN / NOT_ESTABLISHED**.
+No workflow, ruleset, trust, credential, signer, history deletion, merge
+or production change was authorized.
+

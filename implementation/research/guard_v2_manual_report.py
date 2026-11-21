@@ -29,6 +29,27 @@ ALLOWED_KEYS = frozenset({
     "error_type",
 })
 IDENTITY_KEYS = frozenset({"repository_id", "pr_id", "pr_number", "head_sha", "base_sha"})
+# Every reason/status the reader can emit is an upper-case token (fixed literals,
+# HTTP status codes, fixed labels). A closed key set is not enough: values of
+# allowed keys must not carry objects, lists, numbers or free text either.
+TOKEN = re.compile(r"[A-Z0-9_]{1,256}\Z")
+ERROR_TYPE = re.compile(r"[A-Za-z_][A-Za-z0-9_]{0,63}\Z")
+SUCCESS_GRAPH_REASON = "TWO_COMPLETE_GRAPH_SAMPLES_MATCH"
+FRESHNESS = "TWO_SAMPLED_GRAPHS_MATCH_NON_ATOMIC"
+
+
+def _token(value: Any) -> bool:
+    return type(value) is str and TOKEN.fullmatch(value) is not None
+
+
+def _identity_bound(identity: Any, number: int, head: str) -> bool:
+    return (type(identity) is dict and set(identity) == IDENTITY_KEYS and
+            type(identity["repository_id"]) is int and identity["repository_id"] > 0 and
+            type(identity["pr_id"]) is int and identity["pr_id"] > 0 and
+            type(identity["pr_number"]) is int and identity["pr_number"] == number and
+            identity["head_sha"] == head and
+            type(identity["base_sha"]) is str and
+            SHA40.fullmatch(identity["base_sha"]) is not None)
 
 
 class InvalidDiagnostic(ValueError):
@@ -78,17 +99,30 @@ def validate_file(path: Path, number: int, head: str, source: str,
     # The reader prints with ensure_ascii=True; raw non-ASCII is not its output.
     _assert(data.isascii(), "NON_ASCII_REPORT")
     _assert(set(value) <= ALLOWED_KEYS, "UNEXPECTED_REPORT_KEY")
-    if "live_identity" in value:
-        _assert(type(value["live_identity"]) is dict and
-                set(value["live_identity"]) == IDENTITY_KEYS,
-                "UNEXPECTED_IDENTITY_KEYS")
     _assert(value.get("schema") == SCHEMA and
             value.get("status") == EXPECTED_UNKNOWN and
             value.get("disposition") == "HOLD",
             "INVALID_REPORT_SCHEMA_OR_STATUS")
-    _assert(type(value.get("reason")) is str and
-            0 < len(value["reason"]) <= 256,
-            "INVALID_REPORT_REASON")
+    _assert(_token(value.get("reason")), "INVALID_REPORT_REASON")
+    # Optional fields are typed on EVERY exit code, not only on success:
+    # a failed run's artifact is still read by humans and tools.
+    for key in ("review_graph_sample", "review_graph_reason"):
+        _assert(key not in value or _token(value[key]), "INVALID_OPTIONAL_FIELD")
+    _assert("review_freshness" not in value or value["review_freshness"] == FRESHNESS,
+            "INVALID_OPTIONAL_FIELD")
+    _assert("error_type" not in value or
+            (type(value["error_type"]) is str and
+             ERROR_TYPE.fullmatch(value["error_type"]) is not None),
+            "INVALID_OPTIONAL_FIELD")
+    for key in ("first_digest", "second_digest"):
+        _assert(key not in value or value[key] is None or
+                (type(value[key]) is str and SHA256.fullmatch(value[key]) is not None),
+                "INVALID_OPTIONAL_FIELD")
+    _assert("source_commit_sha" not in value or value["source_commit_sha"] == source,
+            "SOURCE_COMMIT_MISMATCH")
+    _assert("live_identity" not in value or
+            _identity_bound(value["live_identity"], number, head),
+            "INVALID_BOUND_PR_IDENTITY")
     _assert(value.get("merge_authorized") is False and
             value.get("check_publish_authorized") is False and
             value.get("trust_activated") is False,
@@ -102,21 +136,15 @@ def validate_file(path: Path, number: int, head: str, source: str,
         _assert(value["reason"] in ("PR_DRAFT_READ_ONLY_HOLD",
                                      "LIVE_READ_ONLY_NON_ATOMIC_HOLD") and
                 value.get("review_graph_sample") == "SAMPLED_STABLE_UNATTESTED" and
-                value.get("review_freshness") == "TWO_SAMPLED_GRAPHS_MATCH_NON_ATOMIC" and
+                value.get("review_graph_reason", SUCCESS_GRAPH_REASON) == SUCCESS_GRAPH_REASON and
+                value.get("review_freshness") == FRESHNESS and
+                "error_type" not in value and
                 value.get("source_commit_sha") == source,
                 "INCOMPLETE_SUCCESS_DIAGNOSTIC")
         first, second = value.get("first_digest"), value.get("second_digest")
         _assert(type(first) is str and SHA256.fullmatch(first) is not None and
                 first == second, "INVALID_SAMPLE_DIGEST")
-        identity = value.get("live_identity")
-        _assert(type(identity) is dict and
-                type(identity.get("repository_id")) is int and identity["repository_id"] > 0 and
-                type(identity.get("pr_id")) is int and identity["pr_id"] > 0 and
-                type(identity.get("pr_number")) is int and identity["pr_number"] == number and
-                identity.get("head_sha") == head and
-                type(identity.get("base_sha")) is str and
-                SHA40.fullmatch(identity["base_sha"]) is not None,
-                "INVALID_BOUND_PR_IDENTITY")
+        _assert("live_identity" in value, "INVALID_BOUND_PR_IDENTITY")
     return value
 
 

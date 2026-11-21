@@ -9,7 +9,7 @@ HEAD, SRC, N = "a" * 40, "b" * 40, 295
 def complete():
     r = reader._hold("PR_DRAFT_READ_ONLY_HOLD")
     r.update({"source_commit_sha": SRC, "review_graph_sample": "SAMPLED_STABLE_UNATTESTED",
-              "review_graph_reason": "STABLE", "review_freshness": "TWO_SAMPLED_GRAPHS_MATCH_NON_ATOMIC",
+              "review_graph_reason": "TWO_COMPLETE_GRAPH_SAMPLES_MATCH", "review_freshness": "TWO_SAMPLED_GRAPHS_MATCH_NON_ATOMIC",
               "first_digest": "c" * 64, "second_digest": "c" * 64,
               "live_identity": {"repository_id": 1, "pr_id": 2, "pr_number": N, "head_sha": HEAD, "base_sha": "d" * 40}})
     return r

@@ -728,3 +728,38 @@ Limits: this corrects exception consistency, not an established evidence-admissi
   focused R17, existing 160 advisory tests, and 10 restore/manifest jobs.
   The independent provider GraphQL read and branch-ref dispatch ambiguity
   are explicitly **UNKNOWN** until a separately authorized test.
+
+
+## 2026-11-22 — #295 R19 independent value-shape validation RED→GREEN (DRAFT/HOLD)
+
+- Owner authorized **immediate**, bounded research changes to:
+  `implementation/research/guard_v2_manual_report.py`,
+  `implementation/tests/test_guard_v2_manual_report_r17.py`,
+  new `implementation/tests/test_guard_v2_manual_report_r19.py`,
+  `implementation/research/GUARD_V2_TRUSTED_EXECUTION_LAB.md`, and
+  this append-only `ENGINEERING_LOG.md`. No other paths or production surfaces.
+- Before any change, #295 was OPEN/DRAFT at `7577b7c8440d31d6934a98b1d7e0bb99292e30af`;
+  main was `9dd4dda2784fe90e8dda0bb5142ea81167a64869`.
+  Original recoverable Git blobs: validator `1956f99275e7da94fed234e2c418f43f4088f7c3`,
+  R17 `cf2dc9f174dbb6cffd84d5dd2a964a27ea9eded9`,
+  research doc `7c2bed5889aad62f9d7ea2a238d5f806c2cb8fea`,
+  log `c3da873e6ced6b47b3eaa063c73cce8f851205e0`.
+- R19 input from independent Perplexity reviewer: 17 pytest cases and
+  `r19_proposed.patch`; all 17 cases preserved byte-identically as Git blob
+  `0c7e3476143fefa4b9e6f35363271933e527787e`.
+  Test-only RED commit `a5dec0890f8d4b178be848b0f9e6c492ecb0f03b`,
+  Actions push run 44958673546: **8 failed / 1871 passed / 7 skipped /
+  273 subtests passed**. No attempt to conceal/redesign the negative cases.
+- R19 source patch applied byte-for-byte to validator, whose Git blob becomes
+  `614e6317af90b02058ac9c9c59eac8c7ea450fde`, plus exactly one correction
+  to the R17 positive case, new blob `e52f02c387acc4ee6050e3f556b7314f91e9057d`.
+  Only allowed-key *values* are tightened. Report remains HOLD/no authority.
+- Research note above records the scope and unresolved token-shaped-but-
+  semantically-false reason strings, unverified historical digests, branch/ref
+  source custody and non-atomic review sampling.
+- Validation required: exact-head hosted Linux 3.13/3.14, Windows, 160
+  synthetic advisory tests and Restore/Manifest 10-job matrix. Do not claim
+  successful GREEN unless each exact SHA/run is checked independently.
+- No force-push, merge, secret exposure, ruleset change, signer, trust, Genesis,
+  Check publication, history deletion, production or #306 modification.
+
