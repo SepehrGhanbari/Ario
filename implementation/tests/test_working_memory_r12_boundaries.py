@@ -65,7 +65,7 @@ def test_valid_int_steps_and_metadata_still_work():
     assert wm.active_count == 1 and len(wm.eviction_history) == 1 and len(eng.nodes) == 1
     assert wm.step_tick() and wm._current_step == 5 or wm._current_step == 5
 
-def test_recalled_chunk_still_usable_and_genuine_new_evidence_still_reinforces():
+def test_recalled_chunk_still_usable_and_separate_claims_retained_without_auto_support():
     eng = ConsolidationEngine()
     w1 = WorkingMemoryBuffer(consolidation_engine=eng)
     w1.ingest("bridge", "the bridge is safe", hyp("e1", "2026-01-01T00:00:00+00:00"), salience=0.9); w1.flush_to_long_term()
@@ -75,4 +75,6 @@ def test_recalled_chunk_still_usable_and_genuine_new_evidence_still_reinforces()
         source_type=SourceType.INTERNAL_HYPOTHESIS, veracity_state=VeracityState.UNVERIFIED_HYPOTHESIS,
         created_at="2026-01-02T00:00:00+00:00")
     w2.ingest("bridge", "the bridge is safe", second, salience=0.9); w2.flush_to_long_term()
-    assert list(eng.nodes.values())[0].reinforcement_count == 2
+    node = list(eng.nodes.values())[0]
+    assert node.reinforcement_count == 1  # same publisher, independence UNKNOWN
+    assert len(node.source_event_hashes) == 2  # both raw claims preserved
