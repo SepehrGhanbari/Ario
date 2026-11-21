@@ -44,3 +44,21 @@ jobs:
             cat "$RUNNER_TEMP/ario-self-audit.json"
             echo '~~~'
           } >> "$GITHUB_STEP_SUMMARY"
+      - name: Guard V2 live PR identity predecision preview (advisory only)
+        shell: bash
+        env:
+          ARIO_GITHUB_READ_TOKEN: ${{ github.token }}
+          ARIO_PR_NUMBER: ${{ github.event.pull_request.number }}
+          ARIO_PR_ID: ${{ github.event.pull_request.id }}
+          ARIO_REPO_ID: ${{ github.event.repository.id }}
+          ARIO_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+          ARIO_EXPECTED_BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          python -B research/guard_v2_live_link.py --repo-id "$ARIO_REPO_ID" --pr-id "$ARIO_PR_ID" --pr "$ARIO_PR_NUMBER" --expected-head "$ARIO_EXPECTED_HEAD" --expected-base "$ARIO_EXPECTED_BASE" > "$RUNNER_TEMP/guard-v2-live-link.json"
+          cat "$RUNNER_TEMP/guard-v2-live-link.json"
+          {
+            echo '### Guard V2 live link advisory; HOLD is expected'
+            echo '~~~json'
+            cat "$RUNNER_TEMP/guard-v2-live-link.json"
+            echo '~~~'
+          } >> "$GITHUB_STEP_SUMMARY"
