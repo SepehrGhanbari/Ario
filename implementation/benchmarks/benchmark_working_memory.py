@@ -20,6 +20,7 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+import argparse
 import json
 import time
 from datetime import datetime, timezone
@@ -39,7 +40,7 @@ from core.working_memory import (
 )
 
 
-def run_benchmark(event_count: int = 100, capacity: int = 4) -> Dict[str, float]:
+def run_benchmark(event_count: int = 200, capacity: int = 4) -> Dict[str, float]:
     engine = ConsolidationEngine()
     wm = WorkingMemoryBuffer(capacity=capacity, consolidation_engine=engine)
 
@@ -146,7 +147,14 @@ def run_benchmark(event_count: int = 100, capacity: int = 4) -> Dict[str, float]
 
 
 if __name__ == "__main__":
-    results = run_benchmark(event_count=200, capacity=4)
+    parser = argparse.ArgumentParser(description="Ario Working Memory Benchmark")
+    parser.add_argument("--events", type=int, default=200, help="Number of incoming events")
+    parser.add_argument("--capacity", type=int, default=4, help="Capacity bound (Cowan limit)")
+    parser.add_argument("--output", type=str, default="", help="Path to write JSON output")
+    args = parser.parse_args()
+
+    results = run_benchmark(event_count=args.events, capacity=args.capacity)
+
     print("=" * 65)
     print("  ARIO COGNITIVE MEMORY BENCHMARK: WORKING MEMORY BUFFER")
     print("=" * 65)
@@ -156,3 +164,9 @@ if __name__ == "__main__":
         else:
             print(f"  {k:32s}: {int(v) if v.is_integer() else v:10}")
     print("=" * 65)
+
+    if args.output:
+        os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
+        with open(args.output, "w", encoding="utf-8") as f:
+            json.dump(results, f, indent=2)
+        print(f"Saved benchmark results to {args.output}")

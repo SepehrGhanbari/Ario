@@ -157,16 +157,24 @@ if assessment.verdict == MetacognitiveVerdict.FOCUSED_SUFFICIENCY:
 
 ---
 
-## 5. Empirical Policy Comparison (FIFO vs. LRU vs. Ario Cowan Buffer)
+## 5. Synthetic Multi-Scenario Policy Comparison
 
-To validate the epistemic efficacy of the `WorkingMemoryBuffer` policy against classical operating system caching strategies (FIFO and LRU), the simulation benchmark (`benchmarks/policy_comparison.py`) ran a representative 200-event cognitive stream:
+`benchmarks/policy_comparison.py` runs four deterministic synthetic scenarios: a balanced stream, epistemic noise flooding, competition between empirical evidence and unverified claims, and a longer temporal stream. The scenarios can be exported as JSON and Markdown for CI artifacts:
 
-| Metric | FIFO | LRU | Ario Cognitive (Cowan K=4) |
-| :--- | :--- | :--- | :--- |
-| **Empirical Retention Rate** | 1.3% | 1.3% | **100.0%** (via selective LTM consolidation) |
-| **Noise Filtering Rate** | 0.0% | 0.0% | **100.0%** (via adaptive forgetting) |
-| **Average Active Salience** | 0.425 | 0.425 | **0.688** |
-| **Active Empirical Chunks** | 1.000 | 1.000 | **3.000** |
+```bash
+python benchmarks/policy_comparison.py --events 200 --seed 42 \
+  --output artifacts/policy-results.json \
+  --markdown artifacts/policy-report.md
+```
 
-### Key Takeaway
-Standard FIFO and LRU evictions indiscriminately discard verified empirical evidence when new input arrives, leading to cognitive amnesia and hallucination loops. Ario's Cowan-inspired buffer protects empirical observations through `SourceAttribution` and selectively consolidates them to Long-Term Memory, while allowing transient noise to decay and be forgotten cleanly.
+The script compares FIFO, LRU, random replacement, and Ario's cognitive buffer. It reports active empirical items separately from total items retained. Classical baselines have only a bounded active buffer; Ario's total preservation metric also counts a unique empirical assertion only when its matching node exists in the modeled LTM. Noise rejection is defined as unique synthetic noise absent from both active memory and modeled LTM at the end. A scenario with no noise reports `N/A`.
+
+**Interpretation limitation:** these are synthetic, seed-dependent simulations, not empirical cognitive-science validation or evidence of production superiority. The baselines and Ario do not have identical storage capabilities, so results are descriptive and must not be presented as an apples-to-apples policy win. CI preserves the raw JSON and readable report for inspection; it does not define a performance target or claim a benchmark regression based on wall-clock timing.
+
+Fuzz/property tests use fixed seeds by default and accept `ARIO_FUZZ_SEED=<integer>` for reproduction of one generated run. For example:
+
+```bash
+ARIO_FUZZ_SEED=999 python -m pytest -v tests/test_working_memory_fuzz.py
+```
+
+A failed randomized invariant reports its seed so the run can be repeated exactly.
