@@ -197,5 +197,58 @@ class BoundedJsonPrimitiveTests(unittest.TestCase):
                 self.assertEqual(report["automatic_removal"], False)
                 self.assertEqual(lock.read_bytes(), original)
 
+@unittest.skipUnless(hasattr(sys, "set_int_max_str_digits"), "requires a configurable digit limit")
+class AgentIntegerOutputTests(unittest.TestCase):
+    def setUp(self):
+        self.addCleanup(sys.set_int_max_str_digits, sys.get_int_max_str_digits())
+        sys.set_int_max_str_digits(640)
+
+    def test_line_positions_are_checked_during_task_validation(self):
+        from ario_agent import AgentRequestError, parse_task
+
+        first_too_large = 10 ** 640
+        for field in ("start_line", "expected_next_start_line"):
+            action = {"step_id": "s", "tool": "read_text", "path": "example"}
+            if field == "expected_next_start_line":
+                action["expected_truncated"] = False
+            task = {"task_id": "t", "goal": "read", "actions": [action]}
+            with self.subTest(field=field):
+                action[field] = first_too_large - 1
+                self.assertEqual(parse_task(task)["actions"][0][field], first_too_large - 1)
+                action[field] = first_too_large
+                with self.assertRaisesRegex(AgentRequestError, field + " exceeds"):
+                    parse_task(task)
+
+    def test_nested_output_values_follow_the_encoder_limit(self):
+        from ario_agent import _integers_fit_json_output
+
+        boundary = 10 ** 640
+        self.assertTrue(_integers_fit_json_output({"values": [1 - boundary, "9" * 700]}))
+        self.assertFalse(_integers_fit_json_output({"values": [-boundary]}))
+        sys.set_int_max_str_digits(0)
+        self.assertTrue(_integers_fit_json_output({"values": [-boundary]}))
+
+    def test_report_refusal_returns_one_unknown_without_writing(self):
+        import io
+        import tempfile
+        from contextlib import redirect_stdout
+        from pathlib import Path
+        from unittest.mock import patch
+        import ario_agent
+
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = Path(temp) / "events.jsonl"
+            original = b'{"event":"TASK_STARTED","task_id":"t","goal":"read"}\n'
+            ledger.write_bytes(original)
+            output = io.StringIO()
+            with patch.object(ario_agent, "_integers_fit_json_output", return_value=False), redirect_stdout(output):
+                code = ario_agent.main(["--inspect-task-id", "t", "--ledger", str(ledger)])
+            report = json.loads(output.getvalue())
+            self.assertEqual((code, report["status"], report["event_count"]), (2, "UNKNOWN", 1))
+            self.assertFalse(report["automatic_resume"])
+            self.assertFalse(report["write_performed"])
+            self.assertEqual(ledger.read_bytes(), original)
+
+
 if __name__ == "__main__":
     unittest.main()

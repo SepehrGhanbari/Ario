@@ -39,6 +39,20 @@ class AgentRequestError(ValueError):
     pass
 
 
+def _integers_fit_json_output(value: Any) -> bool:
+    """Check decimal output without building a second serialized report."""
+    if isinstance(value, dict):
+        return all(_integers_fit_json_output(item) for item in value.values())
+    if isinstance(value, list):
+        return all(_integers_fit_json_output(item) for item in value)
+    if isinstance(value, int):
+        try:
+            int.__repr__(value)  # The standard JSON encoder uses the base int representation.
+        except ValueError:
+            return False
+    return True
+
+
 def _test_target(action: dict) -> str:
     if "test_module" not in action:
         return "tests"
@@ -143,6 +157,8 @@ def parse_task(payload: Any) -> dict:
             start_line = action["start_line"]
             if isinstance(start_line, bool) or not isinstance(start_line, int) or start_line < 1:
                 raise AgentRequestError(f"actions[{index}].start_line must be a positive integer")
+            if not _integers_fit_json_output(start_line):
+                raise AgentRequestError(f"actions[{index}].start_line exceeds the integer output limit")
         if "expected_next_start_line" in action or "expected_truncated" in action:
             if tool != "read_text":
                 raise AgentRequestError(f"actions[{index}] chunk expectations are valid only for read_text")
@@ -153,6 +169,8 @@ def parse_task(payload: Any) -> dict:
             expected_next = action["expected_next_start_line"]
             if isinstance(expected_next, bool) or not isinstance(expected_next, int) or expected_next < 1:
                 raise AgentRequestError(f"actions[{index}].expected_next_start_line must be a positive integer")
+            if not _integers_fit_json_output(expected_next):
+                raise AgentRequestError(f"actions[{index}].expected_next_start_line exceeds the integer output limit")
             if not isinstance(action["expected_truncated"], bool):
                 raise AgentRequestError(f"actions[{index}].expected_truncated must be a boolean")
         seen.add(step_id)
@@ -979,7 +997,7 @@ def inspect_task_history(task_id: str, ledger_path: str | Path) -> dict:
     else:
         status = "INCOMPLETE"
         next_state = "UNKNOWN"
-    return {
+    report = {
         "task_id": task_id,
         "status": status,
         "goal": starts[0].get("goal"),
@@ -999,6 +1017,11 @@ def inspect_task_history(task_id: str, ledger_path: str | Path) -> dict:
             "Execution may have stopped between an action and its ledger observation. Inspect actual workspace and backup state before creating a new task; never replay the old task automatically."
         ),
     }
+    if not _integers_fit_json_output(report):
+        return {"task_id": task_id, "status": "UNKNOWN",
+                "error": "task history contains an integer exceeding the output limit",
+                "event_count": len(events), "automatic_resume": False, "write_performed": False}
+    return report
 
 
 def _write_inspection_json(value: dict) -> None:
