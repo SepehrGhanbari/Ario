@@ -6,6 +6,7 @@ import hashlib,json,os,secrets,sys,urllib.request,urllib.parse
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parent.parent/'r63_g3_witness_ci'))
 import spend_chain_v2 as v2
+from g4_ots_attestation import parse_pending, InvalidPendingProof
 PIN="c61ea488b082a5f01e74bc84b85a60b2a522b5a7274ed41b6d7addee10b060cd"
 URL="https://alice.btc.calendar.opentimestamps.org/digest"
 def main():
@@ -46,7 +47,15 @@ def main():
             meta["receipt_sha256"]=hashlib.sha256(body).hexdigest()
             meta["receipt_size"]=len(body)
             meta["http_status"]=response.status
-            meta["status"]="EXTERNAL_CALENDAR_RESPONSE_RECEIVED_PENDING_ONLY"
+            try:
+                parsed=parse_pending(body,digest)
+                meta["pending_uri_valid"]=True
+                meta["pending_uri"]=parsed.uri
+                meta["status"]="EXTERNAL_PENDING_FORMAT_VERIFIED_NOT_BITCOIN_CONFIRMED"
+            except InvalidPendingProof as bad:
+                meta["pending_uri_valid"]=False
+                meta["pending_format_error"]=str(bad)
+                meta["status"]="HOLD_EXTERNAL_PENDING_FORMAT_INVALID"
     except Exception as e:
         meta["error_type"]=type(e).__name__
         meta["status"]="HOLD_EXTERNAL_CALENDAR_UNAVAILABLE_OR_UNVERIFIED"
@@ -54,5 +63,5 @@ def main():
     print("G4_OTS_STATUS="+meta["status"])
     print("G4_CALENDAR_RECEIPT_FINAL_BITCOIN_ATTESTATION=NOT_ESTABLISHED")
     print("G4_EXTERNAL_VERIFIER_FLOOR=NOT_ESTABLISHED")
-    if meta["status"]!="EXTERNAL_CALENDAR_RESPONSE_RECEIVED_PENDING_ONLY":raise SystemExit(1)
+    if meta["status"]!="EXTERNAL_PENDING_FORMAT_VERIFIED_NOT_BITCOIN_CONFIRMED":raise SystemExit(1)
 if __name__=="__main__":main()
