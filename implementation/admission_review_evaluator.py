@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from bounded_json import loads_bounded
 from candidate_dossier_builder import build_candidate_dossier
 
 POLICY_VERSION = "ARP-0.1"
@@ -100,7 +101,7 @@ def _read_json(path: Path) -> Any:
         raw = stream.read(MAX_JSON_BYTES + 1)
     if len(raw) > MAX_JSON_BYTES:
         raise ValueError("input byte limit exceeded")
-    return json.loads(raw.decode("utf-8"))
+    return loads_bounded(raw.decode("utf-8"))
 
 
 def main(argv: list[str] | None = None) -> int:
