@@ -46,11 +46,22 @@ jobs:
         run: |
           test "$(git rev-parse HEAD)" = "$ARIO_SOURCE_SHA"
           cd implementation
-          python -B -m research.guard_v2_trusted_manual --pr "$ARIO_PR_NUMBER" --expected-head "$ARIO_EXPECTED_HEAD" --source-sha "$ARIO_SOURCE_SHA" > "$RUNNER_TEMP/ario-v2-manual-read.json"
-          cat "$RUNNER_TEMP/ario-v2-manual-read.json"
+          report="$RUNNER_TEMP/ario-v2-manual-read.json"
+          reader_exit=0
+          python -B -m research.guard_v2_trusted_manual --pr "$ARIO_PR_NUMBER" --expected-head "$ARIO_EXPECTED_HEAD" --source-sha "$ARIO_SOURCE_SHA" > "$report" || reader_exit=$?
+          # Always make missing/empty diagnostic output visible and fail closed.
+          if [ ! -s "$report" ]; then
+            printf '%s\n' '{"schema":"ARIO-GUARD-V2-MANUAL-WORKFLOW-REPORT","reason":"NO_DIAGNOSTIC_JSON","disposition":"HOLD","merge_authorized":false}' > "$report"
+            if [ "$reader_exit" -eq 0 ]; then
+              reader_exit=2
+            fi
+          fi
+          cat "$report"
           {
             echo '### Read-only review graph observation — never merge authority'
             echo '~~~json'
-            cat "$RUNNER_TEMP/ario-v2-manual-read.json"
+            cat "$report"
             echo '~~~'
+            printf 'Reader process exit code: `%s`\n' "$reader_exit"
           } >> "$GITHUB_STEP_SUMMARY"
+          exit "$reader_exit"
