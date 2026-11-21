@@ -190,7 +190,7 @@ def test_w43_windows_preexisting_mapped_view_during_readfile(tmp_path, monkeypat
             result = read_bounded_regular(path, len(old))
         except (OSError, ValueError):
             assert not transitions, "reader failed only after mapped mutation"
-            return  # Windows rejected the held read before the native ReadFile
+            pytest.skip("W43_WINDOWS_READER_REJECTED_BEFORE_NATIVE_READFILE")
         assert transitions == [
             "MAPPED_WRITE_DURING_HELD_READ_HANDLE",
             "MAPPED_RESTORE_BEFORE_PATH_RECHECK",
