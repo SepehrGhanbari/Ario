@@ -57,3 +57,10 @@ jobs:
           TEMP: ${{ runner.temp }}
           TMP: ${{ runner.temp }}
         run: python -B -m pytest -p no:cacheprovider -p tests.test_m0_reproducibility_demo -q tests
+      - name: PR298 synthetic Windows CLI peak-working-set experiment (256 MiB trial)
+        if: github.event_name == 'pull_request' && github.event.pull_request.number == 298
+        timeout-minutes: 6
+        env:
+          TEMP: ${{ runner.temp }}
+          TMP: ${{ runner.temp }}
+        run: python -B research/pr298/windows_rss_probe.py
