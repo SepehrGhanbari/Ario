@@ -257,3 +257,43 @@ def test_manual_cli_not_green_if_network_reader_never_reaches_graph(monkeypatch,
     result = json.loads(capsys.readouterr().out)
     assert result["reason"] == "FORBIDDEN_HOST"
     assert result["merge_authorized"] is False
+
+
+def test_manual_cli_complete_but_non_authoritative_graph_capture_can_exit_zero(
+        monkeypatch, capsys):
+    """Exit 0 means read completed, never permission to merge or activate trust."""
+    import json
+    actual_reader_class = manual.rest.GitHubReadOnly
+    opened = _NetworkOpener(FakeRest())
+    graph_reader = FakeGraphQL()
+
+    def construct_reader(token):
+        reader = actual_reader_class(token=token)
+        reader.opener = opened
+        return reader
+
+    monkeypatch.setenv("ARIO_TRUSTED_READ_TOKEN", "synthetic-only")
+    monkeypatch.setattr(manual.rest, "GitHubReadOnly", construct_reader)
+    monkeypatch.setattr(manual.graph, "ReadOnlyGraphQL", lambda token: graph_reader)
+    status = manual.main(["--pr", "295", "--expected-head", HEAD,
+                          "--source-sha", SOURCE_SHA])
+    result = json.loads(capsys.readouterr().out)
+    assert status == 0
+    assert result["reason"] == "PR_DRAFT_READ_ONLY_HOLD"
+    assert result["review_graph_sample"] == "SAMPLED_STABLE_UNATTESTED"
+    assert result["merge_authorized"] is False
+    assert result["check_publish_authorized"] is False
+    assert result["trust_activated"] is False
+    assert len(opened.calls) == 3
+    assert len(graph_reader.calls) == 6
+
+
+def test_manual_cli_missing_token_fails_as_no_data(monkeypatch, capsys):
+    import json
+    monkeypatch.delenv("ARIO_TRUSTED_READ_TOKEN", raising=False)
+    status = manual.main(["--pr", "295", "--expected-head", HEAD,
+                          "--source-sha", SOURCE_SHA])
+    result = json.loads(capsys.readouterr().out)
+    assert status != 0
+    assert result["reason"] == "MISSING_READ_ONLY_TOKEN"
+    assert result["merge_authorized"] is False

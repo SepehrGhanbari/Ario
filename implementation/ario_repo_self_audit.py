@@ -59,7 +59,7 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 class GitHubReadOnly:
-    """Only allow three fixed API GET shapes for the Ario repository."""
+    """Allow exact repository metadata GET plus three fixed subpath GET shapes."""
 
     def __init__(self, token: str | None = None):
         self.token = token
@@ -69,11 +69,15 @@ class GitHubReadOnly:
         )
 
     def get_json(self, url: str) -> dict:
-        if not isinstance(url, str) or not url.startswith(API + "/"):
+        if not isinstance(url, str) or (url != API and not url.startswith(API + "/")):
             raise ReadUnknown("FORBIDDEN_HOST")
-        path = url[len(API) + 1:]
-        if not any(pattern.fullmatch(path) for pattern in ALLOWED):
-            raise ReadUnknown("FORBIDDEN_PATH")
+        # Only the exact root API URL is allowed for repository numeric ID.
+        # Reject /, query parameters, fragments, sibling repositories and
+        # any unrecognized nested path; retain the original narrow allowlist.
+        if url != API:
+            path = url[len(API) + 1:]
+            if not any(pattern.fullmatch(path) for pattern in ALLOWED):
+                raise ReadUnknown("FORBIDDEN_PATH")
         headers = {
             "Accept": "application/vnd.github+json",
             "User-Agent": "Ario-Repo-Self-Audit-Research",

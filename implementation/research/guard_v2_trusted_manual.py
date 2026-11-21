@@ -127,8 +127,15 @@ def main(argv=None) -> int:
             result = _hold("TRUSTED_OBSERVER_INITIALIZATION_FAILED",
                            error_type=type(exc).__name__)
     print(json.dumps(result, sort_keys=True, ensure_ascii=True))
-    # Advisory manual run, never an authoritative status check.
-    return 0
+    # HOLD always remains non-authoritative. Nevertheless, fail the workflow
+    # when no complete graph and final live PR identity were ever observed:
+    # do not display a green Actions job based on zero fetched evidence.
+    # Exit zero only means the diagnostic read completed, NEVER merge approval.
+    completed = (result.get("review_graph_sample") == "SAMPLED_STABLE_UNATTESTED"
+                 and isinstance(result.get("live_identity"), dict)
+                 and result.get("first_digest") == result.get("second_digest")
+                 and isinstance(result.get("first_digest"), str))
+    return 0 if completed else 2
 
 
 if __name__ == "__main__":

@@ -33,3 +33,17 @@ Two new components are staged **only in Draft PR #295**, with no active installa
 - No new human reviewer is a required security primitive. Automated checks are useful evidence, not a substitute for the founder's authorized governance decision.
 
 **Final disposition must remain \`GUARD_V2_OPERATIONAL_HOLD\`** until live trusted execution and the remaining falsifiers pass.
+
+## 2026-11-21 — Reviewer REVISE: REST exact root blocked before HTTP (RED→GREEN)
+
+Independent review of #295 at \`a8a7c733da8d7d9dced67f7ddf0b4dfacf53351e\` found \`guard_v2_trusted_manual.observe\` requests \`https://api.github.com/repos/SepehrGhanbari/Ario\` before the first PR GET, but the shared \`GitHubReadOnly.get_json\` rejected the **exact repository root** as \`FORBIDDEN_HOST\`. Existing \`FakeRest\` erroneously accepted the root. Manual CLI returned exit 0 for any HOLD, allowing an entirely empty read to appear green.
+
+A new **RED-only parent commit \`2d14aa04e809d4f3ba3cb77e6612273ec61ed425\`** added tests using the **actual \`GitHubReadOnly\` class** with only its \`urllib\` opener replaced by a deterministic fake HTTPS transport. Tested:
+- exact repository root GET and syntactically restricted original PR/Check/Actions routes;
+- complete REST→GraphQL two-pass diagnostic with a real REST parser, 3 fake HTTP GETs and 6 GraphQL fake pages;
+- no-data manual CLI must exit nonzero;
+- exact-root trailing slash, query string, sibling repo and unrecognized path all fail before transport.
+
+The **GREEN** change allows **only** \`url == API\` as an extra REST GET, preserving original path/host restrictions and strict bounded JSON parsing. CLI now returns **2** whenever the graph was not completely sampled and the final live PR identity was not obtained. A fully sampled advisory still returns \`HOLD\` with all authority bits false; its exit **0 denotes read completion, NOT merge safety**. No check publication, mutation or trusted source activation.
+
+Test evidence must be pinned to exact HEAD; the staged manual workflow still exists **only in Draft #295**, not on \`main\`, and is not live. The GraphQL client itself was not provided a privileged token. The later test against GitHub with main-sourced code and a read-scoped token remains separately required.
