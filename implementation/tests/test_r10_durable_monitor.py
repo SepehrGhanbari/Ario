@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+from contextlib import closing
 from pathlib import Path
 import shutil
 import sqlite3
@@ -110,7 +111,7 @@ class R10DurableMonitorTests(unittest.TestCase):
         self.assertEqual(child.returncode, 83)
         self.assertEqual(self.lab.status()["seq"], 2)
         self.assertEqual(self.lab.observe(fixture(2)), "IDEMPOTENT_ALREADY_RECORDED_NOT_FRESHNESS")
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn:
             self.assertEqual(conn.execute("SELECT COUNT(*) FROM observations").fetchone()[0], 2)
 
     def test_tamper_or_missing_external_floor_never_bootstraps_silently(self):
@@ -122,7 +123,7 @@ class R10DurableMonitorTests(unittest.TestCase):
 
     def test_db_row_mutation_is_detected_against_fixture_chain(self):
         self.make_seq2()
-        with sqlite3.connect(self.db) as c:
+        with closing(sqlite3.connect(self.db)) as c:
             c.execute("UPDATE observations SET row_sha256 = ? WHERE seq = 2", ("0" * 64,))
         self.assertHold("HOLD_LEDGER_CHAIN_OR_ROW_TAMPER", self.lab.status)
 
@@ -159,7 +160,7 @@ class R10DurableMonitorTests(unittest.TestCase):
         self.assertCountEqual([r[0].strip() for r in results], [
             "RECORDED_SYNTHETIC_ONLY_NOT_TRUTH", "IDEMPOTENT_ALREADY_RECORDED_NOT_FRESHNESS"
         ])
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn:
             self.assertEqual(conn.execute("SELECT COUNT(*) FROM observations").fetchone()[0], 2)
 
     def test_full_database_missing_during_recovery_is_hold(self):
