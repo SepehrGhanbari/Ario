@@ -2,8 +2,9 @@
 
 The scanner counts open arrays and objects before the decoder runs.
 The integer converter counts decimal digits before invoking its hook.
-Both limits are ceilings. A stricter interpreter digit or recursion limit
-can still reject an input within the policy.
+Both limits are ceilings. The default integer converter bypasses a stricter interpreter decimal-string
+conversion setting while respecting the explicit digit cap. A stricter
+interpreter recursion limit may still reject deeply nested input.
 
 ``JSONDepthExceeded`` subclasses ``json.JSONDecodeError``. Existing
 ``except json.JSONDecodeError`` clauses therefore keep their current
@@ -15,6 +16,7 @@ assess the content.
 from __future__ import annotations
 
 import json
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -79,8 +81,16 @@ def loads_bounded(text: str, *, max_depth: int = MAX_JSON_DEPTH, **kwargs: Any) 
     # on an integer exceeding its decimal-digit limit. Enforce a stable
     # input bound even when interpreter digit limits differ or are disabled.
     parse_int = kwargs.get("parse_int")
-    if parse_int is None:
-        parse_int = int
+    if parse_int is None or parse_int is int:
+        # CPython's process-global sys.set_int_max_str_digits() can be below
+        # our documented 4096-digit input ceiling (e.g. 640). Decimal parses
+        # JSON integer tokens exactly, then int(Decimal) avoids the stricter
+        # decimal *string* conversion limit. The explicit digit check below
+        # still runs BEFORE any conversion. Custom hooks retain ownership of
+        # their own narrower numeric policies.
+        def parse_default_integer(literal: str) -> int:
+            return int(Decimal(literal))
+        parse_int = parse_default_integer
     elif not callable(parse_int):
         raise TypeError("parse_int must be callable or None")
 
