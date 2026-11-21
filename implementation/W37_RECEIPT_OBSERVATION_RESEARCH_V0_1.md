@@ -22,6 +22,17 @@ python -B -m pytest -q tests/test_w37_receipt_observation_v0_1.py
 
 The CLI emits exactly one JSON result. Exit **0** means both read-only structural checks completed and matched the provided synthetic bytes; it means **neither successful external-event authentication nor permission to act**. Exit **2** means at least one input is UNKNOWN/REJECTED, including missing local ledger or malformed proof. Treat the structured `use_disposition` as authoritative for action; for this entire research profile it is always `SUSPENDED` and `may_use` is always false.
 
+## Git for Windows checkout text-transport boundary
+
+The four pinned W35 public fixtures may be checked out with Git CRLF endings
+on a Windows runner despite having exact-LF Git blob hashes. The W37 **input
+transport boundary only** may reconstruct LF bytes *if and only if* SHA-256 of
+the restored bytes equals that fixture's hardcoded original W35 pin. It reports
+the exact keys reconstructed in `w35_fixture_git_checkout_crlf_restored`
+(no files are rewritten). W36's direct `verify_bytes` retains strict
+byte-for-byte verification; changed content with a different pinned hash is
+still rejected. No generic newline normalization or authority promotion is added.
+
 ## Required invariants
 
 1. `receipt_status=VERIFIED_SYNTHETIC_INCLUSION` states only that the supplied public synthetic checkpoint was included under the specified pinned policy. External-freshness/current-head checks remain `NOT_CHECKED`.
@@ -33,7 +44,7 @@ The CLI emits exactly one JSON result. Exit **0** means both read-only structura
 
 ## Source tests and test-environment boundary
 
-- New prospective tests: 28 pre-existing W37 controls, plus source import pin, CLI positive, CLI missing-input negative, CLI corrupt-proof negative: **32 W37 focused controls**.
+- New prospective tests: 28 pre-existing W37 controls, plus source import pin, CLI positive, CLI missing-input negative, CLI corrupt-proof negative, and 3 Git-for-Windows CRLF transport controls: **35 W37 focused controls**.
 - Separate W36 baseline: **44 checks** and **300/300** single-bit proof mutations rejected (pinned test profile).
 - Independent scratch combined run against *archival* Ario implementation source (14 Nov 2026) plus exact-blob current versions of the two observed modules: report exact counts from run log; this is **not** the full current `main` suite with this candidate installed.
 - The original full-current `main` CI is linked separately; it did **not** include this new candidate.

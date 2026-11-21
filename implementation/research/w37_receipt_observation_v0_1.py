@@ -13,9 +13,24 @@ from pathlib import Path
 
 from ledger_observation_adapter import observe_ledger
 from ledger_audit_bridge import verify_observation_manifest
-from research.w36_pinned_sigsum_v0_1 import verify_bytes
+from research.w36_pinned_sigsum_v0_1 import (
+    verify_bytes, PINNED_CHECKPOINT_SHA256, PINNED_PROOF_SHA256,
+    PINNED_PUBKEY_SHA256, PINNED_POLICY_SHA256,
+)
 
 PROFILE = 'ARIO-W37-DUAL-OBSERVATION-RESEARCH/0.1'
+# The *only* four public, synthetic Git text fixtures this profile accepts.
+# Git for Windows may check out their LF bytes as CRLF. Never accept a
+# transformed candidate unless LF restoration exactly matches the original
+# externally pinned SHA-256. The cryptographic verifier still sees only the
+# exact original signed byte image; no other text normalization is allowed.
+PINNED_FILES = {
+    'checkpoint': PINNED_CHECKPOINT_SHA256,
+    'proof': PINNED_PROOF_SHA256,
+    'pub': PINNED_PUBKEY_SHA256,
+    'policy': PINNED_POLICY_SHA256,
+}
+
 FILES = {
     'checkpoint': ('checkpoint.PUBLIC_SYNTHETIC.json', 256*1024),
     'proof': ('checkpoint.PUBLIC_SYNTHETIC.json.proof', 64*1024),
@@ -35,14 +50,31 @@ def read_bounded_regular(path: Path, max_bytes: int) -> bytes:
     return data
 
 
+def restore_pinned_checkout_bytes(key: str, raw: bytes) -> tuple[bytes, bool]:
+    """Recover Git-for-Windows CRLF only if resulting bytes match a fixed pin."""
+    expected_sha256 = PINNED_FILES[key]
+    if hashlib.sha256(raw).hexdigest() == expected_sha256:
+        return raw, False
+    if b'\r\n' in raw:
+        restored = raw.replace(b'\r\n', b'\n')
+        if hashlib.sha256(restored).hexdigest() == expected_sha256:
+            return restored, True
+    return raw, False  # Caller/verifier rejects any other mismatched bytes.
+
+
 def observe_pair(ledger: str | Path, *, w36_inputs: str | Path,
                  supplied_manifest: dict | None = None,
                  claimed_external_bind: str | None = None) -> dict:
     """Only report two observations; never assert W35 attests Ario ledger events."""
     root = Path(w36_inputs)
+    checkout_crlf_restored = []
     try:
-        blobs = {key: read_bounded_regular(root / name, cap)
-                 for key, (name, cap) in FILES.items()}
+        blobs = {}
+        for key, (name, cap) in FILES.items():
+            raw = read_bounded_regular(root / name, cap)
+            blobs[key], restored = restore_pinned_checkout_bytes(key, raw)
+            if restored:
+                checkout_crlf_restored.append(key)
         receipt, details = verify_bytes(blobs['checkpoint'], blobs['proof'],
                                        blobs['pub'], blobs['policy'])
         receipt_status = receipt.receipt_status
@@ -68,6 +100,7 @@ def observe_pair(ledger: str | Path, *, w36_inputs: str | Path,
         'result': 'SEPARATE_VALID_OBSERVATIONS' if verified else 'UNKNOWN_OR_REJECTED_INPUT',
         'receipt_status': receipt_status,
         'receipt_reason': receipt_reason,
+        'w35_fixture_git_checkout_crlf_restored': sorted(checkout_crlf_restored),
         'w35_checkpoint_sha256': proof_digest,
         'ario_ledger_sha256': ledger_digest,
         'ario_observation_status': manifest['status'],

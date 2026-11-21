@@ -262,5 +262,40 @@ class W37Tests(unittest.TestCase):
         self.assertEqual(proc.returncode,2,proc.stderr)
         self.assert_refusal(json.loads(proc.stdout))
 
+
+    def test_33_windows_crlf_checkout_restores_only_exact_pinned_bytes(self):
+        for name,_ in FILES.values():
+            p=self.root/name
+            p.write_bytes(p.read_bytes().replace(b'\n',b'\r\n'))
+        self.ledger.write_bytes(self.ledger.read_bytes().replace(b'\n',b'\r\n'))
+        r=observe_pair(self.ledger,w36_inputs=self.root)
+        self.assertEqual(r['result'],'SEPARATE_VALID_OBSERVATIONS')
+        self.assertEqual(r['receipt_status'],'VERIFIED_SYNTHETIC_INCLUSION')
+        self.assertEqual(set(r['w35_fixture_git_checkout_crlf_restored']),set(FILES))
+        self.assertEqual(r['ario_bridge_status'],'OBSERVED')
+        self.check_no_authority(r)
+
+    def test_34_crlf_with_extra_byte_is_not_restored(self):
+        for name,_ in FILES.values():
+            p=self.root/name
+            p.write_bytes(p.read_bytes().replace(b'\n',b'\r\n'))
+        proof=self.root/'checkpoint.PUBLIC_SYNTHETIC.json.proof'
+        proof.write_bytes(proof.read_bytes()+b'X')
+        r=observe_pair(self.ledger,w36_inputs=self.root)
+        self.assertEqual(r['receipt_reason'],'PROOF_BYTES_MISMATCH')
+        self.assertNotIn('proof',r['w35_fixture_git_checkout_crlf_restored'])
+        self.assert_refusal(r)
+
+    def test_35_crlf_modified_policy_must_fail_closed(self):
+        for name,_ in FILES.values():
+            p=self.root/name
+            p.write_bytes(p.read_bytes().replace(b'\n',b'\r\n'))
+        policy=self.root/'sigsum-test1-2025.policy'
+        policy.write_bytes(policy.read_bytes()+b'X')
+        r=observe_pair(self.ledger,w36_inputs=self.root)
+        self.assertEqual(r['receipt_reason'],'UNPINNED_POLICY')
+        self.assertNotIn('policy',r['w35_fixture_git_checkout_crlf_restored'])
+        self.assert_refusal(r)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
