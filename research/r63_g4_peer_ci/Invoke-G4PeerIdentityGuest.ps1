@@ -26,7 +26,8 @@ if (-not [Security.Principal.WindowsPrincipal]::new($current).IsInRole(
     throw 'HOLD_EPHEMERAL_LOCAL_USER_CREATION_REQUIRES_ELEVATION'
 }
 $short=[Guid]::NewGuid().ToString('N').Substring(0,8)
-$names=@('R63G4W'+$short,'R63G4R'+$short,'R63G4X'+$short)
+$names=@(('R63G4W'+$short),('R63G4R'+$short),('R63G4X'+$short))
+if ($names.Count -ne 3 -or (@($names | Where-Object { $_.Length -gt 20 })).Count -ne 0) {throw 'INVALID_THREE_DISPOSABLE_LOCAL_ACCOUNT_NAMES'}
 $root=Join-Path $env:PUBLIC ('ArioR63G4_'+$short)
 $journal=Join-Path $root 'journal'
 $pipeName='ArioR63G4_'+$short
