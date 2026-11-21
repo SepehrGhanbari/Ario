@@ -637,3 +637,11 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - Two separately scoped PRs remain distinct: W39 [#302](https://github.com/SepehrGhanbari/Ario/pull/302) demonstrated **1 expected-failed Win32 ordinary-directory replacement** with original W38 reader (native Windows CI). W40 [#303](https://github.com/SepehrGhanbari/Ario/pull/303) reuses W38's still-limited Windows reader for JSONL, so the Windows ancestor defect is **NOT_CLOSED** here.
 - Previous log retained byte-for-byte as unchanged prefix, no unrelated file or trust code modified. This CI result is source-pinned and does not constitute deployment, signer, Genesis, memory or epistemic authority.
 
+
+
+## 2026-11-21 — W41 held Windows directory HANDLE candidate for W39 RED (RESEARCH_ONLY)
+
+- Grounded source: `main` `4ffc649af47270fc6ff87d5c8216b17162ce325c`; W38 original blob `175462932cbc3f0d89d69318e2faa01f625b6284`; W39 native Windows failure recorded at PR #302.
+- W41 replaces only W38 Windows path reader with a delegated native `NtCreateFile` component-by-component handle-relative reader. The existing POSIX code, W35 proof pins, W40 ledger parser and authority states stay unchanged. Windows directory rename regression replays W39 via `NtCreateFile` and demands actual refusal after an observed injected rename; absence of injection cannot silently PASS.
+- No actual Windows test result is claimed by this initial candidate. Native API runtime behavior, unsupported Windows filesystems and concurrent in-place writes stay UNKNOWN until exact-head runner results and review.
+- Original ENGINEERING_LOG.md retained as a literal byte prefix; no force push, real credentials, source-history rewrite, key or trust activation.
