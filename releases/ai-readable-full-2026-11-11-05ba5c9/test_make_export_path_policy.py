@@ -1,11 +1,14 @@
 import hashlib
+import json
 import os
 import pathlib
+import runpy
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 SCRIPT_SOURCE = pathlib.Path(__file__).with_name("make_export.py")
 
@@ -224,6 +227,70 @@ class ExportPathPolicyTests(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn(expected, result.stderr)
                 self.assertFalse((release / "artifacts" / "ario-full.txt").exists())
+
+class ExportVerificationTests(unittest.TestCase):
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.release = pathlib.Path(tmp.name)
+        self.script = self.release / SCRIPT_SOURCE.name
+        for name in (SCRIPT_SOURCE.name, "RESTORE_FROM_TXT_HARDENED.py", "verify_pinned_manifest.py"):
+            shutil.copyfile(SCRIPT_SOURCE.with_name(name), self.release / name)
+        self.source = self.release / "source"
+        self.source.mkdir()
+        self.git("init", "-q")
+        self.git("config", "user.email", "test@example.invalid")
+        self.git("config", "user.name", "Export Verification Test")
+        self.add_file("first.txt")
+
+    def git(self, *args):
+        return subprocess.check_output(["git", "-C", str(self.source), *args])
+
+    def add_file(self, name):
+        (self.source / name).write_bytes(name.encode("ascii"))
+        self.git("add", name)
+        self.git("commit", "-qm", name)
+
+    def test_optimized_export_reads_multiple_records(self):
+        self.add_file("second.txt")
+        result = subprocess.run([sys.executable, "-O", str(self.script)], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        manifest = json.loads((self.release / "artifacts" / "ario-manifest.json").read_bytes())
+        self.assertEqual([e["path"] for e in manifest["files"]], ["first.txt", "second.txt"])
+
+    def test_optimized_export_rejects_failed_zip_check_and_cleans_stage(self):
+        script = (
+            "import runpy, sys, zipfile\n"
+            "from unittest.mock import patch\n"
+            "with patch.object(zipfile.ZipFile, 'testzip', return_value='ARIO_SOURCE/first.txt'):\n"
+            "    runpy.run_path(sys.argv[1], run_name='__main__')\n"
+        )
+        result = subprocess.run([sys.executable, "-O", "-c", script, str(self.script)],
+                                capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("ARIO_SOURCE/first.txt", result.stderr)
+        self.assertFalse((self.release / "artifacts").exists())
+        self.assertEqual(list(self.release.glob(".artifacts-stage-*")), [])
+
+    def test_export_uses_one_source_commit_when_head_moves(self):
+        commit = self.git("rev-parse", "HEAD").decode().strip()
+        tree = self.git("rev-parse", "HEAD^{tree}").decode().strip()
+        original_check_output = subprocess.check_output
+        def advance_after_pin(args, **kwargs):
+            result = original_check_output(args, **kwargs)
+            if args[-2:] == ["rev-parse", "HEAD"]:
+                self.add_file("later.txt")
+            return result
+
+        with mock.patch.object(subprocess, "check_output", side_effect=advance_after_pin), \
+             mock.patch.object(sys, "path", list(sys.path)):
+            runpy.run_path(str(self.script), run_name="__main__")
+        self.assertNotEqual(self.git("rev-parse", "HEAD").decode().strip(), commit)
+        manifest = json.loads((self.release / "artifacts" / "ario-manifest.json").read_bytes())
+        self.assertEqual(manifest["commit"], commit)
+        self.assertEqual(manifest["tree"], tree)
+        self.assertEqual([e["path"] for e in manifest["files"]], ["first.txt"])
+
 
 if __name__ == "__main__":
     unittest.main()

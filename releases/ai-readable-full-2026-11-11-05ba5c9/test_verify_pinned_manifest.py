@@ -93,6 +93,15 @@ class PinnedManifestTests(unittest.TestCase):
         self.assertEqual(result["bytes"], 5)
         self.assertIn("PIN_CUSTODY_NOT_VERIFIED", result["scope"])
 
+    def test_cli_rejects_non_utf8_record_with_scoped_error(self):
+        self.txt.write_bytes(self.good_txt.replace(b"safe.txt", b"safe\xfftxt", 1))
+        result = subprocess.run([sys.executable, str(SCRIPT), "--txt", str(self.txt),
+                                 "--manifest", str(self.manifest), "--expected-manifest-sha256", self.good_pin],
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertTrue(result.stderr.startswith("PINNED_MANIFEST_REJECTED: "), result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
+
     def test_wrong_out_of_band_pin_rejected(self):
         with self.assertRaisesRegex(VerificationError, "EXTERNAL_MANIFEST_PIN_MISMATCH"):
             verify(self.txt, self.manifest, "0" * 64)
