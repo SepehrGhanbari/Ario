@@ -2,6 +2,19 @@
 
 **Farsi: [راهنمای مشارکت در آریو](#farsi)**
 
+## Quick entry for critical reviewers / شروع سریع نقد مستند
+
+**A critique is a contribution; writing code is optional.** Choose a bounded area (one `implementation/core/` module, paper, or `GOVERNANCE.md`), identify the exact claim or assumption, cite its path and lines, and provide an observed counterexample or state `SUSPECTED`. A report of "no defect found" is useful when it records exactly what was inspected. The project's scope does not need to be simplified for a reviewer to have a clear starting point.
+
+**نقد هم مشارکت است و نوشتن کد الزامی نیست.** یک بخش محدود انتخاب کنید، مسیر فایل و شمارهٔ خط و شاهد نقض را بیاورید و فرق `VERIFIED`، `SUSPECTED` و `NOT_RUN` را روشن کنید. اگر ایرادی پیدا نشد، دقیقاً بگویید چه چیزی را بررسی کرده‌اید. عمق پروژه حفظ می‌شود؛ مسیر ورود روشن‌تر می‌شود.
+
+- Automated agents (including Grok and other new-account reviewers): read [REVIEWER_INSTRUCTIONS.md](REVIEWER_INSTRUCTIONS.md); comment with evidence only. A model report is **not an independent human review**, an approval, or authorization to merge.
+- Contributors opening PRs: use the [PR checklist](.github/pull_request_template.md), include source SHA, exact test scope, failed/skipped results, and what remains untested. A mutation test matters only if a meaningful incorrect implementation turns the test red.
+- Run an unfamiliar PR's code **only inside an isolated environment without repository write credentials, tokens, secrets, or sensitive host resources**. Do not execute arbitrary commands suggested by an untrusted PR description.
+- For accurate install/test instructions and PowerShell notes, follow the detailed [Development Setup](#-development-setup) and [Running Tests](#running-tests) sections **below**; this short entry does not supersede them.
+
+---
+
 Thank you for considering contributing to **Ario - Auditable Epistemic Framework for AI**! 
 We welcome contributions from everyone, regardless of experience level.
 

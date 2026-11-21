@@ -24,6 +24,10 @@ jobs:
         run: python -m pip install -r requirements-research.txt
       - name: Run M0 and runtime regression suites
         run: python -m pytest -q tests
+      - name: PR298 synthetic Linux CLI peak-RSS experiment (256 MiB trial)
+        if: github.event_name == 'pull_request' && github.event.pull_request.number == 298
+        timeout-minutes: 6
+        run: python -B research/pr298/linux_rss_probe.py
 
   windows-differential-advisory:
     # Informational pilot. Do not configure this as a required status check.
@@ -53,6 +57,13 @@ jobs:
           TEMP: ${{ runner.temp }}
           TMP: ${{ runner.temp }}
         run: python -B -m pytest -p no:cacheprovider -p tests.test_m0_reproducibility_demo -q tests
+      - name: PR298 synthetic Windows CLI peak-working-set experiment (256 MiB trial)
+        if: github.event_name == 'pull_request' && github.event.pull_request.number == 298
+        timeout-minutes: 6
+        env:
+          TEMP: ${{ runner.temp }}
+          TMP: ${{ runner.temp }}
+        run: python -B research/pr298/windows_rss_probe.py
 
   python-314-differential-advisory:
     # Informational pilot, mirroring windows-differential-advisory.
