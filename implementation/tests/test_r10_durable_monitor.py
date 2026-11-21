@@ -123,7 +123,7 @@ class R10DurableMonitorTests(unittest.TestCase):
 
     def test_db_row_mutation_is_detected_against_fixture_chain(self):
         self.make_seq2()
-        with closing(sqlite3.connect(self.db)) as c:
+        with closing(sqlite3.connect(self.db)) as c, c:
             c.execute("UPDATE observations SET row_sha256 = ? WHERE seq = 2", ("0" * 64,))
         self.assertHold("HOLD_LEDGER_CHAIN_OR_ROW_TAMPER", self.lab.status)
 
