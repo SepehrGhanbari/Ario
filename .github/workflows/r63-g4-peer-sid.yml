@@ -26,6 +26,8 @@ jobs:
           Write-Host 'MOCK_FLOOR_ONLY / NOT_AN_EXTERNAL_CUSTODIAN'
           python -B research/r63_g4_peer_ci/test_retained_external_floor.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -B research/r63_g4_peer_ci/test_g4_ots_attestation.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
   native-pipe-peer-token:
     runs-on: windows-2022
     timeout-minutes: 18
