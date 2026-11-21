@@ -60,6 +60,7 @@ $observations=[ordered]@{
         pipe_gate=(Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $PSScriptRoot 'G4PipeGate.cs')).Hash.ToLowerInvariant()
         actor=(Get-FileHash -Algorithm SHA256 -LiteralPath $actor).Hash.ToLowerInvariant()
         journal=(Get-FileHash -Algorithm SHA256 -LiteralPath $journalPy).Hash.ToLowerInvariant()
+        token_launcher=(Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $PSScriptRoot 'launch_g4_actor.py')).Hash.ToLowerInvariant()
         frozen_v9_v2=(Get-FileHash -Algorithm SHA256 -LiteralPath $sidecar).Hash.ToLowerInvariant()
     }
 }
@@ -72,16 +73,20 @@ function Cred([string]$name){
 }
 function NativeOk([string]$msg){if($LASTEXITCODE -ne 0){throw ('WINDOWS_API_FAILED_'+$msg+'_'+$LASTEXITCODE)}}
 function StartActor($credential,[string]$tag,[string]$mode,[string]$expected,[string]$nonce,[string]$ident,[string]$claim,[string]$logfile){
-    $out=Join-Path $root ('child-'+$tag+'.out')
-    $err=Join-Path $root ('child-'+$tag+'.err')
-    $a=@('-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',('"'+$actor+'"'),'-Role',$mode,
+    $out=Join-Path $env:TEMP ('G4-'+$short+'-'+$tag+'.out')
+    $err=Join-Path $env:TEMP ('G4-'+$short+'-'+$tag+'.err')
+    $a=@('-Role',$mode,
       '-PipeName',$pipeName,'-LabRoot',('"'+$journal+'"'),'-Python',('"'+$python+'"'),'-WriterSid',$writerSid,'-ReaderSid',$readerSid)
     if ($expected){$a+=@('-ExpectedSid',$expected)}
     if ($nonce){$a+=@('-Nonce',$nonce)}
     if ($ident){$a+=@('-Identifier',$ident)}
     if ($claim){$a+=@('-Claim',$claim)}
     if ($logfile){$a+=@('-LogPath',('"'+$logfile+'"'))}
-    $params=@{FilePath=$psExe;ArgumentList=($a -join ' ');PassThru=$true;
+    # WinPS 5.1 alternate-user PS-child may hang; child Python inherits actual OS SID
+    # and starts the identical PowerShell actor without any elevation.
+    $launcher=Join-Path $PSScriptRoot 'launch_g4_actor.py'
+    $cmd='-I -B "'+$launcher+'" "'+$psExe+'" "'+$actor+'" '+($a -join ' ')
+    $params=@{FilePath=$python;ArgumentList=$cmd;PassThru=$true;
       WindowStyle='Hidden';RedirectStandardOutput=$out;RedirectStandardError=$err}
     if ($null -ne $credential){$params['Credential']=$credential}
     $p=Start-Process @params
