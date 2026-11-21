@@ -25,6 +25,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 
 from core.memory_consolidation import (
+    ConsolidationError,
     ConsolidationEngine,
     NodeEpistemicStatus,
     SemanticNode,
@@ -468,8 +469,12 @@ class WorkingMemoryBuffer:
                 self._active_chunks[cid].access_count,
             ),
         )
-        victim = self._active_chunks.pop(victim_id)
-        return self._handle_chunk_exit(victim, reason="capacity_limit_exceeded")
+        victim = self._active_chunks[victim_id]
+        # Failures during long-term consolidation must never silently delete
+        # an active chunk before its eviction record can be stored.
+        record = self._handle_chunk_exit(victim, reason="capacity_limit_exceeded")
+        del self._active_chunks[victim_id]
+        return record
 
     def _handle_chunk_exit(self, chunk: WorkingMemoryChunk, reason: str) -> EvictionRecord:
         """Determines whether evicted chunk is consolidated to LTM or adaptively forgotten."""
@@ -545,6 +550,8 @@ class WorkingMemoryBuffer:
 
         # A new WM instance must not manufacture an independent source when
         # the receiving engine has already seen this evidence identity.
-        if event_hash not in self.consolidation_engine.known_ledger_hashes:
-            self.consolidation_engine.ingest_event_stream([(event_hash, event_payload)])
+        # Always submit; the engine checks replay content atomically. A known
+        # hash by itself is not proof of the same source and cannot mask a
+        # conflicting publisher event or a failed transaction.
+        self.consolidation_engine.ingest_event_stream([(event_hash, event_payload)])
         self._consolidated_chunk_ids.add(chunk.chunk_id)
