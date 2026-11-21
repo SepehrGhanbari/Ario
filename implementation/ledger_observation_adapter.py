@@ -7,9 +7,11 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+from io import BytesIO
 from pathlib import Path
 
 from bounded_json import JSONDepthExceeded, MAX_JSON_DEPTH, loads_bounded, nesting_exceeds
+from research.w38_receipt_fd_guard import read_bounded_regular
 
 MAX_LEDGER_BYTES = 8 * 1024 * 1024
 MAX_LINE_BYTES = 64 * 1024
@@ -36,12 +38,15 @@ def observe_ledger(path: str | Path) -> dict:
                 "observations": [], "epistemic_limit": "No evidence or assessment inferred"}
 
     try:
-        if target.is_symlink():
-            return unknown("symbolic-link ledger refused")
+        # One bounded descriptor-backed byte acquisition. POSIX W38 walks
+        # no-follow directory descriptors so a symlink swap at final open
+        # cannot redirect the read. The immutable in-memory copy is only a
+        # local observation, not an atomic disk snapshot or truth proof.
+        snapshot = read_bounded_regular(target, MAX_LEDGER_BYTES)
         digest = hashlib.sha256()
         observations: list[dict] = []
         total_bytes = 0
-        with target.open("rb") as stream:
+        with BytesIO(snapshot) as stream:
             for line_number, raw_line in enumerate(iter(lambda: stream.readline(MAX_LINE_BYTES + 1), b""), 1):
                 if line_number > MAX_EVENTS:
                     return unknown("event-count limit exceeded")
