@@ -73,3 +73,17 @@ def test_staged_workflow_keeps_main_source_pin():
     assert "ref: ${{ github.sha }}" in text
     assert "persist-credentials: false" in text
     assert "pull_request_target" not in text
+
+
+@pytest.mark.skipif(not NEEDS_BASH, reason="Bash test on Linux only")
+@pytest.mark.parametrize("bad_output", [
+    "plain text\n", "     \n", "[]\n",
+    '{"schema":"wrong","disposition":"HOLD","merge_authorized":false}\n',
+    '{"schema":"ARIO-GUARD-V2-TRUSTED-MANUAL-READ-LAB-0.1","status":"UNKNOWN","disposition":"HOLD","reason":"fake","merge_authorized":true,"check_publish_authorized":false,"trust_activated":false}\n',
+    '{"schema":"ARIO-GUARD-V2-TRUSTED-MANUAL-READ-LAB-0.1","status":"UNKNOWN","disposition":"HOLD","reason":"fake","merge_authorized":false,"merge_authorized":true,"check_publish_authorized":false,"trust_activated":false}\n',
+])
+def test_cli_exit_zero_with_invalid_or_unsafe_json_is_never_green(tmp_path, bad_output):
+    proc, summary = execute(tmp_path, bad_output, 0)
+    assert proc.returncode != 0
+    assert "INVALID_DIAGNOSTIC_JSON" in proc.stdout
+    assert "INVALID_DIAGNOSTIC_JSON" in summary
