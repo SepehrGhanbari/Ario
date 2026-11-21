@@ -12,9 +12,10 @@ from test_guard_v2_pr_scope import BASE, HEAD, PR14_ID, PR15_ID, PR16_ID, REPO, 
 class FakeReader:
     """Only the three genuine #295 GitHub GET URL shapes, zero writes."""
 
-    def __init__(self):
+    def __init__(self, pr_number=14, pr_id=PR14_ID):
+        self.pr_number = pr_number
         self.raw = {
-            "id": PR14_ID, "number": 14,
+            "id": pr_id, "number": pr_number,
             "head": {"sha": HEAD},
             "base": {"sha": BASE, "repo": {"id": REPO}},
             "body": "Pinned synthetic review body", "updated_at": "2026-11-21T18:00:00Z",
@@ -29,7 +30,7 @@ class FakeReader:
         self.runs = {"total_count": 1, "workflow_runs": [
             {"id": 83, "run_attempt": 1, "head_sha": HEAD, "event": "pull_request",
              "status": "completed", "conclusion": "success",
-             "pull_requests": [{"id": PR14_ID, "number": 14,
+             "pull_requests": [{"id": pr_id, "number": pr_number,
                                 "head": {"sha": HEAD}}]},
         ]}
         self.pr_reads = 0
@@ -41,7 +42,7 @@ class FakeReader:
         self.log.append(url)
         if self.fail_at == len(self.log):
             raise selfaudit.ReadUnknown("GITHUB_HTTP_403")
-        if url == selfaudit.API + "/pulls/14":
+        if url == selfaudit.API + f"/pulls/{self.pr_number}":
             self.pr_reads += 1
             return copy.deepcopy(self.versions.get(self.pr_reads, self.raw))
         if url == selfaudit.API + f"/commits/{HEAD}/check-runs?per_page=100":
@@ -116,9 +117,7 @@ def test_unchanged_forged_snapshots_are_not_independent_attestation():
 @pytest.mark.parametrize("pr_number,pr_id", [(15, PR15_ID), (16, PR16_ID)])
 def test_real_shared_sha_app_check_bound_to_old_pr_is_hold(pr_number, pr_id, monkeypatch):
     """Must reach Guard Check matching, not fail the earlier PR-identity read."""
-    fake = FakeReader()
-    fake.raw["id"] = pr_id
-    fake.raw["number"] = pr_number
+    fake = FakeReader(pr_number=pr_number, pr_id=pr_id)
     seen = []
     original_assess = link.guard.assess
 
@@ -135,6 +134,22 @@ def test_real_shared_sha_app_check_bound_to_old_pr_is_hold(pr_number, pr_id, mon
     assert r["disposition"] == "HOLD"
     assert r["merge_authorized"] is False
     assert seen == [(pr_number, pr_id)]
+    assert fake.pr_reads == 4
+    assert fake.log.count(selfaudit.API + f"/pulls/{pr_number}") == 4
+
+
+@pytest.mark.parametrize("pr_number,pr_id", [(15, PR15_ID), (16, PR16_ID)])
+def test_shared_sha_check_reissued_for_exact_destination_is_only_reviewable(pr_number, pr_id):
+    """Positive control: correct destination IDs must reach Guard, never authorize merge."""
+    fake = FakeReader(pr_number=pr_number, pr_id=pr_id)
+    result = link.examine(pin(pr_number, pr_id), reader=fake,
+                          first=snapshot(pr_number, pr_id),
+                          last=snapshot(pr_number, pr_id),
+                          checks=checks(original_pr=pr_number, original_id=pr_id))
+    assert result["reason"] == "LIVE_PR_AND_SUPPLIED_LAB_METADATA_CORRESPOND"
+    assert result["disposition"] == "REVIEWABLE_ONLY"
+    assert result["merge_authorized"] is False
+    assert result["review_freshness"] == "NOT_ATTESTED_BY_LIVE_GITHUB_READ"
     assert fake.pr_reads == 4
 
 

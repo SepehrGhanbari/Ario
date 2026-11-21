@@ -139,9 +139,13 @@ def read_windows_bounded(path: Path, max_bytes: int) -> bytes:
         # Open type-neutral and enforce directory vs regular via HANDLE attrs.
         options = file_open_reparse_point | file_sync_nonal | (
             0 if directory else file_non_directory)
+        # W42: refuse a regular leaf if an existing handle requests write
+        # or delete access, and deny new incompatible writers for our read.
+        # Directory handles deliberately retain share-all (W39 rename test).
+        share_mode = share_all if directory else 0x0001  # FILE_SHARE_READ
         status = ntdll.NtCreateFile(
             ctypes.byref(handle), desired, ctypes.byref(attrs),
-            ctypes.byref(status_block), None, 0, share_all, file_open,
+            ctypes.byref(status_block), None, 0, share_mode, file_open,
             options, None, 0)
         if status != 0 or not handle.value:
             if handle.value:

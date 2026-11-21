@@ -27,3 +27,13 @@ Synthetic tests mutate the HEAD, BASE, database ID, PR body and updated_at betwe
 4. A future trusted PR-specific broker must retain exact repo/PR/HEAD/BASE + full evidence, independently verify provider and job logs, protect publisher authority and durable receipts, reject ambiguous POST outcomes, and repeat a fresh observation immediately before founder-authorized action. Test shared-SHA PR reuse, comment deletion, pending/skipped CI, base drift, concurrent merges and crashes in a disposable repository first.
 
 **Outcome: diagnostic only.** Existing #295 and #306 histories, RED/GREEN evidence and prior original blobs are preserved; no auto-merge, trust, ruleset, key, or production activation.
+
+## Reviewer follow-up — exact-check reachability and checkout token hardening (2026-11-21)
+
+The original combined test called a PR15 identity on a FakeReader hard-coded to PR14 and allowed any earlier HOLD reason. Therefore its integration coverage did **not** prove the check matched at all. The new RED commit intentionally pinned the expected precise error `GUARD_CHECK_PR_ID_MISMATCH` for **two** destination PRs (15 and 16). GitHub Actions RED run 44944120546 confirmed both tests failed on `unexpected URL /pulls/15` and `unexpected URL /pulls/16` while 55 other tests passed. This was a test fixture limitation, not evidence of an active bypass.
+
+In the GREEN fixture the PR target number and numeric PR database ID are consistent in the PR GET route, every returned PR identity, the linked pull_request workflow-run association, the caller pin, and the supplied review snapshots. A spy asserts that `guard.assess` is actually reached. Both PR15 and PR16 must reach and return exact `GUARD_CHECK_PR_ID_MISMATCH` for the old PR14 App Check, with four PR GET samples. Two additional legitimate synthetic PR15/16 App-check fixtures preserve `REVIEWABLE_ONLY` and all authority flags false. Original RED commit and run are preserved.
+
+The advisory checkout now explicitly has `persist-credentials: false`. This prevents the checkout action from saving GitHub credentials into the repository's Git configuration; it does **not** hide the read-only `github.token` passed in the environment to PR-controlled Python. Complete isolation requires executing the GitHub reader from a trusted, source-pinned evaluator, outside the untrusted PR checkout. No credential permissions were expanded, and the workflow remains advisory/non-required.
+
+Review/comment/thread freshness remains **UNKNOWN**: a PR metadata `updated_at` comparison alone does not authenticate edits and deletions. A successful synthetic test is not independent evidence custody or merge-time atomicity.
