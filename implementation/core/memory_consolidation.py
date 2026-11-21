@@ -10,8 +10,10 @@ over Ario's append-only episodic ledgers without violating epistemic invariants:
 from __future__ import annotations
 
 import dataclasses
+import functools
 import hashlib
 import json
+import threading
 import math
 from datetime import datetime, timezone
 from enum import Enum
@@ -174,6 +176,18 @@ class LedgerIntegrityReport:
         }
 
 
+def _synchronized_memory(method):
+    """Readers and ancillary mutators see only completed batches.
+
+    This is an in-process RLock, not durable storage or multi-process isolation.
+    """
+    @functools.wraps(method)
+    def guarded(self, *args, **kwargs):
+        with self._batch_lock:
+            return method(self, *args, **kwargs)
+    return guarded
+
+
 class ConsolidationEngine:
     """Bounded, fail-closed systems consolidation engine for Ario."""
 
@@ -251,6 +265,9 @@ class ConsolidationEngine:
         self._ledger_hashes: Set[str] = set()
         # Tracks exact processed event bytes for replay/hash-collision detection.
         self._event_payload_digests: Dict[str, str] = {}
+        # Snapshot/restore below is only safe if batches do not interleave.
+        self._batch_lock = threading.RLock()
+        self._batch_running = False  # Reject same-thread reentrant ingestion.
 
     @staticmethod
     def compute_node_id(concept: str, assertion: str, version: str = "v1") -> str:
@@ -264,12 +281,14 @@ class ConsolidationEngine:
             return f"SEM-v2-{hashlib.sha256(payload.encode('utf-8')).hexdigest()[:16]}"
         return f"SEM-{hashlib.sha256((concept + ':' + assertion).encode('utf-8')).hexdigest()[:16]}"
 
+    @_synchronized_memory
     def resolve_node_id(self, identifier: str) -> Optional[str]:
         """Resolve node identifier via exact match or legacy dual-resolver alias."""
         if identifier in self._nodes:
             return identifier
         return self._legacy_aliases.get(identifier)
 
+    @_synchronized_memory
     def get_node(self, identifier: str) -> Optional[SemanticNode]:
         """Retrieve node by exact ID or dual-resolver alias."""
         resolved = self.resolve_node_id(identifier)
@@ -278,14 +297,17 @@ class ConsolidationEngine:
         return None
 
     @property
+    @_synchronized_memory
     def nodes(self) -> Dict[str, SemanticNode]:
         return dict(self._nodes)
 
     @property
+    @_synchronized_memory
     def links(self) -> List[CausalLink]:
         return list(self._links)
 
     @property
+    @_synchronized_memory
     def known_ledger_hashes(self) -> Set[str]:
         return set(self._ledger_hashes)
 
@@ -324,6 +346,16 @@ class ConsolidationEngine:
         malformed, a claimed hash is reused with different data, or one
         consolidation step fails. A failure must not silently admit a prefix.
         """
+        with self._batch_lock:
+            if self._batch_running:
+                raise ConsolidationError("HOLD_REENTRANT_EVENT_BATCH")
+            self._batch_running = True
+            try:
+                return self._ingest_event_stream_locked(events)
+            finally:
+                self._batch_running = False
+
+    def _ingest_event_stream_locked(self, events: Iterable[Tuple[str, Dict[str, Any]]]) -> int:
         previous = (
             self._nodes,
             self._legacy_aliases,
@@ -342,6 +374,7 @@ class ConsolidationEngine:
             for h, ev in events:
                 if not isinstance(h, str) or len(h) != 64 or any(c not in "0123456789abcdef" for c in h.lower()):
                     raise ConsolidationError(f"invalid event sha256 hash: {h}")
+                h = h.lower()  # one event identity regardless of hex case
                 if not isinstance(ev, dict):
                     raise ConsolidationError("HOLD_EVENT_MUST_BE_JSON_OBJECT")
                 try:
@@ -426,6 +459,7 @@ class ConsolidationEngine:
                 falsification_condition=event.get("falsification_condition"),
             )
 
+    @_synchronized_memory
     def apply_saliency_decay(self, cycles: int = 1) -> None:
         """Apply biological forgetting / power-law decay to operational retrieval indices."""
         for node_id, node in list(self._nodes.items()):
@@ -433,6 +467,7 @@ class ConsolidationEngine:
             new_score = max(0.0, node.saliency_score * decay_factor)
             self._nodes[node_id] = dataclasses.replace(node, saliency_score=new_score)
 
+    @_synchronized_memory
     def retrieve_active_context(self, concept_cue: Optional[str] = None) -> List[SemanticNode]:
         """Retrieve operational working memory nodes exceeding the retrieval threshold."""
         results = []
@@ -443,6 +478,7 @@ class ConsolidationEngine:
         # Sort by saliency descending
         return sorted(results, key=lambda n: n.saliency_score, reverse=True)
 
+    @_synchronized_memory
     def validate_lineage_integrity(self) -> bool:
         """T-CONS-01: Verify that every consolidated node points only to ingested ledger hashes."""
         for node in self._nodes.values():
@@ -453,6 +489,7 @@ class ConsolidationEngine:
                     )
         return True
 
+    @_synchronized_memory
     def generate_contestation_report(self) -> ContestationReport:
         """Generate a structured audit report of all contested and contradictory semantic nodes."""
         now_iso = datetime.now(timezone.utc).isoformat()
