@@ -328,6 +328,10 @@ class ConsolidationEngine:
                 clean_line = raw_line.strip()
                 if not clean_line:
                     continue
+                # Match the stream limit during *file reading*, not after
+                # allocating an unbounded ledger-sized event list.
+                if len(events) >= 4096:
+                    raise ConsolidationError("HOLD_BATCH_TOO_LARGE")
                 line_hash = hashlib.sha256(clean_line).hexdigest()
                 try:
                     event = json.loads(clean_line.decode("utf-8"))
