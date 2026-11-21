@@ -146,4 +146,48 @@ class Tests(unittest.TestCase):
  def test_path_index_byte_budget(self):
   with mock.patch.object(hardened,"MAX_PATH_INDEX_BYTES",1):
    self.bad(snap([("a.txt",b"x")]))
+
+ def test_oversized_record_terminator_never_uses_unbounded_readline(self):
+  # Bounded line parser must refuse a long newline-free terminator without
+  # permitting an unrestricted readline allocation.
+  import builtins
+  data=snap([("a",b"x")]).replace(b"x\n@@ARIO_END\n",b"x\n"+b"Z"*131072+b"\n@@ARIO_END\n",1)
+  self.src.write_bytes(data)
+  actual_open=builtins.open
+  limits=[]
+  class BoundedReadProbe:
+   def __init__(self,stream):self.stream=stream
+   def __enter__(self):self.stream.__enter__();return self
+   def __exit__(self,*args):return self.stream.__exit__(*args)
+   def __getattr__(self,name):return getattr(self.stream,name)
+   def readline(self,size=-1):
+    if size<0:raise AssertionError("unbounded readline on untrusted terminator")
+    limits.append(size)
+    return self.stream.readline(size)
+  def guarded_open(*args,**kwargs):
+   return BoundedReadProbe(actual_open(*args,**kwargs))
+  with mock.patch.object(hardened,"open",side_effect=guarded_open,create=True):
+   with self.assertRaisesRegex(SnapshotError,"bad terminator"):
+    restore(self.src,self.dst)
+  self.assertTrue(limits)
+  self.assertLessEqual(max(limits),hardened.MAX_RECORD_LINE_BYTES+1)
+  self.assertFalse(self.dst.exists())
+  self.assertEqual(list(self.d.glob(".out.stage-*")),[])
+
+ def test_concurrent_empty_destination_must_not_be_replaced(self):
+  # Force another actor's empty destination to appear just after the first
+  # absence check, while stage creation succeeds.
+  self.src.write_bytes(snap([("a",b"x")]))
+  create_stage=hardened.tempfile.mkdtemp
+  def interleave(*args,**kwargs):
+   stage=create_stage(*args,**kwargs)
+   self.dst.mkdir()
+   return stage
+  with mock.patch.object(hardened.tempfile,"mkdtemp",side_effect=interleave):
+   with self.assertRaises((OSError,SnapshotError)):
+    restore(self.src,self.dst)
+  self.assertTrue(self.dst.is_dir())
+  self.assertEqual(list(self.dst.iterdir()),[])
+  self.assertEqual(list(self.d.glob(".out.stage-*")),[])
+
 if __name__=="__main__":unittest.main()
