@@ -190,6 +190,12 @@ def _synchronized_memory(method):
     return guarded
 
 
+# Research-only input budgets shared by ingestion and read-only inspection.
+# The line budget counts the terminator (LF or CRLF) as part of the line.
+MAX_LEDGER_LINE_BYTES = 1_048_576
+MAX_LEDGER_BYTES = 64 * 1024 * 1024
+
+
 class ConsolidationEngine:
     """Bounded, fail-closed systems consolidation engine for Ario."""
 
@@ -215,8 +221,33 @@ class ConsolidationEngine:
                 diagnostic="EMPTY_LEDGER",
             )
         valid_lines = 0
+
+        def _held(diagnostic: str, line_no: Optional[int] = None) -> LedgerIntegrityReport:
+            # Over budget is NOT clean and NOT corrupt: it is unexamined (HOLD).
+            # corrupt_line_no stays None so a HOLD is never reported as CORRUPT;
+            # the position, when known, is carried in the diagnostic text only.
+            if line_no is not None:
+                diagnostic = f"{diagnostic}: line {line_no}"
+            return LedgerIntegrityReport(
+                ledger_path=str(ledger_path), total_bytes=total_bytes,
+                valid_lines=valid_lines, is_clean=False,
+                corrupt_line_no=None, diagnostic=diagnostic)
+
+        if total_bytes > MAX_LEDGER_BYTES:
+            return _held("HOLD_LEDGER_BYTES_TOO_LARGE")
+        bytes_read = 0
         with open(ledger_path, "rb") as f:
-            for line_no, raw_line in enumerate(f, start=1):
+            line_no = 0
+            while True:
+                raw_line = f.readline(MAX_LEDGER_LINE_BYTES + 1)
+                if not raw_line:
+                    break
+                line_no += 1
+                bytes_read += len(raw_line)
+                if bytes_read > MAX_LEDGER_BYTES:
+                    return _held("HOLD_LEDGER_BYTES_TOO_LARGE", line_no)
+                if len(raw_line) > MAX_LEDGER_LINE_BYTES:
+                    return _held("HOLD_LEDGER_LINE_TOO_LARGE", line_no)
                 clean = raw_line.strip()
                 if not clean:
                     continue
@@ -250,7 +281,12 @@ class ConsolidationEngine:
         retrieval_threshold: float = 0.2,
         node_id_version: str = "v1",
         default_status: NodeEpistemicStatus = NodeEpistemicStatus.RECORDED,
+        max_batch_events: int = 4096,
     ) -> None:
+        # Fail-closed default; a larger bound must be an explicit caller choice.
+        if type(max_batch_events) is not int or max_batch_events < 1:
+            raise ConsolidationError("max_batch_events must be a positive integer")
+        self.max_batch_events = max_batch_events
         if not (0.0 < decay_rate < 1.0):
             raise ConsolidationError("decay_rate must be between 0.0 and 1.0")
         if not (0.0 <= retrieval_threshold <= 1.0):
@@ -321,16 +357,33 @@ class ConsolidationEngine:
         if not ledger_path.exists():
             raise ConsolidationError(f"ledger path does not exist: {ledger_path}")
 
+        # A bounded event count is insufficient if one record is enormous.
+        # This is a research-only explicit budget, not an archive format rule.
+        max_line_bytes = MAX_LEDGER_LINE_BYTES
+        max_ledger_bytes = MAX_LEDGER_BYTES
         initial_size = ledger_path.stat().st_size
+        if initial_size > max_ledger_bytes:
+            raise ConsolidationError("HOLD_LEDGER_BYTES_TOO_LARGE")
         events = []
+        bytes_read = 0
         with open(ledger_path, "rb") as f:
-            for line_no, raw_line in enumerate(f, start=1):
+            line_no = 0
+            while True:
+                raw_line = f.readline(max_line_bytes + 1)
+                if not raw_line:
+                    break
+                bytes_read += len(raw_line)
+                if bytes_read > max_ledger_bytes:
+                    raise ConsolidationError("HOLD_LEDGER_BYTES_TOO_LARGE")
+                line_no += 1
+                if len(raw_line) > max_line_bytes:
+                    raise ConsolidationError(f"HOLD_LEDGER_LINE_TOO_LARGE: line {line_no}")
                 clean_line = raw_line.strip()
                 if not clean_line:
                     continue
                 # Match the stream limit during *file reading*, not after
                 # allocating an unbounded ledger-sized event list.
-                if len(events) >= 4096:
+                if len(events) >= self.max_batch_events:
                     raise ConsolidationError("HOLD_BATCH_TOO_LARGE")
                 line_hash = hashlib.sha256(clean_line).hexdigest()
                 try:
@@ -364,8 +417,9 @@ class ConsolidationEngine:
         local.materializing = True
         try:
             # Fail closed on unbounded generators rather than exhausting memory.
-            events = list(itertools.islice(events, 4097))
-            if len(events) > 4096:
+            limit = self.max_batch_events
+            events = list(itertools.islice(events, limit + 1))
+            if len(events) > limit:
                 raise ConsolidationError("HOLD_BATCH_TOO_LARGE")
         finally:
             local.materializing = False
@@ -396,6 +450,7 @@ class ConsolidationEngine:
 
     def __setstate__(self, state: Dict[str, Any]) -> None:
         self.__dict__.update(state)
+        self.__dict__.setdefault("max_batch_events", 4096)
         self._batch_lock = threading.RLock()
 
     def _ingest_event_stream_locked(self, events: Iterable[Tuple[str, Dict[str, Any]]]) -> int:
