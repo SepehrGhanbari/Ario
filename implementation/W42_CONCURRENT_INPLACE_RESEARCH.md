@@ -35,3 +35,16 @@ The correction in the following commit leaves those tests **byte-for-byte identi
 - All outcomes remain research-only. The observer maps unsafe reads to UNKNOWN; valid W35 pins, ledger event parser, and downstream epistemic states are not modified. Mandatory exact-head Windows+Linux full CI and targeted mutation replay still apply.
 
 Residual limitations: preexisting writable memory maps and file-system filter writes may not obey ordinary sharing; POSIX uncooperative writers can perform ABA between checks; this is **not proof of globally atomic disk content**, a stable event chronology, external freshness, or source custody.
+
+
+## Phase 3 — exact-source RED/GREEN results and limits
+
+**Baseline RED (before runtime changes):** [Implementation Regression 44942236535](https://github.com/SepehrGhanbari/Ario/actions/runs/44942236535) at `9b25eee8757ebdaf1b6355cb3ed7c360df6eb5ba`:
+- Linux CPython 3.13: **1656 passed / 7 skipped / 1 xfailed / 273 subtests**. The POSIX two-real-read same-inode write recorded `W42_VERIFIED_RED_POSIX` because the resulting two-record mixed JSONL was accepted as OBSERVED.
+- Windows CPython 3.13: **1 failed / 1654 passed / 8 skipped / 1 xfailed / 273 subtests**. The test `test_windows_new_writer_blocked_while_leaf_handle_held` failed with `['WRITER_OPENED_WHILE_READER_HELD']`. The existing writable-handle conflict was separately an xfail. This failed CI is preserved and not reported as PASS.
+
+**Bounded correction:** source commit `174bcec886139fe86475916994dfb9dea55a6571`; unchanged diagnostic test Git blob `3f5ad1e2eab028fdd9ec9ef79d010725621f1c26`:
+- [Implementation Regression 44942451503](https://github.com/SepehrGhanbari/Ario/actions/runs/44942451503) **SUCCESS**. Linux CPython 3.13 **1657 passed / 7 skipped / 2 warnings / 273 subtests**; Windows CPython 3.13 **1656 passed / 8 skipped / 2 warnings / 273 subtests**; Python 3.14 advisory **1657 passed / 7 skipped / 2 warnings / 273 subtests**. No W42 xfails/failures; positive W38/W41/ledger regression tests preserved.
+- [Published TXT Restore Security run 44942451558](https://github.com/SepehrGhanbari/Ario/actions/runs/44942451558) runs independently; its result must be verified before integration, not assumed from implementation CI.
+
+**Interpretation:** The previously reproduced POSIX mixed-byte acceptance and Windows conflicting-writer opening were blocked in the tested synthetic scenarios. POSIX metadata+double-read and Windows `FILE_SHARE_READ` do not establish atomic snapshots in the presence of all filesystem/privileged/remote/memory-mapped actors, timestamp ABA, or external custodial freshness. GitHub branch protection, trust and event authenticity stay separate.
