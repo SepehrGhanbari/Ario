@@ -1,0 +1,71 @@
+name: R63 G5 synthetic-only external Rekor historical commitment
+on:
+  push:
+    branches:
+      - research/r63-g4-guest-external-floor-20261121
+    paths:
+      - .github/workflows/r63-g5-synthetic-rekor.yml
+      - research/r63_g5_floor_custody_ci/G5_SYNTHETIC_PUBLIC_CHECKPOINT.json
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  public-external-historical-entry-not-latest-floor:
+    if: github.repository == 'SepehrGhanbari/Ario' && github.ref == 'refs/heads/research/r63-g4-guest-external-floor-20261121'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Install verified Cosign 3.1.4
+        uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532
+        with:
+          cosign-release: 'v3.1.4'
+      - name: Refuse all except one precisely pinned synthetic checkpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          p=research/r63_g5_floor_custody_ci/G5_SYNTHETIC_PUBLIC_CHECKPOINT.json
+          test "$(sha256sum "$p" | cut -d' ' -f1)" = 'e218d3d05a613024eb26a8e67052aeb61d77d14d6be8ecdede2ed5c27c1a78db'
+          jq -e '.test_only == true and .no_real_ario_keys == true and .production == "NO_GO" and .authority == "NO_TRUST_ACTIVATION" and .seq == 3' "$p"
+      - name: Submit synthetic-only blob to independently operated Rekor using ephemeral OIDC key
+        shell: bash
+        env:
+          COSIGN_YES: 'true'
+        run: |
+          set -euo pipefail
+          p=research/r63_g5_floor_custody_ci/G5_SYNTHETIC_PUBLIC_CHECKPOINT.json
+          cosign sign-blob "$p" --yes --bundle R63-G5-Synthetic-Rekor-Bundle.sigstore.json > R63-G5-Cosign-Sign.log 2>&1
+          cat R63-G5-Cosign-Sign.log
+          test -s R63-G5-Synthetic-Rekor-Bundle.sigstore.json
+      - name: Verify actual Sigstore trust root, workflow identity and inclusion proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          p=research/r63_g5_floor_custody_ci/G5_SYNTHETIC_PUBLIC_CHECKPOINT.json
+          identity='https://github.com/SepehrGhanbari/Ario/.github/workflows/r63-g5-synthetic-rekor.yml@refs/heads/research/r63-g4-guest-external-floor-20261121'
+          cosign verify-blob "$p" --bundle R63-G5-Synthetic-Rekor-Bundle.sigstore.json --certificate-identity "$identity" --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' > R63-G5-Cosign-Verify.log 2>&1
+          cat R63-G5-Cosign-Verify.log
+          jq -e '(.verificationMaterial.tlogEntries | length) > 0 and (all(.verificationMaterial.tlogEntries[]; .inclusionProof != null))' R63-G5-Synthetic-Rekor-Bundle.sigstore.json
+          cp "$p" R63-G5-Synthetic-Checkpoint.json
+          cp "$p" R63-G5-Tampered-Checkpoint.json
+          printf '\n' >> R63-G5-Tampered-Checkpoint.json
+          if cosign verify-blob R63-G5-Tampered-Checkpoint.json --bundle R63-G5-Synthetic-Rekor-Bundle.sigstore.json --certificate-identity "$identity" --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' > R63-G5-Tamper-Verify.log 2>&1; then
+            echo 'FAIL: tampered checkpoint was accepted'; exit 1
+          fi
+          echo 'TAMPERED_CHECKPOINT_REJECTED=PASS'
+          echo 'EXTERNAL_HISTORICAL_COMMITMENT=VERIFIED_SYNTHETIC_ONLY'
+          echo 'INDEPENDENT_LATEST_FLOOR=NOT_ESTABLISHED'
+          echo 'PRODUCTION=NO_GO'
+      - name: Preserve signed bundle, original checkpoint and full unverified/verified logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r63-g5-synthetic-rekor-${{ github.run_id }}
+          path: |
+            R63-G5-Synthetic-Checkpoint.json
+            R63-G5-Synthetic-Rekor-Bundle.sigstore.json
+            R63-G5-Cosign-Sign.log
+            R63-G5-Cosign-Verify.log
+            R63-G5-Tamper-Verify.log
+          if-no-files-found: warn
+          retention-days: 90
