@@ -137,6 +137,47 @@ class WorkingMemoryBuffer:
         # Each source-evidence unit may be structurally consolidated once.
         self._consolidated_chunk_ids: Set[str] = set()
         self._current_step: int = 0
+        # Chunks re-entered via LTM recall carry no new evidence.
+        self._recalled_chunk_ids: Set[str] = set()
+
+    @staticmethod
+    def _validate_step(step: Optional[int]) -> None:
+        if step is not None and (type(step) is not int or step < 0):
+            raise ValueError("step must be a non-negative integer")
+
+    # Validate runtime configuration changes as well as constructor input.
+    # Changing the capacity must never silently evict existing memories.
+    @property
+    def capacity(self) -> int:
+        return self._capacity
+
+    @capacity.setter
+    def capacity(self, value: int) -> None:
+        if type(value) is not int or value < 1:
+            raise ValueError("Working memory capacity must be a positive integer (at least 1)")
+        if len(getattr(self, "_active_chunks", {})) > value:
+            raise ValueError("capacity cannot shrink below the active chunk count")
+        self._capacity = value
+
+    @property
+    def salience_decay_rate(self) -> float:
+        return self._salience_decay_rate
+
+    @salience_decay_rate.setter
+    def salience_decay_rate(self, value: float) -> None:
+        if type(value) not in (int, float) or not math.isfinite(value) or not 0 <= value <= 1:
+            raise ValueError("salience_decay_rate must be finite and within [0, 1]")
+        self._salience_decay_rate = value
+
+    @property
+    def consolidation_threshold(self) -> float:
+        return self._consolidation_threshold
+
+    @consolidation_threshold.setter
+    def consolidation_threshold(self, value: float) -> None:
+        if type(value) not in (int, float) or not math.isfinite(value) or not 0 <= value <= 1:
+            raise ValueError("consolidation_threshold must be finite and within [0, 1]")
+        self._consolidation_threshold = value
 
     @property
     def active_chunks(self) -> List[WorkingMemoryChunk]:
@@ -176,10 +217,9 @@ class WorkingMemoryBuffer:
             raise SourceMonitoringError("Working memory requires a verified SourceAttribution")
 
         # Reject nonfinite values before *any* eviction, rehearsal or mutation.
-        try:
-            numeric_salience = float(salience)
-        except (TypeError, ValueError, OverflowError) as exc:
-            raise ValueError("salience must be a finite number") from exc
+        if type(salience) not in (float, int):
+            raise ValueError("salience must be a finite number")
+        numeric_salience = float(salience)
         if not math.isfinite(numeric_salience):
             raise ValueError("salience must be a finite number")
         clamped_salience = max(0.0, min(1.0, numeric_salience))
@@ -195,42 +235,52 @@ class WorkingMemoryBuffer:
             ):
                 raise SourceMonitoringError("Configured source guard refused attribution")
 
-        if step is not None:
-            self._current_step = max(self._current_step, step)
+        self._validate_step(step)
+        # Copy caller data before any eviction/rehearsal so failure is atomic.
+        metadata_copy = copy.deepcopy(metadata or {})
+        attribution_copy = copy.deepcopy(source_attribution)
+        effective_step = max(self._current_step, step) if step is not None else self._current_step
 
         chunk_id = WorkingMemoryChunk.compute_chunk_id(concept, assertion, source_attribution.attribution_id)
 
         # Re-ingestion / Rehearsal of existing active chunk
         if chunk_id in self._active_chunks:
-            chunk = self._active_chunks[chunk_id]
-            chunk.access_count += 1
-            chunk.last_accessed_step = self._current_step
-            chunk.salience = min(1.0, max(chunk.salience, clamped_salience) + self.REHEARSAL_SALIENCE_BOOST)
-            if metadata:
-                chunk.metadata.update(copy.deepcopy(metadata))
-            return copy.deepcopy(chunk)
+            # Stage *both* internal and returned snapshots before committing.
+            # The second deepcopy may fail for hostile user-controlled objects.
+            staged = copy.deepcopy(self._active_chunks[chunk_id])
+            staged.access_count += 1
+            staged.last_accessed_step = effective_step
+            staged.salience = min(1.0, max(staged.salience, clamped_salience) + self.REHEARSAL_SALIENCE_BOOST)
+            if metadata_copy:
+                staged.metadata.update(metadata_copy)
+            returned = copy.deepcopy(staged)
+            self._current_step = effective_step
+            self._active_chunks[chunk_id] = staged
+            return returned
 
-        # Capacity management: Evict before inserting if full
-        if len(self._active_chunks) >= self.capacity:
-            self._evict_least_salient()
-
+        # Prepare the return value before any capacity eviction or LTM write.
         chunk = WorkingMemoryChunk(
             chunk_id=chunk_id,
             concept=concept.strip(),
             assertion=assertion.strip(),
-            source_attribution=copy.deepcopy(source_attribution),
+            source_attribution=attribution_copy,
             salience=clamped_salience,
-            created_step=self._current_step,
-            last_accessed_step=self._current_step,
+            created_step=effective_step,
+            last_accessed_step=effective_step,
             access_count=1,
             state=ChunkState.ACTIVE,
-            metadata=copy.deepcopy(metadata or {}),
+            metadata=metadata_copy,
         )
+        returned = copy.deepcopy(chunk)
+        self._current_step = effective_step
+        if len(self._active_chunks) >= self.capacity:
+            self._evict_least_salient()
         self._active_chunks[chunk_id] = chunk
-        return copy.deepcopy(chunk)
+        return returned
 
     def access(self, chunk_id: str, step: Optional[int] = None) -> Optional[WorkingMemoryChunk]:
         """Accesses an active chunk, applying attentional rehearsal boost."""
+        self._validate_step(step)
         if step is not None:
             self._current_step = max(self._current_step, step)
 
@@ -245,6 +295,7 @@ class WorkingMemoryBuffer:
 
     def step_tick(self, step: Optional[int] = None) -> List[EvictionRecord]:
         """Advances time/step, applying salience decay and pruning decayed chunks."""
+        self._validate_step(step)
         if step is not None:
             self._current_step = max(self._current_step, step)
         else:
@@ -302,6 +353,7 @@ class WorkingMemoryBuffer:
                 salience=node.saliency_score,
                 metadata={"recalled_from_ltm": True, "ltm_node_id": node.node_id},
             )
+            self._recalled_chunk_ids.add(chunk.chunk_id)
             recalled_chunks.append(chunk)
 
         return recalled_chunks
@@ -313,7 +365,9 @@ class WorkingMemoryBuffer:
 
         consolidated_ids: List[str] = []
         for cid, chunk in list(self._active_chunks.items()):
-            if chunk.salience >= min_salience and cid not in self._consolidated_chunk_ids:
+            if (chunk.salience >= min_salience
+                    and cid not in self._consolidated_chunk_ids
+                    and cid not in self._recalled_chunk_ids):
                 self._promote_to_ltm(chunk)
                 chunk.state = ChunkState.CONSOLIDATED_TO_LTM
                 consolidated_ids.append(cid)
@@ -448,6 +502,9 @@ class WorkingMemoryBuffer:
         if not self.consolidation_engine:
             return
         if chunk.chunk_id in self._consolidated_chunk_ids:
+            return
+        if chunk.chunk_id in self._recalled_chunk_ids:
+            # Remembering is not re-observing: never re-submit a recall as a new event.
             return
 
         event_payload = {
