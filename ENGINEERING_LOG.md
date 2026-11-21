@@ -603,3 +603,21 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - **Preservation:** This `ENGINEERING_LOG.md` addition is append-only, with prior Git blob `90bba2f17e221c7dc25fdd41de82607092819dd2` preserved as an unchanged prefix. Prior independent reviews and RED runs remain accessible from Git history and PR comments. No force-push, branch history rewrite or real-key use.
 - **Decision point:** The only specifically reproduced blocking defect in the most recent review now has a minimal regression-tested fix. Any research-only merge decision must stay explicitly separate from `TRUST_ACTIVATION`, `GENESIS`, `PRODUCTION`, actual historical event authenticity, and security-hardware custody.
 
+
+
+## 2026-11-21 — W38 receipt path TOCTOU controlled RED and candidate guard (RESEARCH_ONLY / DRAFT)
+
+- **Base:** \`main\` \`c7088b69d170df09fa196a1ac1adc7d84e444752\` and original W37 source blob \`180e8fa86297a832acfa84c110197efc6fc26f55\`. Existing W37 checked \`Path.is_symlink()\`/\`Path.is_file()\` then separately \`Path.open()\`.
+- **Controlled synthetic RED:** an attacker-substituted symlink inserted at the \`Path.open()\` call after the prior path checks caused the **old reader** to read the temporary outside file's bytes \`b'outside-secret'\`. This experiment does not prove disclosure of production data or trust activation.
+- **Candidate change scope:** W37 imports the new \`research/w38_receipt_fd_guard.py\` reader; add \`tests/test_w38_receipt_fd_guard_v0_1.py\` and \`W38_RECEIPT_PATH_HARDENING_RESEARCH_V0_1.md\`. No other W37 data fields, signer, ledger, memory or authority paths touched.
+- **Local isolated Linux validation:** \`PYTHONPATH=/mnt/data/w38/implementation python -m pytest -q /mnt/data/w38/implementation/tests/test_w38_receipt_fd_guard_v0_1.py\` => **15 passed**. Exact two injected \`os.open\` symlink races (leaf and parent) rejected in the candidate. Baseline synthetic ordinary/CRLF bytes and exact capacity preserved. This does not establish complete security.
+- **Platform boundary:** POSIX uses descriptor-relative O_NOFOLLOW for directory components and leaf. Windows uses native \`CreateFileW\` with no-follow final leaf, opened-handle attribute and final-path checks. **Windows was not tested in the Linux scratch**, and concurrent ancestor swap races, hardlink provenance, and ledger observer races remain not proved closed.
+- **Research-only obligations:** run GitHub exact-head Linux/Windows CI and independent adversarial source review; do not merge research until the candidate has evidence. Keep all previous engineering log bytes as an exact prefix, no force-push and no source history rewrite. Trust, Genesis, signer and production remain NO_GO.
+
+
+## 2026-11-21 — W38 exact-head hosted CI (after local controlled RED-to-GREEN)
+
+- **Research candidate HEAD:** \`e8c338ead286cd275def9cff888e955a7bc1b595\` / PR #300.
+- **Exact-head PR regression:** [GitHub Actions run 44936106437](https://github.com/SepehrGhanbari/Ario/actions/runs/44936106437) **SUCCESS**. Linux Python 3.13: 1634 passed / 2 skipped / 2 warnings / 227 subtests passed. Windows Python 3.13: 1631 passed / 5 skipped / 2 warnings / 227 subtests passed. Python 3.14 differential advisory: SUCCESS. The extra 3 Windows skips are explicitly POSIX-only test methods (openat file/dir race injection and FIFO nonblocking refusal), not unexplained drops.
+- **Preserved limitations:** Windows ancestor replacement during the precheck-to-open interval is NOT_PROVEN_CLOSED. Any concurrent file content changes are not atomically snapshotted. A successful pinned synthetic W35 receipt does not prove Ario historical truth, provenance, freshness, or independent cross-artifact authorization. Remain RESEARCH_ONLY; no real signer/trust/Genesis/production effects.
+- **Preservation:** append-only log; previous log blob \`ba1036bc45ef0dd4edc2a207a48ed58a1ea40fc1\` retained verbatim; no unrelated files changed. Final exact-head CI is required after the accompanying documentation change.
