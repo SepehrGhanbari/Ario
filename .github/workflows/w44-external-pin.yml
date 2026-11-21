@@ -69,6 +69,31 @@ jobs:
           echo 'W44_REAL_ARIO_CUSTODY=NOT_ESTABLISHED'
           echo 'W44_PRODUCTION_TRUST_ACTIVATION=NO_GO'
 
+  prior-r10-joint-rollback:
+    name: Replay earlier R10 simultaneous rollback negative control
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: previous-r10/implementation
+    steps:
+      - name: Checkout exact archived R10 synthetic monitor source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: SepehrGhanbari/Ario
+          ref: fae07e8e3453d946a2e7928d2e67de0e8663cdd5
+          path: previous-r10
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.13'
+      - name: Replay 16 R10 tests including same-admin double rollback
+        run: python -B -m unittest -v tests.test_r10_durable_monitor
+      - name: Preserve bounded non-authorization summary
+        run: |
+          echo 'W44_R10_JOINT_DB_FLOOR_ROLLBACK=UNDETECTABLE_IN_SAME_ADMIN_LAB'
+          echo 'W44_INDEPENDENT_ADMIN_CUSTODY=NOT_ESTABLISHED'
+          echo 'W44_LIVE_TRUST=NO_GO'
 # This executes ONLY an already published old Sigsum receipt, without submission.
 # Replay from a pinned Git source proves neither admin separation nor latest Ario state.
 # Even passing controls cannot establish true external custodian independence.
