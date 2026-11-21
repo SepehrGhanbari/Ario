@@ -1,0 +1,62 @@
+name: R63 G4 WinPS5.1 stage trace with bounded watchdog (synthetic only)
+on:
+  push:
+    branches:
+      - research/r63-g4-guest-external-floor-20261121
+    paths:
+      - .github/workflows/r63-g4-ps51-watchdog.yml
+permissions:
+  contents: read
+jobs:
+  diagnostic-reproduction:
+    runs-on: windows-2022
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - name: Print last controller stage and fail closed if native PowerShell is blocked
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $exe=Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+          $args='-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "research/r63_g4_peer_ci/Invoke-G4PeerIdentityGuest.ps1" -Mode CI'
+          $p=Start-Process -FilePath $exe -ArgumentList $args -PassThru -WindowStyle Hidden -RedirectStandardOutput R63-G4-Watchdog-Stdout.txt -RedirectStandardError R63-G4-Watchdog-Stderr.txt
+          $handle=$p.Handle
+          $last=''
+          for($i=0;$i -lt 48;$i++) {
+            Start-Sleep -Seconds 5
+            $runs=@(Get-ChildItem -Path 'R63-G4-Run-*.txt' -ErrorAction SilentlyContinue)
+            foreach($f in $runs) {
+              $markers=Get-Content $f.FullName -ErrorAction SilentlyContinue | Where-Object { $_ -match '^G4_STAGE=|^G4_HOLD=|^G4_VERDICT=|^G4_SYNTHETIC' }
+              $joined=($markers -join ',')
+              if ($joined -ne $last) {Write-Host ('G4_PROGRESS='+$joined); $last=$joined}
+            }
+            if ($p.HasExited) {break}
+          }
+          if(-not $p.HasExited) {
+            Write-Host 'G4_WATCHDOG_HOLD_NATIVE_WINPS51_TIMEOUT'
+            & taskkill.exe /PID $p.Id /T /F | Out-Null
+            exit 124
+          }
+          $p.WaitForExit()
+          Get-Content R63-G4-Watchdog-Stdout.txt -ErrorAction SilentlyContinue
+          Get-Content R63-G4-Watchdog-Stderr.txt -ErrorAction SilentlyContinue
+          if($null -eq $p.ExitCode -or $p.ExitCode -ne 0) {exit 1}
+          $z=(Get-ChildItem R63-G4-Evidence-*.zip | Select-Object -First 1).FullName
+          python -B research/r63_g4_peer_ci/audit_g4_evidence.py $z
+          if($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
+      - name: Preserve last native-stage trace and raw output for incident analysis
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r63-g4-stage-watchdog-${{ github.run_id }}
+          path: |
+            R63-G4-Run-*.txt
+            R63-G4-Report-*.json
+            R63-G4-Evidence-*.zip
+            R63-G4-Watchdog-Stdout.txt
+            R63-G4-Watchdog-Stderr.txt
+          if-no-files-found: warn
+          retention-days: 30
