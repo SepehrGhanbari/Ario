@@ -47,7 +47,7 @@ jobs:
             echo '~~~'
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Run Guard V2 shared-SHA and late-mutation negative controls
-        run: python -B -m pytest -p no:cacheprovider -q tests/test_guard_v2_pr_scope.py tests/test_guard_v2_live_link.py
+        run: python -B -m pytest -p no:cacheprovider -q tests/test_guard_v2_pr_scope.py tests/test_guard_v2_live_link.py tests/test_guard_v2_review_graph.py
       - name: Guard V2 live PR identity predecision preview (advisory only)
         shell: bash
         env:

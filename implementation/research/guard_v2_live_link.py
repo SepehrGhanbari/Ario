@@ -12,6 +12,7 @@ from typing import Any
 
 import ario_repo_self_audit as observer
 from research import guard_v2_pr_scope as guard
+from research import guard_v2_review_graph as review_graph
 
 SCHEMA = "ARIO-GUARD-V2-LIVE-LINK-LAB-0.1"
 
@@ -54,7 +55,8 @@ def _live_identity(raw: Any, pin: dict) -> dict:
 
 
 def examine(pin: dict, *, reader: Any = None, first: dict | None = None,
-            last: dict | None = None, checks: dict | None = None) -> dict:
+            last: dict | None = None, checks: dict | None = None,
+            review_graph_reader: Any = None) -> dict:
     """Run real read-only observation and one final PR reread; never act on a verdict.
 
     The before/after Guard review and Check captures are optional lab fixtures,
@@ -78,6 +80,17 @@ def examine(pin: dict, *, reader: Any = None, first: dict | None = None,
         result["ci_observation"] = audit.get("required_check_observation", "NOT_CONFIRMED")
         result["self_audit_reason"] = audit.get("reason", "UNKNOWN")
         result["self_audit_pr_sample"] = audit.get("pr_sample_consistency", "UNKNOWN")
+        if review_graph_reader is not None:
+            # Complete separately sampled GraphQL review graph. This check
+            # detects edits/deletions between two reads even if PR.updated_at
+            # never changed. It is NOT an independent or atomic attestation.
+            sampled = review_graph.compare_twice(pin, review_graph_reader)
+            result["review_graph_reason"] = sampled.get("reason", "UNKNOWN")
+            result["review_graph_status"] = sampled.get("sample_status", "UNKNOWN")
+            if sampled.get("sample_status") != "SAMPLED_STABLE_UNATTESTED":
+                raise guard.EvidenceError("GRAPH_FRESHNESS_" + str(sampled.get("reason", "UNKNOWN")))
+            result["review_graph_digest"] = sampled["first_digest"]
+            result["review_freshness"] = "SAMPLED_STABLE_UNATTESTED"
         after = _live_identity(source.get_json(url), pin)
         if before != after:
             raise guard.EvidenceError("LIVE_PR_CHANGED_BEFORE_DECISION")

@@ -37,3 +37,54 @@ In the GREEN fixture the PR target number and numeric PR database ID are consist
 The advisory checkout now explicitly has `persist-credentials: false`. This prevents the checkout action from saving GitHub credentials into the repository's Git configuration; it does **not** hide the read-only `github.token` passed in the environment to PR-controlled Python. Complete isolation requires executing the GitHub reader from a trusted, source-pinned evaluator, outside the untrusted PR checkout. No credential permissions were expanded, and the workflow remains advisory/non-required.
 
 Review/comment/thread freshness remains **UNKNOWN**: a PR metadata `updated_at` comparison alone does not authenticate edits and deletions. A successful synthetic test is not independent evidence custody or merge-time atomicity.
+
+## 2026-11-21 — Review-graph freshness WIP: GraphQL two-pass observational falsifier
+
+**Research-only, no enforcement.** This extension specifically addresses the missing live
+review/issue-comment/inline-thread *data path*. GitHub GraphQL exposes PR
+\`comments\`, \`reviews\` and \`reviewThreads { isResolved, comments }\`. The new
+\`guard_v2_review_graph.py\` implements exactly three fixed GraphQL query
+templates; HTTPS POST transports a **query**, not a mutation. Explicit query
+templates, TLS verification, disabled HTTP redirect/proxies, bearer read token,
+bounded response sizes and strict JSON protect the reader's request shape.
+**It must not be run with a privileged GitHub App issuer or merge credential.**
+
+For each collection the collector:
+- Binds GitHub repository and PR \`fullDatabaseId\` (64-bit safe), PR number,
+  exact HEAD and BASE on **every page**; validates cursor progress, totalCount,
+  item identities, and complete pages.
+- Reads issue conversation comments with body/timestamps, submitted reviews
+  with state/body/timestamps, inline review threads with resolution/outdated
+  state and reply bodies/timestamps. **More than 100 replies in one thread
+  currently yields HOLD/INCOMPLETE_THREAD_REPLIES**, not a fabricated complete
+  snapshot.
+- Takes **two entire bounded passes**, hashes canonical content and returns
+  \`REVIEW_GRAPH_CHANGED_BETWEEN_SAMPLES\` on an edited/deleted comment, review,
+  thread, or reply—even when the PR's own \`updated_at\` is unchanged.
+- Treats missing authorization, HTTP 403/timeout, GraphQL \`errors\`,
+  inconsistent pagination, duplicates, cursor loops, stale HEAD/BASE and
+  malformed IDs as \`HOLD\` / \`UNKNOWN\`.
+
+\`guard_v2_live_link.examine\` accepts an **optional injected review_graph_reader**
+to test this in an integrated synthetic environment. A changed graph causes
+\`GRAPH_FRESHNESS_REVIEW_GRAPH_CHANGED_BETWEEN_SAMPLES\` and HOLD before a
+hypothetical merge. A stable graph gives only
+\`review_freshness=SAMPLED_STABLE_UNATTESTED\`: **it is not a trusted admission
+of the caller-supplied review digest and never turns merge_authorized on**.
+
+**Execution boundary:** The repository's existing #295 advisory workflow runs
+the new **synthetic tests only**. It does not pass its PR-checkout token to
+the GraphQL collector or execute live GraphQL against actual PR discussions.
+That restraint is intentional: this workflow checks out PR-controlled code.
+\`persist-credentials:false\` prevents checkout's Git config storage but is
+not separate trust custody. A later truly trusted source-pinned process must
+operate the live reader before its data can be considered operational
+attestation.
+
+**Remaining uncertainty:** Matching repeated GraphQL responses do not prove
+that a comment was absent before the first read, that the provider or token
+is independently controlled, or that no edit can occur after the final read.
+Parallel writes while paginating remain an inescapable race; a two-pass
+digest catches changes it observes but does not make GitHub's multirequest
+snapshot atomic. Full read-back and separately retained baseline/checkpoint
+plus authorized merge broker are still required for enforcement.

@@ -7,6 +7,7 @@ import pytest
 import ario_repo_self_audit as selfaudit
 from research import guard_v2_live_link as link
 from test_guard_v2_pr_scope import BASE, HEAD, PR14_ID, PR15_ID, PR16_ID, REPO, checks, pin, snapshot
+from test_guard_v2_review_graph import FakeGraphQL, original as graph_original
 
 
 class FakeReader:
@@ -247,3 +248,65 @@ def test_bad_pin_rejected_before_any_get():
     r = link.examine(malformed, reader=fake)
     assert r["reason"] == "INVALID_PIN_PR_ID"
     assert fake.log == []
+
+
+def graph_for_guard_pr(before=None, after=None):
+    """Bind GraphQL fixture to the identical PR14 identity used by the live fake."""
+    result = FakeGraphQL(before, after)
+    result.repo_id = str(REPO)
+    result.pr_id = str(PR14_ID)
+    result.pr_number = 14
+    return result
+
+
+@pytest.mark.parametrize("family", ["comments", "reviews", "threads"])
+def test_hidden_review_change_detected_despite_constant_pr_updated_at(family):
+    first_graph = graph_original()
+    last_graph = copy.deepcopy(first_graph)
+    if family == "comments":
+        last_graph["comments"][0]["body"] = "Edited without PR timestamp change"
+    elif family == "reviews":
+        last_graph["reviews"][0]["body"] = "Review edited silently"
+    else:
+        last_graph["threads"][0]["isResolved"] = False
+    fake = FakeReader()
+    result = evaluate(fake, review_graph_reader=graph_for_guard_pr(first_graph, last_graph))
+    assert result["disposition"] == "HOLD"
+    assert result["reason"] == "GRAPH_FRESHNESS_REVIEW_GRAPH_CHANGED_BETWEEN_SAMPLES"
+    assert fake.pr_reads == 3  # no false final agreement or Guard check
+    assert fake.raw["updated_at"] == "2026-11-21T18:00:00Z"
+
+
+def test_comment_deleted_without_pr_timestamp_bump_is_hold():
+    first_graph = graph_original()
+    last_graph = copy.deepcopy(first_graph)
+    last_graph["comments"].clear()
+    fake = FakeReader()
+    result = evaluate(fake, review_graph_reader=graph_for_guard_pr(first_graph, last_graph))
+    assert result["reason"] == "GRAPH_FRESHNESS_REVIEW_GRAPH_CHANGED_BETWEEN_SAMPLES"
+    assert result["review_graph_status"] == "UNKNOWN"
+    assert result["merge_authorized"] is False
+
+
+def test_graph_403_is_hold_even_if_pr_ci_is_reported_success():
+    fake_graph = graph_for_guard_pr()
+    fake_graph.fail_on_call = 4
+    result = evaluate(review_graph_reader=fake_graph)
+    assert result["reason"] == "GRAPH_FRESHNESS_GRAPHQL_HTTP_403"
+    assert result["ci_observation"] == "REPORTED_SUCCESS_BY_LINKED_PR_RUN"
+
+
+def test_complete_same_graph_two_reads_are_only_sampled_and_non_authoritative():
+    result = evaluate(review_graph_reader=graph_for_guard_pr())
+    assert result["review_graph_status"] == "SAMPLED_STABLE_UNATTESTED"
+    assert result["review_freshness"] == "SAMPLED_STABLE_UNATTESTED"
+    assert result["disposition"] == "REVIEWABLE_ONLY"  # only supplied synthetic Guard records
+    assert result["merge_authorized"] is False
+    assert result["check_publish_authorized"] is False
+    assert result["execution_attestation"] == "NOT_ESTABLISHED"
+
+
+def test_absent_real_graph_reader_remains_unknown_freshness_and_no_merge():
+    result = evaluate()
+    assert result["review_freshness"] == "NOT_ATTESTED_BY_LIVE_GITHUB_READ"
+    assert result["merge_authorized"] is False
