@@ -1,9 +1,9 @@
 """Standalone bounded JSON primitive tests; no CLI/admission coupling.
 
-This test file is additive and synthetic. The 4096-decimal-digit threshold is
-copied from #248 as a *candidate* value, not an owner-approved contract.
-Do not merge this Draft until real-ledger compatibility and threshold choice
-are resolved. Input size remains a caller-owned budget.
+This test file is additive and synthetic. The depth-64 and 4096-digit
+ceilings already exist on main after PR #298. These tests constrain only
+the default integer hook's interpreter-cap behavior, not production authority.
+Input size remains a caller-owned budget.
 """
 import json
 import sys
@@ -115,6 +115,22 @@ class BoundedJsonPrimitiveTests(unittest.TestCase):
         finally:
             sys.set_int_max_str_digits(original)
 
+
+
+    @unittest.skipUnless(
+        hasattr(sys, "set_int_max_str_digits") and hasattr(sys, "get_int_max_str_digits"),
+        "interpreter has no configurable integer conversion limit",
+    )
+    def test_explicit_builtin_int_hook_is_stable_at_lowered_cap(self):
+        previous = sys.get_int_max_str_digits()
+        try:
+            sys.set_int_max_str_digits(640)
+            self.assertIsInstance(loads_bounded("8" * 700, parse_int=int), int)
+            self.assertIsInstance(loads_bounded("-" + "8" * 4096, parse_int=int), int)
+            with self.assertRaises(JSONValueLimitExceeded):
+                loads_bounded("8" * 4097, parse_int=int)
+        finally:
+            sys.set_int_max_str_digits(previous)
 
 if __name__ == "__main__":
     unittest.main()

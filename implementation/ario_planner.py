@@ -14,6 +14,7 @@ from typing import Any
 
 from ario_agent import MAX_READ_BYTES, MAX_STEPS, AgentRequestError, _inside, execute_action
 from ario_workflow import parse_workflow, run_workflow
+from bounded_json import loads_bounded
 
 
 MAX_GOAL_CHARS = 2_000
@@ -474,9 +475,9 @@ def request_plan(
         if len(raw) > MAX_RESPONSE_BYTES:
             raise AgentRequestError("Ollama response exceeded the 1 MB safety limit")
         try:
-            envelope = json.loads(raw.decode("utf-8"))
+            envelope = loads_bounded(raw.decode("utf-8"))
             content = envelope["message"]["content"]
-            proposed = json.loads(content)
+            proposed = loads_bounded(content)
         except (UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError) as exc:
             raise AgentRequestError("Ollama did not return a valid JSON recommendation") from exc
         try:
