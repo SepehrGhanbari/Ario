@@ -132,5 +132,70 @@ class BoundedJsonPrimitiveTests(unittest.TestCase):
         finally:
             sys.set_int_max_str_digits(previous)
 
+
+    @unittest.skipUnless(
+        hasattr(sys, "set_int_max_str_digits") and hasattr(sys, "get_int_max_str_digits"),
+        "interpreter has no configurable integer conversion limit",
+    )
+    def test_lock_inspection_rejects_impossible_700_digit_pid_as_unknown(self):
+        """Read-only CLI must never attempt to JSON-emit a huge int lock PID."""
+        import io
+        import tempfile
+        from contextlib import redirect_stdout
+        from pathlib import Path
+        import ario_agent
+
+        with tempfile.TemporaryDirectory(prefix="ario-int-pid-boundary-") as temp:
+            ledger = Path(temp) / "synthetic.jsonl"
+            lock = ledger.with_name(ledger.name + ".lock")
+            initial = ('{"pid":' + '9' * 700 +
+                       ',"task_id":"T","started_at":"2026-01-01T00:00:00Z"}').encode()
+            lock.write_bytes(initial)
+            prior = sys.get_int_max_str_digits()
+            try:
+                sys.set_int_max_str_digits(640)
+                output = io.StringIO()
+                with redirect_stdout(output):
+                    exit_code = ario_agent.main([
+                        "--inspect-lock", "--ledger", str(ledger)
+                    ])
+                report = json.loads(output.getvalue())
+                self.assertEqual(exit_code, 2)
+                self.assertEqual(report["status"], "UNKNOWN")
+                self.assertNotIn("lock_record", report)
+                self.assertFalse(report["write_performed"])
+                self.assertFalse(report["automatic_removal"])
+            finally:
+                sys.set_int_max_str_digits(prior)
+            self.assertEqual(lock.read_bytes(), initial)
+            self.assertFalse(ledger.exists())
+
+    def test_lock_inspection_pid_range_and_no_mutation(self):
+        """The lock contains an operating-system PID, never arbitrary JSON int."""
+        import tempfile
+        from pathlib import Path
+        import ario_agent
+
+        with tempfile.TemporaryDirectory(prefix="ario-pid-range-") as temp:
+            ledger = Path(temp) / "synthetic.jsonl"
+            lock = ledger.with_name(ledger.name + ".lock")
+            for raw_pid, expected in (
+                ("1", "LOCK_PRESENT"),
+                ("4294967295", "LOCK_PRESENT"),
+                ("4294967296", "UNKNOWN"),
+                ("-1", "UNKNOWN"),
+            ):
+                lock.write_text(
+                    '{"pid":' + raw_pid +
+                    ',"task_id":"T","started_at":"t"}',
+                    encoding="utf-8",
+                )
+                original = lock.read_bytes()
+                report = ario_agent.inspect_execution_lock(ledger)
+                self.assertEqual(report["status"], expected, raw_pid)
+                self.assertEqual(report["write_performed"], False)
+                self.assertEqual(report["automatic_removal"], False)
+                self.assertEqual(lock.read_bytes(), original)
+
 if __name__ == "__main__":
     unittest.main()
