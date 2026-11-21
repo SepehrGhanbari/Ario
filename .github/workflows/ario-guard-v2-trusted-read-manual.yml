@@ -1,0 +1,56 @@
+name: Ario Guard V2 Protected-Main Manual Read (research only)
+
+# STAGED ONLY: this workflow cannot run on default main until separately merged
+# with founder approval. It never runs on pull_request and never checks out PR code.
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: PR number to read (no permission to merge)
+        required: true
+        type: number
+      expected_head_sha:
+        description: Exact 40-character PR HEAD to bind the research observation
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+
+jobs:
+  trusted-manual-read:
+    if: github.ref == 'refs/heads/main'
+    name: trusted-main-read-only-research
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout ONLY the protected workflow event commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Set up pinned Python runtime
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.13'
+      - name: Observe GitHub review evidence without PR-source execution
+        shell: bash
+        env:
+          ARIO_TRUSTED_READ_TOKEN: ${{ github.token }}
+          ARIO_PR_NUMBER: ${{ inputs.pr_number }}
+          ARIO_EXPECTED_HEAD: ${{ inputs.expected_head_sha }}
+          ARIO_SOURCE_SHA: ${{ github.sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$ARIO_SOURCE_SHA"
+          cd implementation
+          python -B -m research.guard_v2_trusted_manual --pr "$ARIO_PR_NUMBER" --expected-head "$ARIO_EXPECTED_HEAD" --source-sha "$ARIO_SOURCE_SHA" > "$RUNNER_TEMP/ario-v2-manual-read.json"
+          cat "$RUNNER_TEMP/ario-v2-manual-read.json"
+          {
+            echo '### Read-only review graph observation — never merge authority'
+            echo '~~~json'
+            cat "$RUNNER_TEMP/ario-v2-manual-read.json"
+            echo '~~~'
+          } >> "$GITHUB_STEP_SUMMARY"
