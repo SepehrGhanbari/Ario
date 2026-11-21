@@ -524,6 +524,6 @@ class SourceMonitoringGuard:
             if self.detect_circular_dependency(aid):
                 continue
 
-            valid_items.append(node)
+            valid_items.append(copy.deepcopy(node))  # never hand out live registry objects
 
         return valid_items
