@@ -629,3 +629,11 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - Narrow research change: `implementation/ledger_observation_adapter.py` delegates one bounded regular-file read to the previously merged W38 descriptor guard; parses the in-memory bytes via `BytesIO` without reopening the path. Add synthetic race tests and W40 research notes. `ledger_audit_bridge.py`, known event envelope and permission state unchanged.
 - Scope remains a local byte observation. This does NOT establish atomic content snapshot under simultaneous writes, historical truth, monotonicity, Windows ancestor path safety, memory admission, signer or trust. Separate W39 Windows probe is independent.
 - Exact-head PR Linux/Windows CI required before any merge; source, tests, notes and this append-only entry retain all previous log bytes unchanged.
+
+## 2026-11-21 — W40 exact-head CI and bounded snapshot research results
+
+- Head `83097b0bc0dbd947037e9a5733e0216fb3006026`; [PR regression run 44938375544](https://github.com/SepehrGhanbari/Ario/actions/runs/44938375544) completed **SUCCESS**: Linux CPython 3.13 **1655 passed, 2 skipped, 2 warnings, 273 subtests passed**; Windows CPython 3.13 **1650 passed, 7 skipped, 2 warnings, 273 subtests passed**; CPython 3.14 advisory **SUCCESS**. Extra Windows skips include POSIX-only filesystem race and FIFO probes; these skips are not evidence of a Windows atomic fix.
+- [Published TXT Restore Security run 44938375585](https://github.com/SepehrGhanbari/Ario/actions/runs/44938375585): all 10 jobs **SUCCESS**. None of these tests prove historic event truth or concurrency-safe in-place file snapshots.
+- Two separately scoped PRs remain distinct: W39 [#302](https://github.com/SepehrGhanbari/Ario/pull/302) demonstrated **1 expected-failed Win32 ordinary-directory replacement** with original W38 reader (native Windows CI). W40 [#303](https://github.com/SepehrGhanbari/Ario/pull/303) reuses W38's still-limited Windows reader for JSONL, so the Windows ancestor defect is **NOT_CLOSED** here.
+- Previous log retained byte-for-byte as unchanged prefix, no unrelated file or trust code modified. This CI result is source-pinned and does not constitute deployment, signer, Genesis, memory or epistemic authority.
+
