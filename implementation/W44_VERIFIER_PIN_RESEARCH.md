@@ -49,3 +49,13 @@ Local Linux CPython 3.13.5 scratch prototype with a reconstructed W38-equivalent
 **Next independent-custody phase:** experimentally move an append-only checkpoint and a separate (sequence, head) floor into a truly separate administrative authority, check trusted public-key enrollment, crashes, deletion, rollback, stale responses, key rotations and equivocation. Synthetic-only until independently authorized; do not publish original Ario data or activate trust.
 
 **At authoring: W44_RESEARCH_PROBE / INDEPENDENCE_NOT_ESTABLISHED / DRAFT_HOLD.**
+
+## Candidate **real** external anchoring for a later, separately authorized phase
+
+These are not deployed in W44 and do **not** supply a live independent Ario witness:
+
+1. **OpenTimestamps** (https://opentimestamps.org/): can commit a digest using public calendar servers and eventually Bitcoin-backed attestations verified against the chain. An inclusion/timestamp proof can support a past existence claim *after confirmation*; a timestamp alone does **not** identify the newest valid (sequence, head), and the verifier still needs a retained floor, verified attestation and checkpoint identifier. Temporary/unconfirmed calendar receipts are not blockchain confirmation.
+2. **Sigstore Rekor / verifiable transparency** (https://docs.sigstore.dev/logging/overview/; https://github.com/sigstore/architecture-docs/blob/main/rekor-spec.md): log inclusion, signed checkpoints and consistency monitoring can provide externally observable tamper-evidence for supported registered artifacts. The verifier must verify inclusion and required consistency under independently distributed log keys. A self-submitted hash or unsigned assertion of inclusion is not enough; service admission requirements and public exposure must be examined before use.
+3. **Merkle-log verification principles** from RFC 9162 (https://www.rfc-editor.org/rfc/rfc9162.html): inclusion and consistency are different claims, and neither alone establishes truthful event content or that the verifier was shown the globally latest head.
+
+The next practical experiment requires a **genuine separately administered service and a verifier floor not controlled by the original log writer**, with a proof that can be independently validated and retained across process restarts. Do not publish real Ario material, generate permanent trust keys, or treat a mere public-hosting account as an independent witness without a separate authorization and threat model.
