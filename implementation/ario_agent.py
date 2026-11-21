@@ -997,6 +997,20 @@ def inspect_task_history(task_id: str, ledger_path: str | Path) -> dict:
     }
 
 
+def _write_inspection_json(value: dict) -> None:
+    """Write one legacy-compatible JSON line without building a full JSON string.
+
+    The inspection report can retain 128 projected metadata entries.  Creating
+    a second, monolithic JSON string before print() can sharply increase peak
+    process memory.  JSONEncoder.iterencode preserves the exact canonical
+    ensure_ascii=False/sort_keys=True text and streams fragments to stdout.
+    """
+    encoder = json.JSONEncoder(ensure_ascii=False, sort_keys=True)
+    for fragment in encoder.iterencode(value):
+        sys.stdout.write(fragment)
+    sys.stdout.write("\n")
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Run or inspect a bounded Ario workspace task.")
     mode = parser.add_mutually_exclusive_group(required=True)
@@ -1013,7 +1027,7 @@ def main(argv=None) -> int:
             return 0 if result["status"] in {"NO_LOCK", "LOCK_PRESENT"} else 2
         if args.inspect_task_id is not None:
             result = inspect_task_history(args.inspect_task_id, args.ledger)
-            print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+            _write_inspection_json(result)
             return 0 if result["status"] in {"COMPLETED", "STOPPED"} else 2
         if not args.workspace:
             parser.error("--workspace is required with --task")
