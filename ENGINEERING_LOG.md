@@ -621,3 +621,11 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - **Exact-head PR regression:** [GitHub Actions run 44936106437](https://github.com/SepehrGhanbari/Ario/actions/runs/44936106437) **SUCCESS**. Linux Python 3.13: 1634 passed / 2 skipped / 2 warnings / 227 subtests passed. Windows Python 3.13: 1631 passed / 5 skipped / 2 warnings / 227 subtests passed. Python 3.14 differential advisory: SUCCESS. The extra 3 Windows skips are explicitly POSIX-only test methods (openat file/dir race injection and FIFO nonblocking refusal), not unexplained drops.
 - **Preserved limitations:** Windows ancestor replacement during the precheck-to-open interval is NOT_PROVEN_CLOSED. Any concurrent file content changes are not atomically snapshotted. A successful pinned synthetic W35 receipt does not prove Ario historical truth, provenance, freshness, or independent cross-artifact authorization. Remain RESEARCH_ONLY; no real signer/trust/Genesis/production effects.
 - **Preservation:** append-only log; previous log blob \`ba1036bc45ef0dd4edc2a207a48ed58a1ea40fc1\` retained verbatim; no unrelated files changed. Final exact-head CI is required after the accompanying documentation change.
+
+
+## 2026-11-21 — W40 JSONL ledger adapter bounded FD snapshot candidate (DRAFT / RESEARCH_ONLY)
+
+- Source main `3d2e17374359eb28778fbd74ec520215c0bb2a6b`; original adapter blob `5d3082570fbbbf9ea62b17030c21eac53a11a26b`. Before the patch: `target.is_symlink()` checked separately from `target.open("rb")`; the path could be substituted between operations.
+- Narrow research change: `implementation/ledger_observation_adapter.py` delegates one bounded regular-file read to the previously merged W38 descriptor guard; parses the in-memory bytes via `BytesIO` without reopening the path. Add synthetic race tests and W40 research notes. `ledger_audit_bridge.py`, known event envelope and permission state unchanged.
+- Scope remains a local byte observation. This does NOT establish atomic content snapshot under simultaneous writes, historical truth, monotonicity, Windows ancestor path safety, memory admission, signer or trust. Separate W39 Windows probe is independent.
+- Exact-head PR Linux/Windows CI required before any merge; source, tests, notes and this append-only entry retain all previous log bytes unchanged.
