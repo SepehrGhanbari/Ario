@@ -113,6 +113,7 @@ try {
     $rogueSid=(Get-LocalUser -Name $names[2]).SID.Value
     Need ($writerSid -ne $readerSid -and $readerSid -ne $rogueSid -and $writerSid -ne $rogueSid) 'SIDS_NOT_DISTINCT'
     $observations['writer_sid']=$writerSid;$observations['allowed_peer_sid']=$readerSid;$observations['rogue_peer_sid']=$rogueSid
+    Say 'G4_STAGE=THREE_EPHEMERAL_ACCOUNTS_CREATED'
     [IO.Directory]::CreateDirectory($root)|Out-Null
     & icacls.exe $root /inheritance:r | Out-Null;NativeOk 'REMOVE_INHERITANCE'
     $grants=@('*S-1-5-18:(OI)(CI)F','*S-1-5-32-544:(OI)(CI)F',
@@ -125,21 +126,31 @@ try {
     $compile='Add-Type -Path "'+$cs+'" -OutputAssembly "'+$asm+'" -ErrorAction Stop'
     & $psExe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command $compile
     Need ($LASTEXITCODE -eq 0 -and [IO.File]::Exists($asm)) 'NATIVE_DOTNET_FRAMEWORK_COMPILATION_FAILED'
+    Say 'G4_STAGE=WINPS51_DOTNET_COMPILED'
     [IO.Directory]::CreateDirectory($evidenceDir)|Out-Null
     $baseline=& $python -I -B $journalPy --prepare $journal
     Need ($LASTEXITCODE -eq 0) 'JOURNAL_PREPARE_FAILURE'
     $observations['baseline']=(ConvertFrom-Json -InputObject ($baseline|Out-String))
     Need ($observations['baseline'].v2_events -eq 2 -and $observations['baseline'].coherent) 'BASE_NOT_CANONICAL'
+    Say 'G4_STAGE=V1V2_BASELINE_READY'
     $logFile=Join-Path $journal 'server-peer-log.txt'
+    Say 'G4_STAGE=SERVER_STARTING'
     $serv=StartActor $creds[0] 'server' 'Server' '' '' '' '' $logFile
+    Say 'G4_STAGE=SERVER_PROCESS_HANDLE_READY'
     Start-Sleep -Seconds 2
     Need (-not $serv.process.HasExited) 'SERVER_EXITED_BEFORE_FIRST_CONNECTION'
     $nonce='c'*64;$ident='3'*64
+    Say 'G4_STAGE=AUTHORIZED_CLIENT_STARTING'
     $admitted=WaitActor (StartActor $creds[1] 'good' 'Client' $readerSid $nonce $ident $rogueSid '')
+    Say 'G4_STAGE=AUTHORIZED_CLIENT_COMPLETED'
     $duplicate=WaitActor (StartActor $creds[1] 'duplicate' 'Client' $readerSid $nonce $ident $readerSid '')
+    Say 'G4_STAGE=DUPLICATE_CLIENT_COMPLETED'
     $denied=WaitActor (StartActor $creds[2] 'rogue-spoof' 'Client' $rogueSid ('d'*64) ('4'*64) $readerSid '')
+    Say 'G4_STAGE=ROGUE_CLIENT_COMPLETED'
     $adminDenied=WaitActor (StartActor $null 'admin-spoof' 'Client' $current.User.Value ('e'*64) ('5'*64) $readerSid '')
+    Say 'G4_STAGE=ADMIN_CLIENT_COMPLETED'
     $serverResult=WaitActor $serv
+    Say 'G4_STAGE=SERVER_COMPLETED'
     $observations['client_replies']=[ordered]@{positive=$admitted;duplicate=$duplicate;rogue_claimed_reader=$denied;admin_claimed_reader=$adminDenied}
     Need ($admitted -eq ($readerSid+'|RESERVED_ONLY_NO_SIGN')) 'VALID_PEER_COULD_NOT_RESERVE'
     Need ($duplicate -eq ($readerSid+'|ALREADY_RESERVED_NO_APPEND')) 'VALID_PEER_DUPLICATE_NOT_DETECTED'
