@@ -39,7 +39,7 @@ if ($Role -eq 'Direct') {
     $results | ConvertTo-Json -Depth 5 -Compress
     exit 0
 }
-Add-Type -Path (Join-Path $PSScriptRoot 'G4PipeGate.cs') -ErrorAction Stop
+Add-Type -Path (Join-Path (Split-Path -Parent $LabRoot) 'G4PipeGate.dll') -ErrorAction Stop
 if ($Role -eq 'Server') {
     if ($current -ne $WriterSid) {throw 'SERVER_NON_WRITER_SID'}
     if (-not $LogPath) {throw 'MISSING_LOG_PATH'}
