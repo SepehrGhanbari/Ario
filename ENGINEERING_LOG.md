@@ -662,3 +662,26 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - Narrow change only to repository CodeRabbit settings: disable automatic review for all PRs, incremental review, review status messages, high-level summaries and CodeRabbit commit statuses; explicitly skip owner `SepehrGhanbari` PRs. Other technical review instructions in file remain; no repository source, tests, CI required status, branch protection, trust, identity, signer, keys, Genesis or production state changed.
 - This is a best-effort repository-config silence, not verified removal of the installed GitHub App. Complete cessation of GitHub App webhook comments is only guaranteed by restricting repository access or uninstalling CodeRabbit in GitHub's Installed GitHub Apps settings. The GitHub connector exposed no CodeRabbit installation-admin mutation action. Do not claim CodeRabbit uninstalled.
 - Existing `ENGINEERING_LOG.md` entries remain byte-for-byte as a prefix; verify the diff and branch CI before a normal PR merge. No history rewrite.
+
+
+## 2026-11-21 — W42 same-file concurrent modification RED diagnostic (DRAFT / RESEARCH_ONLY)
+
+- Base `d60688c68a746a48881897050adb7c7063d6c6aa`. Original W38 POSIX reader and W41 Windows handle-based reader untouched in this first diagnostic commit.
+- New native experiments: POSIX `os.read` old-prefix/new-suffix torn JSONL on a single original file identity; Windows existing writer handle and a writer-open attempt inside native ReadFile. Intentional xfail labels denote **verified baseline weakness**, not security success. All bytes are public synthetic, files are temporary; no real ledger or signer touched.
+- Source contract and research goals in `implementation/W42_CONCURRENT_INPLACE_RESEARCH.md`. Previous ENGINEERING_LOG.md remains unchanged as an exact prefix. Remediation and adversarial recheck must be separate commits with exact-head CI.
+
+
+## 2026-11-21 — W42 baseline RED observed, scoped POSIX/Windows in-place-content guard candidate
+
+- Baseline W42 diagnostic commit `9b25eee8757ebdaf1b6355cb3ed7c360df6eb5ba`. [PR CI 44942236535](https://github.com/SepehrGhanbari/Ario/actions/runs/44942236535): Linux two-native-read torn JSONL led to expected failure `W42_VERIFIED_RED_POSIX`; Windows confirmed a live writer-handle conflict accepted (xfail) and **1 actual failure** when a new writer opened during native `ReadFile`. This RED CI is intentionally retained as evidence; not described as PASS.
+- Correction changes only `research/w38_receipt_fd_guard.py` POSIX byte acquisition and `research/w41_windows_root_relative.py` leaf share mode, plus this append-only log and W42 notes. New W42 tests remain byte-for-byte unchanged from RED.
+- POSIX now takes pre/mid/post fstat fingerprints and two identical reads from the same held FD; any detectable mutation returns `CONCURRENT_MODIFICATION_DETECTED`. Windows NtCreateFile leaf uses `FILE_SHARE_READ`, while directory ancestors retain share-all for W39. No historical event, real key, signer, trust, Genesis, memory or production paths touched.
+- Cross-platform GREEN and current-head full CI must be verified separately. Not guaranteed: uncooperative privileged writes, ABA/timestamp spoofing, memory-mapped changes, remote volume semantics, external witness provenance, or atomic history.
+
+
+## 2026-11-21 — W42 native Linux+Windows synthetic in-place RED→GREEN exact-head evidence
+
+- Baseline RED head `9b25eee8757ebdaf1b6355cb3ed7c360df6eb5ba`: [CI 44942236535](https://github.com/SepehrGhanbari/Ario/actions/runs/44942236535). Linux **1656 passed, 7 skipped, 1 xfailed, 273 subtests** (W42_VERIFIED_RED_POSIX torn JSONL accepted); Windows **1 failed, 1654 passed, 8 skipped, 1 xfailed, 273 subtests** (writer opened during native ReadFile; preexisting writer open also accepted). Historical CI failure retained as reproducible negative evidence.
+- Bounded correction head `174bcec886139fe86475916994dfb9dea55a6571`: [CI 44942451503](https://github.com/SepehrGhanbari/Ario/actions/runs/44942451503) **SUCCESS** Linux 1657 passed/7 skipped/2 warnings/273 subtests; Windows 1656 passed/8 skipped/2 warnings/273 subtests; CPython 3.14 1657 passed/7 skipped/2 warnings/273 subtests. Both W42 negative controls now PASS without test source edits (Git test blob `3f5ad1e2eab028fdd9ec9ef79d010725621f1c26` unchanged).
+- The fix monitors POSIX fstat identity, size, mtime/ctime and two read images, and uses Windows leaf SHARE_READ to refuse normal competing writers. These narrow tests DO NOT prove atomicity for arbitrary in-place or privileged/mapped writes or historical event truth, freshness, memory admission, signer or trust authority. Old log prefix and original RED code/tests remain in Git history.
+- No unrelated code, parser, real event ledger, memory, signature pin, governance or production changes. Follow-up must check exact final-head CI and TXT security workflows before research-only merge.
