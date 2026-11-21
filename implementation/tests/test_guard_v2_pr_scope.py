@@ -136,6 +136,12 @@ def test_missing_app_check_fails():
     assert out["reason"] == "MISSING_OR_AMBIGUOUS_APP_CHECK"
 
 
+@pytest.mark.parametrize("malformed_id", [float(guard.APP_ID), True, str(guard.APP_ID)])
+def test_app_id_requires_exact_json_integer(malformed_id):
+    out = do(checks=lambda x: x["check_runs"][0]["app"].update(id=malformed_id))
+    assert out["reason"] == "MISSING_OR_AMBIGUOUS_APP_CHECK"
+
+
 @pytest.mark.parametrize("conclusion", ["skipped", "neutral", "failure", "cancelled", None])
 def test_non_success_check_fails(conclusion):
     out = do(checks=lambda x: x["check_runs"][0].update(conclusion=conclusion))

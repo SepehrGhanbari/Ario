@@ -29,3 +29,7 @@ This code does not fetch GitHub directly; its pin, two captures and review diges
 **Before any operational activation:** implement a separately running, source-pinned evaluator and founder-authorized PR-specific merge broker with authenticated live GitHub reads, complete raw records, protected retained observations, exact repo/PR/HEAD/BASE binding, and immediate pre-action reread with no blind retry after an uncertain write. Falsify again with same-SHA PRs, mutable reviews, crash/partition windows, and adversarial workflows. Do **not** assume another required Check alone fixes the shared-SHA problem.
 
 **No new human reviewer is required for this synthetic research.** No change to existing Ario main rulesets, owner authority, signer, Genesis or Trust.
+
+## 4. Append-only follow-up falsifier: App-ID numeric alias (2026-11-21)
+
+After the initial 32/32 local PASS, an additional adversarial Python/JSON probe showed that a fake Check with float App ID **5747504.0** was incorrectly treated as the integer App ID **5747504**: original classifier yielded **REVIEWABLE_ONLY** (RED). This is a schema-type weakness, not proof an attacker can impersonate a genuine GitHub App over authenticated API. The tightened matcher now requires a *positive exact Python integer* App ID, rejecting float/string/boolean aliases. Three new parameterized tests and the original 32 checks passed locally: **35/35 GREEN**. Prior committed RED code is preserved in Git history. All authority booleans remain false; no runtime or rule activation.

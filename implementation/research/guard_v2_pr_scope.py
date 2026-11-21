@@ -156,7 +156,7 @@ def assess(pin: dict, first: dict, last: dict, check_capture: dict,
                 and len(set(ids)) == len(ids), "INVALID_CHECK_IDS")
         matching = [c for c in checks if c.get("name") == CHECK_NAME
                     and isinstance(c.get("app"), dict)
-                    and c["app"].get("id") == APP_ID]
+                    and positive(c["app"].get("id")) and c["app"]["id"] == APP_ID]
         require(len(matching) == 1, "MISSING_OR_AMBIGUOUS_APP_CHECK")
         check = matching[0]
         require(check.get("head_sha") == pin["head_sha"]
