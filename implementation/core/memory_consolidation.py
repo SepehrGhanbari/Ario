@@ -318,19 +318,49 @@ class ConsolidationEngine:
         return self.ingest_event_stream(events)
 
     def ingest_event_stream(self, events: Iterable[Tuple[str, Dict[str, Any]]]) -> int:
+        """In-memory all-or-nothing batch; not a durable filesystem transaction.
+
+        Preserve the previous graph, hashes and lineage if a later item is
+        malformed, a claimed hash is reused with different data, or one
+        consolidation step fails. A failure must not silently admit a prefix.
+        """
+        previous = (
+            self._nodes,
+            self._legacy_aliases,
+            self._links,
+            self._ledger_hashes,
+            self._event_payload_digests,
+        )
+        # SemanticNode and CausalLink values are frozen; copy mutable indexes.
+        self._nodes = self._nodes.copy()
+        self._legacy_aliases = self._legacy_aliases.copy()
+        self._links = self._links.copy()
+        self._ledger_hashes = self._ledger_hashes.copy()
+        self._event_payload_digests = self._event_payload_digests.copy()
         count = 0
-        for h, ev in events:
-            if not isinstance(h, str) or len(h) != 64 or any(c not in "0123456789abcdef" for c in h.lower()):
-                raise ConsolidationError(f"invalid event sha256 hash: {h}")
-            digest = hashlib.sha256(json.dumps(ev, sort_keys=True, default=str).encode("utf-8")).hexdigest()
-            if h in self._event_payload_digests:
-                if self._event_payload_digests[h] != digest:
-                    raise ConsolidationError("HOLD_REUSED_HASH_DIFFERENT_EVENT_PAYLOAD")
-                continue  # Retry, not a new event or corroboration.
-            self._process_raw_event(h, ev)
-            self._event_payload_digests[h] = digest
-            self._ledger_hashes.add(h)
-            count += 1
+        try:
+            for h, ev in events:
+                if not isinstance(h, str) or len(h) != 64 or any(c not in "0123456789abcdef" for c in h.lower()):
+                    raise ConsolidationError(f"invalid event sha256 hash: {h}")
+                if not isinstance(ev, dict):
+                    raise ConsolidationError("HOLD_EVENT_MUST_BE_JSON_OBJECT")
+                try:
+                    encoded = json.dumps(ev, sort_keys=True, allow_nan=False).encode("utf-8")
+                except (TypeError, ValueError, OverflowError) as exc:
+                    raise ConsolidationError("HOLD_EVENT_NOT_JSON_SERIALIZABLE") from exc
+                digest = hashlib.sha256(encoded).hexdigest()
+                if h in self._event_payload_digests:
+                    if self._event_payload_digests[h] != digest:
+                        raise ConsolidationError("HOLD_REUSED_HASH_DIFFERENT_EVENT_PAYLOAD")
+                    continue  # Retry is not a new source.
+                self._process_raw_event(h, ev)
+                self._event_payload_digests[h] = digest
+                self._ledger_hashes.add(h)
+                count += 1
+        except Exception:
+            (self._nodes, self._legacy_aliases, self._links,
+             self._ledger_hashes, self._event_payload_digests) = previous
+            raise
         return count
 
     def _process_raw_event(self, event_hash: str, event: Dict[str, Any]) -> None:
