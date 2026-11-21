@@ -11,6 +11,8 @@ import hashlib
 import json
 from pathlib import Path
 
+from research.w38_receipt_fd_guard import read_bounded_regular
+
 from ledger_observation_adapter import observe_ledger
 from ledger_audit_bridge import verify_observation_manifest
 from research.w36_pinned_sigsum_v0_1 import (
@@ -37,17 +39,6 @@ FILES = {
     'pub': ('w35-lab-submitter.pub', 4096),
     'policy': ('sigsum-test1-2025.policy', 16*1024),
 }
-
-
-def read_bounded_regular(path: Path, max_bytes: int) -> bytes:
-    # Deliberately fail closed for symlinks and oversized/unreadable input files.
-    if path.is_symlink() or not path.is_file():
-        raise ValueError('REFUSED_NON_REGULAR_OR_SYMLINK')
-    with path.open('rb') as fp:
-        data = fp.read(max_bytes + 1)
-    if len(data) > max_bytes:
-        raise ValueError('INPUT_SIZE_LIMIT')
-    return data
 
 
 def restore_pinned_checkout_bytes(key: str, raw: bytes) -> tuple[bytes, bool]:

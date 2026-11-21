@@ -603,3 +603,13 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - **Preservation:** This `ENGINEERING_LOG.md` addition is append-only, with prior Git blob `90bba2f17e221c7dc25fdd41de82607092819dd2` preserved as an unchanged prefix. Prior independent reviews and RED runs remain accessible from Git history and PR comments. No force-push, branch history rewrite or real-key use.
 - **Decision point:** The only specifically reproduced blocking defect in the most recent review now has a minimal regression-tested fix. Any research-only merge decision must stay explicitly separate from `TRUST_ACTIVATION`, `GENESIS`, `PRODUCTION`, actual historical event authenticity, and security-hardware custody.
 
+
+
+## 2026-11-21 — W38 receipt path TOCTOU controlled RED and candidate guard (RESEARCH_ONLY / DRAFT)
+
+- **Base:** \`main\` \`c7088b69d170df09fa196a1ac1adc7d84e444752\` and original W37 source blob \`180e8fa86297a832acfa84c110197efc6fc26f55\`. Existing W37 checked \`Path.is_symlink()\`/\`Path.is_file()\` then separately \`Path.open()\`.
+- **Controlled synthetic RED:** an attacker-substituted symlink inserted at the \`Path.open()\` call after the prior path checks caused the **old reader** to read the temporary outside file's bytes \`b'outside-secret'\`. This experiment does not prove disclosure of production data or trust activation.
+- **Candidate change scope:** W37 imports the new \`research/w38_receipt_fd_guard.py\` reader; add \`tests/test_w38_receipt_fd_guard_v0_1.py\` and \`W38_RECEIPT_PATH_HARDENING_RESEARCH_V0_1.md\`. No other W37 data fields, signer, ledger, memory or authority paths touched.
+- **Local isolated Linux validation:** \`PYTHONPATH=/mnt/data/w38/implementation python -m pytest -q /mnt/data/w38/implementation/tests/test_w38_receipt_fd_guard_v0_1.py\` => **15 passed**. Exact two injected \`os.open\` symlink races (leaf and parent) rejected in the candidate. Baseline synthetic ordinary/CRLF bytes and exact capacity preserved. This does not establish complete security.
+- **Platform boundary:** POSIX uses descriptor-relative O_NOFOLLOW for directory components and leaf. Windows uses native \`CreateFileW\` with no-follow final leaf, opened-handle attribute and final-path checks. **Windows was not tested in the Linux scratch**, and concurrent ancestor swap races, hardlink provenance, and ledger observer races remain not proved closed.
+- **Research-only obligations:** run GitHub exact-head Linux/Windows CI and independent adversarial source review; do not merge research until the candidate has evidence. Keep all previous engineering log bytes as an exact prefix, no force-push and no source history rewrite. Trust, Genesis, signer and production remain NO_GO.
