@@ -266,8 +266,8 @@ class W37Tests(unittest.TestCase):
     def test_33_windows_crlf_checkout_restores_only_exact_pinned_bytes(self):
         for name,_ in FILES.values():
             p=self.root/name
-            p.write_bytes(p.read_bytes().replace(b'\n',b'\r\n'))
-        self.ledger.write_bytes(self.ledger.read_bytes().replace(b'\n',b'\r\n'))
+            p.write_bytes(p.read_bytes().replace(b'\r\n',b'\n').replace(b'\n',b'\r\n'))
+        self.ledger.write_bytes(self.ledger.read_bytes().replace(b'\r\n',b'\n').replace(b'\n',b'\r\n'))
         r=observe_pair(self.ledger,w36_inputs=self.root)
         self.assertEqual(r['result'],'SEPARATE_VALID_OBSERVATIONS')
         self.assertEqual(r['receipt_status'],'VERIFIED_SYNTHETIC_INCLUSION')
@@ -278,7 +278,7 @@ class W37Tests(unittest.TestCase):
     def test_34_crlf_with_extra_byte_is_not_restored(self):
         for name,_ in FILES.values():
             p=self.root/name
-            p.write_bytes(p.read_bytes().replace(b'\n',b'\r\n'))
+            p.write_bytes(p.read_bytes().replace(b'\r\n',b'\n').replace(b'\n',b'\r\n'))
         proof=self.root/'checkpoint.PUBLIC_SYNTHETIC.json.proof'
         proof.write_bytes(proof.read_bytes()+b'X')
         r=observe_pair(self.ledger,w36_inputs=self.root)
@@ -289,7 +289,7 @@ class W37Tests(unittest.TestCase):
     def test_35_crlf_modified_policy_must_fail_closed(self):
         for name,_ in FILES.values():
             p=self.root/name
-            p.write_bytes(p.read_bytes().replace(b'\n',b'\r\n'))
+            p.write_bytes(p.read_bytes().replace(b'\r\n',b'\n').replace(b'\n',b'\r\n'))
         policy=self.root/'sigsum-test1-2025.policy'
         policy.write_bytes(policy.read_bytes()+b'X')
         r=observe_pair(self.ledger,w36_inputs=self.root)
