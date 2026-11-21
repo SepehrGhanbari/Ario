@@ -160,27 +160,35 @@ try {
     $serverResult=WaitActor $serv
     Say 'G4_STAGE=SERVER_COMPLETED'
     $observations['client_replies']=[ordered]@{positive=$admitted;duplicate=$duplicate;rogue_claimed_reader=$denied;admin_claimed_reader=$adminDenied}
+    Say 'G4_STAGE=CLIENT_RESPONSES_STORED'
     Need ($admitted -eq ($readerSid+'|RESERVED_ONLY_NO_SIGN')) 'VALID_PEER_COULD_NOT_RESERVE'
     Need ($duplicate -eq ($readerSid+'|ALREADY_RESERVED_NO_APPEND')) 'VALID_PEER_DUPLICATE_NOT_DETECTED'
     Need ($denied -eq ($rogueSid+'|HOLD_PEER_IDENTITY')) 'ROGUE_SID_SPOOF_NOT_REJECTED'
     Need ($adminDenied -eq ($current.User.Value+'|HOLD_PEER_IDENTITY')) 'ADMIN_PEER_NOT_REJECTED'
     Need ($serverResult -eq ($writerSid+'|G4_PIPE_GATE_COMPLETED')) 'SERVER_NOT_COMPLETE'
+    Say 'G4_STAGE=CLIENT_RESPONSES_ASSERTED'
     $serverLines=@(Get-Content $logFile)
+    Say 'G4_STAGE=SERVER_PEER_LOG_LOADED'
     Need ((@($serverLines|Where-Object{$_ -eq 'ALLOW_COUNT=2'})).Count -eq 1) 'SERVER_ALLOW_COUNT_WRONG'
     Need ((@($serverLines|Where-Object{$_ -eq 'DENY_COUNT=2'})).Count -eq 1) 'SERVER_DENY_COUNT_WRONG'
     Need ((@($serverLines|Where-Object{$_ -eq 'CLIENT_2_SID='+$rogueSid})).Count -eq 1) 'SERVER_NOT_OBSERVING_ACTUAL_ROGUE_SID'
     Need ((@($serverLines|Where-Object{$_ -eq 'CLIENT_3_SID='+$current.User.Value})).Count -eq 1) 'SERVER_NOT_OBSERVING_ACTUAL_ADMIN_SID'
+    Say 'G4_STAGE=SERVER_LOG_ASSERTED'
     $state=& $python -I -B $journalPy --inspect $journal
+    Say 'G4_STAGE=JOURNAL_INSPECTED'
     Need ($LASTEXITCODE -eq 0) 'AFTER_JOURNAL_INSPECT_FAILED'
     $observations['journal']=(ConvertFrom-Json -InputObject ($state|Out-String))
     Need ($observations['journal'].coherent -and $observations['journal'].v2_events -eq 3 -and $observations['journal'].v1_rows -eq 3) 'JOURNAL_NOT_EXACTLY_ONE_APPEND'
+    Say 'G4_STAGE=DIRECT_PROBE_STARTING'
     $direct=WaitActor (StartActor $creds[1] 'reader-direct' 'Direct' $readerSid '' '' '' '')
+    Say 'G4_STAGE=DIRECT_PROBE_COMPLETED'
     $directObj=ConvertFrom-Json $direct
     Need ($directObj.results.'append_v1.jsonl' -eq 'ACCESS_DENIED' -and $directObj.results.'append_v2.jsonl' -eq 'ACCESS_DENIED') 'READER_DIRECT_WRITE_NOT_DENIED'
     $post=& $python -I -B $journalPy --inspect $journal
     Need ($LASTEXITCODE -eq 0) 'AFTER_DIRECT_INSPECT_FAILED'
     Need (($post|Out-String).Trim() -eq ($state|Out-String).Trim()) 'DIRECT_WRITE_MODIFIED_JOURNALS'
     $observations['direct_probe']=$directObj
+    Say 'G4_STAGE=DIRECT_POST_STATE_ASSERTED'
     $observations['server_readback']=$serverLines
     $observations['dacl']=@(& icacls.exe $journal)
     # Retain raw authorized records + OS-peer log before ephemeral cleanup.
@@ -190,6 +198,7 @@ try {
         Copy-Item -LiteralPath $src -Destination (Join-Path $evidenceDir $file) -ErrorAction Stop
     }
     $observations['result']='PASS_SYNTHETIC_PEER_SID'
+    Say 'G4_STAGE=RAW_DATA_READY_FOR_EVIDENCE'
     $allowCapture=$true
     Say 'G4_OS_PEER_SID_ON_PIPE=PASS'
     Say 'G4_FORGED_PAYLOAD_SID_REJECTED=PASS'
@@ -202,9 +211,11 @@ try {
     Say ('G4_HOLD='+$_.Exception.Message)
     throw
 } finally {
+    Say 'G4_STAGE=EPHEMERAL_CLEANUP_STARTING'
     foreach($p in $children){
         if($null -ne $p.process -and -not $p.process.HasExited){try{$p.process.Kill()}catch{}}
     }
+    Say 'G4_STAGE=CHILDREN_STOPPED'
     if ($allowCapture) {
         try {
             [IO.File]::WriteAllText((Join-Path $evidenceDir 'report-before-cleanup.json'),
@@ -222,9 +233,12 @@ try {
             Say ('G4_EVIDENCE_HOLD='+$_.Exception.Message)
         }
     }
+    Say 'G4_STAGE=EVIDENCE_EXPORT_ATTEMPTED'
     $clean=$true
     if(Test-Path $root){try{Remove-Item -LiteralPath $root -Recurse -Force}catch{$clean=$false}}
+    Say 'G4_STAGE=LAB_DIR_REMOVAL_ATTEMPTED'
     foreach($n in @($created)){try{Remove-LocalUser -Name $n -ErrorAction Stop}catch{$clean=$false}}
+    Say 'G4_STAGE=TEMP_ACCOUNT_REMOVAL_ATTEMPTED'
     foreach($n in @($created)){if(Get-LocalUser -Name $n -ErrorAction SilentlyContinue){$clean=$false}}
     if(Test-Path $root){$clean=$false}
     $observations['cleanup_verified']=$clean
