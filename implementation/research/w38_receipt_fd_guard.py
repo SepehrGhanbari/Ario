@@ -43,10 +43,23 @@ def _read_posix(path: Path, max_bytes: int) -> bytes:
                 raise UnsafeReceiptPath('REFUSED_NON_REGULAR_OR_SYMLINK')
             if info.st_size > max_bytes:
                 raise UnsafeReceiptPath('INPUT_SIZE_LIMIT')
-            data = stream.read(max_bytes + 1)
-        if len(data) > max_bytes:
-            raise UnsafeReceiptPath('INPUT_SIZE_LIMIT')
-        return data
+            # Two actual reads on the same held FD plus metadata checks catch
+            # tested same-inode modification during this bounded observation.
+            # This is NOT an atomic filesystem snapshot or origin guarantee.
+            fingerprint = lambda s: (s.st_dev, s.st_ino, s.st_size,
+                                     s.st_mtime_ns, s.st_ctime_ns)
+            first = stream.read(max_bytes + 1)
+            middle = os.fstat(stream.fileno())
+            if (fingerprint(info) != fingerprint(middle)
+                    or len(first) != info.st_size):
+                raise UnsafeReceiptPath('CONCURRENT_MODIFICATION_DETECTED')
+            stream.seek(0)
+            second = stream.read(max_bytes + 1)
+            last = os.fstat(stream.fileno())
+            if (fingerprint(info) != fingerprint(last)
+                    or len(second) != info.st_size or first != second):
+                raise UnsafeReceiptPath('CONCURRENT_MODIFICATION_DETECTED')
+            return first
     finally:
         os.close(directory_fd)
 

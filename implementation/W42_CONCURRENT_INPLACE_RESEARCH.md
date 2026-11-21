@@ -23,3 +23,15 @@ For Windows, keep the W41 held-parent `RootDirectory` algorithm, but reduce the 
 A passing focused suite plus exact-head full Linux/Windows/Python 3.14 CI is required. Cross-process shared memory/file mapping, kernel file-system filter writers, timestamp ABA/restoration, malicious privileged writes, and historical source provenance remain NOT_TESTED or NOT_ESTABLISHED.
 
 No code, signer, trust, genesis, identity, memory admission or production changes are authorized by a passing test.
+
+
+## Phase 2 — bounded correction candidate and unchanged RED probes
+
+The baseline W42 PR commit `9b25eee8757ebdaf1b6355cb3ed7c360df6eb5ba` is the unmodified W38/W41 runtime + newly added diagnostic tests. On real GitHub CI (run 44942236535), the Linux tests observed a torn JSONL and recorded `W42_VERIFIED_RED_POSIX` as an xfail, while Windows recorded a pre-existing-writer xfail and **failed** `test_windows_new_writer_blocked_while_leaf_handle_held` because a competing writer opened during the held leaf `ReadFile` operation. This is a real negative-control failure, not an authorization bypass.
+
+The correction in the following commit leaves those tests **byte-for-byte identical**:
+- POSIX `_read_posix` now checks `fstat` identity/size/write/change times both after the first read and after a second read on the same opened FD. The two reads must agree byte-for-byte. Otherwise fail closed with `CONCURRENT_MODIFICATION_DETECTED`. This detects the tested two-read write window but cannot guarantee absence of all races (ABA, malicious timestamp manipulation, unsupported mounts).
+- Windows W41 `NtCreateFile` restricts **only the final regular leaf** to `FILE_SHARE_READ`. It fails when an existing writer is incompatible and blocks a newly opened writer that requests write access during the reader-handle lifetime. Existing directory HANDLE sharing remains unchanged, preserving the W39 rename replay.
+- All outcomes remain research-only. The observer maps unsafe reads to UNKNOWN; valid W35 pins, ledger event parser, and downstream epistemic states are not modified. Mandatory exact-head Windows+Linux full CI and targeted mutation replay still apply.
+
+Residual limitations: preexisting writable memory maps and file-system filter writes may not obey ordinary sharing; POSIX uncooperative writers can perform ABA between checks; this is **not proof of globally atomic disk content**, a stable event chronology, external freshness, or source custody.

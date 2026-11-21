@@ -669,3 +669,11 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - Base `d60688c68a746a48881897050adb7c7063d6c6aa`. Original W38 POSIX reader and W41 Windows handle-based reader untouched in this first diagnostic commit.
 - New native experiments: POSIX `os.read` old-prefix/new-suffix torn JSONL on a single original file identity; Windows existing writer handle and a writer-open attempt inside native ReadFile. Intentional xfail labels denote **verified baseline weakness**, not security success. All bytes are public synthetic, files are temporary; no real ledger or signer touched.
 - Source contract and research goals in `implementation/W42_CONCURRENT_INPLACE_RESEARCH.md`. Previous ENGINEERING_LOG.md remains unchanged as an exact prefix. Remediation and adversarial recheck must be separate commits with exact-head CI.
+
+
+## 2026-11-21 — W42 baseline RED observed, scoped POSIX/Windows in-place-content guard candidate
+
+- Baseline W42 diagnostic commit `9b25eee8757ebdaf1b6355cb3ed7c360df6eb5ba`. [PR CI 44942236535](https://github.com/SepehrGhanbari/Ario/actions/runs/44942236535): Linux two-native-read torn JSONL led to expected failure `W42_VERIFIED_RED_POSIX`; Windows confirmed a live writer-handle conflict accepted (xfail) and **1 actual failure** when a new writer opened during native `ReadFile`. This RED CI is intentionally retained as evidence; not described as PASS.
+- Correction changes only `research/w38_receipt_fd_guard.py` POSIX byte acquisition and `research/w41_windows_root_relative.py` leaf share mode, plus this append-only log and W42 notes. New W42 tests remain byte-for-byte unchanged from RED.
+- POSIX now takes pre/mid/post fstat fingerprints and two identical reads from the same held FD; any detectable mutation returns `CONCURRENT_MODIFICATION_DETECTED`. Windows NtCreateFile leaf uses `FILE_SHARE_READ`, while directory ancestors retain share-all for W39. No historical event, real key, signer, trust, Genesis, memory or production paths touched.
+- Cross-platform GREEN and current-head full CI must be verified separately. Not guaranteed: uncooperative privileged writes, ABA/timestamp spoofing, memory-mapped changes, remote volume semantics, external witness provenance, or atomic history.
