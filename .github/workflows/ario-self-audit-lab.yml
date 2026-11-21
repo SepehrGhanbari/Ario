@@ -36,3 +36,4 @@ jobs:
           tests/test_guard_v2_live_link.py
           tests/test_guard_v2_review_graph.py
           tests/test_guard_v2_workflow_token_boundary.py
+          tests/test_guard_v2_manual_workflow_report.py
