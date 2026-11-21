@@ -9,9 +9,9 @@ atexit.register(shutil.rmtree,OUT,ignore_errors=True)
 def g(*args):return subprocess.check_output(["git","-C",str(SRC),*args])
 def hash256(b):return hashlib.sha256(b).hexdigest()
 sha=g("rev-parse","HEAD").decode().strip()
-assert re.fullmatch("[0-9a-f]{40}",sha)
-tree=g("rev-parse","HEAD^{tree}").decode().strip()
-date=g("show","-s","--format=%cI","HEAD").decode().strip()
+if not re.fullmatch("[0-9a-f]{40}",sha):raise ValueError("invalid source commit")
+tree=g("rev-parse",sha+"^{tree}").decode().strip()
+date=g("show","-s","--format=%cI",sha).decode().strip()
 rec=[]
 RESERVED={"CON","PRN","AUX","NUL","CONIN$","CONOUT$","COM¹","COM²","COM³","LPT¹","LPT²","LPT³",*(f"COM{i}" for i in range(1,10)),*(f"LPT{i}" for i in range(1,10))}
 MAX_FILES=10000
@@ -40,7 +40,7 @@ def validate_portable_path(name):
       or any(ord(ch)<32 or ch in '<>"|?*' for ch in part)
       or device_base in RESERVED):raise ValueError("unsafe or non-portable path")
  return p
-for item in g("ls-tree","-r","-z","--full-tree","HEAD").split(b"\x00"):
+for item in g("ls-tree","-r","-z","--full-tree",sha).split(b"\x00"):
  if not item:continue
  h,path=item.split(b"\t",1)
  mode,typ,oid=h.decode().split()
@@ -129,36 +129,27 @@ with zipfile.ZipFile(zp,"w",compression=zipfile.ZIP_DEFLATED,compresslevel=9,all
  for x in ["ario-manifest.json","README-EXPORT.txt","RESTORE_FROM_TXT.py","VERIFY_PINNED_MANIFEST.py"]:z.writestr(info("EXPORT_META/"+x,"100644"),(OUT/x).read_bytes())
 # Full archive verification against original Git blobs, not just ZIP CRC.
 with zipfile.ZipFile(zp) as z:
- assert z.testzip() is None
- names={x.filename.removeprefix("ARIO_SOURCE/") for x in z.infolist() if x.filename.startswith("ARIO_SOURCE/")}
- assert names=={e["path"] for e,_ in rec}
- for e,raw in rec:assert z.read("ARIO_SOURCE/"+e["path"])==raw,e["path"]
- assert z.read("EXPORT_META/ario-manifest.json")==m
-# Verify TXT record by record: exact byte reconstruction of ALL source files.
-with open(txt,"rb") as f:
- while f.readline()!=b"@@ARIO_BEGIN\n":pass
+ bad_member=z.testzip()
+ if bad_member is not None:raise ValueError("ZIP integrity check failed: "+bad_member)
+ names=[x.filename.removeprefix("ARIO_SOURCE/") for x in z.infolist() if x.filename.startswith("ARIO_SOURCE/")]
+ if len(names)!=len(rec) or set(names)!=seen_paths:raise ValueError("ZIP source path mismatch")
  for e,raw in rec:
-  h=f.readline()
-  assert h.startswith(b"@@ARIO_FILE "),e["path"]
-  obj=json.loads(h[12:])
-  assert obj["path"]==e["path"]
-  payload=f.read(obj["payload_bytes"])
-  assert len(payload)==obj["payload_bytes"]
-  assert f.readline()==b"\n" and f.readline()==b"@@ARIO_END\n"
-  restored=payload if obj["encoding"]=="raw-utf8" else base64.b64decode(payload)
-  assert restored==raw and hash256(restored)==obj["sha256"],e["path"]
- assert f.readline()==(f"@@ARIO_COMPLETE files={len(rec)} commit={sha} tree={tree} tracked_bytes={manifest['tracked_bytes']} manifest_sha256={hash256(m)}\n").encode()
- assert f.read()==b""
-# Exercise the actual published restore consumer, independently of the TXT parser above.
+  if z.read("ARIO_SOURCE/"+e["path"])!=raw:raise ValueError("ZIP source byte mismatch: "+e["path"])
+ if z.read("EXPORT_META/ario-manifest.json")!=m:raise ValueError("ZIP manifest mismatch")
+# Check the written TXT against the in-memory Git-derived manifest, then compare
+# the actual restored files to the blobs. This build-time pin checks consistency.
 sys.path.insert(0,str(R))
 from RESTORE_FROM_TXT_HARDENED import restore
+from verify_pinned_manifest import verify
+verify(txt,OUT/"ario-manifest.json",hash256(m))
 with tempfile.TemporaryDirectory(prefix="ario-restore-check-") as temp:
  restored_root=pathlib.Path(temp)/"restored"
  restore(txt,restored_root)
  for e,raw in rec:
   restored_file=restored_root/e["path"]
-  assert restored_file.read_bytes()==raw,e["path"]
-  if e["mode"]=="120000":assert restored_file.is_file() and not restored_file.is_symlink(),e["path"]
+  if restored_file.is_symlink() or not restored_file.is_file():
+   raise ValueError("restored path is not a regular file: "+e["path"])
+  if restored_file.read_bytes()!=raw:raise ValueError("restored source byte mismatch: "+e["path"])
 cs={"commit":sha,"git_tree":tree,"tracked_files":len(rec),"tracked_bytes":manifest["tracked_bytes"],"verification":"PASS: ZIP and TXT independently reconstructed all Git blobs and matched source SHA1/SHA256."}
 for x in ["ario-full.zip","ario-full.txt","ario-manifest.json","README-EXPORT.txt","RESTORE_FROM_TXT.py","VERIFY_PINNED_MANIFEST.py"]:
  b=(OUT/x).read_bytes();cs[x]={"bytes":len(b),"sha256":hash256(b)}

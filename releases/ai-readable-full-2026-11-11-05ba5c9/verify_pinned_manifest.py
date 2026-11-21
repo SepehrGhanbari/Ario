@@ -233,7 +233,11 @@ def verify(txt_path, manifest_path, expected_manifest_sha256):
             line = f.readline(RECORD_LINE_LIMIT + 1)
             require(line.startswith(b"@@ARIO_FILE ") and len(line) <= RECORD_LINE_LIMIT,
                     "invalid record boundary/size")
-            record = strict_json(line[len(b"@@ARIO_FILE "):].decode("utf-8"))
+            try:
+                record_text = line[len(b"@@ARIO_FILE "):].decode("utf-8")
+            except UnicodeDecodeError as exc:
+                raise VerificationError("record JSON is not valid UTF-8") from exc
+            record = strict_json(record_text)
             require(isinstance(record, dict), "record object expected")
             for field in ("path", "mode", "git_blob_sha1", "sha256", "bytes", "encoding"):
                 require(record.get(field) == item[field], "TXT record/manifest metadata mismatch: " + field)
