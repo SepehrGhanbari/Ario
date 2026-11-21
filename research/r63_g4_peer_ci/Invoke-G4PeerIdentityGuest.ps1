@@ -35,7 +35,15 @@ $psExe=Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe
 $actor=Join-Path $PSScriptRoot 'Invoke-G4PipeActor.ps1'
 $journalPy=Join-Path $PSScriptRoot 'g4_journal.py'
 $sidecar=Join-Path $PSScriptRoot '..\r63_g3_witness_ci\spend_chain_v2.py'
-if ((Get-FileHash -Algorithm SHA256 -LiteralPath $sidecar).Hash.ToLowerInvariant() -cne
+function FileSHA256([string]$file) {
+    $hasher=[Security.Cryptography.SHA256]::Create()
+    try {
+        $bytes=[IO.File]::ReadAllBytes($file)
+        return ([BitConverter]::ToString($hasher.ComputeHash($bytes))).Replace('-','').ToLowerInvariant()
+    } finally { $hasher.Dispose() }
+}
+
+if ((FileSHA256 $sidecar) -cne
     'c61ea488b082a5f01e74bc84b85a60b2a522b5a7274ed41b6d7addee10b060cd') {
     throw 'EXACT_FROZEN_V9_V2_PIN_MISMATCH'
 }
@@ -56,12 +64,12 @@ $observations=[ordered]@{
     signer='NOT_EXECUTED';external_custody='NOT_ESTABLISHED'
     run_id=$runID;mode=$Mode;rpc_peer_token_auth='OS_IMPERSONATION_GATED'
     source_sha256=[ordered]@{
-        controller=(Get-FileHash -Algorithm SHA256 -LiteralPath $PSCommandPath).Hash.ToLowerInvariant()
-        pipe_gate=(Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $PSScriptRoot 'G4PipeGate.cs')).Hash.ToLowerInvariant()
-        actor=(Get-FileHash -Algorithm SHA256 -LiteralPath $actor).Hash.ToLowerInvariant()
-        journal=(Get-FileHash -Algorithm SHA256 -LiteralPath $journalPy).Hash.ToLowerInvariant()
-        token_launcher=(Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $PSScriptRoot 'launch_g4_actor.py')).Hash.ToLowerInvariant()
-        frozen_v9_v2=(Get-FileHash -Algorithm SHA256 -LiteralPath $sidecar).Hash.ToLowerInvariant()
+        controller=(FileSHA256 $PSCommandPath)
+        pipe_gate=(FileSHA256 (Join-Path $PSScriptRoot 'G4PipeGate.cs'))
+        actor=(FileSHA256 $actor)
+        journal=(FileSHA256 $journalPy)
+        token_launcher=(FileSHA256 (Join-Path $PSScriptRoot 'launch_g4_actor.py'))
+        frozen_v9_v2=(FileSHA256 $sidecar)
     }
 }
 function Need([bool]$ok,[string]$msg){if(-not $ok){throw $msg}}
