@@ -155,3 +155,105 @@ def test_manual_workflow_never_checks_out_target_pr_code():
     assert "ARIO_TRUSTED_READ_TOKEN: ${{ github.token }}" in source
     assert "pull_request.head" not in source
     assert "pull_request.merge" not in source
+
+
+# RED→GREEN real REST-class coverage: mock only urllib transport,
+# not GitHubReadOnly's exact path authorization or JSON decoding.
+class _NetworkResponse:
+    def __init__(self, obj):
+        import io
+        import json
+        from email.message import Message
+        encoded = json.dumps(obj, separators=(",", ":")).encode("utf-8")
+        self.stream = io.BytesIO(encoded)
+        self.status = 200
+        self.headers = Message()
+        self.headers["Content-Length"] = str(len(encoded))
+
+    def read(self, size=-1):
+        return self.stream.read(size)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.stream.close()
+        return False
+
+
+class _NetworkOpener:
+    def __init__(self, model):
+        self.model = model
+        self.calls = []
+
+    def open(self, request, timeout):
+        self.calls.append({"url": request.full_url,
+                           "method": request.get_method(),
+                           "timeout": timeout})
+        if request.full_url == manual.REPO_URL:
+            obj = self.model.repo
+        elif request.full_url == manual.rest.API + "/pulls/295":
+            obj = self.model.pr
+        else:
+            raise AssertionError("unexpected real-reader HTTP route")
+        return _NetworkResponse(obj)
+
+
+def test_real_reader_exact_repository_root_get_allowed_with_mock_transport():
+    real = manual.rest.GitHubReadOnly(token=None)
+    transport = _NetworkOpener(FakeRest())
+    real.opener = transport
+    assert real.get_json(manual.REPO_URL) == {"id": REPO_ID}
+    assert transport.calls == [{"url": manual.REPO_URL, "method": "GET", "timeout": 12}]
+
+
+def test_real_reader_rejects_all_but_exact_repo_root_and_original_allowlist():
+    import pytest
+    reader = manual.rest.GitHubReadOnly(token=None)
+    transport = _NetworkOpener(FakeRest())
+    reader.opener = transport
+    for path in (manual.REPO_URL + "/", manual.REPO_URL + "?x=1",
+                 manual.REPO_URL + "/../../users/me",
+                 manual.REPO_URL + "/issues/1",
+                 "https://api.github.com/repos/SepehrGhanbari/ArioEVIL"):
+        with pytest.raises(manual.rest.ReadUnknown):
+            reader.get_json(path)
+    assert transport.calls == []
+
+
+def test_real_rest_class_complete_guard_probe_reaches_graph_and_records_hold():
+    real = manual.rest.GitHubReadOnly(token=None)
+    transport = _NetworkOpener(FakeRest())
+    real.opener = transport
+    graph_reader = FakeGraphQL()
+    result = run(rest=real, graph=graph_reader)
+    assert result["review_graph_sample"] == "SAMPLED_STABLE_UNATTESTED"
+    assert result["reason"] == "PR_DRAFT_READ_ONLY_HOLD"
+    assert result["first_digest"] == result["second_digest"]
+    assert len(graph_reader.calls) == 6
+    assert [c["url"] for c in transport.calls] == [
+        manual.REPO_URL,
+        manual.rest.API + "/pulls/295",
+        manual.rest.API + "/pulls/295",
+    ]
+    assert all(c["method"] == "GET" for c in transport.calls)
+    assert result["merge_authorized"] is False
+
+
+def test_manual_cli_not_green_if_network_reader_never_reaches_graph(monkeypatch, capsys):
+    class _EarlyFailure:
+        def __init__(self, token):
+            pass
+        def get_json(self, url):
+            raise manual.rest.ReadUnknown("FORBIDDEN_HOST")
+
+    monkeypatch.setenv("ARIO_TRUSTED_READ_TOKEN", "synthetic-only")
+    monkeypatch.setattr(manual.rest, "GitHubReadOnly", _EarlyFailure)
+    monkeypatch.setattr(manual.graph, "ReadOnlyGraphQL", lambda token: FakeGraphQL())
+    status = manual.main(["--pr", "295", "--expected-head", HEAD,
+                          "--source-sha", SOURCE_SHA])
+    assert status != 0, "No-data HOLD cannot be a green manual job"
+    import json
+    result = json.loads(capsys.readouterr().out)
+    assert result["reason"] == "FORBIDDEN_HOST"
+    assert result["merge_authorized"] is False
