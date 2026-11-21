@@ -36,5 +36,40 @@ jobs:
           TMP: ${{ runner.temp }}
         run: python -B -m pytest -p no:cacheprovider -q -rxs tests/test_w44_external_pin.py
 
+  prior-w19-sigsum-proof:
+    name: Offline replay of previously archived W18/W19 Sigsum witness proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact earlier research archive (not latest mutable branch)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: SepehrGhanbari/Ario
+          ref: 33f193cdb68efdd7deff35b65db8c360378f87b5
+          path: previous-archive
+          persist-credentials: false
+      - name: Install pinned official Sigsum verifier for offline replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          go version
+          export GOBIN="$RUNNER_TEMP/w44-sigsum-bin"
+          mkdir -p "$GOBIN"
+          go install sigsum.org/sigsum-go/cmd/sigsum-verify@v0.14.1
+          test -x "$GOBIN/sigsum-verify"
+          echo "$GOBIN" >> "$GITHUB_PATH"
+      - name: Replay exact W19 two cross-operator policies (no publication)
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash previous-archive/research/consensus/w19_verify_cross_operator_existing_proof.sh
+          echo 'W44_PREEXISTING_W19_PROOF=OFFLINE_VERIFIED_FOR_PINNED_PUBLIC_SYNTHETIC_ARCHIVE'
+          echo 'W44_LATEST_ARIO_SEQ_HEAD=NOT_ESTABLISHED'
+          echo 'W44_EXTERNAL_MONOTONIC_FLOOR=NOT_ESTABLISHED'
+          echo 'W44_REAL_ARIO_CUSTODY=NOT_ESTABLISHED'
+          echo 'W44_PRODUCTION_TRUST_ACTIVATION=NO_GO'
+
+# This executes ONLY an already published old Sigsum receipt, without submission.
+# Replay from a pinned Git source proves neither admin separation nor latest Ario state.
 # Even passing controls cannot establish true external custodian independence.
 # Private keys used in tests are ephemeral and synthetic, never live Ario keys.
