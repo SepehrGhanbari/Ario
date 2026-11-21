@@ -10,6 +10,7 @@ Enforces founding epistemic invariants:
 
 from __future__ import annotations
 
+import copy
 import dataclasses
 import hashlib
 from datetime import datetime, timezone
@@ -194,10 +195,49 @@ class SourceMonitoringGuard:
     def __init__(self, allowlisted_tools: Optional[Set[str]] = None) -> None:
         self._allowlisted_tools = set(allowlisted_tools) if allowlisted_tools else set(ALLOWLISTED_TOOLS)
         self._attributions: Dict[str, SourceAttribution] = {}
+        # In-memory audit snapshots: NOT a persistent append-only journal.
+        self._revisions: Dict[str, List[SourceAttribution]] = {}
 
     @property
     def attributions(self) -> Dict[str, SourceAttribution]:
-        return dict(self._attributions)
+        return copy.deepcopy(self._attributions)
+
+    def attribution_history(self, attribution_id: str) -> Tuple[SourceAttribution, ...]:
+        """Read-only snapshots, including a disallowed promotion's recorded state."""
+        return tuple(copy.deepcopy(self._revisions.get(attribution_id, [])))
+
+    @staticmethod
+    def _basis(attr: SourceAttribution) -> Dict[str, Any]:
+        """Compare stable data; retries with new observation times are not new sources."""
+        value = attr.to_dict()
+        value.pop("created_at", None)
+        if "provenance" in value:
+            value["provenance"].pop("recorded_at", None)
+        return value
+
+    def _register(self, attr: SourceAttribution) -> SourceAttribution:
+        """Never replace an existing identity with different claim/source data."""
+        old = self._attributions.get(attr.attribution_id)
+        if old is not None:
+            if self._basis(old) == self._basis(attr):
+                return copy.deepcopy(old)
+            raise SourceMonitoringError(
+                f"ATTRIBUTION_ID_COLLISION: {attr.attribution_id} already names a different source"
+            )
+        stored = copy.deepcopy(attr)
+        self._attributions[stored.attribution_id] = stored
+        self._revisions[stored.attribution_id] = [copy.deepcopy(stored)]
+        return copy.deepcopy(stored)
+
+    def _revise(self, attr: SourceAttribution) -> SourceAttribution:
+        if attr.attribution_id not in self._attributions:
+            raise SourceMonitoringError("HOLD_UNREGISTERED_REVISION")
+        # Changes in epistemic status are explicit in-memory revisions, not erasure.
+        stored = copy.deepcopy(attr)
+        if stored != self._attributions[attr.attribution_id]:
+            self._attributions[attr.attribution_id] = stored
+            self._revisions[attr.attribution_id].append(copy.deepcopy(stored))
+        return copy.deepcopy(self._attributions[attr.attribution_id])
 
     def create_hypothesis(
         self,
@@ -217,8 +257,7 @@ class SourceMonitoringGuard:
             parent_attribution_ids=tuple(parent_attribution_ids),
             falsification_condition=falsification_condition,
         )
-        self._attributions[attr.attribution_id] = attr
-        return attr
+        return self._register(attr)
 
     def create_external_testimony(
         self,
@@ -237,8 +276,7 @@ class SourceMonitoringGuard:
             parent_attribution_ids=(),
             falsification_condition=falsification_condition,
         )
-        self._attributions[attr.attribution_id] = attr
-        return attr
+        return self._register(attr)
 
     def record_empirical_observation(
         self,
@@ -262,7 +300,10 @@ class SourceMonitoringGuard:
 
         # Verification of execution lock integrity
         if expected_execution_lock_sha256 and expected_execution_lock_sha256.lower() != actual_lock_hash.lower():
-            attr_id = attribution_id or f"ATTR-EMP-MISMATCH-{_sha256_hex(assertion)[:12]}"
+            attr_id = attribution_id or (
+                "ATTR-EMP-MISMATCH-LOCK-"
+                + _sha256_hex(assertion + actual_lock_hash + str(expected_execution_lock_sha256))[:16]
+            )
             prov = EmpiricalProvenance(
                 tool=tool,
                 target=target,
@@ -280,14 +321,17 @@ class SourceMonitoringGuard:
                 provenance=prov,
                 parent_attribution_ids=tuple(parent_attribution_ids),
             )
-            self._attributions[attr.attribution_id] = attr
+            self._register(attr)
             raise AttributionMismatchError(
                 f"T-SRC-02: execution lock mismatch (expected {expected_execution_lock_sha256}, got {actual_lock_hash})"
             )
 
         # Verification of stdout integrity
         if expected_stdout_sha256 and expected_stdout_sha256.lower() != actual_stdout_hash.lower():
-            attr_id = attribution_id or f"ATTR-EMP-MISMATCH-{_sha256_hex(assertion)[:12]}"
+            attr_id = attribution_id or (
+                "ATTR-EMP-MISMATCH-STDOUT-"
+                + _sha256_hex(assertion + actual_stdout_hash + str(expected_stdout_sha256))[:16]
+            )
             prov = EmpiricalProvenance(
                 tool=tool,
                 target=target,
@@ -305,12 +349,20 @@ class SourceMonitoringGuard:
                 provenance=prov,
                 parent_attribution_ids=tuple(parent_attribution_ids),
             )
-            self._attributions[attr.attribution_id] = attr
+            self._register(attr)
             raise AttributionMismatchError(
                 f"T-SRC-02: stdout hash mismatch (expected {expected_stdout_sha256}, got {actual_stdout_hash})"
             )
 
-        veracity = VeracityState.VERIFIED_EMPIRICAL if exit_code == 0 else VeracityState.UNSUPPORTED
+        # Cryptographic hashes bind self-reported bytes, NOT the semantic claim.
+        # This narrow canonical statement reports only the tool/target/exit fields.
+        # It does not prove that the caller is an independently trusted runner.
+        bound_assertion = f"tool_exit:{tool}:{target}:{exit_code}"
+        veracity = (
+            VeracityState.VERIFIED_EMPIRICAL
+            if exit_code == 0 and assertion == bound_assertion
+            else VeracityState.UNSUPPORTED
+        )
 
         prov = EmpiricalProvenance(
             tool=tool,
@@ -329,8 +381,7 @@ class SourceMonitoringGuard:
             provenance=prov,
             parent_attribution_ids=tuple(parent_attribution_ids),
         )
-        self._attributions[attr.attribution_id] = attr
-        return attr
+        return self._register(attr)
 
     def detect_circular_dependency(self, start_id: str) -> bool:
         """Detect if an attribution graph contains a self-citation cycle."""
@@ -391,12 +442,17 @@ class SourceMonitoringGuard:
             self._attributions[claim_id] = claim
             raise SelfCitationError(f"T-SRC-01: Circular citation loop detected involving '{claim_id}'")
 
-        # Invariant T-SRC-01: Must contain at least one EMPIRICAL_OBSERVATION with VERIFIED_EMPIRICAL
+        # Evidence supports only its own *narrowly bound* statement.
+        # Unrelated successful tests cannot verify a free-form natural-language claim.
+        # A separate externally authenticated semantic entailment contract is not available.
+        # In the research-only guard, exact matching is necessary but still not
+        # independently sufficient to establish external truth.
         has_verified_empirical = False
         for node in supporting_nodes:
             if (
                 node.source_type == SourceType.EMPIRICAL_OBSERVATION
                 and node.veracity_state == VeracityState.VERIFIED_EMPIRICAL
+                and node.assertion == claim.assertion
             ):
                 has_verified_empirical = True
                 break
@@ -408,7 +464,7 @@ class SourceMonitoringGuard:
                 veracity_state=VeracityState.UNSUPPORTED,
                 parent_attribution_ids=temp_parents,
             )
-            self._attributions[claim_id] = unsupported_claim
+            self._revise(unsupported_claim)
             raise SelfCitationError(
                 f"T-SRC-01: Anti-Self-Citation: claim '{claim_id}' cites only hypotheses/testimony "
                 "without an empirical observation and cannot promote to verified evidence."
@@ -420,8 +476,7 @@ class SourceMonitoringGuard:
             veracity_state=VeracityState.VERIFIED_EMPIRICAL,
             parent_attribution_ids=temp_parents,
         )
-        self._attributions[claim_id] = promoted
-        return promoted
+        return self._revise(promoted)
 
     def filter_working_memory_candidates(
         self,
