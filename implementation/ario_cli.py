@@ -158,6 +158,15 @@ def execute_request(payload):
     return result_to_dict(result)
 
 
+def _ascii_decimal_or_none(text):
+    # argparse's int() accepts " 5000", "+5000", "5_000" and non-ASCII digits.
+    if isinstance(text, int):
+        return text
+    if not (isinstance(text, str) and text.isascii() and text.isdigit()):
+        return None
+    return int(text)
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(
         description="Ario CLI: Deterministic M0 audit and cognitive memory conflict reporting."
@@ -186,7 +195,7 @@ def main(argv=None) -> int:
     )
     parser.add_argument(
         "--memory-max-events",
-        type=int,
+        type=str,
         default=4096,
         metavar="N",
         help="Explicit event ceiling for --memory-conflicts (default 4096; max 10000)",
@@ -211,7 +220,8 @@ def main(argv=None) -> int:
                 "detail": "--ledger path is required for --memory-conflicts",
             }, ensure_ascii=False, sort_keys=True), file=sys.stderr)
             return 2
-        if not 1 <= args.memory_max_events <= 10000:
+        max_events = _ascii_decimal_or_none(args.memory_max_events)
+        if max_events is None or not 1 <= max_events <= 10000:
             print(json.dumps({
                 "error": "INVALID_MEMORY_MAX_EVENTS",
                 "detail": "--memory-max-events must be an integer from 1 to 10000",
@@ -219,7 +229,7 @@ def main(argv=None) -> int:
             return 2
         try:
             from core.memory_consolidation import ConsolidationEngine
-            engine = ConsolidationEngine(max_batch_events=args.memory_max_events)
+            engine = ConsolidationEngine(max_batch_events=max_events)
             ledger_path = Path(args.ledger)
             if not ledger_path.exists():
                 print(json.dumps({

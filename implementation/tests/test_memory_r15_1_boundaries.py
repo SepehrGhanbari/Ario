@@ -94,6 +94,8 @@ def test_ledger_file_loader_stops_before_consuming_unbounded_lines(tmp_path, mon
             self.file.close()
         def __iter__(self):
             return self
+        def fileno(self):
+            return self.file.fileno()
         def __next__(self):
             seen[0] += 1
             if seen[0] > 4097:
