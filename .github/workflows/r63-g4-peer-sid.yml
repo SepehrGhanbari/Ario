@@ -1,0 +1,42 @@
+name: R63 G4 Windows authenticated named-pipe witness (synthetic only)
+on:
+  push:
+    branches:
+      - research/r63-g4-peer-sid-external-floor-20261121
+    paths:
+      - .github/workflows/r63-g4-peer-sid.yml
+      - research/r63_g4_peer_ci/**
+permissions:
+  contents: read
+jobs:
+  native-pipe-peer-token:
+    runs-on: windows-2022
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - name: Frozen V9-sidecar model positive and split hold checks
+        shell: pwsh
+        run: |
+          python -I -B research/r63_g4_peer_ci/g4_journal.py --self-test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Native Win32 peer identity and refused forged role
+        shell: pwsh
+        run: |
+          Write-Host 'RESEARCH_ONLY / NO_V9_SIGNER / NO_REAL_KEYS / NO_PRODUCTION'
+          & ./research/r63_g4_peer_ci/Invoke-G4PeerIdentityCI.ps1 *> r63-g4-run.log
+          $code=if($?){0}else{1}
+          Get-Content r63-g4-run.log
+          if($code -ne 0){exit $code}
+      - name: Archive complete RED and GREEN research evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r63-g4-peer-evidence
+          path: |
+            r63-g4-run.log
+            r63-g4-peer-report.json
+          if-no-files-found: warn
+          retention-days: 30
