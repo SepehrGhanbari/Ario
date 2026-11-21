@@ -43,3 +43,17 @@ Initial W43 head `2d9691ba2dbdd6b105ee6ed5109331cf0e664f20` in [Implementation R
 - Windows Python 3.13: **1658 passed / 9 skipped / 0 xfailed / 273 subtests**. The first version returned normally when the W41 open was refused before `ReadFile`; it lacked an explicit SKIP reason. This was changed to a named SKIP in a subsequent diagnostic commit to avoid misinterpreting the early rejection as a demonstrated safe held-handle read.
 
 **Initial evidence conclusion: `W43_POSIX_RED_REPRODUCED`, Windows outcome requires the focused explicit-reason replay.** No W43 mitigation has been proposed or integrated. The transient bytes are an ordinary untrusted local observation, not proved historical evidence or a signer authorization. This record is not a claim of bypassing cryptographically bound W35 receipts.
+
+## Phase 2 — dedicated real Linux/Windows negative-control replay
+
+The [W43 targeted GitHub Actions run 44944498255](https://github.com/SepehrGhanbari/Ario/actions/runs/44944498255) executed at source head `08a5ff47151d8468bd6957ae01dd0108420310c9` with explicit `pytest -q -rxs` output:
+
+- **Linux CPython 3.13:** `1 passed, 1 skipped, 1 xfailed`. Named `XFAIL tests/test_w43_mmap_aba.py::test_w43_posix_mmap_aba_torn_jsonl_not_silently_observed - W43_VERIFIED_RED_POSIX: mmap ABA admitted mixed JSONL despite matching before/mid/after fstat and repeat reads`.
+- **Windows CPython 3.13:** `1 passed, 2 skipped`. Named `W43_WINDOWS_READER_REJECTED_BEFORE_NATIVE_READFILE` for the preexisting writable-map case. This is an *early refusal* of the W41 open, **not** a completed read of a stable mapped file; no Windows bypass was shown by this specific replay.
+- The ordinary positive control passed on both platforms.
+
+**Current risk assessment:** the reproduced Linux observation path is not an atomic snapshot under preexisting shared memory mappings, even with twice-matching bytes and metadata. A mapping that cannot be opened under Windows share rules is a measured refusal, not evidence that all Windows mapped writers are impossible. Other OS/filesystem configurations, concurrent processes and privileged actors remain untested.
+
+**Mitigation research needed before merge:** demonstrate an immutable, separately-pinned input reference (or equivalent enforceable producer-side publish protocol) and reject any local observation that diverges from the independent expected digest. This would at most bind observed bytes to a previously pinned digest; it cannot by itself prove event truth, origin, freshness or custody. Test adversarial self-pin and stale-pin cases before making stronger claims.
+
+**Disposition:** `W43_POSIX_VERIFIED_RED` / `W43_WINDOWS_REFUSAL_OBSERVED` / `RESEARCH_ONLY` / `DRAFT_HOLD` / `NO_MERGE`.
