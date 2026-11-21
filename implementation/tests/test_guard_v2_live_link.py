@@ -256,6 +256,8 @@ def graph_for_guard_pr(before=None, after=None):
     result.repo_id = str(REPO)
     result.pr_id = str(PR14_ID)
     result.pr_number = 14
+    result.head = HEAD
+    result.base = BASE
     return result
 
 
