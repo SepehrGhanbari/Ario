@@ -278,13 +278,21 @@ def evaluate_floor(evidence: EvidenceObservation, data: dict, floor: dict|None) 
         return 'UNKNOWN_INVALID_PROOF'
     if floor is None:
         return 'NOT_CHECKED_NO_EXTERNAL_FLOOR'
-    if not floor.get('independently_retained',False):
+    if type(floor) is not dict:
+        return 'UNKNOWN_MALFORMED_FLOOR'
+    if floor.get('independently_retained') is not True:
         return 'UNKNOWN_SELF_REPORTED_FLOOR'
     if floor.get('scope') != EXPECTED_SCOPE:
         return 'UNKNOWN_FLOOR_SCOPE_MISMATCH'
-    if floor.get('size') == data['tree_size']:
+    # A signed tree-size is a positive integer no larger than 2**63.
+    # Exclude bool (a subclass of int), floats, numeric strings and objects
+    # *before* equality/order tests. Untrusted floors never authorize use.
+    floor_size = floor.get('size')
+    if type(floor_size) is not int or not (1 <= floor_size <= 2**63):
+        return 'UNKNOWN_MALFORMED_FLOOR_SIZE'
+    if floor_size == data['tree_size']:
         return 'MOCK_FLOOR_MATCH' if floor.get('root')==data['tree_root'] else 'UNKNOWN_SAME_SIZE_ROOT_CONFLICT'
-    if floor.get('size',0) > data['tree_size']:
+    if floor_size > data['tree_size']:
         return 'UNKNOWN_STALE_PROOF_RELATIVE_TO_FLOOR'
     return 'UNKNOWN_NEWER_HEAD_REQUIRES_CONSISTENCY_PROOF'
 
