@@ -1,4 +1,5 @@
-# CodeRabbit configuration for Ario.
+# CodeRabbit configuration for Ario (owner-requested quiet mode).
+# No automatic CodeRabbit reviews or skip/status comments desired.
 # Inherit existing central/UI settings rather than silently discard them.
 # No automatic PR approval, merge, signer, trust, or runtime authorization.
 inheritance: true
@@ -9,16 +10,22 @@ tone_instructions: >-
   model claims, hash matches or green CI as proof of identity, trust or authority.
 reviews:
   profile: assertive
-  high_level_summary: true
+  # Quiet mode: no automatic review/status-summary comments.
+  high_level_summary: false
+  review_status: false
+  commit_status: false
   poem: false
   request_changes_workflow: false
   auto_approvals:
     enabled: false
   auto_review:
-    enabled: true
-    drafts: true
-    auto_incremental_review: true
+    enabled: false
+    drafts: false
+    auto_incremental_review: false
     auto_pause_after_reviewed_commits: 0
+    # Exact owner PRs also skipped rather than generating a status comment.
+    ignore_usernames:
+      - "SepehrGhanbari"
   path_instructions:
     - path: "implementation/**"
       instructions: |
