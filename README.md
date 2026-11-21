@@ -14,6 +14,10 @@
 
 ## Latest verified research corpus / کامل‌ترین بستهٔ پژوهشی — 14 November 2026
 
+
+**New book release / انتشار تازهٔ کتاب — 18 November 2026:** [Being With the Other — complete 13-language v7.1 edition (Zenodo DOI 10.5281/zenodo.24343618)](https://doi.org/10.5281/zenodo.24343618). [Official GitHub publication index with direct language PDFs and file inventory](./papers/being-with-the-other/v7.1/zenodo-24343618/README.md). **Persian original; 12 full-text machine-translation drafts** (not professionally proofread). The philosophical book is separate from Ario's software tests and does not establish AI consciousness or production readiness. The author opposed sacralizing the founder or project; that suggestion originated with an AI assistant.
+
+
 **Zenodo official archive / آرشیو رسمی:** [DOI 10.5281/zenodo.24230572](https://doi.org/10.5281/zenodo.24230572) — v19, Dataset, published 14 November 2026. Four deposited assets match the archived Git originals; source commit a39ac06e69c1b5115bca2016698556730bf920cd. This DOI links to the same source snapshot, not a new separately validated study.
 
 **Newest release:** [Complete TXT (3.86 MB)](https://ario-research-independent.vercel.app/downloads/Ario-Latest.txt) · [Original PDF/source ZIP (16.87 MB)](https://ario-research-independent.vercel.app/downloads/Ario-Latest.zip) · [Dated TXT](https://ario-research-independent.vercel.app/downloads/Ario-Research-Complete-2026-11-14.txt) · [Dated ZIP](https://ario-research-independent.vercel.app/downloads/Ario-Research-Complete-2026-11-14.zip) · [Manifest, experiment coverage and SHA-256](https://github.com/SepehrGhanbari/Ario/tree/018fc52285c7c07c770e0894b734e7199f2110ac/releases/complete-research-2026-11-14-a39ac06e).
@@ -21,6 +25,10 @@
 Pinned Git source a39ac06e: 264 tracked paths checked; 230 full text/code files and 9 original binaries included, including full English/Persian book text layers and original illustrated PDFs, independent research papers, all 24 experiment and all 55 test files. Historical repository exports and superseded whole-book editions remain traceable in the source manifest.
 
 **Book provenance warning:** Zenodo record [Being With the Other](https://doi.org/10.5281/zenodo.23771218) calls itself Version 6; its deposited original PDF covers say Fifth Integrated Edition. The PDFs are retained unmodified and text has been extracted page-by-page, without inventing a different manuscript. [Published PDF originals and text extractions](https://github.com/SepehrGhanbari/Ario/tree/main/papers/being-with-the-other/v6/zenodo-published-originals).
+
+**Hugging Face research dataset / دیتاست پژوهشی Hugging Face:** [Ario — source-traceable research dataset](https://huggingface.co/datasets/ario-research/ario-research-corpus-discovery) — publicly available English/Persian, JSONL source records, code/test records, original-path inventory and provenance metadata. **Version boundary:** this dataset is based on the 12 November 2026 source snapshot (`3d7708b1`), **not** the newer 14 November 2026 complete Zenodo corpus above. Its availability does not imply independent scholarly validation.
+
+**Hugging Face agent reading guide / راهنمای عامل‌های هوش مصنوعی — 18 November 2026:** [Ario Agent Reading Guide v1](https://huggingface.co/datasets/ario-research/ario-agent-reading-guide-v1) — a small bilingual orientation dataset with 9 source-linked epistemic distinctions and 12 explicitly fictional scenarios (six English, six Persian). The Hugging Face Dataset Viewer exposes `principles/train` and `scenarios/train` (21 rows in total). **This guide is not the complete Ario source archive, an executed benchmark, a trained model, or evidence of production trust.** It does not replace the pinned 12 November research dataset or the 14 November Zenodo source archive.
 
 ## Previous verified source release / انتشار پیشین — 12 November 2026
 
