@@ -1,0 +1,34 @@
+name: R63 G4 one-time synthetic OpenTimestamps calendar receipt (not final)
+on:
+  push:
+    branches:
+      - research/r63-g4-peer-sid-external-floor-20261121
+    paths:
+      - .github/workflows/r63-g4-one-shot-external-calendar.yml
+permissions:
+  contents: read
+jobs:
+  one-time-synthetic-external-receipt:
+    if: contains(github.event.head_commit.message, 'R63-G4-OTS-ONE-SHOT')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - name: Public random synthetic digest only; reject missing calendar evidence
+        env:
+          R63_G4_ONE_TIME_PUBLIC_SYNTHETIC_ONLY: I_ACCEPT_PERMANENT_PUBLIC_RANDOM_DIGEST
+        run: |
+          python -B research/r63_g4_peer_ci/one_shot_ots_probe.py
+      - name: Preserve calendar response and explicit pending-verification metadata
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r63-g4-external-calendar-pending
+          path: |
+            r63-g4-ots-response.bin
+            r63-g4-ots-report.json
+          if-no-files-found: warn
+          retention-days: 90
