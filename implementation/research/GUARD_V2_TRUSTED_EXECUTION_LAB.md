@@ -47,3 +47,39 @@ A new **RED-only parent commit \`2d14aa04e809d4f3ba3cb77e6612273ec61ed425\`** ad
 The **GREEN** change allows **only** \`url == API\` as an extra REST GET, preserving original path/host restrictions and strict bounded JSON parsing. CLI now returns **2** whenever the graph was not completely sampled and the final live PR identity was not obtained. A fully sampled advisory still returns \`HOLD\` with all authority bits false; its exit **0 denotes read completion, NOT merge safety**. No check publication, mutation or trusted source activation.
 
 Test evidence must be pinned to exact HEAD; the staged manual workflow still exists **only in Draft #295**, not on \`main\`, and is not live. The GraphQL client itself was not provided a privileged token. The later test against GitHub with main-sourced code and a read-scoped token remains separately required.
+
+
+## 2026-11-21 — Malformed nonempty report: no false-green manual job
+
+Even after report-printing fixes, Bash's \`test -s\` checked only file size.
+The manual research step could exit **0** with a nonempty string, whitespace,
+JSON array, wrong schema, duplicate authority keys, or \`merge_authorized=true\`,
+with the job appearing green despite no valid diagnostic. This was reproduced
+in six separate RED tests on the original full Bash step and historical
+RED commit; the raw diagnostic was under repo control, not an authorization.
+
+The correction introduces a small **offline shape validator**
+\`research/guard_v2_manual_report.py\`, invoked by **python3 from the
+protected-main checkout** after CLI output is saved, before displaying its
+content. It parses strict bounded UTF-8 JSON as one object and rejects duplicate
+keys, nonfinite/floating numeric tokens, invalid schema/status/disposition,
+missing/non-boolean-false authority fields, and incorrect non-attestation
+boundaries. If reader exit is zero, it additionally requires the expected PR
+number, exact HEAD and source commit, two equal SHA-256 sample digests,
+a complete sampled graph and final REST PR identity. This check validates
+*report structure only*: it cannot attest the underlying GitHub history
+or make the observation atomic.
+
+For malformed or incomplete output, the Bash step replaces it with a
+non-authorizing \`INVALID_DIAGNOSTIC_JSON\` record, prints it, adds it to
+\`GITHUB_STEP_SUMMARY\`, and forces exit **2** if the reader claimed zero.
+A preexisting nonzero reader exit (for example 17 or 2) is always preserved.
+Empty output retains \`NO_DIAGNOSTIC_JSON\`; valid error HOLD reports preserve
+their original reason in log/summary. A valid completed observation still
+has \`disposition=HOLD\`, \`merge_authorized=false\` and no power to publish
+Check results, issue an approval, activate trust or merge.
+
+Test scope: the actual workflow Bash block is run under \`-e -o pipefail\`
+against a mocked CLI but the **real Python validator**, without any network or
+GitHub token. This is a staged Draft-only workflow; no actual protected-main
+manual run has taken place. Status remains \`GUARD_V2_OPERATIONAL_HOLD\`.

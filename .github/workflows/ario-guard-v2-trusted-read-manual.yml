@@ -55,6 +55,13 @@ jobs:
             if [ "$reader_exit" -eq 0 ]; then
               reader_exit=2
             fi
+          elif ! python3 -B -m research.guard_v2_manual_report "$report" "$ARIO_PR_NUMBER" "$ARIO_EXPECTED_HEAD" "$ARIO_SOURCE_SHA" "$reader_exit"; then
+            # A nonempty file is not sufficient: reject whitespace, arrays,
+            # malformed/duplicate JSON and claims of merge/Check/trust authority.
+            printf '%s\n' '{"schema":"ARIO-GUARD-V2-MANUAL-WORKFLOW-REPORT","reason":"INVALID_DIAGNOSTIC_JSON","disposition":"HOLD","merge_authorized":false}' > "$report"
+            if [ "$reader_exit" -eq 0 ]; then
+              reader_exit=2
+            fi
           fi
           cat "$report"
           {
