@@ -9,8 +9,10 @@ over Ario's append-only episodic ledgers without violating epistemic invariants:
 
 from __future__ import annotations
 
+import copy
 import dataclasses
 import functools
+import itertools
 import hashlib
 import json
 import threading
@@ -265,6 +267,9 @@ class ConsolidationEngine:
         self._ledger_hashes: Set[str] = set()
         # Tracks exact processed event bytes for replay/hash-collision detection.
         self._event_payload_digests: Dict[str, str] = {}
+        # A second WM recording with different attention is the SAME source,
+        # but cannot replace a different claim or independently corroborate it.
+        self._event_stable_digests: Dict[str, str] = {}
         # Snapshot/restore below is only safe if batches do not interleave.
         self._batch_lock = threading.RLock()
         self._batch_running = False  # Reject same-thread reentrant ingestion.
@@ -346,6 +351,20 @@ class ConsolidationEngine:
         malformed, a claimed hash is reused with different data, or one
         consolidation step fails. A failure must not silently admit a prefix.
         """
+        # Materialize caller-supplied iterables *before* taking the lock: a
+        # caller generator must neither observe an uncommitted prefix nor
+        # hold the lock (and every reader) while it stalls.
+        local = self._thread_state()
+        if getattr(local, "materializing", False):
+            raise ConsolidationError("HOLD_REENTRANT_EVENT_BATCH")
+        local.materializing = True
+        try:
+            # Fail closed on unbounded generators rather than exhausting memory.
+            events = list(itertools.islice(events, 4097))
+            if len(events) > 4096:
+                raise ConsolidationError("HOLD_BATCH_TOO_LARGE")
+        finally:
+            local.materializing = False
         with self._batch_lock:
             if self._batch_running:
                 raise ConsolidationError("HOLD_REENTRANT_EVENT_BATCH")
@@ -355,6 +374,26 @@ class ConsolidationEngine:
             finally:
                 self._batch_running = False
 
+    def _thread_state(self) -> threading.local:
+        local = self.__dict__.get("_local")
+        if local is None:
+            local = self.__dict__.setdefault("_local", threading.local())
+        return local
+
+    def __getstate__(self) -> Dict[str, Any]:
+        # Snapshot under the lock; a lock object is process-local, not state.
+        with self._batch_lock:
+            # Freeze the entire snapshot *under* the lock. A shallow state
+            # would still change if decay altered shared node indexes later.
+            state = {key: value for key, value in self.__dict__.items()
+                     if key not in ("_batch_lock", "_local")}
+            state["_batch_running"] = False
+            return copy.deepcopy(state)
+
+    def __setstate__(self, state: Dict[str, Any]) -> None:
+        self.__dict__.update(state)
+        self._batch_lock = threading.RLock()
+
     def _ingest_event_stream_locked(self, events: Iterable[Tuple[str, Dict[str, Any]]]) -> int:
         previous = (
             self._nodes,
@@ -362,6 +401,7 @@ class ConsolidationEngine:
             self._links,
             self._ledger_hashes,
             self._event_payload_digests,
+            self._event_stable_digests,
         )
         # SemanticNode and CausalLink values are frozen; copy mutable indexes.
         self._nodes = self._nodes.copy()
@@ -369,6 +409,7 @@ class ConsolidationEngine:
         self._links = self._links.copy()
         self._ledger_hashes = self._ledger_hashes.copy()
         self._event_payload_digests = self._event_payload_digests.copy()
+        self._event_stable_digests = self._event_stable_digests.copy()
         count = 0
         try:
             for h, ev in events:
@@ -382,17 +423,40 @@ class ConsolidationEngine:
                 except (TypeError, ValueError, OverflowError) as exc:
                     raise ConsolidationError("HOLD_EVENT_NOT_JSON_SERIALIZABLE") from exc
                 digest = hashlib.sha256(encoded).hexdigest()
+                # Only WM's structural record can vary in *attentional score*
+                # without becoming a new evidence identity. All other fields
+                # remain strictly bound to the event hash.
+                stable = digest
+                if (
+                    ev.get("promoted_from_working_memory") is True
+                    and ev.get("status") == NodeEpistemicStatus.RECORDED.value
+                    and all(key in ev for key in (
+                        "concept", "assertion", "attribution_id", "source_type",
+                        "veracity_state", "timestamp", "saliency_score"
+                    ))
+                ):
+                    stable_record = dict(ev)
+                    stable_record.pop("saliency_score")
+                    stable_bytes = json.dumps(
+                        stable_record, sort_keys=True, allow_nan=False
+                    ).encode("utf-8")
+                    stable = hashlib.sha256(stable_bytes).hexdigest()
                 if h in self._event_payload_digests:
-                    if self._event_payload_digests[h] != digest:
+                    if (
+                        self._event_payload_digests[h] != digest
+                        and self._event_stable_digests.get(h) != stable
+                    ):
                         raise ConsolidationError("HOLD_REUSED_HASH_DIFFERENT_EVENT_PAYLOAD")
-                    continue  # Retry is not a new source.
+                    continue  # Identical event, or WM attention-only replay.
                 self._process_raw_event(h, ev)
                 self._event_payload_digests[h] = digest
+                self._event_stable_digests[h] = stable
                 self._ledger_hashes.add(h)
                 count += 1
         except Exception:
             (self._nodes, self._legacy_aliases, self._links,
-             self._ledger_hashes, self._event_payload_digests) = previous
+             self._ledger_hashes, self._event_payload_digests,
+             self._event_stable_digests) = previous
             raise
         return count
 
