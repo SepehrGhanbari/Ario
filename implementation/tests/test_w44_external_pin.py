@@ -135,17 +135,17 @@ def test_truncated_and_overlarge_read_images_fail_closed(tmp_path):
     path = _target(tmp_path)
     _, pin, anchor = _key_and_anchor()
     for data in (OLD[:10], OLD + b"x"):
-        _check(verify_pinned_file(path, pin=pin, anchor=anchor,
-                                  reader=lambda _path, _cap, data=data: data),
-               "UNKNOWN", "INPUT_LENGTH_MISMATCH")
+        with patch("research.w44_external_pin_probe.read_bounded_regular", return_value=data):
+            _check(verify_pinned_file(path, pin=pin, anchor=anchor),
+                   "UNKNOWN", "INPUT_LENGTH_MISMATCH")
 
 
 def test_false_reader_bytes_with_matching_size_fail_closed(tmp_path):
     path = _target(tmp_path)
     _, pin, anchor = _key_and_anchor()
-    _check(verify_pinned_file(path, pin=pin, anchor=anchor,
-                              reader=lambda _path, _cap: NEW),
-           "UNKNOWN", "INPUT_DIGEST_MISMATCH")
+    with patch("research.w44_external_pin_probe.read_bounded_regular", return_value=NEW):
+        _check(verify_pinned_file(path, pin=pin, anchor=anchor),
+               "UNKNOWN", "INPUT_DIGEST_MISMATCH")
 
 
 def test_malformed_pin_and_anchor_fail_closed(tmp_path):
