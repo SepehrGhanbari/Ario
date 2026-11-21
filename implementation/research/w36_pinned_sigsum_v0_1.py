@@ -217,8 +217,17 @@ def verify_bytes(checkpoint: bytes, proof: bytes, pub: bytes, policy: bytes,
         digest=SHA(SHA(checkpoint))
         verify_ed25519(signer_key,sig,b'sigsum.org/v1/tree-leaf\0'+digest,'LEAF')
         data['leaf_signature']=True
-        require(val['size'].isdigit() and val['leaf_index'].isdigit(), 'MALFORMED_TREE_POSITION')
-        size=int(val['size']);i=int(val['leaf_index'])
+        # Both values are bounded by 2**63 and therefore require at most
+        # 19 decimal digits. Check the strings *before* int() so an opt-out
+        # proof pin can never trigger Python's large-integer parsing error.
+        require(all(1 <= len(val[field]) <= 19 and val[field].isascii() and
+                    val[field].isdigit() for field in ('size', 'leaf_index')),
+                'MALFORMED_TREE_POSITION')
+        try:
+            size = int(val['size'])
+            i = int(val['leaf_index'])
+        except (ValueError, OverflowError) as exc:
+            raise CheckFailure('MALFORMED_TREE_POSITION') from exc
         require(1<=size<=2**63 and 0<=i<size,'INVALID_TREE_POSITION')
         root=hexbytes(val['root_hash'],32,'TREE_ROOT')
         log_sig=hexbytes(val['signature'],64,'TREE_SIGNATURE')

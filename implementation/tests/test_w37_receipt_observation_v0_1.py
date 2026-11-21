@@ -297,5 +297,72 @@ class W37Tests(unittest.TestCase):
         self.assertNotIn('policy',r['w35_fixture_git_checkout_crlf_restored'])
         self.assert_refusal(r)
 
+
+    def test_36_w36_unpinned_numeric_fields_fail_closed(self):
+        from research.w36_pinned_sigsum_v0_1 import verify_bytes, may_use_from_receipt
+        from research.w36_pinned_sigsum_v0_1 import (
+            PINNED_CHECKPOINT_SHA256, PINNED_PROOF_SHA256,
+            PINNED_PUBKEY_SHA256, PINNED_POLICY_SHA256)
+        pins={'checkpoint':PINNED_CHECKPOINT_SHA256,'proof':PINNED_PROOF_SHA256,
+              'pub':PINNED_PUBKEY_SHA256,'policy':PINNED_POLICY_SHA256}
+        raw={key: (self.root/name).read_bytes().replace(b'\r\n', b'\n')
+             for key, (name, _) in FILES.items()}
+        for key in raw:
+            self.assertEqual(hashlib.sha256(raw[key]).hexdigest(), pins[key])
+        for key, original in (('size', b'280277'), ('leaf_index', b'280276')):
+            with self.subTest(field=key):
+                proof=raw['proof'].replace(key.encode()+b'='+original,
+                                           key.encode()+b'='+b'9'*5000, 1)
+                e, metrics = verify_bytes(raw['checkpoint'],proof,raw['pub'],
+                                          raw['policy'],strict_proof_pin=False)
+                self.assertEqual(e.receipt_status,'INVALID_OR_UNVERIFIED_RECEIPT')
+                self.assertEqual(e.reason,'MALFORMED_TREE_POSITION')
+                self.assertFalse(metrics['proof_valid'])
+                self.assertFalse(may_use_from_receipt(e))
+                self.assertEqual(e.evidence_admission,'NOT_EVALUATED')
+
+    def test_37_w36_valid_unpinned_and_strict_positive_preserved(self):
+        from research.w36_pinned_sigsum_v0_1 import verify_bytes, may_use_from_receipt
+        from research.w36_pinned_sigsum_v0_1 import (
+            PINNED_CHECKPOINT_SHA256, PINNED_PROOF_SHA256,
+            PINNED_PUBKEY_SHA256, PINNED_POLICY_SHA256)
+        pins={'checkpoint':PINNED_CHECKPOINT_SHA256,'proof':PINNED_PROOF_SHA256,
+              'pub':PINNED_PUBKEY_SHA256,'policy':PINNED_POLICY_SHA256}
+        raw={key: (self.root/name).read_bytes().replace(b'\r\n', b'\n')
+             for key, (name, _) in FILES.items()}
+        for key in raw:
+            self.assertEqual(hashlib.sha256(raw[key]).hexdigest(), pins[key])
+        for strict in (False,True):
+            with self.subTest(strict=strict):
+                e, metrics=verify_bytes(raw['checkpoint'],raw['proof'],raw['pub'],
+                                        raw['policy'],strict_proof_pin=strict)
+                self.assertEqual(e.receipt_status,'VERIFIED_SYNTHETIC_INCLUSION')
+                self.assertTrue(metrics['proof_valid'])
+                self.assertFalse(may_use_from_receipt(e))
+
+    def test_38_w36_numeric_bounds_remain_rejected_without_exception(self):
+        from research.w36_pinned_sigsum_v0_1 import verify_bytes
+        from research.w36_pinned_sigsum_v0_1 import (
+            PINNED_CHECKPOINT_SHA256, PINNED_PROOF_SHA256,
+            PINNED_PUBKEY_SHA256, PINNED_POLICY_SHA256)
+        pins={'checkpoint':PINNED_CHECKPOINT_SHA256,'proof':PINNED_PROOF_SHA256,
+              'pub':PINNED_PUBKEY_SHA256,'policy':PINNED_POLICY_SHA256}
+        raw={key: (self.root/name).read_bytes().replace(b'\r\n', b'\n')
+             for key, (name, _) in FILES.items()}
+        for key in raw:
+            self.assertEqual(hashlib.sha256(raw[key]).hexdigest(), pins[key])
+        for key, old in (('size', b'280277'), ('leaf_index', b'280276')):
+            for candidate, reason in ((b'9'*19,'INVALID_TREE_POSITION'),
+                                      (b'0'*20,'MALFORMED_TREE_POSITION'),
+                                      (b'123x','MALFORMED_TREE_POSITION')):
+                with self.subTest(key=key, candidate=candidate[:20]):
+                    proof=raw['proof'].replace(key.encode()+b'='+old,
+                                              key.encode()+b'='+candidate,1)
+                    e, metrics=verify_bytes(raw['checkpoint'],proof,raw['pub'],
+                                            raw['policy'],strict_proof_pin=False)
+                    self.assertEqual(e.receipt_status,'INVALID_OR_UNVERIFIED_RECEIPT')
+                    self.assertEqual(e.reason,reason)
+                    self.assertFalse(metrics['proof_valid'])
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
