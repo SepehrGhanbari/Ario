@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Fail-closed, staged restore for ARIO_FULL_TEXT_EXPORT_V1."""
-import argparse,base64,binascii,hashlib,json,os,pathlib,re,shutil,stat,tempfile,unicodedata
+import argparse,base64,binascii,hashlib,json,os,pathlib,re,shutil,stat,tempfile,unicodedata,ctypes,errno,sys
 FMT=b"ARIO_FULL_TEXT_EXPORT_V1"
 FOOT=re.compile(rb"@@ARIO_COMPLETE files=(\d+) commit=([0-9a-f]{40}) tree=([0-9a-f]{40}) tracked_bytes=(\d+) manifest_sha256=([0-9a-f]{64})\n")
 RES={"CON","PRN","AUX","NUL","CONIN$","CONOUT$","COM¹","COM²","COM³","LPT¹","LPT²","LPT³",*(f"COM{i}" for i in range(1,10)),*(f"LPT{i}" for i in range(1,10))}
@@ -49,6 +49,34 @@ def safe(s):
       or any(ord(c)<32 or c in '<>"|?*' for c in x)
       or device_base in RES): raise SnapshotError("non-portable path")
  return p
+def _publish_directory_no_replace(stage,dst):
+ """Atomically publish a staged directory ONLY if its destination is absent.
+
+ POSIX os.replace() can overwrite a concurrently created EMPTY directory.
+ Linux renameat2(RENAME_NOREPLACE) refuses that race in the kernel.
+ Windows os.rename() refuses existing destinations (unlike os.replace()).
+ Other platforms/filesystems fail closed rather than silently weaken policy.
+ This does not guarantee power-loss durability or protection from hostile
+ concurrent changes to ancestor directory identities.
+ """
+ if os.name=="nt":
+  try: os.rename(stage,dst)
+  except FileExistsError as ex: raise SnapshotError("destination must not exist") from ex
+  return
+ if sys.platform.startswith("linux"):
+  libc=ctypes.CDLL(None,use_errno=True)
+  renameat2=getattr(libc,"renameat2",None)
+  if renameat2 is None: raise SnapshotError("atomic no-replace publish unavailable")
+  renameat2.argtypes=(ctypes.c_int,ctypes.c_char_p,ctypes.c_int,ctypes.c_char_p,ctypes.c_uint)
+  renameat2.restype=ctypes.c_int
+  # Linux: AT_FDCWD=-100, RENAME_NOREPLACE=1.
+  if renameat2(-100,os.fsencode(stage),-100,os.fsencode(dst),1)==0:return
+  code=ctypes.get_errno()
+  if code in (errno.EEXIST,errno.ENOTEMPTY): raise SnapshotError("destination must not exist")
+  if code in (errno.ENOSYS,errno.EINVAL,errno.EOPNOTSUPP):
+   raise SnapshotError("atomic no-replace publish unsupported on filesystem")
+  raise OSError(code,os.strerror(code),str(dst))
+ raise SnapshotError("atomic no-replace publish unsupported on platform")
 def restore(src,dst):
  dst=pathlib.Path(dst).absolute()
  if os.path.lexists(dst): raise SnapshotError("destination must not exist")
@@ -121,7 +149,7 @@ def restore(src,dst):
         or f.tell()+e["payload_bytes"]>MAX_INPUT_BYTES): raise SnapshotError("record resource limit")
     if not re.fullmatch("[0-9a-f]{40}",str(e["git_blob_sha1"])) or not re.fullmatch("[0-9a-f]{64}",str(e["sha256"])): raise SnapshotError("invalid digest")
     payload=f.read(e["payload_bytes"])
-    if len(payload)!=e["payload_bytes"] or f.readline()!=b"\n" or f.readline()!=b"@@ARIO_END\n": raise SnapshotError("truncated payload/bad terminator")
+    if len(payload)!=e["payload_bytes"] or f.readline(2)!=b"\n" or f.readline(len(b"@@ARIO_END\n")+1)!=b"@@ARIO_END\n": raise SnapshotError("truncated payload/bad terminator")
     if e["encoding"]=="raw-utf8":
      try: payload.decode("utf-8")
      except UnicodeDecodeError as ex: raise SnapshotError("invalid UTF-8") from ex
@@ -135,7 +163,7 @@ def restore(src,dst):
     if e["mode"]=="100755": target.chmod(target.stat().st_mode|stat.S_IXUSR|stat.S_IXGRP|stat.S_IXOTH)
     # Symlink blobs remain regular files; never create links from untrusted data.
     total+=len(raw); n+=1
-  os.replace(stage,dst); done=True; print(f"RESTORE_STRUCTURAL_PASS_AUTHENTICITY_UNKNOWN: {n} records at {dst}"); return n
+  _publish_directory_no_replace(stage,dst); done=True; print(f"RESTORE_STRUCTURAL_PASS_AUTHENTICITY_UNKNOWN: {n} records at {dst}"); return n
  finally:
   if not done and stage.exists(): shutil.rmtree(stage,ignore_errors=True)
 def main():
