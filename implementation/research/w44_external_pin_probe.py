@@ -12,7 +12,6 @@ import hmac
 import json
 from pathlib import Path
 import re
-from typing import Callable
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
@@ -56,7 +55,6 @@ def checkpoint_hash(pin: SignedPin) -> str:
 
 def verify_pinned_file(
     path: str | Path, *, pin: SignedPin, anchor: VerifierAnchor,
-    reader: Callable[[Path, int], bytes] = read_bounded_regular,
 ) -> dict:
     """Return a *byte-equivalence observation only*. Never authorize use.
 
@@ -102,7 +100,7 @@ def verify_pinned_file(
         return result("UNKNOWN", "CHECKPOINT_SIGNATURE_UNTRUSTED")
 
     try:
-        observed = reader(Path(path), MAX_W44_BYTES)
+        observed = read_bounded_regular(Path(path), MAX_W44_BYTES)
     except (OSError, ValueError):
         return result("UNKNOWN", "BOUNDED_INPUT_READ_REJECTED")
     if type(observed) is not bytes or len(observed) != pin.byte_length:
