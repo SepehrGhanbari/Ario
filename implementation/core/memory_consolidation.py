@@ -248,6 +248,7 @@ def _json_structure_markers(raw: bytes, remaining: int) -> int:
     quoted = False
     escaped = False
     count = 0
+    depth = 0
     for byte in raw:
         if quoted:
             if escaped:
@@ -258,10 +259,17 @@ def _json_structure_markers(raw: bytes, remaining: int) -> int:
                 quoted = False
         elif byte == 34:
             quoted = True
-        elif byte in (44, 91, 93, 123, 125):
-            count += 1
-            if count > remaining:
-                raise ConsolidationError("HOLD_LEDGER_STRUCTURE_BUDGET")
+        else:
+            if byte in (91, 123):
+                depth += 1
+                if depth > 512:
+                    raise ConsolidationError("HOLD_LEDGER_JSON_UNSUPPORTED")
+            elif byte in (93, 125):
+                depth -= 1
+            if byte in (44, 91, 93, 123, 125):
+                count += 1
+                if count > remaining:
+                    raise ConsolidationError("HOLD_LEDGER_STRUCTURE_BUDGET")
     return count
 
 
@@ -360,8 +368,8 @@ class ConsolidationEngine:
                     try:
                         markers += _json_structure_markers(
                             clean, MAX_LEDGER_STRUCTURE_MARKERS - markers)
-                    except ConsolidationError:
-                        return _held("HOLD_LEDGER_STRUCTURE_BUDGET", line_no)
+                    except ConsolidationError as exc:
+                        return _held(str(exc), line_no)
                     try:
                         event = _loads_ledger_line(clean.decode("utf-8"))
                         if not isinstance(event, dict):
