@@ -19,6 +19,7 @@ import copy
 import dataclasses
 import hashlib
 import json
+import math
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
@@ -112,8 +113,19 @@ class WorkingMemoryBuffer:
         salience_decay_rate: float = DEFAULT_SALIENCE_DECAY,
         consolidation_threshold: float = DEFAULT_CONSOLIDATION_THRESHOLD,
     ) -> None:
-        if capacity < 1:
-            raise ValueError("Working memory capacity must be at least 1")
+        # A fractional, infinite or NaN capacity silently disables the bound.
+        if type(capacity) is not int or capacity < 1:
+            raise ValueError("Working memory capacity must be a positive integer (at least 1)")
+        for label, value in (
+            ("salience_decay_rate", salience_decay_rate),
+            ("consolidation_threshold", consolidation_threshold),
+        ):
+            if (
+                type(value) not in (float, int)
+                or not math.isfinite(value)
+                or not (0.0 <= value <= 1.0)
+            ):
+                raise ValueError(f"{label} must be finite and within [0, 1]")
         self.capacity = capacity
         self.consolidation_engine = consolidation_engine
         self.source_guard = source_guard
@@ -163,6 +175,15 @@ class WorkingMemoryBuffer:
         if not isinstance(source_attribution, SourceAttribution):
             raise SourceMonitoringError("Working memory requires a verified SourceAttribution")
 
+        # Reject nonfinite values before *any* eviction, rehearsal or mutation.
+        try:
+            numeric_salience = float(salience)
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise ValueError("salience must be a finite number") from exc
+        if not math.isfinite(numeric_salience):
+            raise ValueError("salience must be a finite number")
+        clamped_salience = max(0.0, min(1.0, numeric_salience))
+
         # Dataclass shape is not provenance. A configured guard must recognize
         # the *exact* attribution and accept it before eviction or rehearsal.
         if self.source_guard is not None:
@@ -184,7 +205,7 @@ class WorkingMemoryBuffer:
             chunk = self._active_chunks[chunk_id]
             chunk.access_count += 1
             chunk.last_accessed_step = self._current_step
-            chunk.salience = min(1.0, max(chunk.salience, salience) + self.REHEARSAL_SALIENCE_BOOST)
+            chunk.salience = min(1.0, max(chunk.salience, clamped_salience) + self.REHEARSAL_SALIENCE_BOOST)
             if metadata:
                 chunk.metadata.update(copy.deepcopy(metadata))
             return copy.deepcopy(chunk)
@@ -193,7 +214,6 @@ class WorkingMemoryBuffer:
         if len(self._active_chunks) >= self.capacity:
             self._evict_least_salient()
 
-        clamped_salience = max(0.0, min(1.0, float(salience)))
         chunk = WorkingMemoryChunk(
             chunk_id=chunk_id,
             concept=concept.strip(),
@@ -245,7 +265,7 @@ class WorkingMemoryBuffer:
             record = self._handle_chunk_exit(chunk, reason="salience_decay_to_zero")
             evicted.append(record)
 
-        return evicted
+        return copy.deepcopy(evicted)
 
     def recall_from_long_term(self, concept_cue: str) -> List[WorkingMemoryChunk]:
         """Directed recall from Long-Term Memory (ConsolidationEngine) into Working Memory."""
