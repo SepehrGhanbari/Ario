@@ -83,3 +83,56 @@ Test scope: the actual workflow Bash block is run under \`-e -o pipefail\`
 against a mocked CLI but the **real Python validator**, without any network or
 GitHub token. This is a staged Draft-only workflow; no actual protected-main
 manual run has taken place. Status remains \`GUARD_V2_OPERATIONAL_HOLD\`.
+
+
+## 2026-11-22 — R17 independent-review input whitelist (research-only)
+
+Independent R17 review provided by Perplexity on source HEAD
+\`bfb24113af2f0c43072c9f254983f3d1e4424ce7\` found a **format/meaning
+ambiguity**, not a demonstrated merge-authority escalation. The validator
+rejected malformed JSON, duplicates, float/non-finite constants and non-bool
+authority flags, but admitted unrecognized top-level authority-looking keys
+(\`guard_decision=PASS\`, \`merge_ready=true\`), Unicode look-alike field
+names, and nested \`live_identity.merge_authorized=true\`. Python CLI \`int()\`
+also admitted \`2_95\`, \` 295\` and \`+295\` instead of canonical decimal
+arguments. These additions could mislead people or downstream consumers
+about whether a report was *validated*, even though the actual Guard
+decision remained HOLD and no Check or merge capability was granted.
+
+**Evidence:** the exact twelve reviewer-supplied tests are preserved in
+\`implementation/tests/test_guard_v2_manual_report_r17.py\`, Git blob
+\`cf2dc9f174dbb6cffd84d5dd2a964a27ea9eded9\`. A test-only
+append-only RED commit \`9200eb5a8fc090da749227c6ceb5d5464424ec43\`
+was run in GitHub Actions
+[44956804464](https://github.com/SepehrGhanbari/Ario/actions/runs/44956804464):
+**9 failed / 1,853 passed / 7 skipped / 273 subtests passed**. The
+R17 3 positive reader-shaped baselines were not rejected by the old code.
+This preserves an actual hosted negative result before repair, independent
+of the reviewer's earlier Python 3.14 sandbox report.
+
+**Bounded correction:** apply the *verbatim supplied R17 patch* solely to
+\`implementation/research/guard_v2_manual_report.py\`. Git blob changes
+from \`09dd41d5f2b878a82f731068b9a9dc2d12b11ff1\` to
+\`1956f99275e7da94fed234e2c418f43f4088f7c3\`. Allow only known
+real-reader top-level keys, require exactly five native PR identity keys,
+require ASCII-only serialized bytes (consistent with \`ensure_ascii=True\`),
+and require canonical ASCII decimal arguments. Keep success semantics
+\`disposition=HOLD\`, all authority flags **false**, and all attestation
+claims **NOT_ESTABLISHED**.
+
+**Deliberate non-claim:** the validator checks whether two SHA-256-looking
+hex strings are equal; it does **not** recompute SHA-256 from complete
+source-backed GitHub observations. Two fabricated equal digest strings can
+pass. Do not describe this as canonical digest attestation. Nor does a
+\`workflow_dispatch\` YAML \`github.ref == main\` check alone prove protected
+source custody: selecting other run refs is possible, and actual provider/
+token/branch-protection behavior remains **UNKNOWN** pending an explicitly
+approved, trusted-main lab. An external consumer must check actual run
+branch, workflow path and commit lineage, not the green Actions icon.
+
+**Scope & status:** Draft #295 only, no force push, merge, Check issue,
+ruleset, secret, real key, signer, trust, Genesis or production mutation.
+All #306 source history remains intact. Exact-head GREEN hosted tests are
+reported in the PR review handoff; this log entry is limited to the
+RED-falsifier and implemented patch provenance, not a claim of live GraphQL
+or atomic historical review evidence.

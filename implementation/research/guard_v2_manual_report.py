@@ -18,6 +18,17 @@ SHA40 = re.compile(r"[0-9a-f]{40}\Z")
 SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 EXPECTED_UNKNOWN = "UNKNOWN"
 EXPECTED_NOT_ESTABLISHED = "NOT_ESTABLISHED"
+# Exactly the keys research.guard_v2_trusted_manual can emit. Anything else
+# (extra "decision" fields, look-alike keys, nested flags) is not this schema.
+ALLOWED_KEYS = frozenset({
+    "schema", "disposition", "status", "reason", "merge_authorized",
+    "check_publish_authorized", "trust_activated", "execution_attestation",
+    "independent_custody", "atomic_merge_attestation", "source_provenance",
+    "source_commit_sha", "review_graph_sample", "review_graph_reason",
+    "first_digest", "second_digest", "live_identity", "review_freshness",
+    "error_type",
+})
+IDENTITY_KEYS = frozenset({"repository_id", "pr_id", "pr_number", "head_sha", "base_sha"})
 
 
 class InvalidDiagnostic(ValueError):
@@ -64,6 +75,13 @@ def validate_file(path: Path, number: int, head: str, source: str,
     except (UnicodeError, ValueError, TypeError, RecursionError) as exc:
         raise InvalidDiagnostic("MALFORMED_JSON") from exc
     _assert(type(value) is dict, "REPORT_NOT_OBJECT")
+    # The reader prints with ensure_ascii=True; raw non-ASCII is not its output.
+    _assert(data.isascii(), "NON_ASCII_REPORT")
+    _assert(set(value) <= ALLOWED_KEYS, "UNEXPECTED_REPORT_KEY")
+    if "live_identity" in value:
+        _assert(type(value["live_identity"]) is dict and
+                set(value["live_identity"]) == IDENTITY_KEYS,
+                "UNEXPECTED_IDENTITY_KEYS")
     _assert(value.get("schema") == SCHEMA and
             value.get("status") == EXPECTED_UNKNOWN and
             value.get("disposition") == "HOLD",
@@ -108,6 +126,10 @@ def main(argv=None) -> int:
         return 2
     try:
         path, number, head, source, reader_exit = args
+        # Plain decimal only: int() would also accept "2_95", " 295 " or "+295".
+        if not (number.isascii() and number.isdigit() and
+                reader_exit.isascii() and reader_exit.isdigit()):
+            return 2
         validate_file(Path(path), int(number), head, source, int(reader_exit))
     except (InvalidDiagnostic, ValueError, TypeError, OSError,
             RecursionError, OverflowError):
