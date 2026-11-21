@@ -20,12 +20,14 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference='Stop'
+          # Restore the Windows PowerShell module search root when invoked by pwsh7.
+          $env:PSModulePath=(Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\Modules')+';'+$env:PSModulePath
           $exe=Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
           $args='-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "research/r63_g4_peer_ci/Invoke-G4PeerIdentityGuest.ps1" -Mode CI'
           $p=Start-Process -FilePath $exe -ArgumentList $args -PassThru -WindowStyle Hidden -RedirectStandardOutput R63-G4-Watchdog-Stdout.txt -RedirectStandardError R63-G4-Watchdog-Stderr.txt
           $handle=$p.Handle
           $last=''
-          for($i=0;$i -lt 48;$i++) {
+          for($i=0;$i -lt 36;$i++) {
             Start-Sleep -Seconds 5
             $runs=@(Get-ChildItem -Path 'R63-G4-Run-*.txt' -ErrorAction SilentlyContinue)
             foreach($f in $runs) {
