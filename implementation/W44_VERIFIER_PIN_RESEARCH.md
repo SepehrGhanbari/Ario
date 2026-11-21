@@ -15,7 +15,7 @@ W43 [Draft PR #311](https://github.com/SepehrGhanbari/Ario/pull/311), [targeted 
 - A signed pin with an older sequence, ahead of the floor, or the same sequence but a different digest is refused. Exact equality to the retained floor is required; this is not an append-only chain or an authorized floor-advance mechanism.
 - Pin format, expected checkpoint hash and signature are checked *before* W38/W41 bounded reading. Read bytes must match both the pinned length and SHA-256. All mismatches and bounded read refusals yield UNKNOWN.
 - The only positive status is **PIN_MATCH_ONLY**, *not* ACCEPTED, TRUSTED, EVIDENCE or TRUE. Every response sets may_use=false, historical_event_truth=UNKNOWN, custody_independence=NOT_ESTABLISHED, evidence_admission=NOT_EVALUATED.
-- An injectable reader exists solely for instrumented synthetic tests; a compromised caller or verifier process can bypass any local-only trust assumption.
+- The public probe does **not** accept a caller-selected reader: it calls W38/W41 directly. Tests monkeypatch the private imported read function for fault injection only. A compromised verifier runtime can still bypass any same-process check.
 
 **Conditional premise:** the verification key and floor must actually originate outside the file writer's administrative control and survive rollback/restart. A dataclass called VerifierAnchor, a separate folder/process under the same OS user, a self-controlled GitHub repository, or a self-signed hash **does not** prove independence.
 
