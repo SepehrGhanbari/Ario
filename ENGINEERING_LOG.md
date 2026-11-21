@@ -637,3 +637,20 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - Two separately scoped PRs remain distinct: W39 [#302](https://github.com/SepehrGhanbari/Ario/pull/302) demonstrated **1 expected-failed Win32 ordinary-directory replacement** with original W38 reader (native Windows CI). W40 [#303](https://github.com/SepehrGhanbari/Ario/pull/303) reuses W38's still-limited Windows reader for JSONL, so the Windows ancestor defect is **NOT_CLOSED** here.
 - Previous log retained byte-for-byte as unchanged prefix, no unrelated file or trust code modified. This CI result is source-pinned and does not constitute deployment, signer, Genesis, memory or epistemic authority.
 
+
+
+## 2026-11-21 — W41 held Windows directory HANDLE candidate for W39 RED (RESEARCH_ONLY)
+
+- Grounded source: `main` `4ffc649af47270fc6ff87d5c8216b17162ce325c`; W38 original blob `175462932cbc3f0d89d69318e2faa01f625b6284`; W39 native Windows failure recorded at PR #302.
+- W41 replaces only W38 Windows path reader with a delegated native `NtCreateFile` component-by-component handle-relative reader. The existing POSIX code, W35 proof pins, W40 ledger parser and authority states stay unchanged. Windows directory rename regression replays W39 via `NtCreateFile` and demands actual refusal after an observed injected rename; absence of injection cannot silently PASS.
+- No actual Windows test result is claimed by this initial candidate. Native API runtime behavior, unsupported Windows filesystems and concurrent in-place writes stay UNKNOWN until exact-head runner results and review.
+- Original ENGINEERING_LOG.md retained as a literal byte prefix; no force push, real credentials, source-history rewrite, key or trust activation.
+
+
+## 2026-11-21 — W41 native Windows W39 replay verified GREEN on exact head
+
+- Candidate runtime source head `fd95ae36511c766014ee8119277cf8f8aa53fdfa` (W38 Windows delegation plus W41 RootDirectory HANDLE reader). W39 original RED remains in separate draft PR #302.
+- [Implementation Regression 44939412453](https://github.com/SepehrGhanbari/Ario/actions/runs/44939412453) exact-head **SUCCESS**: Windows Python 3.13 `1653 passed, 7 skipped, 2 warnings, 273 subtests passed`; Linux Python 3.13 `1655 passed, 5 skipped, 2 warnings, 273 subtests passed`; Python 3.14 advisory also `1655 passed, 5 skipped, 2 warnings, 273 subtests passed`.
+- All 3 new W41 native Windows tests PASS: bounded ordinary read, invalid Windows name failure, and W39's ordinary parent rename precisely before leaf NtCreateFile with an enforced refusal. The test fails if the interception did not execute; it only skips on host inability to rename. **0 newly skipped W41 Windows tests**, no xfailed W41 tests.
+- [Published TXT Restore Security 44939412467](https://github.com/SepehrGhanbari/Ario/actions/runs/44939412467) all **10 jobs SUCCESS**.
+- This closes the **tested W39 ancestor substitution** on the candidate Windows runner, not all possible Windows races or epistemic provenance questions. No real signer, trust, Genesis, production or memory admission changes. Earlier log prefix and review/RED evidence preserved; independent broader security review still welcome.
