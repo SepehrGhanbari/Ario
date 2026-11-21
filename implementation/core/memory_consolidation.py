@@ -233,7 +233,7 @@ class ConsolidationEngine:
         decay_rate: float = 0.05,
         retrieval_threshold: float = 0.2,
         node_id_version: str = "v1",
-        default_status: NodeEpistemicStatus = NodeEpistemicStatus.ACCEPTED,
+        default_status: NodeEpistemicStatus = NodeEpistemicStatus.RECORDED,
     ) -> None:
         if not (0.0 < decay_rate < 1.0):
             raise ConsolidationError("decay_rate must be between 0.0 and 1.0")
@@ -249,6 +249,8 @@ class ConsolidationEngine:
         self._legacy_aliases: Dict[str, str] = {}
         self._links: List[CausalLink] = []
         self._ledger_hashes: Set[str] = set()
+        # Tracks exact processed event bytes for replay/hash-collision detection.
+        self._event_payload_digests: Dict[str, str] = {}
 
     @staticmethod
     def compute_node_id(concept: str, assertion: str, version: str = "v1") -> str:
@@ -311,19 +313,23 @@ class ConsolidationEngine:
         if after_size < initial_size:
             raise ConsolidationError("T-CONS-02: Non-Erasure violation: ledger size decreased during ingestion")
 
-        for h, ev in events:
-            self._ledger_hashes.add(h)
-            self._process_raw_event(h, ev)
-
-        return len(events)
+        # File ingestion must use the same replay/hash-collision guard as
+        # live event ingestion. A second read is not a new independent source.
+        return self.ingest_event_stream(events)
 
     def ingest_event_stream(self, events: Iterable[Tuple[str, Dict[str, Any]]]) -> int:
         count = 0
         for h, ev in events:
-            if not isinstance(h, str) or len(h) != 64:
+            if not isinstance(h, str) or len(h) != 64 or any(c not in "0123456789abcdef" for c in h.lower()):
                 raise ConsolidationError(f"invalid event sha256 hash: {h}")
-            self._ledger_hashes.add(h)
+            digest = hashlib.sha256(json.dumps(ev, sort_keys=True, default=str).encode("utf-8")).hexdigest()
+            if h in self._event_payload_digests:
+                if self._event_payload_digests[h] != digest:
+                    raise ConsolidationError("HOLD_REUSED_HASH_DIFFERENT_EVENT_PAYLOAD")
+                continue  # Retry, not a new event or corroboration.
             self._process_raw_event(h, ev)
+            self._event_payload_digests[h] = digest
+            self._ledger_hashes.add(h)
             count += 1
         return count
 
@@ -344,15 +350,15 @@ class ConsolidationEngine:
 
         # Check for contradiction with existing nodes (Invariant T-CONS-03)
         claimed_value = event.get("value")
-        # Invariant (Issue #216): Distinguish structural recording from truth/support
-        custom_status = event.get("status")
-        if custom_status and isinstance(custom_status, str):
-            try:
-                status = NodeEpistemicStatus(custom_status)
-            except ValueError:
-                status = self.default_status
+        # Caller-supplied status cannot assert proof or choose ACCEPTED/SUPPORTED.
+        # Conservative CONTESTED/UNSUPPORTED are diagnostic, not truth claims.
+        supplied = event.get("status")
+        if supplied == NodeEpistemicStatus.CONTESTED.value:
+            status = NodeEpistemicStatus.CONTESTED
+        elif supplied == NodeEpistemicStatus.UNSUPPORTED.value:
+            status = NodeEpistemicStatus.UNSUPPORTED
         else:
-            status = self.default_status
+            status = NodeEpistemicStatus.RECORDED
         for existing in self._nodes.values():
             if existing.concept == concept and existing.node_id != node_id:
                 # Contradiction detection: opposing assertions or opposite values under same concept
@@ -368,14 +374,12 @@ class ConsolidationEngine:
             prev = self._nodes[node_id]
             # Reinforce existing schema
             new_hashes = tuple(sorted(set(prev.source_event_hashes + (event_hash,))))
-            # Saliency reinforcement: bounded power-law boost
-            new_saliency = min(1.0, prev.saliency_score + (1.0 - prev.saliency_score) * 0.3)
+            # A second publisher-controlled event/ID is not proof of an
+            # independent source. Preserve its event hash for auditing, but
+            # do not let unverified repetition increase support or salience.
             self._nodes[node_id] = dataclasses.replace(
                 prev,
                 source_event_hashes=new_hashes,
-                saliency_score=new_saliency,
-                last_reinforced_at=now_iso,
-                reinforcement_count=prev.reinforcement_count + 1,
                 status=status if status == NodeEpistemicStatus.CONTESTED else prev.status,
             )
         else:
