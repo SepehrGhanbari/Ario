@@ -104,7 +104,7 @@ def test_valid_empirical_promotion():
     guard = SourceMonitoringGuard()
 
     hyp = guard.create_hypothesis(
-        assertion="Planner loopback bind works on IPv4 and IPv6",
+        assertion="tool_exit:run_tests:implementation/tests/test_planner_transport.py:0",
         attribution_id="ATTR-HYP-BIND",
     )
 
@@ -114,7 +114,7 @@ def test_valid_empirical_promotion():
     stdout_hash = _make_dummy_hash(stdout_content)
 
     obs = guard.record_empirical_observation(
-        assertion="pytest implementation/tests/test_planner_transport.py verified",
+        assertion="tool_exit:run_tests:implementation/tests/test_planner_transport.py:0",
         tool="run_tests",
         target="implementation/tests/test_planner_transport.py",
         exit_code=0,
@@ -158,7 +158,7 @@ def test_working_memory_gating():
 
     lock_data = "lock-valid-123"
     obs = guard.record_empirical_observation(
-        assertion="ping exit code 0",
+        assertion="tool_exit:inspect_directory:.:0",
         tool="inspect_directory",
         target=".",
         exit_code=0,
