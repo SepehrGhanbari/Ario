@@ -18,6 +18,9 @@ from ledger_streaming import LedgerLineLimitExceeded, iter_bounded_ledger_lines
 
 MAX_STEPS = 8
 MAX_READ_BYTES = 20_000
+# Lock PID is an OS process identifier, not an unbounded JSON integer.
+# Bound to the portable 32-bit unsigned PID representation on Windows/Linux.
+MAX_LOCK_PID = (1 << 32) - 1
 # Research-only history budget; legitimate bounded agent tasks emit <= 26 lifecycle events.
 MAX_TASK_HISTORY_EVENTS = 128
 ALLOWED_TOOLS = {"inspect_directory", "read_text", "file_fingerprint", "inspect_backup", "recovery_preflight", "git_status", "compile_python", "run_tests", "replace_text", "restore_backup", "verify_text"}
@@ -828,6 +831,7 @@ def inspect_execution_lock(ledger_path: str | Path) -> dict:
         or not isinstance(record.get("pid"), int)
         or isinstance(record.get("pid"), bool)
         or record["pid"] <= 0
+        or record["pid"] > MAX_LOCK_PID
         or not isinstance(record.get("task_id"), str)
         or not record["task_id"].strip()
         or not isinstance(record.get("started_at"), str)
