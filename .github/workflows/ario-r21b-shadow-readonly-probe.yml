@@ -30,6 +30,7 @@ jobs:
           python-version: '3.13'
       - name: Read pinned public PRs with one B-enriched sampling stream
         env:
+          PYTHONPATH: implementation
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           python -B implementation/research/guard_v2_r21b_live_shadow_probe.py
