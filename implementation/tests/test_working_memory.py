@@ -199,7 +199,7 @@ def test_metacognitive_assessment_scenarios():
     # 3. Grounded empirical focus requires guard-admitted execution evidence.
     guard = SourceMonitoringGuard()
     empirical = guard.record_empirical_observation(
-        assertion="proof 1",
+        assertion="tool_exit:run_tests:synthetic-memory-test:0",
         tool="run_tests",
         target="synthetic-memory-test",
         exit_code=0,

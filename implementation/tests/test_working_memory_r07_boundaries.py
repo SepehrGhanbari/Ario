@@ -44,7 +44,7 @@ def _unregistered_empirical(
 
 def _registered_empirical(guard: SourceMonitoringGuard, aid: str = "OBS-1"):
     return guard.record_empirical_observation(
-        assertion="synthetic tool returned exit zero",
+        assertion="tool_exit:run_tests:synthetic-r07:0",
         tool="run_tests",
         target="synthetic-r07",
         exit_code=0,
