@@ -427,8 +427,9 @@ def test_exact_attempt_jobs_endpoint_is_read_and_bound():
     assert f.calls[3] == (
         mod.API + "/actions/runs/100/attempts/1/jobs?per_page=100"
     )
-    assert f.calls[4] == mod.API + "/commits/" + HEAD + "/check-runs?per_page=100"
-    assert f.calls[5] == (
+    assert f.calls[4] == mod.API + "/pulls/" + str(PR)
+    assert f.calls[5] == mod.API + "/commits/" + HEAD + "/check-runs?per_page=100"
+    assert f.calls[6] == (
         mod.API + "/actions/runs?head_sha=" + HEAD
         + "&event=pull_request&per_page=100"
     )
@@ -523,9 +524,10 @@ def test_rerun_started_during_attempt_read_cannot_leave_attempt_one_green(change
     assert f.calls[3] == (
         mod.API + "/actions/runs/100/attempts/1/jobs?per_page=100"
     )
-    assert f.calls[4] == mod.API + "/commits/" + HEAD + "/check-runs?per_page=100"
+    assert f.calls[4] == mod.API + "/pulls/" + str(PR)
+    assert f.calls[5] == mod.API + "/commits/" + HEAD + "/check-runs?per_page=100"
     if changed == "runs":
-        assert f.calls[5] == (
+        assert f.calls[6] == (
             mod.API + "/actions/runs?head_sha=" + HEAD
             + "&event=pull_request&per_page=100"
         )
