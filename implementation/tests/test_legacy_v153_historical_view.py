@@ -200,11 +200,24 @@ class TestLegacyHistoricalView(unittest.TestCase):
         self.assertFalse(got["source_history_rewritten"])
 
     def test_nonfinite_json_fails_closed(self):
-        raw = self.path.read_bytes().replace(b'"concepts": []', b'"concepts": NaN', 1)
+        for token in (b"NaN", b"Infinity", b"-Infinity", b"1e999", b"-1e999"):
+            with self.subTest(token=token.decode("ascii")):
+                self.make_fixture()
+                raw = self.path.read_bytes().replace(
+                    b'"concepts": []', b'"concepts": [' + token + b']', 1
+                )
+                self.path.write_bytes(raw)
+                self.digest = hashlib.sha256(raw).hexdigest()
+                with self.assertRaisesRegex(HistoricalViewHold, "HOLD_NONFINITE_JSON"):
+                    self.view()
+
+    def test_finite_large_exponent_json_is_allowed(self):
+        raw = self.path.read_bytes().replace(
+            b'"concepts": []', b'"concepts": [1e308]', 1
+        )
         self.path.write_bytes(raw)
         self.digest = hashlib.sha256(raw).hexdigest()
-        with self.assertRaisesRegex(HistoricalViewHold, "HOLD_NONFINITE_JSON"):
-            self.view()
+        self.assertEqual(self.view().inspect()["record_count"], 2)
 
     def test_stale_pin_different_same_length(self):
         old = self.digest
