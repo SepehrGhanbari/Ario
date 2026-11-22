@@ -1,0 +1,55 @@
+name: R63 G8 native integrated synthetic broker crash/replay (research only)
+on:
+  push:
+    branches:
+      - research/r63-g8-native-broker-crash-20261122
+    paths:
+      - .github/workflows/r63-g8-native-broker-crash.yml
+      - research/r63_g8_native_ci/**
+      - research/r63_g5_floor_custody_ci/g7_native_checkpoint/**
+      - research/r63_g5_floor_custody_ci/offline_minimum_extension/**
+permissions:
+  contents: read
+jobs:
+  native-integrated-g8:
+    runs-on: windows-2022
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13"
+      - name: Exact frozen V9-derived seq3 to seq4 source gate (no keys)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $g6 = 'research/r63_g5_floor_custody_ci/offline_minimum_extension'
+          python -B (Join-Path $g6 'build_g6_fixtures.py')
+          if ($LASTEXITCODE -ne 0) { throw 'REFUSE_UNREVIEWED_G6_FIXTURE' }
+          python -B (Join-Path $g6 'test_g6_extension_gate.py')
+          if ($LASTEXITCODE -ne 0) { throw 'REFUSE_UNVERIFIED_HISTORIC_MINIMUM' }
+          python -B 'research/r63_g5_floor_custody_ci/g7_native_checkpoint/test_g7_preflight.py'
+          if ($LASTEXITCODE -ne 0) { throw 'REFUSE_UNREVIEWED_NATIVE_SIGN_PAYLOAD' }
+          $root=Join-Path $env:RUNNER_TEMP 'g8-source-bound-candidate'
+          python -B 'research/r63_g5_floor_custody_ci/g7_native_checkpoint/g7_preflight.py' --mode prepare --g6-dir $g6 --out $root
+          if ($LASTEXITCODE -ne 0) { throw 'REFUSE_CANDIDATE_PREFLIGHT_HOLD' }
+          Write-Host 'G8_CANDIDATE_FIXED_SEQ3_TO_SEQ4=PASS'
+      - name: Actual OS-token SID + signed synthetic approvals + native CNG crash/restart
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $payload=Join-Path (Join-Path $env:RUNNER_TEMP 'g8-source-bound-candidate') 'payload.bin'
+          & './research/r63_g8_native_ci/Invoke-G8-NativeE2ECI.ps1' -PayloadFile $payload
+          if (-not $?) { throw 'G8_INTEGRATED_CI_HOLD' }
+      - name: Preserve public-only evidence and explicit HOLD diagnosis
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r63-g8-evidence-${{ github.run_id }}
+          path: |
+            r63-g8-native-report-*.json
+            r63-g8-native-evidence-*.zip
+          if-no-files-found: warn
+          retention-days: 30
