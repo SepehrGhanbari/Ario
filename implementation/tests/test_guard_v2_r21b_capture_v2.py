@@ -112,7 +112,12 @@ def test_non_node_unknown_or_null_actor_identity_stays_unknown(actor):
     result = make_v2(data)
     assert_non_authority(result)
     assert result["reason"] == "B_PARTIAL_ATTRIBUTION_UNKNOWN"
-    assert result["reviews"][0]["actor_node_id_presence"] in ("ABSENT", "EXPLICIT_NULL")
+    # A future/unknown Actor type may still supply a Node.id, but the
+    # type itself is not admitted as known attribution: remain UNKNOWN/HOLD.
+    presence = result["reviews"][0]["actor_node_id_presence"]
+    assert presence == ("OBSERVED_VALUE" if actor.get("__typename") == "FutureActor"
+                        else "EXPLICIT_NULL" if actor.get("id", "ABSENT") is None
+                        else "ABSENT")
 
 
 @pytest.mark.parametrize("field,value", [
