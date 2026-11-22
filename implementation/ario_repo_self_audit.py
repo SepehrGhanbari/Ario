@@ -141,9 +141,108 @@ def _unknown(reason: str, **extra) -> dict:
     }
 
 
+
+def _check_snapshot(value: Any, expected_head: str, label: str) -> tuple:
+    """Project a complete Check Runs page onto fields that affect job binding."""
+    obj = _object(value, label)
+    records = obj.get("check_runs")
+    count = obj.get("total_count")
+    if (type(count) is not int or not 0 <= count <= 100
+            or not isinstance(records, list) or len(records) != count):
+        raise ReadUnknown(label + "_INCOMPLETE")
+    ids = set()
+    relevant = []
+    for record in records:
+        item = _object(record, "CHECK_RECHECK")
+        app = _object(item.get("app"), "APP_RECHECK")
+        details = item.get("details_url")
+        if (not _positive(item.get("id")) or item["id"] in ids
+                or not isinstance(item.get("name"), str)
+                or item.get("head_sha") != expected_head
+                or not _positive(app.get("id"))
+                or item.get("status") not in ("queued", "in_progress", "completed")
+                or item.get("conclusion") not in (
+                    None, "success", "failure", "neutral", "skipped",
+                    "cancelled", "timed_out", "action_required", "stale")
+                or (item["status"] == "completed")
+                   != (item.get("conclusion") is not None)
+                or (details is not None and not isinstance(details, str))):
+            raise ReadUnknown("INVALID_OR_DUPLICATE_CHECK")
+        ids.add(item["id"])
+        if item["name"] == CANONICAL_JOB_NAME and app["id"] == ACTIONS_APP_ID:
+            relevant.append((
+                item["id"], item["name"], item["head_sha"], app["id"],
+                item["status"], item.get("conclusion"), details,
+            ))
+    # Order and presentation-only API fields (output, timestamps, URLs) are
+    # deliberately excluded; only canonical binding fields define drift.
+    return tuple(sorted(relevant))
+
+
+def _run_snapshot(value: Any, expected_head: str, pr_number: int,
+                  pr_id: int, label: str) -> tuple:
+    """Project a complete workflow-run page onto PR-linked selection fields."""
+    obj = _object(value, label)
+    records = obj.get("workflow_runs")
+    count = obj.get("total_count")
+    if (type(count) is not int or not 0 <= count <= 100
+            or not isinstance(records, list) or len(records) != count):
+        raise ReadUnknown(label + "_INCOMPLETE")
+    run_ids = set()
+    workflow_sequences = set()
+    relevant = []
+    for record in records:
+        run = _object(record, "RUN_RECHECK")
+        if (not _positive(run.get("id")) or not _positive(run.get("run_attempt"))
+                or not _positive(run.get("workflow_id"))
+                or not _positive(run.get("run_number"))
+                or not isinstance(run.get("path"), str) or not run["path"]
+                or run.get("head_sha") != expected_head
+                or run.get("event") != "pull_request"
+                or run["id"] in run_ids
+                or run.get("status") not in ("queued", "in_progress", "completed")
+                or run.get("conclusion") not in (
+                    None, "success", "failure", "neutral", "skipped", "cancelled",
+                    "timed_out", "action_required", "stale", "startup_failure")
+                or (run["status"] == "completed")
+                   != (run.get("conclusion") is not None)):
+            raise ReadUnknown("INVALID_RUN")
+        run_ids.add(run["id"])
+        sequence = (run["workflow_id"], run["run_number"])
+        if sequence in workflow_sequences:
+            raise ReadUnknown("DUPLICATE_WORKFLOW_RUN_NUMBER")
+        workflow_sequences.add(sequence)
+
+        pr_links = run.get("pull_requests")
+        if not isinstance(pr_links, list) or not pr_links:
+            raise ReadUnknown("RUN_PR_ASSOCIATION_INCOMPLETE")
+        link_view = []
+        for link in pr_links:
+            item = _object(link, "RUN_PR_LINK")
+            link_head = _object(item.get("head"), "RUN_PR_HEAD")
+            if (not _positive(item.get("id")) or not _positive(item.get("number"))
+                    or not isinstance(link_head.get("sha"), str)
+                    or not SHA.fullmatch(link_head["sha"])):
+                raise ReadUnknown("INVALID_RUN_PR_ASSOCIATION")
+            if item["number"] == pr_number or item["id"] == pr_id:
+                if (item["number"] != pr_number or item["id"] != pr_id
+                        or link_head["sha"] != expected_head):
+                    raise ReadUnknown("RUN_PR_ASSOCIATION_MISMATCH")
+            link_view.append((item["id"], item["number"], link_head["sha"]))
+
+        if links_pr(pr_links, pr_number, pr_id, expected_head):
+            relevant.append((
+                run["id"], run["workflow_id"], run["path"], run["run_number"],
+                run["run_attempt"], run["head_sha"], run["event"],
+                run["status"], run.get("conclusion"), tuple(sorted(link_view)),
+            ))
+    # Unlinked runs and presentation-only fields do not affect this PR's
+    # canonical workflow selection. Every record is still validated above.
+    return tuple(sorted(relevant))
+
 def observe(pr_number: int, expected_head: str, *,
             repository: str = REPOSITORY, reader: Any = None) -> dict:
-    """Two pinned PR reads surrounding bounded, read-only check/run metadata."""
+    """Two pinned PR reads plus a final run-list sample; non-atomic and read-only."""
     if (repository != REPOSITORY or not _positive(pr_number)
             or not isinstance(expected_head, str) or not SHA.fullmatch(expected_head)):
         return _unknown("INVALID_FIXED_TARGET")
@@ -179,11 +278,15 @@ def observe(pr_number: int, expected_head: str, *,
                        != (item.get("conclusion") is not None)):
                 raise ReadUnknown("INVALID_OR_DUPLICATE_CHECK")
             ids.add(item["id"])
+            details = item.get("details_url")
+            if details is not None and not isinstance(details, str):
+                raise ReadUnknown("INVALID_OR_DUPLICATE_CHECK")
             observed_checks.append({
                 "id": item["id"], "name": item["name"], "status": item["status"],
                 "conclusion": item.get("conclusion"), "app_id": app["id"],
-                "details_url": item.get("details_url"),
+                "details_url": details,
             })
+        check_snapshot = _check_snapshot(check_obj, expected_head, "CHECKS")
         runs_url = (API + "/actions/runs?head_sha=" + expected_head
                      + "&event=pull_request&per_page=100")
         runs_obj = _object(source.get_json(runs_url), "RUNS")
@@ -240,6 +343,9 @@ def observe(pr_number: int, expected_head: str, *,
                     "path": run["path"],
                     "status": run["status"], "conclusion": run.get("conclusion"),
                 })
+        run_snapshot = _run_snapshot(
+            runs_obj, expected_head, pr_number, first["id"], "RUNS"
+        )
         # A green job from an older run is stale when a newer run of the SAME
         # workflow is linked to this PR and exact head. GitHub's run_number is
         # monotonic within a workflow; run_attempt orders reruns of that run.
@@ -327,39 +433,28 @@ def observe(pr_number: int, expected_head: str, *,
                     and check["status"] == "completed" and check["conclusion"] == "success"
                     and run["status"] == "completed" and run["conclusion"] == "success"
                 )
-            if named_regression_confirmed:
-                # The attempt-specific job response may arrive after a rerun or
-                # newer workflow run has started. Re-sample checks first, then
-                # runs last, so changed latest-attempt metadata cannot leave old
-                # green evidence eligible. Any drift is UNKNOWN, never a stale PASS.
-                final_check_obj = _object(
-                    source.get_json(checks_url), "CHECKS_RECHECK"
-                )
-                final_checks = final_check_obj.get("check_runs")
-                final_check_count = final_check_obj.get("total_count")
-                if (type(final_check_count) is not int
-                        or not 0 <= final_check_count <= 100
-                        or not isinstance(final_checks, list)
-                        or len(final_checks) != final_check_count):
-                    raise ReadUnknown("CHECKS_RECHECK_INCOMPLETE")
-                if final_check_obj != check_obj:
-                    raise ReadUnknown("CHECKS_CHANGED_DURING_OBSERVATION")
-
-                final_runs_obj = _object(
-                    source.get_json(runs_url), "RUNS_RECHECK"
-                )
-                final_runs = final_runs_obj.get("workflow_runs")
-                final_run_count = final_runs_obj.get("total_count")
-                if (type(final_run_count) is not int
-                        or not 0 <= final_run_count <= 100
-                        or not isinstance(final_runs, list)
-                        or len(final_runs) != final_run_count):
-                    raise ReadUnknown("RUNS_RECHECK_INCOMPLETE")
-                if final_runs_obj != runs_obj:
-                    raise ReadUnknown("RUNS_CHANGED_DURING_OBSERVATION")
+        # Sample PR identity before the final metadata reads. The latest
+        # workflow-run collection is deliberately the last network request:
+        # this catches a rerun that starts during the PR read, while making
+        # explicit that no non-atomic API sequence can prevent a later rerun.
         last = _identity(source.get_json(url), pr_number)
         if last != first:
             raise ReadUnknown("PR_CHANGED_BETWEEN_SAMPLES")
+
+        if named_regression_confirmed:
+            final_check_obj = source.get_json(checks_url)
+            final_check_snapshot = _check_snapshot(
+                final_check_obj, expected_head, "CHECKS_RECHECK"
+            )
+            if final_check_snapshot != check_snapshot:
+                raise ReadUnknown("CHECKS_CHANGED_DURING_OBSERVATION")
+
+            final_runs_obj = source.get_json(runs_url)
+            final_run_snapshot = _run_snapshot(
+                final_runs_obj, expected_head, pr_number, first["id"], "RUNS_RECHECK"
+            )
+            if final_run_snapshot != run_snapshot:
+                raise ReadUnknown("RUNS_CHANGED_DURING_OBSERVATION")
         result.update({
             "reason": "NON_AUTHORITATIVE_GITHUB_METADATA_READBACK",
             "pr_sample_consistency": "SAME_AT_TWO_SAMPLED_READS",
