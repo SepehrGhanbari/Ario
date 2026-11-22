@@ -36,6 +36,21 @@ jobs:
         run: |
           python -B research/r63_g5_floor_custody_ci/offline_minimum/test_g5_floor.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Manual phone-note comparison: zero remote attestation, eight strict negative/positive controls
+        shell: pwsh
+        run: |
+          $dir = 'research/r63_g5_floor_custody_ci/offline_minimum'
+          python -B (Join-Path $dir 'test_g5_phone_manual_compare.py')
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $v1 = Join-Path $dir 'synthetic_rollback_seq2_v1.jsonl'
+          $v2 = Join-Path $dir 'synthetic_rollback_seq2_v2.jsonl'
+          $response = & python -B (Join-Path $dir 'g5_phone_manual_compare.py') --v1 $v1 --v2 $v2 --reference-seq 3 --reference-head 6e1d74f7860e0173b9b049487a6a89428439a987809cf363fa27503ae0b06ea1
+          $exit = $LASTEXITCODE
+          $obj = $response | ConvertFrom-Json
+          Write-Host ('G5_MANUAL_PHONE_REFERENCE_UNVERIFIED_'+$obj.verdict+' EXIT='+$exit)
+          if ($obj.verdict -ne 'HOLD_ROLLBACK' -or $obj.reference_origin -ne 'CALLER_SUPPLIED_UNVERIFIED__PHONE_ORIGIN_NOT_ATTESTED' -or $exit -ne 2) {
+            throw 'FAIL_OPEN_PHONE_REFERENCE_PROVENANCE'
+          }
       - name: Portable offline-phone JavaScript crypto logic controls
         shell: pwsh
         run: |
