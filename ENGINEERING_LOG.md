@@ -763,3 +763,15 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - No force-push, merge, secret exposure, ruleset change, signer, trust, Genesis,
   Check publication, history deletion, production or #306 modification.
 
+
+
+## 2026-11-22 — R22 Guard V2 current-run selection + explicit success reason (DRAFT / HOLD)
+
+- Scope is limited to two reproduced #295 false-green paths. Exact base: \`14f9da37673b04f7fce90b720a94c27144c15667\`; final R22 head: \`22a18b9cee00dbab2d86a8e5c4df62256fcfc30b\`; separate Draft PR #333 stacks on the #295 research branch, not main.
+- **RED retained:** test-only head \`1d3577a49217fb6a4bc522158cf786541a08a951\`; [Actions #45063527252](https://github.com/SepehrGhanbari/Ario/actions/runs/45063527252) had 5 targeted false-green failures / 1,959 passes / 7 skips / 273 subtests. The old green was incorrectly accepted while a newer same-workflow same-head PR run was queued, running or failed; the manual validator accepted success with \`review_graph_reason\` absent.
+- **Run freshness correction:** require workflow_id/run_number/run_attempt, validate PR association shape and target identity, reject ambiguous duplicate run numbers, and only accept the named check from the newest PR-linked run of the same workflow. Missing/empty/mismatched PR association is UNKNOWN. Other-workflow runs do not shadow the target workflow.
+- **Manual report correction:** reader exit 0 requires explicit \`review_graph_reason=TWO_COMPLETE_GRAPH_SAMPLES_MATCH\`; nonzero early-failure HOLD may omit it. Added real-reader positive/negative controls and corrected the complete workflow-report fixture.
+- Compatibility regressions found during the first GREEN attempt were fixed in test fixtures, not by relaxing source validation. The mismatched PR link test now expects fail-closed UNKNOWN.
+- **Final exact-head CI:** [PR Implementation Regression #45064906338](https://github.com/SepehrGhanbari/Ario/actions/runs/45064906338) 3/3 success — Linux 3.13 **1,968 passed / 7 skipped**, Linux 3.14 **1,968 / 7**, Windows 3.13 **1,948 / 27**; each 273 subtests, two warnings. [TXT Restore Security #45064906383](https://github.com/SepehrGhanbari/Ario/actions/runs/45064906383) **10/10 success**; [self-audit advisory #45064906350](https://github.com/SepehrGhanbari/Ario/actions/runs/45064906350) success. Windows skip count reflects a different executed subset.
+- Remaining: GitHub API samples are non-atomic; post-last-sample freshness and provider/source custody are not established. Job-to-rerun-attempt binding is not independently fetched. A green read remains metadata, never authority. Node 20 → 24 and two test warnings remain.
+- No change to #295 branch, main, rulesets, required checks, keys, signer, Trust, Genesis, memory admission or production. #333 remains Draft / RESEARCH_ONLY / NO_MERGE.
