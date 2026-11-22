@@ -88,3 +88,54 @@ Final code/test PR run `45069047655` was independently read from GitHub's API:
 `RESEARCH_ONLY / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTION / NO_AUTOMATIC_MERGE`.
 
 PR #337 is Draft/HOLD and targets the R22.1 branch in PR #335. PR #335 and parent PR #333 remain open Draft/HOLD. `main` was not targeted or changed. No merge, force-push, ruleset/required-check change, key use, signature, trust activation, Genesis activation, memory admission, or production action occurred.
+
+## 8. Second independent pass against PR #337 — final-sample race RED, then bounded correction GREEN
+
+### 8.1 RED: race after the previous final workflow sample
+
+Test head `cdabf1f5ea08bdd5445a8c733bed2c7661aad9d7`; [Implementation Regression 45069759321](https://github.com/SepehrGhanbari/Ario/actions/runs/45069759321): **4 failed / 1,994 passed / 7 skipped / 273 subtests passed**. [Self Audit Research 45069759350](https://github.com/SepehrGhanbari/Ario/actions/runs/45069759350) reproduced the four failures.
+
+The new attack starts a rerun during the second/final PR identity GET, after the previous code had already re-read Check Runs and workflow runs. The PR identity remains unchanged, so the old code returned `REPORTED_SUCCESS_BY_LINKED_PR_RUN` despite a new in-progress attempt. Three variants changed checks only, runs only, or both. This established that the previous ordering left an avoidable gap after the workflow sample.
+
+### 8.2 RED: false UNKNOWN from raw-object equality
+
+The same test head reordered Check Runs and workflow-run arrays and changed presentation-only fields (`output`, `updated_at`, `display_title`) while preserving the selected canonical check and run. The old whole-object comparison returned `NOT_CONFIRMED`. This was an unnecessary false UNKNOWN. It also treated a stale canonical check for an older run and a complete run for another PR/workflow as if they changed the selected evidence.
+
+### 8.3 Bounded correction
+
+Final code/test head: `7e35262f9e13bd3a35d3e10325d61df5baf00369`.
+
+- Move the second PR identity read **before** the final metadata rechecks. A rerun during that PR read is now caught by the subsequent Check Runs and workflow-run samples.
+- Make the Check Runs re-read compare a normalized projection of canonical checks bound to the selected latest run and selected check ID. Array order, presentation-only fields, unrelated checks, and stale canonical checks for older runs no longer cause false UNKNOWN. A new competing canonical check pointing to the selected run still changes the projection.
+- Make the workflow-run re-read compare the normalized latest PR-linked run of the pinned canonical workflow. Every returned run is still validated for required fields, IDs, workflow/run-number uniqueness and PR associations; unrelated PRs/workflows and older runs do not create false drift. The latest run's ID, workflow, path, number, attempt, SHA, event, state, conclusion and PR associations remain bound.
+- Keep bounded completeness checks on both final responses. Missing/incomplete collections, duplicate IDs, duplicate workflow/run-number sequences, malformed records and association mismatches fail closed as `UNKNOWN`.
+- Make the workflow-run collection the **last network request**. The output now exposes `workflow_freshness: SAMPLED_NOT_ATOMIC` for a positive reported success.
+
+### 8.4 Explicit residual boundary
+
+A further control models a rerun that begins immediately **after** the final workflow-run GET has returned its old response. A sequential reader cannot observe a state change that occurs after its last read; the test therefore documents the residual rather than pretending to eliminate it. The result remains `status: UNKNOWN`, `merge_authorized: false`, `execution_attestation: NOT_ESTABLISHED`, and explicitly labels the positive GitHub metadata as `SAMPLED_NOT_ATOMIC`. No atomic snapshot or permanent freshness guarantee is claimed.
+
+### 8.5 GREEN evidence on final head
+
+[Implementation Regression 45070448595](https://github.com/SepehrGhanbari/Ario/actions/runs/45070448595): **3/3 jobs SUCCESS**.
+
+| Environment | Passed | Skipped |
+|---|---:|---:|
+| Linux / Python 3.13 | 2,003 | 7 |
+| Linux / Python 3.14 | 2,003 | 7 |
+| Windows / Python 3.13 | 1,983 | 27 |
+
+Each environment reported 273 passing subtests. [Ario Repo Self Audit Research 45070448681](https://github.com/SepehrGhanbari/Ario/actions/runs/45070448681) succeeded. [Published TXT Restore Security 45070448683](https://github.com/SepehrGhanbari/Ario/actions/runs/45070448683) completed **10/10 jobs SUCCESS**.
+
+### 8.6 Final-head GitHub API cross-check
+
+Final run `45070448595` was independently checked against GitHub API:
+
+- canonical workflow ID `379498305`, path `.github/workflows/implementation-regression.yml`, run number `3640`, attempt `1`, event `pull_request`, PR #337 and exact head `7e35262f9e13bd3a35d3e10325d61df5baf00369`;
+- attempt-specific jobs page contains 3 jobs;
+- canonical `m0-regression` Job ID `137355997196`, run ID `45070448595`, attempt 1, exact head, completed/success;
+- Check Run ID `137355997196`, app ID `15368`, same head, completed/success, with exact `/job/137355997196` details URL.
+
+### 8.7 Governance
+
+PR #337 remains open Draft/HOLD and is still stacked on #335. #335 and parent #333 remain open Draft/HOLD. No merge, main update, force-push, ruleset/required-check change, real key, signature, trust activation, Genesis, memory admission or production action occurred. Status remains `RESEARCH_ONLY / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTION / NO_AUTOMATIC_MERGE`.
