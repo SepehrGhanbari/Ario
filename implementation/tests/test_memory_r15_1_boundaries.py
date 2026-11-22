@@ -94,11 +94,19 @@ def test_ledger_file_loader_stops_before_consuming_unbounded_lines(tmp_path, mon
             self.file.close()
         def __iter__(self):
             return self
+        def fileno(self):
+            return self.file.fileno()
         def __next__(self):
             seen[0] += 1
             if seen[0] > 4097:
                 raise RuntimeError("file stream consumed past memory limit")
             return next(self.iterator)
+        def readline(self, size=-1):
+            # R16.1 reads bounded physical lines; count them like iteration.
+            seen[0] += 1
+            if seen[0] > 4097:
+                raise RuntimeError("file stream consumed past memory limit")
+            return self.file.readline(size)
     def guarded_open(path, mode="r", *args, **kwargs):
         f = original_open(path, mode, *args, **kwargs)
         return CountedInput(f) if str(path) == str(ledger) and mode == "rb" else f

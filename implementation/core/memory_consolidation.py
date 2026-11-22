@@ -12,9 +12,12 @@ from __future__ import annotations
 import copy
 import dataclasses
 import functools
-import itertools
 import hashlib
 import json
+import os
+import re
+import sys
+import stat
 import threading
 import math
 from datetime import datetime, timezone
@@ -190,57 +193,229 @@ def _synchronized_memory(method):
     return guarded
 
 
+class _UnsupportedLedgerJSON(Exception):
+    """Syntactically valid JSON that this parser refuses to materialize."""
+
+
+def _bounded_parse_int(text: str) -> int:
+    limit = sys.get_int_max_str_digits() if hasattr(sys, "get_int_max_str_digits") else 4300
+    if limit and len(text.lstrip("-")) > limit:
+        raise _UnsupportedLedgerJSON("integer exceeds interpreter digit limit")
+    return int(text)
+
+
+def _finite_json_float(text: str) -> float:
+    val = float(text)
+    if not math.isfinite(val):
+        raise _UnsupportedLedgerJSON("nonfinite float")
+    return val
+
+
+def _unsupported_json_constant(text: str) -> Any:
+    raise _UnsupportedLedgerJSON("nonstandard JSON constant")
+
+
+def _loads_ledger_line(decoded: str) -> Any:
+    # Interpreter resource limits imply UNEXAMINED/HOLD, not proven corruption.
+    try:
+        return json.loads(
+            decoded, parse_int=_bounded_parse_int,
+            parse_float=_finite_json_float, parse_constant=_unsupported_json_constant,
+        )
+    except (RecursionError, MemoryError) as exc:
+        raise _UnsupportedLedgerJSON(type(exc).__name__) from exc
+
+
+def _same_ledger_stat(a: os.stat_result, b: os.stat_result) -> bool:
+    # Detect observable file replacement and content changes; not a locking
+    # or immutable-snapshot guarantee, especially with adversarial mtime edits.
+    return (a.st_size == b.st_size and a.st_mtime_ns == b.st_mtime_ns
+            and a.st_dev == b.st_dev
+            and (not a.st_ino or not b.st_ino or a.st_ino == b.st_ino))
+
+
+def _checked_batch_limit(value: Any, *, snapshot: bool = False) -> int:
+    if type(value) is not int or value < 1 or value >= sys.maxsize:
+        label = ("HOLD_INVALID_SNAPSHOT_MAX_BATCH_EVENTS" if snapshot
+                 else "HOLD_INVALID_MAX_BATCH_EVENTS")
+        raise ConsolidationError(label)
+    return value
+
+
+def _json_structure_markers(raw: bytes, remaining: int) -> int:
+    # Count delimiters only outside strings, before materializing JSON.
+    # This is a conservative structural budget, NOT a proof of bounded RSS.
+    quoted = False
+    escaped = False
+    count = 0
+    depth = 0
+    for byte in raw:
+        if quoted:
+            if escaped:
+                escaped = False
+            elif byte == 92:
+                escaped = True
+            elif byte == 34:
+                quoted = False
+        elif byte == 34:
+            quoted = True
+        else:
+            if byte in (91, 123):
+                depth += 1
+                if depth > 512:
+                    raise ConsolidationError("HOLD_LEDGER_JSON_UNSUPPORTED")
+            elif byte in (93, 125):
+                depth -= 1
+            if byte in (44, 91, 93, 123, 125):
+                count += 1
+                if count > remaining:
+                    raise ConsolidationError("HOLD_LEDGER_STRUCTURE_BUDGET")
+    return count
+
+
+def _approximate_event_size(value: Any, maximum: int) -> int:
+    # Avoid building new JSON-sized copies of excessively large direct events.
+    # Estimates Python object memory already supplied by the caller, not RSS.
+    stack = [value]
+    seen = set()
+    used = 0
+    while stack:
+        item = stack.pop()
+        identity = id(item)
+        if identity in seen:
+            continue
+        seen.add(identity)
+        used += sys.getsizeof(item)
+        if used > maximum:
+            raise ConsolidationError("HOLD_EVENT_RESOURCE_BUDGET")
+        if isinstance(item, dict):
+            stack.extend(item.keys())
+            stack.extend(item.values())
+        elif isinstance(item, (tuple, list, set, frozenset)):
+            stack.extend(item)
+    return used
+
+
+# Research-only input budgets shared by ingestion and read-only inspection.
+# The line budget counts the terminator (LF or CRLF) as part of the line.
+MAX_LEDGER_LINE_BYTES = 1_048_576
+MAX_LEDGER_BYTES = 64 * 1024 * 1024
+MAX_LEDGER_STRUCTURE_MARKERS = 100_000  # research-only structural ceiling
+MAX_DIRECT_EVENT_APPROX_BYTES = 2 * 1024 * 1024
+MAX_DIRECT_BATCH_APPROX_BYTES = 32 * 1024 * 1024
+_JSON_WHITESPACE = b" \t\r\n"
+_STORED_SHA256 = re.compile(r"[0-9a-f]{64}")
+
+
+def _direct_batch_bytes_after(payload: Any, used: int) -> int:
+    if not isinstance(payload, dict):
+        raise ConsolidationError("HOLD_EVENT_MUST_BE_JSON_OBJECT")
+    remaining = min(MAX_DIRECT_EVENT_APPROX_BYTES, MAX_DIRECT_BATCH_APPROX_BYTES - used)
+    return used + _approximate_event_size(payload, remaining)
+
+
+def _event_digest(event: dict) -> str:
+    try:
+        encoded = json.dumps(event, sort_keys=True, allow_nan=False).encode("utf-8")
+    except (TypeError, ValueError, OverflowError, RecursionError) as exc:
+        raise ConsolidationError("HOLD_EVENT_NOT_JSON_SERIALIZABLE") from exc
+    return hashlib.sha256(encoded).hexdigest()
+
+
 class ConsolidationEngine:
     """Bounded, fail-closed systems consolidation engine for Ario."""
 
     @staticmethod
     def inspect_ledger_integrity(ledger_path: Path) -> LedgerIntegrityReport:
-        """Read-only diagnostic inspection of ledger file for crash analysis without mutations."""
+        """Read-only bounded observation, never proof of immutable history."""
         ledger_path = Path(ledger_path)
-        if not ledger_path.exists():
+        try:
+            initial = ledger_path.stat()
+        except FileNotFoundError:
             return LedgerIntegrityReport(
-                ledger_path=str(ledger_path),
-                total_bytes=0,
-                valid_lines=0,
+                ledger_path=str(ledger_path), total_bytes=0, valid_lines=0,
+                is_clean=False, diagnostic="FILE_NOT_FOUND",
+            )
+        except OSError as exc:
+            return LedgerIntegrityReport(
+                ledger_path=str(ledger_path), total_bytes=0, valid_lines=0,
                 is_clean=False,
-                diagnostic="FILE_NOT_FOUND",
+                diagnostic=f"HOLD_LEDGER_UNREADABLE: {type(exc).__name__}",
             )
-        total_bytes = ledger_path.stat().st_size
-        if total_bytes == 0:
-            return LedgerIntegrityReport(
-                ledger_path=str(ledger_path),
-                total_bytes=0,
-                valid_lines=0,
-                is_clean=True,
-                diagnostic="EMPTY_LEDGER",
-            )
+        total_bytes = initial.st_size
         valid_lines = 0
-        with open(ledger_path, "rb") as f:
-            for line_no, raw_line in enumerate(f, start=1):
-                clean = raw_line.strip()
-                if not clean:
-                    continue
-                try:
-                    decoded = clean.decode("utf-8")
-                    json.loads(decoded)
-                    valid_lines += 1
-                except Exception as exc:
-                    snippet = clean[:80].decode("utf-8", errors="replace")
-                    return LedgerIntegrityReport(
-                        ledger_path=str(ledger_path),
-                        total_bytes=total_bytes,
-                        valid_lines=valid_lines,
-                        is_clean=False,
-                        corrupt_line_no=line_no,
-                        corrupt_line_snippet=snippet,
-                        diagnostic=f"CORRUPT_JSON_OR_TRUNCATED_TAIL: {exc}",
-                    )
+
+        def _held(reason: str, line_no: Optional[int] = None) -> LedgerIntegrityReport:
+            if line_no is not None:
+                reason = f"{reason}: line {line_no}"
+            return LedgerIntegrityReport(
+                ledger_path=str(ledger_path), total_bytes=total_bytes,
+                valid_lines=valid_lines, is_clean=False,
+                corrupt_line_no=None, diagnostic=reason,
+            )
+
+        if not stat.S_ISREG(initial.st_mode):
+            if stat.S_ISDIR(initial.st_mode):
+                return _held("HOLD_LEDGER_UNREADABLE: IsADirectoryError")
+            return _held("HOLD_LEDGER_NOT_REGULAR_FILE")
+        if total_bytes > MAX_LEDGER_BYTES:
+            return _held("HOLD_LEDGER_BYTES_TOO_LARGE")
+
+        bytes_read = 0
+        markers = 0
+        line_no = 0
+        try:
+            with open(ledger_path, "rb") as f:
+                start_fd = os.fstat(f.fileno())
+                if not _same_ledger_stat(initial, start_fd):
+                    return _held("HOLD_LEDGER_CHANGED_DURING_INSPECTION")
+                while True:
+                    raw_line = f.readline(MAX_LEDGER_LINE_BYTES + 1)
+                    if not raw_line:
+                        break
+                    line_no += 1
+                    bytes_read += len(raw_line)
+                    if bytes_read > MAX_LEDGER_BYTES:
+                        return _held("HOLD_LEDGER_BYTES_TOO_LARGE", line_no)
+                    if len(raw_line) > MAX_LEDGER_LINE_BYTES:
+                        return _held("HOLD_LEDGER_LINE_TOO_LARGE", line_no)
+                    clean = raw_line.strip(_JSON_WHITESPACE)
+                    if not clean:
+                        continue
+                    try:
+                        markers += _json_structure_markers(
+                            clean, MAX_LEDGER_STRUCTURE_MARKERS - markers)
+                    except ConsolidationError as exc:
+                        return _held(str(exc), line_no)
+                    try:
+                        event = _loads_ledger_line(clean.decode("utf-8"))
+                        if not isinstance(event, dict):
+                            return _held("HOLD_EVENT_MUST_BE_JSON_OBJECT", line_no)
+                        valid_lines += 1
+                    except _UnsupportedLedgerJSON:
+                        return _held("HOLD_LEDGER_JSON_UNSUPPORTED", line_no)
+                    except Exception as exc:
+                        snippet = clean[:80].decode("utf-8", errors="replace")
+                        return LedgerIntegrityReport(
+                            ledger_path=str(ledger_path), total_bytes=total_bytes,
+                            valid_lines=valid_lines, is_clean=False,
+                            corrupt_line_no=line_no, corrupt_line_snippet=snippet,
+                            diagnostic=f"CORRUPT_JSON_OR_TRUNCATED_TAIL: {exc}",
+                        )
+                end_fd = os.fstat(f.fileno())
+        except OSError as exc:
+            return _held(f"HOLD_LEDGER_UNREADABLE: {type(exc).__name__}", line_no + 1)
+        try:
+            after = ledger_path.stat()
+        except OSError:
+            return _held("HOLD_LEDGER_CHANGED_DURING_INSPECTION")
+        if (bytes_read != total_bytes or not _same_ledger_stat(initial, end_fd)
+                or not _same_ledger_stat(initial, after)):
+            return _held("HOLD_LEDGER_CHANGED_DURING_INSPECTION")
         return LedgerIntegrityReport(
-            ledger_path=str(ledger_path),
-            total_bytes=total_bytes,
-            valid_lines=valid_lines,
-            is_clean=True,
-            diagnostic="CLEAN",
+            ledger_path=str(ledger_path), total_bytes=total_bytes,
+            valid_lines=valid_lines, is_clean=True,
+            diagnostic="EMPTY_LEDGER" if total_bytes == 0 else "CLEAN",
         )
 
 
@@ -250,7 +425,10 @@ class ConsolidationEngine:
         retrieval_threshold: float = 0.2,
         node_id_version: str = "v1",
         default_status: NodeEpistemicStatus = NodeEpistemicStatus.RECORDED,
+        max_batch_events: int = 4096,
     ) -> None:
+        # Fail-closed default; a larger bound must be an explicit caller choice.
+        self.max_batch_events = _checked_batch_limit(max_batch_events)
         if not (0.0 < decay_rate < 1.0):
             raise ConsolidationError("decay_rate must be between 0.0 and 1.0")
         if not (0.0 <= retrieval_threshold <= 1.0):
@@ -317,35 +495,82 @@ class ConsolidationEngine:
         return set(self._ledger_hashes)
 
     def ingest_ledger_file(self, ledger_path: Path) -> int:
-        """Ingest raw ledger JSONL without modifying or truncating the file."""
-        if not ledger_path.exists():
-            raise ConsolidationError(f"ledger path does not exist: {ledger_path}")
+        """Bounded all-or-nothing file observation; refuse detected concurrent changes.
 
-        initial_size = ledger_path.stat().st_size
+        The final stat check is not an immutable snapshot or publisher-authentication
+        protocol. Writers which can restore content, inode and mtime remain outside
+        this research-only guarantee.
+        """
+        ledger_path = Path(ledger_path)
+        _checked_batch_limit(self.max_batch_events)
+        try:
+            initial = ledger_path.stat()
+        except FileNotFoundError as exc:
+            raise ConsolidationError(f"ledger path does not exist: {ledger_path}") from exc
+        except OSError as exc:
+            raise ConsolidationError("HOLD_LEDGER_UNREADABLE") from exc
+        if not stat.S_ISREG(initial.st_mode):
+            raise ConsolidationError("HOLD_LEDGER_NOT_REGULAR_FILE")
+        if initial.st_size > MAX_LEDGER_BYTES:
+            raise ConsolidationError("HOLD_LEDGER_BYTES_TOO_LARGE")
+
         events = []
-        with open(ledger_path, "rb") as f:
-            for line_no, raw_line in enumerate(f, start=1):
-                clean_line = raw_line.strip()
-                if not clean_line:
-                    continue
-                # Match the stream limit during *file reading*, not after
-                # allocating an unbounded ledger-sized event list.
-                if len(events) >= 4096:
-                    raise ConsolidationError("HOLD_BATCH_TOO_LARGE")
-                line_hash = hashlib.sha256(clean_line).hexdigest()
-                try:
-                    event = json.loads(clean_line.decode("utf-8"))
-                except Exception as exc:
-                    raise ConsolidationError(f"corrupt ledger JSON on line {line_no}") from exc
-                events.append((line_hash, event))
+        bytes_read = 0
+        markers = 0
+        try:
+            with open(ledger_path, "rb") as f:
+                start_fd = os.fstat(f.fileno())
+                if not _same_ledger_stat(initial, start_fd):
+                    raise ConsolidationError("HOLD_LEDGER_CHANGED_DURING_INGESTION")
+                line_no = 0
+                while True:
+                    raw_line = f.readline(MAX_LEDGER_LINE_BYTES + 1)
+                    if not raw_line:
+                        break
+                    bytes_read += len(raw_line)
+                    line_no += 1
+                    if bytes_read > MAX_LEDGER_BYTES:
+                        raise ConsolidationError("HOLD_LEDGER_BYTES_TOO_LARGE")
+                    if len(raw_line) > MAX_LEDGER_LINE_BYTES:
+                        raise ConsolidationError(
+                            f"HOLD_LEDGER_LINE_TOO_LARGE: line {line_no}")
+                    clean_line = raw_line.strip(_JSON_WHITESPACE)
+                    if not clean_line:
+                        continue
+                    if len(events) >= self.max_batch_events:
+                        raise ConsolidationError("HOLD_BATCH_TOO_LARGE")
+                    markers += _json_structure_markers(
+                        clean_line, MAX_LEDGER_STRUCTURE_MARKERS - markers)
+                    line_hash = hashlib.sha256(clean_line).hexdigest()
+                    try:
+                        event = _loads_ledger_line(clean_line.decode("utf-8"))
+                    except _UnsupportedLedgerJSON as exc:
+                        raise ConsolidationError(
+                            f"HOLD_LEDGER_JSON_UNSUPPORTED: line {line_no}") from exc
+                    except Exception as exc:
+                        raise ConsolidationError(
+                            f"corrupt ledger JSON on line {line_no}") from exc
+                    if not isinstance(event, dict):
+                        raise ConsolidationError("HOLD_EVENT_MUST_BE_JSON_OBJECT")
+                    events.append((line_hash, event))
+                end_fd = os.fstat(f.fileno())
+        except OSError as exc:
+            raise ConsolidationError("HOLD_LEDGER_UNREADABLE") from exc
 
-        # Invariant T-CONS-02 check: Verify file was not mutated or truncated during read
-        after_size = ledger_path.stat().st_size
-        if after_size < initial_size:
-            raise ConsolidationError("T-CONS-02: Non-Erasure violation: ledger size decreased during ingestion")
+        try:
+            after = ledger_path.stat()
+        except OSError as exc:
+            raise ConsolidationError("HOLD_LEDGER_CHANGED_DURING_INGESTION") from exc
+        # Preserve the historical T-CONS-02 shrink diagnostic.
+        if after.st_size < initial.st_size or end_fd.st_size < initial.st_size:
+            raise ConsolidationError(
+                "T-CONS-02: Non-Erasure violation: ledger size decreased during ingestion")
+        if (bytes_read != initial.st_size
+                or not _same_ledger_stat(initial, end_fd)
+                or not _same_ledger_stat(initial, after)):
+            raise ConsolidationError("HOLD_LEDGER_CHANGED_DURING_INGESTION")
 
-        # File ingestion must use the same replay/hash-collision guard as
-        # live event ingestion. A second read is not a new independent source.
+        # Only now may the graph, hashes and replay indexes be mutated.
         return self.ingest_event_stream(events)
 
     def ingest_event_stream(self, events: Iterable[Tuple[str, Dict[str, Any]]]) -> int:
@@ -364,9 +589,20 @@ class ConsolidationEngine:
         local.materializing = True
         try:
             # Fail closed on unbounded generators rather than exhausting memory.
-            events = list(itertools.islice(events, 4097))
-            if len(events) > 4096:
-                raise ConsolidationError("HOLD_BATCH_TOO_LARGE")
+            limit = _checked_batch_limit(self.max_batch_events)
+            batch = []
+            estimated_batch = 0
+            for record in events:
+                if len(batch) >= limit:
+                    raise ConsolidationError("HOLD_BATCH_TOO_LARGE")
+                event_hash, payload = record
+                estimated_batch = _direct_batch_bytes_after(payload, estimated_batch)
+                batch.append((event_hash, payload))
+            # A generator can update a previously yielded record. Recheck the
+            # finished batch before taking the lock or copying the graph.
+            estimated_batch = 0
+            for _, payload in batch:
+                estimated_batch = _direct_batch_bytes_after(payload, estimated_batch)
         finally:
             local.materializing = False
         with self._batch_lock:
@@ -374,7 +610,7 @@ class ConsolidationEngine:
                 raise ConsolidationError("HOLD_REENTRANT_EVENT_BATCH")
             self._batch_running = True
             try:
-                return self._ingest_event_stream_locked(events)
+                return self._ingest_event_stream_locked(batch)
             finally:
                 self._batch_running = False
 
@@ -395,7 +631,43 @@ class ConsolidationEngine:
             return copy.deepcopy(state)
 
     def __setstate__(self, state: Dict[str, Any]) -> None:
+        # A missing replay-index on a populated historical snapshot cannot
+        # safely be reconstructed as an empty map: that would admit replays.
+        limit = _checked_batch_limit(
+            state.get("max_batch_events", 4096), snapshot=True)
+        keys = ("_event_payload_digests", "_event_stable_digests")
+        if any(key not in state for key in keys):
+            if (state.get("_ledger_hashes") or state.get("_nodes")
+                    or state.get("_links") or state.get("_legacy_aliases")
+                    or any(state.get(key) for key in keys)):
+                raise ConsolidationError(
+                    "HOLD_LEGACY_SNAPSHOT_REPLAY_INDEX_MISSING")
+        hashes = state.get("_ledger_hashes")
+        nodes = state.get("_nodes")
+        links = state.get("_links")
+        if not isinstance(hashes, set) or not isinstance(nodes, dict) or not isinstance(links, list):
+            raise ConsolidationError("HOLD_INVALID_SNAPSHOT_REPLAY_INDEX")
+        if not hashes and (nodes or links or state.get("_legacy_aliases")):
+            raise ConsolidationError("HOLD_INVALID_SNAPSHOT_REPLAY_INDEX")
+        for key in keys:
+            index = state.get(key, {})
+            if not isinstance(index, dict) or index.keys() != hashes:
+                raise ConsolidationError("HOLD_INVALID_SNAPSHOT_REPLAY_INDEX")
+            if any(not isinstance(digest, str) or not _STORED_SHA256.fullmatch(digest)
+                   for digest in index.values()):
+                raise ConsolidationError("HOLD_INVALID_SNAPSHOT_REPLAY_INDEX")
+        if any(not isinstance(h, str) or not _STORED_SHA256.fullmatch(h) for h in hashes):
+            raise ConsolidationError("HOLD_INVALID_SNAPSHOT_REPLAY_INDEX")
+        if (any(not isinstance(node, SemanticNode) or not hashes.issuperset(node.source_event_hashes)
+                for node in nodes.values())
+                or any(not isinstance(link, CausalLink) or not hashes.issuperset(link.evidence_hashes)
+                       for link in links)):
+            raise ConsolidationError("HOLD_INVALID_SNAPSHOT_REPLAY_INDEX")
         self.__dict__.update(state)
+        self.max_batch_events = limit
+        for key in keys:
+            self.__dict__[key] = state.get(key, {})
+        self._batch_running = False
         self._batch_lock = threading.RLock()
 
     def _ingest_event_stream_locked(self, events: Iterable[Tuple[str, Dict[str, Any]]]) -> int:
@@ -420,13 +692,7 @@ class ConsolidationEngine:
                 if not isinstance(h, str) or len(h) != 64 or any(c not in "0123456789abcdef" for c in h.lower()):
                     raise ConsolidationError(f"invalid event sha256 hash: {h}")
                 h = h.lower()  # one event identity regardless of hex case
-                if not isinstance(ev, dict):
-                    raise ConsolidationError("HOLD_EVENT_MUST_BE_JSON_OBJECT")
-                try:
-                    encoded = json.dumps(ev, sort_keys=True, allow_nan=False).encode("utf-8")
-                except (TypeError, ValueError, OverflowError) as exc:
-                    raise ConsolidationError("HOLD_EVENT_NOT_JSON_SERIALIZABLE") from exc
-                digest = hashlib.sha256(encoded).hexdigest()
+                digest = _event_digest(ev)
                 # Only WM's structural record can vary in *attentional score*
                 # without becoming a new evidence identity. All other fields
                 # remain strictly bound to the event hash.
@@ -441,10 +707,7 @@ class ConsolidationEngine:
                 ):
                     stable_record = dict(ev)
                     stable_record.pop("saliency_score")
-                    stable_bytes = json.dumps(
-                        stable_record, sort_keys=True, allow_nan=False
-                    ).encode("utf-8")
-                    stable = hashlib.sha256(stable_bytes).hexdigest()
+                    stable = _event_digest(stable_record)
                 if h in self._event_payload_digests:
                     if (
                         self._event_payload_digests[h] != digest

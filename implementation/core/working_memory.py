@@ -313,8 +313,11 @@ class WorkingMemoryBuffer:
                 to_purge.append(cid)
 
         for cid in to_purge:
-            chunk = self._active_chunks.pop(cid)
+            # As in _evict_least_salient: a failed LTM save must not delete
+            # the chunk before its eviction record exists.
+            chunk = self._active_chunks[cid]
             record = self._handle_chunk_exit(chunk, reason="salience_decay_to_zero")
+            del self._active_chunks[cid]
             evicted.append(record)
 
         return copy.deepcopy(evicted)
