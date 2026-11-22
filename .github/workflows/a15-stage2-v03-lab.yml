@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'implementation/research/a15_*v0_3.js'
+      - 'implementation/tests/test_a15_claude_delta_v0_3.js'
       - 'implementation/research/A15_STAGE2_V03.md'
       - 'implementation/tests/test_a15_lab_v0_3.js'
       - '.github/workflows/a15-stage2-v03-lab.yml'
@@ -27,3 +28,4 @@ jobs:
           node --test implementation/tests/test_a15_research.js
           node --test implementation/tests/test_a15_lab_v0_2.js
           node --test implementation/tests/test_a15_lab_v0_3.js
+          node --test implementation/tests/test_a15_claude_delta_v0_3.js
