@@ -18,6 +18,10 @@ from research import guard_v2_r21b_shadow_reader as shadow
 REPO = "SepehrGhanbari/Ario"
 SCHEMA = "ARIO-GUARD-V2-R21B-LIVE-SHADOW-READ-LAB-0.1"
 TARGETS = (183, 295)
+ALLOWED_RESEARCH_BRANCH_REFS = frozenset({
+    "refs/heads/research/r21b-shadow-reader-v1-v2-20261122",
+    "refs/heads/research/r21b-shadow-adversarial-20261122",
+})
 
 
 def summarize(number: int, result: dict) -> dict:
@@ -66,8 +70,7 @@ def live_pin(number: int, reader: Any) -> dict:
 
 def main() -> int:
     if (os.getenv("GITHUB_REPOSITORY") != REPO or
-        os.getenv("GITHUB_REF") !=
-            "refs/heads/research/r21b-shadow-reader-v1-v2-20261122"):
+        os.getenv("GITHUB_REF") not in ALLOWED_RESEARCH_BRANCH_REFS):
         print("ARIO_R21B_LIVE_SHADOW " + json.dumps({
             "schema": SCHEMA, "status": "INVALID_RUN_CONTEXT_HOLD",
             "disposition": "HOLD", "merge_authorized": False,
