@@ -103,10 +103,14 @@ if ($gatePrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrat
 if (@($identity.Groups | ForEach-Object { $_.Value }) -contains $CustodianSid) { throw 'Gate probe inherited Custodian SID membership.' }
 
 $readAllowed = $false
+$executeAllowed = $false
 try {
     if ((Get-Content -LiteralPath $ProtectedFile -Raw -ErrorAction Stop) -match 'A15_CUSTODIAN_IMAGE_V04') { $readAllowed = $true }
 } catch { throw "Gate could not read protected image: $($_.Exception.Message)" }
 
+$powerShell = Join-Path $PSHOME 'pwsh.exe'
+$executeOutput = & $powerShell -NoProfile -NonInteractive -File $ProtectedFile 2>&1
+if ($LASTEXITCODE -eq 0 -and ($executeOutput -join [Environment]::NewLine) -match 'A15_CUSTODIAN_IMAGE_V04') { $executeAllowed = $true } else { throw 'Gate could not execute the read-only service image.' }
 $writeDenied = Assert-AccessDenied { Add-Content -LiteralPath $ProtectedFile -Value 'MALICIOUS_REPLACEMENT' -ErrorAction Stop } 'executable-write'
 $deleteDenied = Assert-AccessDenied { Remove-Item -LiteralPath $ProtectedFile -Force -ErrorAction Stop } 'executable-delete'
 $acl = Get-Acl -LiteralPath $ProtectedFile -ErrorAction Stop
@@ -122,6 +126,7 @@ $killDenied = Assert-AccessDenied { Stop-Process -Id $ServicePid -Force -ErrorAc
     GateIsAdministrator = $gatePrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
     GateHasCustodianSid = @($identity.Groups | ForEach-Object { $_.Value }) -contains $CustodianSid
     ReadAllowed = $readAllowed
+    ExecuteAllowed = $executeAllowed
     WriteDenied = $writeDenied
     DeleteDenied = $deleteDenied
     AclChangeDenied = $aclChangeDenied
@@ -164,7 +169,7 @@ Add-Content -LiteralPath $LedgerFile -Value 'CUSTODIAN_WRITE' -ErrorAction Stop
 
     if (-not (Test-Path -LiteralPath $outFile)) { throw "Gate probe did not write its result (exit code $($gateProcess.ExitCode))." }
     $result = Get-Content -LiteralPath $outFile -Raw | ConvertFrom-Json
-    if ($gateProcess.ExitCode -ne 0 -or -not ($result.GateSid -eq $gateSid -and -not $result.GateIsAdministrator -and -not $result.GateHasCustodianSid -and $result.ReadAllowed -and $result.WriteDenied -and $result.DeleteDenied -and $result.AclChangeDenied -and $result.LedgerReadDenied -and $result.LedgerWriteDenied -and $result.KillDenied)) {
+    if ($gateProcess.ExitCode -ne 0 -or -not ($result.GateSid -eq $gateSid -and -not $result.GateIsAdministrator -and -not $result.GateHasCustodianSid -and $result.ReadAllowed -and $result.ExecuteAllowed -and $result.WriteDenied -and $result.DeleteDenied -and $result.AclChangeDenied -and $result.LedgerReadDenied -and $result.LedgerWriteDenied -and $result.KillDenied)) {
         throw "Gate isolation probe failed with exit code $($gateProcess.ExitCode); observed result: $($result | ConvertTo-Json -Compress)"
     }
 
@@ -182,7 +187,7 @@ Add-Content -LiteralPath $LedgerFile -Value 'CUSTODIAN_WRITE' -ErrorAction Stop
     Write-Output "CUSTODIAN_IDENTITY=$custodianUser"
     Write-Output 'GATE_IS_NONADMIN=YES'
     Write-Output 'CUSTODIAN_IS_NONADMIN=YES'
-    Write-Output 'GATE_CAN_READ_EXECUTABLE=YES'
+    Write-Output 'GATE_CAN_READ_AND_EXECUTE_READONLY_IMAGE=YES'
     Write-Output 'GATE_CAN_WRITE_DELETE_OR_CHANGE_ACL=NO'
     Write-Output 'GATE_CAN_READ_OR_WRITE_LEDGER=NO'
     Write-Output 'GATE_CAN_TERMINATE_CUSTODIAN_PROCESS=NO'
