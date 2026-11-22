@@ -1,0 +1,435 @@
+[
+  {
+    "case_id": "HR01_CHANGED_PREFERENCE",
+    "events": [
+      {
+        "event_id": "S1",
+        "kind": "RECORDED_STATEMENT",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SUBJECT-A",
+        "scope": "PERSONALIZATION",
+        "ref": "STMT-T1",
+        "target_ref": "",
+        "authority": "DECLARED"
+      },
+      {
+        "event_id": "I1",
+        "kind": "SYSTEM_INTERPRETATION",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SYNTHETIC_SYSTEM",
+        "scope": "PERSONALIZATION",
+        "ref": "INTERP-T1",
+        "target_ref": "STMT-T1",
+        "authority": "NONE"
+      },
+      {
+        "event_id": "C1",
+        "kind": "PERSON_CORRECTION",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SUBJECT-A",
+        "scope": "PERSONALIZATION",
+        "ref": "CORR-T2",
+        "target_ref": "INTERP-T1",
+        "authority": "EXTERNALLY_VERIFIED"
+      },
+      {
+        "event_id": "P1",
+        "kind": "USE_PERMISSION",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SUBJECT-A",
+        "scope": "PERSONALIZATION",
+        "ref": "PERMIT",
+        "target_ref": "CORR-T2",
+        "authority": "EXTERNALLY_VERIFIED"
+      }
+    ],
+    "expected_status": "REVIEWABLE",
+    "expected_future_use": "CURRENT_REF_ONLY"
+  },
+  {
+    "case_id": "HR02_MISQUOTE",
+    "events": [
+      {
+        "event_id": "S1",
+        "kind": "RECORDED_STATEMENT",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SUBJECT-A",
+        "scope": "PERSONALIZATION",
+        "ref": "STMT-T1",
+        "target_ref": "",
+        "authority": "DECLARED"
+      },
+      {
+        "event_id": "I1",
+        "kind": "SYSTEM_INTERPRETATION",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SYNTHETIC_SYSTEM",
+        "scope": "PERSONALIZATION",
+        "ref": "INTERP-T1",
+        "target_ref": "STMT-T1",
+        "authority": "NONE"
+      },
+      {
+        "event_id": "C2",
+        "kind": "PERSON_CORRECTION",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SUBJECT-A",
+        "scope": "PERSONALIZATION",
+        "ref": "NOT_MY_WORDS",
+        "target_ref": "INTERP-T1",
+        "authority": "EXTERNALLY_VERIFIED"
+      },
+      {
+        "event_id": "P2",
+        "kind": "USE_PERMISSION",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SUBJECT-A",
+        "scope": "PERSONALIZATION",
+        "ref": "P",
+        "target_ref": "NOT_MY_WORDS",
+        "authority": "EXTERNALLY_VERIFIED"
+      }
+    ],
+    "expected_status": "REVIEWABLE",
+    "expected_future_use": "CURRENT_REF_ONLY"
+  },
+  {
+    "case_id": "HR03_CONTEXT_CROSS_SCOPE",
+    "events": [
+      {
+        "event_id": "S1",
+        "kind": "RECORDED_STATEMENT",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SUBJECT-A",
+        "scope": "PERSONALIZATION",
+        "ref": "STMT-T1",
+        "target_ref": "",
+        "authority": "DECLARED"
+      },
+      {
+        "event_id": "I1",
+        "kind": "SYSTEM_INTERPRETATION",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SYNTHETIC_SYSTEM",
+        "scope": "PERSONALIZATION",
+        "ref": "INTERP-T1",
+        "target_ref": "STMT-T1",
+        "authority": "NONE"
+      },
+      {
+        "event_id": "C1",
+        "kind": "PERSON_CORRECTION",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SUBJECT-A",
+        "scope": "HEALTH_CONTEXT",
+        "ref": "CORR-T2",
+        "target_ref": "INTERP-T1",
+        "authority": "EXTERNALLY_VERIFIED"
+      },
+      {
+        "event_id": "P1",
+        "kind": "USE_PERMISSION",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SUBJECT-A",
+        "scope": "PERSONALIZATION",
+        "ref": "PERMIT",
+        "target_ref": "CORR-T2",
+        "authority": "EXTERNALLY_VERIFIED"
+      }
+    ],
+    "expected_status": "UNKNOWN",
+    "expected_future_use": "WITHHOLD"
+  },
+  {
+    "case_id": "HR04_WITHDRAWAL",
+    "events": [
+      {
+        "event_id": "S1",
+        "kind": "RECORDED_STATEMENT",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SUBJECT-A",
+        "scope": "PERSONALIZATION",
+        "ref": "STMT-T1",
+        "target_ref": "",
+        "authority": "DECLARED"
+      },
+      {
+        "event_id": "I1",
+        "kind": "SYSTEM_INTERPRETATION",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SYNTHETIC_SYSTEM",
+        "scope": "PERSONALIZATION",
+        "ref": "INTERP-T1",
+        "target_ref": "STMT-T1",
+        "authority": "NONE"
+      },
+      {
+        "event_id": "C1",
+        "kind": "PERSON_CORRECTION",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SUBJECT-A",
+        "scope": "PERSONALIZATION",
+        "ref": "CORR-T2",
+        "target_ref": "INTERP-T1",
+        "authority": "EXTERNALLY_VERIFIED"
+      },
+      {
+        "event_id": "P1",
+        "kind": "USE_PERMISSION",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SUBJECT-A",
+        "scope": "PERSONALIZATION",
+        "ref": "PERMIT",
+        "target_ref": "CORR-T2",
+        "authority": "EXTERNALLY_VERIFIED"
+      },
+      {
+        "event_id": "W1",
+        "kind": "USE_WITHDRAWAL",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SUBJECT-A",
+        "scope": "PERSONALIZATION",
+        "ref": "REVOKE",
+        "target_ref": "",
+        "authority": "EXTERNALLY_VERIFIED"
+      }
+    ],
+    "expected_status": "WITHDRAWN",
+    "expected_future_use": "DENY"
+  },
+  {
+    "case_id": "HR05_EXTERNAL_CONFLICT",
+    "events": [
+      {
+        "event_id": "S1",
+        "kind": "RECORDED_STATEMENT",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SUBJECT-A",
+        "scope": "PERSONALIZATION",
+        "ref": "STMT-T1",
+        "target_ref": "",
+        "authority": "DECLARED"
+      },
+      {
+        "event_id": "I1",
+        "kind": "SYSTEM_INTERPRETATION",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SYNTHETIC_SYSTEM",
+        "scope": "PERSONALIZATION",
+        "ref": "INTERP-T1",
+        "target_ref": "STMT-T1",
+        "authority": "NONE"
+      },
+      {
+        "event_id": "D1",
+        "kind": "DISPUTE",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SUBJECT-A",
+        "scope": "PERSONALIZATION",
+        "ref": "DISPUTE-T2",
+        "target_ref": "",
+        "authority": "EXTERNALLY_VERIFIED"
+      }
+    ],
+    "expected_status": "UNKNOWN",
+    "expected_future_use": "WITHHOLD"
+  },
+  {
+    "case_id": "HR06_AMBIGUOUS_TARGET",
+    "events": [
+      {
+        "event_id": "S1",
+        "kind": "RECORDED_STATEMENT",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SUBJECT-A",
+        "scope": "PERSONALIZATION",
+        "ref": "STMT-T1",
+        "target_ref": "",
+        "authority": "DECLARED"
+      },
+      {
+        "event_id": "I1",
+        "kind": "SYSTEM_INTERPRETATION",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SYNTHETIC_SYSTEM",
+        "scope": "PERSONALIZATION",
+        "ref": "INTERP-T1",
+        "target_ref": "STMT-T1",
+        "authority": "NONE"
+      },
+      {
+        "event_id": "C1",
+        "kind": "PERSON_CORRECTION",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SUBJECT-A",
+        "scope": "PERSONALIZATION",
+        "ref": "CORR-T2",
+        "target_ref": "UNBOUND-SUMMARY",
+        "authority": "EXTERNALLY_VERIFIED"
+      },
+      {
+        "event_id": "P1",
+        "kind": "USE_PERMISSION",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SUBJECT-A",
+        "scope": "PERSONALIZATION",
+        "ref": "PERMIT",
+        "target_ref": "CORR-T2",
+        "authority": "EXTERNALLY_VERIFIED"
+      }
+    ],
+    "expected_status": "UNKNOWN",
+    "expected_future_use": "WITHHOLD"
+  },
+  {
+    "case_id": "HR07_IMPERSONATION",
+    "events": [
+      {
+        "event_id": "S1",
+        "kind": "RECORDED_STATEMENT",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SUBJECT-A",
+        "scope": "PERSONALIZATION",
+        "ref": "STMT-T1",
+        "target_ref": "",
+        "authority": "DECLARED"
+      },
+      {
+        "event_id": "I1",
+        "kind": "SYSTEM_INTERPRETATION",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SYNTHETIC_SYSTEM",
+        "scope": "PERSONALIZATION",
+        "ref": "INTERP-T1",
+        "target_ref": "STMT-T1",
+        "authority": "NONE"
+      },
+      {
+        "event_id": "C1",
+        "kind": "PERSON_CORRECTION",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "STRANGER",
+        "scope": "PERSONALIZATION",
+        "ref": "CORR-T2",
+        "target_ref": "INTERP-T1",
+        "authority": "EXTERNALLY_VERIFIED"
+      },
+      {
+        "event_id": "P1",
+        "kind": "USE_PERMISSION",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SUBJECT-A",
+        "scope": "PERSONALIZATION",
+        "ref": "PERMIT",
+        "target_ref": "CORR-T2",
+        "authority": "EXTERNALLY_VERIFIED"
+      }
+    ],
+    "expected_status": "UNKNOWN",
+    "expected_future_use": "WITHHOLD"
+  },
+  {
+    "case_id": "HR08_STALE_SUMMARY",
+    "events": [
+      {
+        "event_id": "S1",
+        "kind": "RECORDED_STATEMENT",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SUBJECT-A",
+        "scope": "PERSONALIZATION",
+        "ref": "STMT-T1",
+        "target_ref": "",
+        "authority": "DECLARED"
+      },
+      {
+        "event_id": "I1",
+        "kind": "SYSTEM_INTERPRETATION",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SYNTHETIC_SYSTEM",
+        "scope": "PERSONALIZATION",
+        "ref": "INTERP-T1",
+        "target_ref": "STMT-T1",
+        "authority": "NONE"
+      },
+      {
+        "event_id": "C1",
+        "kind": "PERSON_CORRECTION",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SUBJECT-A",
+        "scope": "PERSONALIZATION",
+        "ref": "CORR-T2",
+        "target_ref": "INTERP-T1",
+        "authority": "EXTERNALLY_VERIFIED"
+      },
+      {
+        "event_id": "P1",
+        "kind": "USE_PERMISSION",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SUBJECT-A",
+        "scope": "PERSONALIZATION",
+        "ref": "PERMIT",
+        "target_ref": "CORR-T2",
+        "authority": "EXTERNALLY_VERIFIED"
+      },
+      {
+        "event_id": "I2",
+        "kind": "SYSTEM_INTERPRETATION",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SYNTHETIC_SYSTEM",
+        "scope": "PERSONALIZATION",
+        "ref": "STALE-T3",
+        "target_ref": "STMT-T1",
+        "authority": "NONE"
+      }
+    ],
+    "expected_status": "REVIEWABLE",
+    "expected_future_use": "CURRENT_REF_ONLY"
+  },
+  {
+    "case_id": "HR09_NO_EXPLANATION",
+    "events": [
+      {
+        "event_id": "S1",
+        "kind": "RECORDED_STATEMENT",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SUBJECT-A",
+        "scope": "PERSONALIZATION",
+        "ref": "STMT-T1",
+        "target_ref": "",
+        "authority": "DECLARED"
+      },
+      {
+        "event_id": "I1",
+        "kind": "SYSTEM_INTERPRETATION",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SYNTHETIC_SYSTEM",
+        "scope": "PERSONALIZATION",
+        "ref": "INTERP-T1",
+        "target_ref": "STMT-T1",
+        "authority": "NONE"
+      },
+      {
+        "event_id": "C1",
+        "kind": "PERSON_CORRECTION",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SUBJECT-A",
+        "scope": "PERSONALIZATION",
+        "ref": "CORR-T2",
+        "target_ref": "INTERP-T1",
+        "authority": "EXTERNALLY_VERIFIED"
+      },
+      {
+        "event_id": "P1",
+        "kind": "USE_PERMISSION",
+        "subject_ref": "SUBJECT-A",
+        "actor_ref": "SUBJECT-A",
+        "scope": "PERSONALIZATION",
+        "ref": "PERMIT",
+        "target_ref": "CORR-T2",
+        "authority": "EXTERNALLY_VERIFIED"
+      }
+    ],
+    "expected_status": "REVIEWABLE",
+    "expected_future_use": "CURRENT_REF_ONLY"
+  }
+]
