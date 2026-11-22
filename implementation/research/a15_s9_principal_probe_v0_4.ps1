@@ -159,7 +159,7 @@ Add-Content -LiteralPath $LedgerFile -Value 'CUSTODIAN_WRITE' -ErrorAction Stop
     if ($service.HasExited) { throw 'Custodian process exited before the Gate probe.' }
 
     $processInfo = Get-CimInstance -ClassName Win32_Process -Filter "ProcessId = $($service.Id)"
-    $ownerInfo = $processInfo.GetOwner()
+    $ownerInfo = Invoke-CimMethod -InputObject $processInfo -MethodName GetOwner
     if ($ownerInfo.ReturnValue -ne 0 -or $ownerInfo.User -ne $custodianUser -or $ownerInfo.Domain -ne $env:COMPUTERNAME) {
         throw "Custodian process identity mismatch: $($ownerInfo.Domain)\$($ownerInfo.User)"
     }
