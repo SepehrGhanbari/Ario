@@ -63,7 +63,7 @@ def call(fake=None):
 def test_bound_pr_and_checks_remain_non_authoritative():
     f = Fake()
     result = call(f)
-    assert len(f.calls) == 5
+    assert len(f.calls) == 7
     assert result["pr_sample_consistency"] == "SAME_AT_TWO_SAMPLED_READS"
     assert result["required_check_observation"] == "REPORTED_SUCCESS_BY_LINKED_PR_RUN"
     assert result["linked_run_count"] == 1
@@ -401,8 +401,12 @@ def test_canonical_workflow_id_with_wrong_path_is_not_confirmed():
 def test_prior_attempt_check_cannot_stand_in_for_latest_attempt_job():
     f = Fake()
     f.runs["workflow_runs"][0]["run_attempt"] = 2
+    f.checks["check_runs"][0].update(
+        id=3,
+        details_url="https://github.com/SepehrGhanbari/Ario/actions/runs/100/job/3",
+    )
     f.jobs = {"total_count": 1, "jobs": [{
-        "id": 3, "run_id": 100, "run_attempt": 2, "head_sha": HEAD,
+        "id": 3, "run_id": 100, "run_attempt": 1, "head_sha": HEAD,
         "name": "m0-regression", "status": "completed", "conclusion": "success",
     }]}
     result = call(f)
@@ -420,8 +424,13 @@ def test_workflow_id_is_pinned_even_when_path_matches():
 def test_exact_attempt_jobs_endpoint_is_read_and_bound():
     f = Fake()
     result = call(f)
-    assert f.calls[-2] == (
+    assert f.calls[3] == (
         mod.API + "/actions/runs/100/attempts/1/jobs?per_page=100"
+    )
+    assert f.calls[4] == mod.API + "/commits/" + HEAD + "/check-runs?per_page=100"
+    assert f.calls[5] == (
+        mod.API + "/actions/runs?head_sha=" + HEAD
+        + "&event=pull_request&per_page=100"
     )
     assert result["canonical_workflow_observation"] == "MATCH"
     assert result["attempt_binding_observation"] == "MATCH"
@@ -473,48 +482,50 @@ def test_missing_workflow_path_is_unknown():
 
 # Independent R22.1 adversarial review: rerun race and malformed evidence controls.
 class RerunDuringAttemptRead(Fake):
-    """A newer attempt starts after the initial runs/checks reads but before return."""
+    """A rerun starts after the initial metadata read, during the job response."""
+    def __init__(self, changed):
+        super().__init__()
+        self.changed = changed
+
     def get_json(self, url):
         if "/attempts/" in url and "/jobs?" in url:
             self.calls.append(url)
             old_attempt_jobs = copy.deepcopy(self.jobs)
-            self.runs = {"total_count": 1, "workflow_runs": [{
-                "id": 100, "workflow_id": 379498305,
-                "path": ".github/workflows/implementation-regression.yml",
-                "run_number": 10, "run_attempt": 2, "head_sha": HEAD,
-                "event": "pull_request", "status": "in_progress", "conclusion": None,
-                "pull_requests": [{"id": 987, "number": PR, "head": {"sha": HEAD}}],
-            }]}
-            self.checks = {"total_count": 1, "check_runs": [{
-                "id": 3, "name": "m0-regression", "head_sha": HEAD,
-                "status": "in_progress", "conclusion": None, "app": {"id": 15368},
-                "details_url": "https://github.com/SepehrGhanbari/Ario/actions/runs/100/job/3",
-            }]}
+            if self.changed in ("runs", "both"):
+                self.runs = {"total_count": 1, "workflow_runs": [{
+                    "id": 100, "workflow_id": 379498305,
+                    "path": ".github/workflows/implementation-regression.yml",
+                    "run_number": 10, "run_attempt": 2, "head_sha": HEAD,
+                    "event": "pull_request", "status": "in_progress", "conclusion": None,
+                    "pull_requests": [{"id": 987, "number": PR, "head": {"sha": HEAD}}],
+                }]}
+            if self.changed in ("checks", "both"):
+                self.checks = {"total_count": 1, "check_runs": [{
+                    "id": 3, "name": "m0-regression", "head_sha": HEAD,
+                    "status": "in_progress", "conclusion": None, "app": {"id": 15368},
+                    "details_url": "https://github.com/SepehrGhanbari/Ario/actions/runs/100/job/3",
+                }]}
             return old_attempt_jobs
         return super().get_json(url)
 
 
-def test_rerun_started_after_initial_run_read_cannot_leave_attempt_one_green():
-    f = RerunDuringAttemptRead()
+@pytest.mark.parametrize(("changed", "reason"), [
+    ("checks", "CHECKS_CHANGED_DURING_OBSERVATION"),
+    ("runs", "RUNS_CHANGED_DURING_OBSERVATION"),
+    ("both", "CHECKS_CHANGED_DURING_OBSERVATION"),
+])
+def test_rerun_started_during_attempt_read_cannot_leave_attempt_one_green(changed, reason):
+    f = RerunDuringAttemptRead(changed)
     result = call(f)
     assert result["required_check_observation"] == "NOT_CONFIRMED"
-    assert result["attempt_binding_observation"] != "MATCH"
-
-
-def test_prior_attempt_job_is_rejected_even_when_check_and_job_ids_match():
-    f = Fake()
-    f.runs["workflow_runs"][0]["run_attempt"] = 2
-    f.checks["check_runs"][0].update(
-        id=3,
-        details_url="https://github.com/SepehrGhanbari/Ario/actions/runs/100/job/3",
+    assert result["status"] == "UNKNOWN"
+    assert result["reason"] == reason
+    assert f.calls[-3] == mod.API + "/commits/" + HEAD + "/check-runs?per_page=100"
+    assert f.calls[-2] == (
+        mod.API + "/actions/runs?head_sha=" + HEAD
+        + "&event=pull_request&per_page=100"
     )
-    f.jobs = {"total_count": 1, "jobs": [{
-        "id": 3, "run_id": 100, "run_attempt": 1, "head_sha": HEAD,
-        "name": "m0-regression", "status": "completed", "conclusion": "success",
-    }]}
-    result = call(f)
-    assert result["required_check_observation"] == "NOT_CONFIRMED"
-    assert result["attempt_binding_observation"] == "NOT_CONFIRMED"
+    assert f.calls[-1] == mod.API + "/pulls/" + str(PR)
 
 
 @pytest.mark.parametrize("field", ["run_id", "run_attempt", "head_sha", "status", "conclusion"])
