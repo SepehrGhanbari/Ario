@@ -651,3 +651,49 @@ def test_reordered_records_and_unrelated_presentation_metadata_do_not_create_fal
     result = call(f)
     assert result["required_check_observation"] == "REPORTED_SUCCESS_BY_LINKED_PR_RUN"
     assert result["attempt_binding_observation"] == "MATCH"
+
+
+class MalformedFinalMetadataRecheck(Fake):
+    def __init__(self, which, mutation):
+        super().__init__()
+        self.which = which
+        self.mutation = mutation
+        self.check_reads = 0
+        self.run_reads = 0
+
+    def get_json(self, url):
+        result = super().get_json(url)
+        if "/check-runs?" in url:
+            self.check_reads += 1
+            if self.which == "checks" and self.check_reads == 2:
+                if self.mutation == "incomplete":
+                    result["total_count"] += 1
+                elif self.mutation == "duplicate":
+                    result["check_runs"].append(copy.deepcopy(result["check_runs"][0]))
+                    result["total_count"] += 1
+        if "/actions/runs?" in url:
+            self.run_reads += 1
+            if self.which == "runs" and self.run_reads == 2:
+                if self.mutation == "incomplete":
+                    result["total_count"] += 1
+                elif self.mutation == "duplicate_sequence":
+                    duplicate = copy.deepcopy(result["workflow_runs"][0])
+                    duplicate["id"] = 101
+                    duplicate["run_attempt"] = 2
+                    result["workflow_runs"].append(duplicate)
+                    result["total_count"] += 1
+        return result
+
+
+@pytest.mark.parametrize(("which", "mutation", "reason"), [
+    ("checks", "incomplete", "CHECKS_RECHECK_INCOMPLETE"),
+    ("checks", "duplicate", "INVALID_OR_DUPLICATE_CHECK"),
+    ("runs", "incomplete", "RUNS_RECHECK_INCOMPLETE"),
+    ("runs", "duplicate_sequence", "DUPLICATE_WORKFLOW_RUN_NUMBER"),
+])
+def test_malformed_final_metadata_recheck_never_confirms_success(which, mutation, reason):
+    f = MalformedFinalMetadataRecheck(which, mutation)
+    result = call(f)
+    assert result["status"] == "UNKNOWN"
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+    assert result["reason"] == reason
