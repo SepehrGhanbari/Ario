@@ -54,6 +54,31 @@ class CorpusTests(unittest.TestCase):
         self.assertIn("DUPLICATE_EVENT_ID", out["unresolved"])
         self.assertEqual(out["future_use"], "WITHHOLD")
 
+    def test_old_permission_cannot_transfer_to_corrected_interpretation(self):
+        cases = json.loads((ROOT / "synthetic_cases.json").read_text())
+        events = copy.deepcopy(cases[0]["events"])
+        # Grant the old interpretation before the person corrects it.
+        events[2], events[3] = events[3], events[2]
+        events[2]["target_ref"] = "INTERP-T1"
+        observed = project(events, subject_ref="SUBJECT-A", scope="PERSONALIZATION")
+        self.assertEqual(observed["current_interpretation_ref"], "CORR-T2")
+        self.assertEqual(observed["permission"], "UNKNOWN")
+        self.assertEqual(observed["future_use"], "WITHHOLD")
+
+    def test_old_permission_cannot_transfer_to_later_model_summary(self):
+        cases = json.loads((ROOT / "synthetic_cases.json").read_text())
+        events = copy.deepcopy(cases[0]["events"][:2])
+        permission = copy.deepcopy(cases[0]["events"][3])
+        permission["target_ref"] = "INTERP-T1"
+        events.append(permission)
+        late = copy.deepcopy(events[1])
+        late["event_id"], late["ref"] = "I-LATE", "INTERP-LATE"
+        events.append(late)
+        observed = project(events, subject_ref="SUBJECT-A", scope="PERSONALIZATION")
+        self.assertEqual(observed["current_interpretation_ref"], "INTERP-LATE")
+        self.assertEqual(observed["permission"], "UNKNOWN")
+        self.assertEqual(observed["future_use"], "WITHHOLD")
+
     def test_withdrawal_dominates_conflicting_untrusted_summary(self):
         cases = json.loads((ROOT / "synthetic_cases.json").read_text())
         events = copy.deepcopy(cases[3]["events"])
