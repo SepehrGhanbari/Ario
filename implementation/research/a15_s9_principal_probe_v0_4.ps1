@@ -69,6 +69,7 @@ $readAllowed = $false
 $writeDenied = $false
 $deleteDenied = $false
 $killDenied = $false
+$aclChangeDenied = $false
 $ledgerReadDenied = $false
 $ledgerWriteDenied = $false
 try { Get-Content -LiteralPath $ProtectedFile -ErrorAction Stop | Out-Null; $readAllowed = $true } catch {}
@@ -76,21 +77,23 @@ try { Add-Content -LiteralPath $ProtectedFile -Value 'MALICIOUS_REPLACEMENT' -Er
 try { Remove-Item -LiteralPath $ProtectedFile -Force -ErrorAction Stop } catch { $deleteDenied = $true }
 try { Get-Content -LiteralPath $LedgerFile -ErrorAction Stop | Out-Null } catch { $ledgerReadDenied = $true }
 try { Add-Content -LiteralPath $LedgerFile -Value 'FORGED_LEDGER_ENTRY' -ErrorAction Stop } catch { $ledgerWriteDenied = $true }
+try { & icacls.exe $ProtectedFile /grant ("{0}:F" -f [Security.Principal.WindowsIdentity]::GetCurrent().Name) 2>$null | Out-Null; $aclChangeDenied = $LASTEXITCODE -ne 0 } catch { $aclChangeDenied = $true }
 try { Stop-Process -Id $ServicePid -Force -ErrorAction Stop } catch { $killDenied = $true }
 [pscustomobject]@{
     ReadAllowed = $readAllowed
     WriteDenied = $writeDenied
     DeleteDenied = $deleteDenied
     KillDenied = $killDenied
+    AclChangeDenied = $aclChangeDenied
     LedgerReadDenied = $ledgerReadDenied
     LedgerWriteDenied = $ledgerWriteDenied
 } | ConvertTo-Json -Compress | Set-Content -LiteralPath $OutputFile -Encoding UTF8
-if (-not ($readAllowed -and $writeDenied -and $deleteDenied -and $killDenied -and $ledgerReadDenied -and $ledgerWriteDenied)) { exit 9 }
+if (-not ($readAllowed -and $writeDenied -and $deleteDenied -and $killDenied -and $aclChangeDenied -and $ledgerReadDenied -and $ledgerWriteDenied)) { exit 9 }
 exit 0
 '@
     $probeText | Set-Content -LiteralPath $probe -Encoding UTF8
 
-    $powerShell = Join-Path $PSHOME 'powershell.exe'
+    $powerShell = Join-Path $PSHOME 'pwsh.exe'
     $service = Start-Process -FilePath $powerShell -Credential $custodianCredential -ArgumentList '-NoProfile -NonInteractive -Command "Start-Sleep -Seconds 90"' -PassThru -WindowStyle Hidden
     Start-Sleep -Milliseconds 400
     if ($service.HasExited) { throw 'Custodian process exited before the Gate probe.' }
@@ -101,7 +104,7 @@ exit 0
     if ($gateProcess.ExitCode -ne 0) { throw "Gate isolation probe failed with exit code $($gateProcess.ExitCode)." }
     if (-not (Test-Path -LiteralPath $outFile)) { throw 'Gate probe did not write its result.' }
     $result = Get-Content -LiteralPath $outFile -Raw | ConvertFrom-Json
-    if (-not ($result.ReadAllowed -and $result.WriteDenied -and $result.DeleteDenied -and $result.KillDenied -and $result.LedgerReadDenied -and $result.LedgerWriteDenied)) {
+    if (-not ($result.ReadAllowed -and $result.WriteDenied -and $result.DeleteDenied -and $result.KillDenied -and $result.AclChangeDenied -and $result.LedgerReadDenied -and $result.LedgerWriteDenied)) {
         throw "Unexpected Gate access result: $($result | ConvertTo-Json -Compress)"
     }
     if (-not (Test-Path -LiteralPath $recorder)) { throw 'Gate removed the protected service image.' }
@@ -113,6 +116,7 @@ exit 0
     Write-Output "CUSTODIAN_IDENTITY=$custodianUser"
     Write-Output 'GATE_CAN_READ_EXECUTABLE=YES'
     Write-Output 'GATE_CAN_WRITE_OR_DELETE_EXECUTABLE=NO'
+    Write-Output 'GATE_CAN_CHANGE_EXECUTABLE_ACL=NO'
     Write-Output 'GATE_CAN_TERMINATE_CUSTODIAN_PROCESS=NO'
     Write-Output 'GATE_CAN_READ_OR_WRITE_LEDGER=NO'
     Write-Output 'SCOPE=LOCAL_OS_PRINCIPAL_ONLY_NOT_EXTERNAL_CUSTODY'
