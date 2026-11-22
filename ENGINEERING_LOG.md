@@ -810,3 +810,11 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - **API cross-check:** run `45070448595`, canonical workflow ID/path, PR #337, run number 3640, attempt 1, exact final head; 3 attempt jobs. Job ID `137355997196` exactly matches Check Run ID `137355997196`, app ID 15368, head/run/attempt/status/conclusion/details URL.
 - **Durable report:** `implementation/research/R22_1_ADVERSARIAL_REVIEW_2026-11-23.md`, section 8.
 - **Governance:** PR #337 remains Draft/HOLD stacked on #335; #335 and #333 remain Draft/HOLD. No merge/main/ruleset/key/signature/trust/Genesis/memory/production action. `RESEARCH_ONLY / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTION / NO_AUTOMATIC_MERGE`.
+
+## 2026-11-23 — final R22.1 verification: PR-revision residual explicitly tested
+
+- Added a second explicit non-atomic boundary control: PR head changes immediately after the second PR identity GET returns. The sequential reader cannot observe it in later old-SHA Check/Workflow queries. Expected disposition is `SAMPLED_NOT_ATOMIC`, overall UNKNOWN, merge false, execution attestation NOT_ESTABLISHED. This is a documented limitation, not a claimed fix.
+- **Final code/test head:** `67c480ed9becf4d57669fed6909401af1a23289c`. [Implementation Regression 45070794094](https://github.com/SepehrGhanbari/Ario/actions/runs/45070794094): Linux 3.13 **2,004 passed / 7 skipped**, Linux 3.14 **2,004 / 7**, Windows 3.13 **1,984 / 27**; 273 subtests each; 3/3 SUCCESS. [Self Audit 45070794130](https://github.com/SepehrGhanbari/Ario/actions/runs/45070794130) SUCCESS. [TXT Restore Security 45070794022](https://github.com/SepehrGhanbari/Ario/actions/runs/45070794022) **10/10 SUCCESS**.
+- **Actual API cross-check:** canonical workflow ID/path, PR #337, run number 3653, attempt 1, exact head; 3 jobs. `m0-regression` Job ID `137357047100` exactly matches Check Run ID `137357047100`, app ID 15368, exact run/attempt/head and completed/success.
+- **Durable report:** `implementation/research/R22_1_ADVERSARIAL_REVIEW_2026-11-23.md`, section 9.
+- **Governance:** #337, #335, #333 remain Draft/HOLD. No merge/main/ruleset/key/signature/trust/Genesis/memory/production action. `RESEARCH_ONLY / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTION / NO_AUTOMATIC_MERGE`.
