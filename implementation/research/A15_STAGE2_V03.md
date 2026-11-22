@@ -16,7 +16,7 @@
 
 ## Threats exercised
 
-The v0.3 suite contains positive and negative controls for valid ACCEPT, DECLINE, UNKNOWN, pre-verification command injection (S1), forged ACCEPT for DECLINE (S2), inconsistent status/reason (S3), arbitrary reason strings, child timeout (S4), SIGTERM-trapping stdout flood (S5), extra/oversized envelope fields, same-ID replay (S6), same-UID Recorder rewrite (S9), wrong Recorder PID, EPIPE (S10), stderr flood and Recorder failure.
+The v0.3 suite contains positive and negative controls for valid ACCEPT, DECLINE, UNKNOWN, pre-verification command injection (S1), forged ACCEPT for DECLINE (S2), inconsistent status/reason (S3), arbitrary reason strings, child timeout (S4), SIGTERM-trapping stdout flood (S5), extra/oversized envelope fields, same-ID replay (S6), same-UID Recorder rewrite (S9), wrong Recorder PID, broken-pipe/early-close handling (EPIPE on POSIX, EOF on Windows; S10), stderr flood and Recorder failure.
 
 S9 is deliberately expected to remain RED: the Gate and Recorder still share the same OS identity and writable directory. A same-user child process is not an independent witness or custodian. This PR does not simulate away that boundary.
 
