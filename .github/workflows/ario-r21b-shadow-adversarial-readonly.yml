@@ -1,0 +1,35 @@
+name: Ario R21B Adversarial Shadow Read-Only Live Probe (Research)
+
+on:
+  push:
+    branches:
+      - research/r21b-shadow-adversarial-20261122
+    paths:
+      - .github/workflows/ario-r21b-shadow-adversarial-readonly.yml
+      - implementation/research/guard_v2_r21b_shadow_reader.py
+      - implementation/research/guard_v2_r21b_live_shadow_probe.py
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  adversarial-shadow-readonly:
+    if: github.repository == 'SepehrGhanbari/Ario' && github.ref == 'refs/heads/research/r21b-shadow-adversarial-20261122'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Check out research branch without retaining token
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Set up Python 3.13
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - name: Test single-snapshot read and final read-only REST head recheck
+        env:
+          PYTHONPATH: implementation
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python -B implementation/research/guard_v2_r21b_live_shadow_probe.py
