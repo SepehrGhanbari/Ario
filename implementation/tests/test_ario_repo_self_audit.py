@@ -520,12 +520,15 @@ def test_rerun_started_during_attempt_read_cannot_leave_attempt_one_green(change
     assert result["required_check_observation"] == "NOT_CONFIRMED"
     assert result["status"] == "UNKNOWN"
     assert result["reason"] == reason
-    assert f.calls[-3] == mod.API + "/commits/" + HEAD + "/check-runs?per_page=100"
-    assert f.calls[-2] == (
-        mod.API + "/actions/runs?head_sha=" + HEAD
-        + "&event=pull_request&per_page=100"
+    assert f.calls[3] == (
+        mod.API + "/actions/runs/100/attempts/1/jobs?per_page=100"
     )
-    assert f.calls[-1] == mod.API + "/pulls/" + str(PR)
+    assert f.calls[4] == mod.API + "/commits/" + HEAD + "/check-runs?per_page=100"
+    if changed == "runs":
+        assert f.calls[5] == (
+            mod.API + "/actions/runs?head_sha=" + HEAD
+            + "&event=pull_request&per_page=100"
+        )
 
 
 @pytest.mark.parametrize("field", ["run_id", "run_attempt", "head_sha", "status", "conclusion"])
