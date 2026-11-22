@@ -180,6 +180,7 @@ public static class G8IntegratedBroker {
     static void WriteReply(Stream s,string reply) {byte[] b=UTF(reply+"\n");s.Write(b,0,b.Length);s.Flush();}
     public static string Serve(string root,string caseName,string pipeName,string writerSid,string readerSid,int count,string phase) {
        Need(WindowsIdentity.GetCurrent().User.Value==writerSid,"HOLD_WRITER_OS_SID_MISMATCH");
+       Console.WriteLine("G8_WRITER_OS_SID="+writerSid);Console.Out.Flush();
        Need(Regex.IsMatch(pipeName,"^ArioR63G8_[a-f0-9]{8}$"),"HOLD_UNEXPECTED_PIPE_NAME");
        Need(count>0&&count<=12,"HOLD_BAD_CLIENT_COUNT");
        Need(phase=="normal"||phase=="recovery"||phase=="before"||phase=="after"||phase=="receipt","HOLD_WRONG_PHASE");
