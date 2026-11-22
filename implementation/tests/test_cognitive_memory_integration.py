@@ -37,7 +37,7 @@ def test_full_cognitive_memory_lifecycle(tmp_path: Path):
 
     # --- Phase 1: Speculative Hypothesis Generation ---
     hyp = guard.create_hypothesis(
-        assertion="Loopback binding prevents proxy redirection",
+        assertion="tool_exit:run_tests:implementation/tests/test_planner_transport.py:0",
         attribution_id="ATTR-HYP-BIND",
     )
     assert hyp.veracity_state == VeracityState.UNVERIFIED_HYPOTHESIS
@@ -59,7 +59,7 @@ def test_full_cognitive_memory_lifecycle(tmp_path: Path):
     stdout_hash = _sha256(stdout_content)
 
     obs = guard.record_empirical_observation(
-        assertion="test_planner_transport.py verified on Ubuntu and Windows",
+        assertion="tool_exit:run_tests:implementation/tests/test_planner_transport.py:0",
         tool="run_tests",
         target="implementation/tests/test_planner_transport.py",
         exit_code=0,
@@ -108,7 +108,7 @@ def test_full_cognitive_memory_lifecycle(tmp_path: Path):
     active_nodes = engine.retrieve_active_context("planner_loopback")
     assert len(active_nodes) == 1
     node = active_nodes[0]
-    assert node.status == NodeEpistemicStatus.ACCEPTED
+    assert node.status == NodeEpistemicStatus.RECORDED
     assert engine.validate_lineage_integrity() is True
 
     # --- Phase 4: Prospective Intention Triggering ---
@@ -129,6 +129,4 @@ def test_full_cognitive_memory_lifecycle(tmp_path: Path):
         "saliency": node.saliency_score,
     }
     triggered = prospective.evaluate_cues(cue_context, current_epoch=1500.0)
-    assert len(triggered) == 1
-    assert triggered[0].intention_id == "INT-PROSPECTIVE-01"
-    assert triggered[0].status == IntentionStatus.TRIGGERED
+    assert triggered == []  # RECORDED cannot satisfy the ACCEPTED action cue

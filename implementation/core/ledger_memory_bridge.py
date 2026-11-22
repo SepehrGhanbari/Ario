@@ -181,12 +181,13 @@ class EpistemicLedgerBridge:
 
                     # Source monitoring guard attribution
                     attribution = self.guard.record_empirical_observation(
-                        assertion=f"step_execution:{tool}:{target_name}:{status}",
+                        assertion=f"tool_exit:{tool}:{target_name}:{0 if status == 'COMPLETED' else 1}",
                         tool=tool,
                         target=target_name,
                         exit_code=0 if status == "COMPLETED" else 1,
                         stdout=stdout_str,
                         execution_lock=lock_payload,
+                        attribution_id=f"ATTR-STEP-{line_hash[:24]}",
                     )
 
                     # Determine semantic concept and assertion
@@ -197,7 +198,7 @@ class EpistemicLedgerBridge:
                     claim_data: Dict[str, Any] = {
                         "concept": concept,
                         "assertion": assertion,
-                        "status": NodeEpistemicStatus.SUPPORTED.value if status == "COMPLETED" else NodeEpistemicStatus.CONTESTED.value,
+                        "status": NodeEpistemicStatus.RECORDED.value if status == "COMPLETED" else NodeEpistemicStatus.CONTESTED.value,
                     }
 
                     # If previous observation on same target exists with different assertion, mark conflict
