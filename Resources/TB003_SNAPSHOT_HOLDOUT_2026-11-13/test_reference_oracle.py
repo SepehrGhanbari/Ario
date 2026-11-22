@@ -159,5 +159,70 @@ class BlindRunnerValueSchemaTests(unittest.TestCase):
                     run_blind(target)
 
 
+class SnapshotDeclaredRiskControls(unittest.TestCase):
+    """Open mutation controls; not an independent blinded holdout."""
+
+    def test_mismatch_does_not_mask_common_controller_or_witness_b_compromise(self):
+        item = _runner_fixture()
+        item["declared_holder"] = "P3"  # mismatched, no transfer
+        item["common_control"] = True
+        item["compromised_custodians"] = ["P2"]
+        observed = adjudicate(item)
+        self.assertEqual(observed["holder_status"], "MISMATCH")
+        self.assertEqual(observed["chain_independence"], "UNKNOWN")
+        self.assertIn("DECLARED_COMMON_ADMIN_CONTROL", observed["declared_negative_facts"])
+        self.assertIn("DECLARED_COMPROMISED_WITNESS_B", observed["declared_negative_facts"])
+
+    def test_incomplete_history_preserves_declared_risks(self):
+        item = _runner_fixture()
+        item["complete_transfer_surface"] = False
+        item["shared_storage"] = True
+        item["compromised_custodians"] = ["P3"]
+        item["transfers"] = [{"from":"P1","to":"P3","origin":"LAB","sequence":2}]
+        observed = adjudicate(item)
+        self.assertEqual(observed["holder_status"], "UNKNOWN")
+        self.assertIn("DECLARED_SHARED_STORAGE", observed["declared_negative_facts"])
+        self.assertIn("DECLARED_COMPROMISED_TRANSFER_ACTOR", observed["declared_negative_facts"])
+        self.assertEqual(observed["transfer_surface_authentication"], "NOT_ESTABLISHED")
+
+    def test_disconnected_fork_and_same_sequence_no_positive_final_claim(self):
+        for variant in ("fork", "same_sequence", "cycle"):
+            with self.subTest(variant=variant):
+                item = _runner_fixture()
+                item["declared_holder"] = "P3"
+                first = {"from":"P1","to":"P3","origin":"LAB","sequence":2}
+                bad = ({"from":"P1","to":"P4","origin":"LAB","sequence":3}
+                       if variant == "fork" else
+                       {"from":"P3","to":"P4","origin":"LAB","sequence":2}
+                       if variant == "same_sequence" else
+                       {"from":"P3","to":"P1","origin":"LAB","sequence":3})
+                item["transfers"] = [first, bad]
+                observed = adjudicate(item)
+                self.assertEqual(observed["holder_status"], "UNKNOWN")
+                self.assertNotEqual(observed["chain_independence"],
+                                    "LAB_CONDITIONALLY_SEPARATE")
+
+    def test_public_controls_keep_declared_non_authorizing_boundary(self):
+        self.assertEqual(len(cases), 18)
+        for item in cases:
+            with self.subTest(case=item["case_id"]):
+                observed = adjudicate(item)
+                self.assertEqual(observed["independence_authority"],
+                                 "LAB_DECLARED_ONLY")
+                self.assertEqual(observed["transfer_surface_authentication"],
+                                 "NOT_ESTABLISHED")
+
+    def test_deleted_transfer_with_self_declared_completeness_is_not_authenticated(self):
+        # No parser can discover an event omitted by the sole fixture author.
+        item = _runner_fixture()
+        item["complete_transfer_surface"] = True
+        item["transfers"] = []
+        observed = adjudicate(item)
+        self.assertEqual(observed["holder_status"], "MATCH")
+        self.assertEqual(observed["transfer_surface_authentication"], "NOT_ESTABLISHED")
+        self.assertEqual(observed["independence_authority"], "LAB_DECLARED_ONLY")
+
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
