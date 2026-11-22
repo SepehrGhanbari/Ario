@@ -38,7 +38,8 @@ ALLOWED = (
 LIMITATIONS = [
     "GitHub Actions success is not independently attested test execution",
     "The repository author may also control tests and workflow definitions",
-    "Two PR GET samples do not form an atomic or permanent snapshot",
+    "Two PR GET samples and repeated metadata reads do not form an atomic or permanent snapshot",
+    "Post-job re-reads narrow but cannot eliminate the final GitHub API race",
     "This probe does not validate job logs, code quality, truth or merge eligibility",
     "No memory update, M0 evidence admission, real signer, Genesis or trust permission",
 ]
@@ -64,7 +65,7 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 class GitHubReadOnly:
-    """Allow exact repository metadata GET plus three fixed subpath GET shapes."""
+    """Allow exact repository metadata GET plus four fixed subpath GET shapes."""
 
     def __init__(self, token: str | None = None):
         self.token = token
@@ -154,10 +155,8 @@ def observe(pr_number: int, expected_head: str, *,
         result["first_head_observed"] = first["head"]
         if first["head"] != expected_head:
             raise ReadUnknown("PR_HEAD_CHANGED")
-        check_obj = _object(
-            source.get_json(API + "/commits/" + expected_head + "/check-runs?per_page=100"),
-            "CHECKS",
-        )
+        checks_url = API + "/commits/" + expected_head + "/check-runs?per_page=100"
+        check_obj = _object(source.get_json(checks_url), "CHECKS")
         checks = check_obj.get("check_runs")
         count = check_obj.get("total_count")
         if (type(count) is not int or not 0 <= count <= 100
@@ -185,11 +184,9 @@ def observe(pr_number: int, expected_head: str, *,
                 "conclusion": item.get("conclusion"), "app_id": app["id"],
                 "details_url": item.get("details_url"),
             })
-        runs_obj = _object(
-            source.get_json(API + "/actions/runs?head_sha=" + expected_head
-                            + "&event=pull_request&per_page=100"),
-            "RUNS",
-        )
+        runs_url = (API + "/actions/runs?head_sha=" + expected_head
+                     + "&event=pull_request&per_page=100")
+        runs_obj = _object(source.get_json(runs_url), "RUNS")
         runs = runs_obj.get("workflow_runs")
         run_count = runs_obj.get("total_count")
         if (type(run_count) is not int or not 0 <= run_count <= 100
@@ -330,6 +327,36 @@ def observe(pr_number: int, expected_head: str, *,
                     and check["status"] == "completed" and check["conclusion"] == "success"
                     and run["status"] == "completed" and run["conclusion"] == "success"
                 )
+            if named_regression_confirmed:
+                # The attempt-specific job response may arrive after a rerun or
+                # newer workflow run has started. Re-sample checks first, then
+                # runs last, so changed latest-attempt metadata cannot leave old
+                # green evidence eligible. Any drift is UNKNOWN, never a stale PASS.
+                final_check_obj = _object(
+                    source.get_json(checks_url), "CHECKS_RECHECK"
+                )
+                final_checks = final_check_obj.get("check_runs")
+                final_check_count = final_check_obj.get("total_count")
+                if (type(final_check_count) is not int
+                        or not 0 <= final_check_count <= 100
+                        or not isinstance(final_checks, list)
+                        or len(final_checks) != final_check_count):
+                    raise ReadUnknown("CHECKS_RECHECK_INCOMPLETE")
+                if final_check_obj != check_obj:
+                    raise ReadUnknown("CHECKS_CHANGED_DURING_OBSERVATION")
+
+                final_runs_obj = _object(
+                    source.get_json(runs_url), "RUNS_RECHECK"
+                )
+                final_runs = final_runs_obj.get("workflow_runs")
+                final_run_count = final_runs_obj.get("total_count")
+                if (type(final_run_count) is not int
+                        or not 0 <= final_run_count <= 100
+                        or not isinstance(final_runs, list)
+                        or len(final_runs) != final_run_count):
+                    raise ReadUnknown("RUNS_RECHECK_INCOMPLETE")
+                if final_runs_obj != runs_obj:
+                    raise ReadUnknown("RUNS_CHANGED_DURING_OBSERVATION")
         last = _identity(source.get_json(url), pr_number)
         if last != first:
             raise ReadUnknown("PR_CHANGED_BETWEEN_SAMPLES")
