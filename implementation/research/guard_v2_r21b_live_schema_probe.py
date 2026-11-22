@@ -20,6 +20,11 @@ SCHEMA_QUERY = """query ArioR21BTypes {
     fields { name type { kind name } }
     possibleTypes { name }
   }
+}"""
+
+# GitHub enforces a small introspection-selection reuse limit. Split the four
+# types into TWO queries to keep __Type.fields selection count <= 2 per call.
+SECOND_SCHEMA_QUERY = """query ArioR21BNodeCommitTypes {
   node: __type(name:"Node") { fields { name } }
   commit: __type(name:"Commit") { fields { name } }
 }"""
@@ -133,13 +138,15 @@ def main() -> int:
                           safe_error_kinds=safe_graphql_error_kinds(exact["errors"]),
                           query_sha256=hashlib.sha256(REVIEW_QUERY.encode()).hexdigest())
         schema = post(token, SCHEMA_QUERY)
-        if schema.get("errors"):
+        second_schema = post(token, SECOND_SCHEMA_QUERY)
+        errors = (schema.get("errors") or []) + (second_schema.get("errors") or [])
+        if errors:
             return report("SCHEMA_INTROSPECTION_ERROR",
-                          graphql_error_count=len(schema["errors"]),
-                          safe_error_kinds=safe_graphql_error_kinds(schema["errors"]),
+                          graphql_error_count=len(errors),
+                          safe_error_kinds=safe_graphql_error_kinds(errors),
                           exact_query_syntax_ok=True,
                           query_sha256=hashlib.sha256(REVIEW_QUERY.encode()).hexdigest())
-        types = schema.get("data") or {}
+        types = {**(schema.get("data") or {}), **(second_schema.get("data") or {})}
         review = field_map(types.get("review"))
         actor = field_map(types.get("actor"))
         node = field_map(types.get("node"))
