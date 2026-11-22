@@ -28,12 +28,7 @@ def test_five_synthetic_interactive_cases_in_both_languages():
 
 def test_no_false_authentication_from_hash_or_signed_looking_image():
     s = source()
-    for fragment in ("Matching hash", "matching hash", "UNKNOWN",
-                     "اصالت امضا", "هشِ درست", "هویت"):
-        # 'هویت' need not occur in the scenario because this is not a real
-        # identity-proving system. Keep that source boundary explicit.
-        if fragment == "هویت":
-            continue
+    for fragment in ("matching hash", "UNKNOWN", "اصالت امضا", "هشِ درست"):
         assert fragment in s
 
 
