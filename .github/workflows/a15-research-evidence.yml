@@ -1,0 +1,22 @@
+name: A15 synthetic evidence research
+on:
+  pull_request:
+    paths:
+      - 'implementation/research/a15_*'
+      - 'implementation/research/A15_README_FA.md'
+      - 'implementation/tests/test_a15_research.js'
+      - '.github/workflows/a15-research-evidence.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  synthetic-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Frozen G0/G1 and separate adversarial/choice tests
+        run: node --test implementation/tests/test_a15_research.js
