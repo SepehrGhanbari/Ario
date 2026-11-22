@@ -1,0 +1,128 @@
+name: W44 Synthetic Verifier-Pinned Byte Check
+
+on:
+  pull_request:
+    paths:
+      - implementation/research/w44_external_pin_probe.py
+      - implementation/tests/test_w44_external_pin.py
+      - implementation/W44_VERIFIER_PIN_RESEARCH.md
+      - .github/workflows/w44-external-pin.yml
+
+permissions:
+  contents: read
+
+jobs:
+  w44-focused:
+    name: W44 synthetic pinned bytes (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-2022]
+    defaults:
+      run:
+        working-directory: implementation
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.13'
+      - name: Install pinned research dependencies
+        run: python -m pip install -r requirements-research.txt
+      - name: Run W44 synthetic controls and explicitly show skips
+        env:
+          TEMP: ${{ runner.temp }}
+          TMP: ${{ runner.temp }}
+        run: python -B -m pytest -p no:cacheprovider -q -rxs tests/test_w44_external_pin.py
+
+  prior-w19-sigsum-proof:
+    name: Offline replay of previously archived W18/W19 Sigsum witness proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact earlier research archive (not latest mutable branch)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: SepehrGhanbari/Ario
+          ref: 33f193cdb68efdd7deff35b65db8c360378f87b5
+          path: previous-archive
+          persist-credentials: false
+      - name: Install pinned official Sigsum verifier for offline replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          go version
+          export GOBIN="$RUNNER_TEMP/w44-sigsum-bin"
+          mkdir -p "$GOBIN"
+          go install sigsum.org/sigsum-go/cmd/sigsum-verify@v0.14.1
+          test -x "$GOBIN/sigsum-verify"
+          echo "$GOBIN" >> "$GITHUB_PATH"
+      - name: Replay exact W19 two cross-operator policies (no publication)
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash previous-archive/research/consensus/w19_verify_cross_operator_existing_proof.sh
+          echo 'W44_PREEXISTING_W19_PROOF=OFFLINE_VERIFIED_FOR_PINNED_PUBLIC_SYNTHETIC_ARCHIVE'
+          echo 'W44_LATEST_ARIO_SEQ_HEAD=NOT_ESTABLISHED'
+          echo 'W44_EXTERNAL_MONOTONIC_FLOOR=NOT_ESTABLISHED'
+          echo 'W44_REAL_ARIO_CUSTODY=NOT_ESTABLISHED'
+          echo 'W44_PRODUCTION_TRUST_ACTIVATION=NO_GO'
+
+  prior-r10-joint-rollback:
+    name: Replay earlier R10 simultaneous rollback negative control
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: previous-r10/implementation
+    steps:
+      - name: Checkout exact archived R10 synthetic monitor source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: SepehrGhanbari/Ario
+          ref: fae07e8e3453d946a2e7928d2e67de0e8663cdd5
+          path: previous-r10
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.13'
+      - name: Replay 16 R10 tests including same-admin double rollback
+        run: python -B -m unittest -v tests.test_r10_durable_monitor
+      - name: Preserve bounded non-authorization summary
+        run: |
+          echo 'W44_R10_JOINT_DB_FLOOR_ROLLBACK=UNDETECTABLE_IN_SAME_ADMIN_LAB'
+          echo 'W44_INDEPENDENT_ADMIN_CUSTODY=NOT_ESTABLISHED'
+          echo 'W44_LIVE_TRUST=NO_GO'
+  prior-f15-rekor-witness:
+    name: Offline replay of already archived Rekor third-party cosignature
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout the exact published F15 sandbox research source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: SepehrGhanbari/ario-relay-webhook-sandbox-20261112
+          ref: 98c9d373e37e9340c81176e094549dd15874e90c
+          path: old-f15
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.13'
+      - name: Replay archived cosignature and its known tampering negative
+        shell: bash
+        run: |
+          set -euo pipefail
+          openssl version
+          script=old-f15/research/r2a0/f15-third-party-rekor-20261120/f15_witness_verify.py
+          python -B "$script" | tee "$RUNNER_TEMP/w44-f15-verify.json"
+          grep -Fq '"status": "WITNESS_SIGNATURE_VERIFIED"' "$RUNNER_TEMP/w44-f15-verify.json"
+          python -B "$script" --tamper | tee "$RUNNER_TEMP/w44-f15-tamper.json"
+          grep -Fq '"status": "EXPECTED_TAMPER_REJECTED"' "$RUNNER_TEMP/w44-f15-tamper.json"
+          echo 'W44_PREEXISTING_F15_REKOR_TREE_WITNESS=OFFLINE_CRYPTO_VERIFIED'
+          echo 'W44_F15_VERIFIER_KEY_ORIGIN=EARLIER_PIN_NOT_NEW_OOB_AUDIT'
+          echo 'W44_INDEPENDENT_ARIO_IDENTITY_SCOPED_FLOOR=NOT_ESTABLISHED'
+# This executes ONLY an already published old Sigsum receipt, without submission.
+# Replay from a pinned Git source proves neither admin separation nor latest Ario state.
+# Even passing controls cannot establish true external custodian independence.
+# Private keys used in tests are ephemeral and synthetic, never live Ario keys.
