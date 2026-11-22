@@ -17,11 +17,13 @@ $custodianCredential = New-Object System.Management.Automation.PSCredential("$($
 $root = Join-Path $env:RUNNER_TEMP $tag
 $protected = Join-Path $root 'protected'
 $gateOut = Join-Path $root 'gate-output'
+$custOut = Join-Path $root 'custodian-output'
 $recorder = Join-Path $protected 'recorder.ps1'
 $ledger = Join-Path $protected 'ledger.jsonl'
 $probe = Join-Path $root 'gate-probe.ps1'
 $custodianProbe = Join-Path $root 'custodian-probe.ps1'
 $outFile = Join-Path $gateOut 'result.json'
+$readyFile = Join-Path $custOut 'service.ready'
 $gateStdout = Join-Path $gateOut 'gate.stdout.txt'
 $gateStderr = Join-Path $gateOut 'gate.stderr.txt'
 $service = $null
@@ -43,6 +45,7 @@ try {
     $createdRoot = $true
     New-Item -ItemType Directory -Path $protected -Force | Out-Null
     New-Item -ItemType Directory -Path $gateOut -Force | Out-Null
+    New-Item -ItemType Directory -Path $custOut -Force | Out-Null
 
     $gatePrincipal = "$($env:COMPUTERNAME)\$gateUser"
     $custodianPrincipal = "$($env:COMPUTERNAME)\$custodianUser"
@@ -54,6 +57,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Could not grant Gate/Custodian traversal access to test root.' }
     & icacls.exe $gateOut /inheritance:r /grant:r "NT AUTHORITY\SYSTEM:(OI)(CI)(F)" "BUILTIN\Administrators:(OI)(CI)(F)" ("{0}:(OI)(CI)(M)" -f $gatePrincipal) | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'Could not isolate Gate output directory.' }
+    & icacls.exe $custOut /inheritance:r /grant:r "NT AUTHORITY\SYSTEM:(OI)(CI)(F)" "BUILTIN\Administrators:(OI)(CI)(F)" ("{0}:(OI)(CI)(M)" -f $custodianPrincipal) | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'Could not isolate Custodian output directory.' }
 
     # Protected service directory: Custodian FullControl; Gate read/execute only.
     & icacls.exe $protected /inheritance:r /grant:r "NT AUTHORITY\SYSTEM:(OI)(CI)(F)" "BUILTIN\Administrators:(OI)(CI)(F)" ("{0}:(OI)(CI)(F)" -f $custodianPrincipal) ("{0}:(OI)(CI)(RX)" -f $gatePrincipal) | Out-Null
@@ -143,20 +148,75 @@ $killDenied = Assert-AccessDenied { Stop-Process -Id $ServicePid -Force -ErrorAc
 param(
     [Parameter(Mandatory=$true)][string]$LedgerFile,
     [Parameter(Mandatory=$true)][string]$ProtectedFile,
+    [Parameter(Mandatory=$true)][string]$ReadyFile,
     [Parameter(Mandatory=$true)][string]$ExpectedCustodianSid
 )
 $ErrorActionPreference = 'Stop'
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
 $principal = New-Object Security.Principal.WindowsPrincipal($identity)
-if ($identity.User.Value -ne $ExpectedCustodianSid) { throw 'Custodian positive control ran under the wrong SID.' }
-if ($principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw 'Custodian test identity unexpectedly has Administrator membership.' }
+if ($identity.User.Value -ne $ExpectedCustodianSid) { throw 'Custodian service ran under the wrong SID.' }
+if ($principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw 'Custodian service identity unexpectedly has Administrator membership.' }
 if ((Get-Content -LiteralPath $ProtectedFile -Raw -ErrorAction Stop) -notmatch 'A15_CUSTODIAN_IMAGE_V04') { throw 'Custodian could not read its installed image.' }
 Add-Content -LiteralPath $LedgerFile -Value 'CUSTODIAN_WRITE' -ErrorAction Stop
+
+$source = @"
+using System;
+using System.ComponentModel;
+using System.Runtime.InteropServices;
+public static class A15ProcessDacl {
+    [DllImport("kernel32.dll", SetLastError=true)]
+    static extern uint GetCurrentProcessId();
+    [DllImport("kernel32.dll", SetLastError=true)]
+    static extern IntPtr OpenProcess(uint access, bool inherit, uint pid);
+    [DllImport("kernel32.dll", SetLastError=true)]
+    static extern bool CloseHandle(IntPtr handle);
+    [DllImport("kernel32.dll", CharSet=CharSet.Unicode, SetLastError=true)]
+    static extern bool ConvertStringSecurityDescriptorToSecurityDescriptor(string sddl, uint revision, out IntPtr descriptor, out uint size);
+    [DllImport("advapi32.dll", SetLastError=true)]
+    static extern bool GetSecurityDescriptorDacl(IntPtr descriptor, out bool present, out IntPtr dacl, out bool defaulted);
+    [DllImport("advapi32.dll", SetLastError=true)]
+    static extern uint SetSecurityInfo(IntPtr handle, int objectType, uint securityInfo, IntPtr owner, IntPtr group, IntPtr dacl, IntPtr sacl);
+    [DllImport("kernel32.dll", SetLastError=true)]
+    static extern IntPtr LocalFree(IntPtr memory);
+    public static void RestrictCurrentProcess() {
+        IntPtr handle = OpenProcess(0x00040000, false, GetCurrentProcessId()); // WRITE_DAC
+        if (handle == IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error());
+        IntPtr descriptor = IntPtr.Zero;
+        try {
+            uint size;
+            string sddl = "D:P(A;;GA;;;SY)(A;;GA;;;BA)(A;;GA;;;OW)";
+            if (!ConvertStringSecurityDescriptorToSecurityDescriptor(sddl, 1, out descriptor, out size))
+                throw new Win32Exception(Marshal.GetLastWin32Error());
+            bool present, defaulted;
+            IntPtr dacl;
+            if (!GetSecurityDescriptorDacl(descriptor, out present, out dacl, out defaulted) || !present)
+                throw new Win32Exception(Marshal.GetLastWin32Error());
+            uint result = SetSecurityInfo(handle, 6, 0x4, IntPtr.Zero, IntPtr.Zero, dacl, IntPtr.Zero); // kernel object, DACL_SECURITY_INFORMATION
+            if (result != 0) throw new Win32Exception((int)result);
+        } finally {
+            if (descriptor != IntPtr.Zero) LocalFree(descriptor);
+            CloseHandle(handle);
+        }
+    }
+}
+"@
+Add-Type -TypeDefinition $source -ErrorAction Stop
+[A15ProcessDacl]::RestrictCurrentProcess()
+Set-Content -LiteralPath $ReadyFile -Value ("READY:" + $PID) -Encoding ASCII
+Start-Sleep -Seconds 90
 '@
     $custodianProbeText | Set-Content -LiteralPath $custodianProbe -Encoding UTF8
 
     $powerShell = Join-Path $PSHOME 'pwsh.exe'
-    $service = Start-Process -FilePath $powerShell -Credential $custodianCredential -ArgumentList '-NoProfile -NonInteractive -Command "Start-Sleep -Seconds 90"' -PassThru -WindowStyle Hidden
+    $serviceArgs = '-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "' + $custodianProbe + '" -LedgerFile "' + $ledger + '" -ProtectedFile "' + $recorder + '" -ReadyFile "' + $readyFile + '" -ExpectedCustodianSid "' + $custodianSid + '"'
+    $service = Start-Process -FilePath $powerShell -Credential $custodianCredential -ArgumentList $serviceArgs -PassThru -WindowStyle Hidden
+    for ($waitIndex = 0; $waitIndex -lt 150; $waitIndex++) {
+        if (Test-Path -LiteralPath $readyFile) { break }
+        if ($service.HasExited) { throw 'Custodian service exited before applying its process DACL.' }
+        Start-Sleep -Milliseconds 100
+    }
+    if (-not (Test-Path -LiteralPath $readyFile)) { throw 'Custodian service did not publish its protected-ready marker.' }
+    if ((Get-Content -LiteralPath $readyFile -Raw).Trim() -ne ("READY:" + $service.Id)) { throw 'Custodian ready marker PID does not match the launched service process.' }
     Start-Sleep -Milliseconds 400
     if ($service.HasExited) { throw 'Custodian process exited before the Gate probe.' }
 
@@ -179,10 +239,7 @@ Add-Content -LiteralPath $LedgerFile -Value 'CUSTODIAN_WRITE' -ErrorAction Stop
         throw "Gate isolation probe failed with exit code $($gateProcess.ExitCode); observed result: $($result | ConvertTo-Json -Compress)"
     }
 
-    $custodianArgs = '-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "' + $custodianProbe + '" -LedgerFile "' + $ledger + '" -ProtectedFile "' + $recorder + '" -ExpectedCustodianSid "' + $custodianSid + '"'
-    $custodianWrite = Start-Process -FilePath $powerShell -Credential $custodianCredential -ArgumentList $custodianArgs -PassThru -Wait -WindowStyle Hidden
-    if ($custodianWrite.ExitCode -ne 0) { throw "Custodian positive control failed with exit code $($custodianWrite.ExitCode)." }
-    if ((Get-Content -LiteralPath $ledger -Raw) -notmatch 'CUSTODIAN_WRITE') { throw 'Custodian positive control did not persist its ledger entry.' }
+    if ((Get-Content -LiteralPath $ledger -Raw) -notmatch 'CUSTODIAN_WRITE') { throw 'Custodian service positive control did not persist its ledger entry.' }
 
     if (-not (Test-Path -LiteralPath $recorder)) { throw 'Gate removed the protected service image.' }
     if ((Get-Content -LiteralPath $recorder -Raw) -notmatch 'A15_CUSTODIAN_IMAGE_V04') { throw 'Protected service image content changed.' }
