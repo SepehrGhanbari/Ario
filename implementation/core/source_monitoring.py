@@ -95,7 +95,7 @@ class EmpiricalProvenance:
             raise SourceMonitoringError(f"execution_lock_sha256 must be a valid 64-char sha256: {self.execution_lock_sha256}")
         if not _is_valid_sha256(self.stdout_sha256):
             raise SourceMonitoringError(f"stdout_sha256 must be a valid 64-char sha256: {self.stdout_sha256}")
-        if not isinstance(self.exit_code, int):
+        if type(self.exit_code) is not int:  # bool is not an exit code
             raise SourceMonitoringError("exit_code must be an integer")
 
     def to_dict(self) -> Dict[str, Any]:
@@ -111,10 +111,13 @@ class EmpiricalProvenance:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> EmpiricalProvenance:
+        raw_exit_code = data["exit_code"]
+        if type(raw_exit_code) is not int:
+            raise SourceMonitoringError("exit_code must be an integer")
         return cls(
             tool=str(data["tool"]),
             target=str(data.get("target", "")),
-            exit_code=int(data["exit_code"]),
+            exit_code=raw_exit_code,
             execution_lock_sha256=str(data["execution_lock_sha256"]),
             stdout_sha256=str(data.get("stdout_sha256", data.get("execution_lock_sha256"))),
             recorded_at=str(data.get("recorded_at", datetime.now(timezone.utc).isoformat())),
@@ -388,21 +391,28 @@ class SourceMonitoringGuard:
         visited: Set[str] = set()
         stack: Set[str] = set()
 
-        def _dfs(node_id: str) -> bool:
-            visited.add(node_id)
-            stack.add(node_id)
-            node = self._attributions.get(node_id)
-            if node:
-                for parent in node.parent_attribution_ids:
-                    if parent not in visited:
-                        if _dfs(parent):
-                            return True
-                    elif parent in stack:
-                        return True
-            stack.remove(node_id)
-            return False
-
-        return _dfs(start_id)
+        # Iterative DFS: a deep lineage must not abort with RecursionError
+        # between a temporary write and its rollback.
+        work: List[Tuple[str, Any]] = [(start_id, None)]
+        while work:
+            node_id, it = work.pop()
+            if it is None:
+                visited.add(node_id)
+                stack.add(node_id)
+                node = self._attributions.get(node_id)
+                it = iter(node.parent_attribution_ids if node else ())
+            advanced = False
+            for parent in it:
+                if parent in stack:
+                    return True
+                if parent not in visited:
+                    work.append((node_id, it))
+                    work.append((parent, None))
+                    advanced = True
+                    break
+            if not advanced:
+                stack.discard(node_id)
+        return False
 
     def evaluate_claim_promotion(
         self,
@@ -418,6 +428,13 @@ class SourceMonitoringGuard:
         claim = self._attributions.get(claim_id)
         if not claim:
             raise SourceMonitoringError(f"Unknown claim_id: {claim_id}")
+        # An observation's veracity comes only from its own provenance; citing
+        # another record must not launder a failed lock/stdout check.
+        if (
+            claim.source_type == SourceType.EMPIRICAL_OBSERVATION
+            or claim.veracity_state == VeracityState.ATTRIBUTION_MISMATCH
+        ):
+            raise SourceMonitoringError(f"HOLD_OBSERVATION_NOT_PROMOTABLE: {claim_id}")
 
         if not supporting_ids:
             raise SelfCitationError(f"T-SRC-01: Claim '{claim_id}' has no supporting evidence (unsupported)")
@@ -437,9 +454,11 @@ class SourceMonitoringGuard:
         temp_parents = claim.parent_attribution_ids + tuple(supporting_ids)
         temp_claim = dataclasses.replace(claim, parent_attribution_ids=temp_parents)
         self._attributions[claim_id] = temp_claim
-        if self.detect_circular_dependency(claim_id):
-            # Rollback
+        try:
+            circular = self.detect_circular_dependency(claim_id)
+        finally:
             self._attributions[claim_id] = claim
+        if circular:
             raise SelfCitationError(f"T-SRC-01: Circular citation loop detected involving '{claim_id}'")
 
         # Evidence supports only its own *narrowly bound* statement.
@@ -505,6 +524,6 @@ class SourceMonitoringGuard:
             if self.detect_circular_dependency(aid):
                 continue
 
-            valid_items.append(node)
+            valid_items.append(copy.deepcopy(node))  # never hand out live registry objects
 
         return valid_items
