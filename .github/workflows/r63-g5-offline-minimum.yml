@@ -56,3 +56,4 @@ jobs:
           $exit = $LASTEXITCODE
           Write-Host ('ACTUAL_UNPROVEN_INDEPENDENCE_'+$response+' EXIT='+$exit)
           if ($response -ne 'HOLD_INDEPENDENT_PIN_NOT_ESTABLISHED' -or $exit -ne 2) { throw 'FALSE_INDEPENDENT_CUSTODY_CLAIM' }
+          exit 0 # both negative controls deliberately exit 2; shell step itself is a PASS
