@@ -336,3 +336,18 @@ def test_workflow_run_requires_positive_workflow_and_run_numbers(field):
     result = call(f)
     assert result["reason"] == "INVALID_RUN"
     assert result["required_check_observation"] == "NOT_CONFIRMED"
+
+
+
+@pytest.mark.parametrize("links", [None, []])
+def test_missing_or_empty_run_pr_association_cannot_leave_old_green_eligible(links):
+    f = Fake()
+    newer = copy.deepcopy(f.runs["workflow_runs"][0])
+    newer.update(id=101, run_number=11, status="queued", conclusion=None,
+                 pull_requests=links)
+    f.runs["workflow_runs"].append(newer)
+    f.runs["total_count"] = 2
+
+    result = call(f)
+    assert result["reason"] == "RUN_PR_ASSOCIATION_INCOMPLETE"
+    assert result["required_check_observation"] == "NOT_CONFIRMED"

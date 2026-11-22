@@ -209,6 +209,16 @@ def observe(pr_number: int, expected_head: str, *,
                        != (run.get("conclusion") is not None)):
                 raise ReadUnknown("INVALID_RUN")
             run_ids.add(run["id"])
+            pr_links = run.get("pull_requests")
+            if not isinstance(pr_links, list) or not pr_links:
+                raise ReadUnknown("RUN_PR_ASSOCIATION_INCOMPLETE")
+            for link in pr_links:
+                item = _object(link, "RUN_PR_LINK")
+                link_head = _object(item.get("head"), "RUN_PR_HEAD")
+                if (not _positive(item.get("id")) or not _positive(item.get("number"))
+                        or not isinstance(link_head.get("sha"), str)
+                        or not SHA.fullmatch(link_head["sha"])):
+                    raise ReadUnknown("INVALID_RUN_PR_ASSOCIATION")
             workflow_sequence = (run["workflow_id"], run["run_number"])
             if workflow_sequence in workflow_run_numbers:
                 raise ReadUnknown("DUPLICATE_WORKFLOW_RUN_NUMBER")
