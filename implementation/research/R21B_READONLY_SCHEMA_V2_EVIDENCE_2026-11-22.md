@@ -47,7 +47,8 @@ New `implementation/research/guard_v2_r21b_capture_v2.py` is **not integrated wi
 - Existing synthetic B lab: 35 new tests vs initial 1879-test parent.
 - New capture V2 contract: 46 further tests, including null-vs-missing, unknown actors, duplicate IDs, pin mismatch, deterministic domain hashing, known modifications and two-sample HOLD.
 - Existing baseline and other R17/R19 tests remain unmodified.
-- No Windows / CPython 3.14 test claim yet; those jobs are configured for PR events, not branch pushes.
+- **[Draft PR #320 exact-code platform CI #45020767846](https://github.com/SepehrGhanbari/Ario/actions/runs/45020767846)**: ALL 3/3 jobs SUCCESS. Linux Python **3.13.18: 1960 passed, 7 skipped**, Linux Python **3.14.10: 1960 passed, 7 skipped**, Windows Python **3.13.17: 1940 passed, 27 skipped**. Every job reports **273 subtests passed** and 2 unrelated diagnostic warnings.
+- **[Restore security #45020768319](https://github.com/SepehrGhanbari/Ario/actions/runs/45020768319)**: 10/10 jobs successful; **[advisory self-audit #45020767797](https://github.com/SepehrGhanbari/Ario/actions/runs/45020767797)** successful (not independent provenance).
 
 ## Remaining open questions
 
