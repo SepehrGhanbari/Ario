@@ -93,7 +93,7 @@ function Assert-AccessDenied {
             if ($exception -is [System.ComponentModel.Win32Exception] -and $exception.NativeErrorCode -eq 5) { return $true }
             $exception = $exception.InnerException
         }
-        throw "S9_EXPECTED_ACCESS_DENIED_BUT_GOT:$Label:$($_.Exception.GetType().FullName):$($_.Exception.Message)"
+        throw "S9_EXPECTED_ACCESS_DENIED_BUT_GOT:$($Label):$($_.Exception.GetType().FullName):$($_.Exception.Message)"
     }
 }
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
