@@ -39,7 +39,7 @@ LIMITATIONS = [
     "GitHub Actions success is not independently attested test execution",
     "The repository author may also control tests and workflow definitions",
     "Two PR GET samples and repeated metadata reads do not form an atomic or permanent snapshot",
-    "The final workflow-run sample is last, but a rerun after that sample remains unobservable",
+    "A PR revision or workflow rerun after its last relevant sample remains unobservable",
     "This probe does not validate job logs, code quality, truth or merge eligibility",
     "No memory update, M0 evidence admission, real signer, Genesis or trust permission",
 ]
