@@ -757,3 +757,23 @@ def test_malformed_final_metadata_recheck_never_confirms_success(which, mutation
     assert result["status"] == "UNKNOWN"
     assert result["required_check_observation"] == "NOT_CONFIRMED"
     assert result["reason"] == reason
+
+
+class PrRevisionAfterFinalIdentitySample(Fake):
+    """Model the PR head changing immediately after the second PR GET returns."""
+    def get_json(self, url):
+        result = super().get_json(url)
+        if (url.endswith("/pulls/295")
+                and sum(x.endswith("/pulls/295") for x in self.calls) == 2):
+            self.pr["head"]["sha"] = "f" * 40
+        return result
+
+
+def test_pr_revision_after_final_identity_sample_is_explicitly_non_atomic_residual():
+    f = PrRevisionAfterFinalIdentitySample()
+    result = call(f)
+    assert result["required_check_observation"] == "REPORTED_SUCCESS_BY_LINKED_PR_RUN"
+    assert result["workflow_freshness"] == "SAMPLED_NOT_ATOMIC"
+    assert result["status"] == "UNKNOWN"
+    assert result["merge_authorized"] is False
+    assert result["execution_attestation"] == "NOT_ESTABLISHED"
