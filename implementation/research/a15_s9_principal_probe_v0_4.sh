@@ -63,6 +63,9 @@ if runuser -u "$gate_user" -- sh -c 'printf "MALICIOUS_REPLACEMENT\n" >> "$1"' _
 fi
 if runuser -u "$gate_user" -- rm -f "$recorder_file" 2>/dev/null; then
   echo "FAIL: Gate deleted custodian-owned executable" >&2; exit 1
+if runuser -u "$gate_user" -- chmod 0660 "$recorder_file" 2>/dev/null; then
+  echo "FAIL: Gate changed executable permissions" >&2; exit 1
+fi
 fi
 after="$(sha256sum "$recorder_file" | awk '{print $1}')"
 [ "$before" = "$after" ] || { echo "FAIL: protected executable changed" >&2; exit 1; }
