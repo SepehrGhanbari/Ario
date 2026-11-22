@@ -33,7 +33,19 @@ IDENTITY_KEYS = frozenset({"repository_id", "pr_id", "pr_number", "head_sha", "b
 # HTTP status codes, fixed labels). A closed key set is not enough: values of
 # allowed keys must not carry objects, lists, numbers or free text either.
 TOKEN = re.compile(r"[A-Z0-9_]{1,256}\Z")
-ERROR_TYPE = re.compile(r"[A-Za-z_][A-Za-z0-9_]{0,63}\Z")
+# Reader main() emits type(exc).__name__ only for constructor failures.
+# Match known caught exception classes and common OSError subclasses, rather
+# than accepting a forged decision-looking string as an exception class.
+ERROR_TYPE_NAMES = frozenset({
+    "ReviewGraphUnknown", "ReadUnknown", "ValueError", "TypeError", "OSError",
+    "TimeoutError", "ConnectionError", "ConnectionRefusedError",
+    "ConnectionResetError", "ConnectionAbortedError", "BrokenPipeError",
+    "PermissionError", "FileNotFoundError", "FileExistsError", "IsADirectoryError",
+    "NotADirectoryError", "BlockingIOError", "InterruptedError", "ChildProcessError",
+    "ProcessLookupError", "URLError", "HTTPError", "RemoteDisconnected",
+    "SSLError", "SSLCertVerificationError", "SSLEOFError", "SSLZeroReturnError",
+    "SSLSyscallError",
+})
 SUCCESS_GRAPH_REASON = "TWO_COMPLETE_GRAPH_SAMPLES_MATCH"
 FRESHNESS = "TWO_SAMPLED_GRAPHS_MATCH_NON_ATOMIC"
 SUCCESS_REASONS = frozenset({"PR_DRAFT_READ_ONLY_HOLD", "LIVE_READ_ONLY_NON_ATOMIC_HOLD"})
@@ -44,8 +56,9 @@ SAMPLE_VALUES = frozenset({"SAMPLED_STABLE_UNATTESTED", "UNKNOWN"})
 # CLOSED failure-reason vocabulary: every reason the manual reader can emit on a
 # failed run, derived from the pinned sources (guard_v2_review_graph.py,
 # guard_v2_trusted_manual.py, ario_repo_self_audit.GitHubReadOnly.get_json).
-# test_r21_vocabulary.py re-derives these sets by AST and fails on drift in either
-# direction. There is deliberately NO keyword denylist and NO open fallback: an
+# The in-repository test_guard_v2_r21a_vocabulary_contract.py re-derives
+# these sets from reader AST and rejects vocabulary drift in both directions.
+# There is deliberately NO keyword denylist and NO open fallback: an
 # unlisted token on a failed run is rejected (fail-closed, report is replaced by
 # INVALID_DIAGNOSTIC_JSON by the workflow, exit code stays nonzero).
 GRAPH_REASON_LITERALS = frozenset({
@@ -173,8 +186,9 @@ def validate_file(path: Path, number: int, head: str, source: str,
     _assert("review_freshness" not in value or value["review_freshness"] == FRESHNESS,
             "INVALID_OPTIONAL_FIELD")
     _assert("error_type" not in value or
-            (type(value["error_type"]) is str and
-             ERROR_TYPE.fullmatch(value["error_type"]) is not None),
+            (value["reason"] == "TRUSTED_OBSERVER_INITIALIZATION_FAILED" and
+             type(value["error_type"]) is str and
+             value["error_type"] in ERROR_TYPE_NAMES),
             "INVALID_OPTIONAL_FIELD")
     for key in ("first_digest", "second_digest"):
         _assert(key not in value or value[key] is None or
