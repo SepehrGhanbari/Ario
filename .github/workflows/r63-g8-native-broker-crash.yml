@@ -53,3 +53,28 @@ jobs:
             r63-g8-native-evidence-*.zip
           if-no-files-found: warn
           retention-days: 30
+  independent-public-crypto-audit:
+    name: independent Python ECDSA receipts and 10 mutation controls
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    needs: native-integrated-g8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13"
+      - uses: actions/download-artifact@v4
+        with:
+          name: r63-g8-evidence-${{ github.run_id }}
+          path: g8-public-artifact
+      - name: Independent cross-language public ECDSA and adversarial archive tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check 'cryptography==46.0.4'
+          python -B research/r63_g8_native_ci/audit_g8_public_evidence.py g8-public-artifact
+          python -B research/r63_g8_native_ci/test_audit_g8_public_evidence.py g8-public-artifact
+          echo 'G8_CROSS_LANGUAGE_PUBLIC_RECEIPTS_AND_ACTOR_SIGNATURES=PASS'
+          echo 'G8_SAME_RUNNER_ADMIN=NOT_INDEPENDENT_CUSTODY'
