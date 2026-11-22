@@ -36,7 +36,7 @@ jobs:
         run: |
           python -B research/r63_g5_floor_custody_ci/offline_minimum/test_g5_floor.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Manual phone-note comparison: zero remote attestation, eight strict negative/positive controls
+      - name: 'Manual phone-note comparison (eight negative/positive controls, no remote attestation)'
         shell: pwsh
         run: |
           $dir = 'research/r63_g5_floor_custody_ci/offline_minimum'
