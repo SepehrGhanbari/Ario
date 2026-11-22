@@ -126,6 +126,30 @@ $acl.SetAccessRule($rule)
 $aclChangeDenied = Assert-AccessDenied { Set-Acl -LiteralPath $ProtectedFile -AclObject $acl -ErrorAction Stop } 'executable-acl-change'
 $ledgerReadDenied = Assert-AccessDenied { Get-Content -LiteralPath $LedgerFile -Raw -ErrorAction Stop | Out-Null } 'ledger-read'
 $ledgerWriteDenied = Assert-AccessDenied { Add-Content -LiteralPath $LedgerFile -Value 'FORGED_LEDGER_ENTRY' -ErrorAction Stop } 'ledger-write'
+$gateProcessDaclSource = @"
+using System;
+using System.ComponentModel;
+using System.Runtime.InteropServices;
+public static class A15GateProcessDaclProbe {
+    [DllImport("kernel32.dll", SetLastError=true)]
+    static extern IntPtr OpenProcess(uint access, bool inherit, uint pid);
+    [DllImport("kernel32.dll", SetLastError=true)]
+    static extern bool CloseHandle(IntPtr handle);
+    public static bool Denied(int pid) {
+        IntPtr handle = OpenProcess(0x00040000, false, (uint)pid); // WRITE_DAC
+        if (handle == IntPtr.Zero) {
+            int error = Marshal.GetLastWin32Error();
+            if (error == 5) return true;
+            throw new Win32Exception(error);
+        }
+        CloseHandle(handle);
+        return false;
+    }
+}
+"@
+Add-Type -TypeDefinition $gateProcessDaclSource -ErrorAction Stop
+$processDaclChangeDenied = [A15GateProcessDaclProbe]::Denied($ServicePid)
+if (-not $processDaclChangeDenied) { throw 'Gate unexpectedly opened the Custodian process for WRITE_DAC.' }
 $killDenied = Assert-AccessDenied { Stop-Process -Id $ServicePid -Force -ErrorAction Stop } 'custodian-process-terminate'
 
 [pscustomobject]@{
@@ -140,6 +164,7 @@ $killDenied = Assert-AccessDenied { Stop-Process -Id $ServicePid -Force -ErrorAc
     LedgerReadDenied = $ledgerReadDenied
     LedgerWriteDenied = $ledgerWriteDenied
     KillDenied = $killDenied
+    ProcessDaclChangeDenied = $processDaclChangeDenied
 } | ConvertTo-Json -Compress | Set-Content -LiteralPath $OutputFile -Encoding UTF8
 '@
     $probeText | Set-Content -LiteralPath $probe -Encoding UTF8
@@ -191,7 +216,7 @@ public static class A15ProcessDacl {
             IntPtr dacl;
             if (!GetSecurityDescriptorDacl(descriptor, out present, out dacl, out defaulted) || !present)
                 throw new Win32Exception(Marshal.GetLastWin32Error());
-            uint result = SetSecurityInfo(handle, 6, 0x4, IntPtr.Zero, IntPtr.Zero, dacl, IntPtr.Zero); // kernel object, DACL_SECURITY_INFORMATION
+            uint result = SetSecurityInfo(handle, 6, 0x80000004, IntPtr.Zero, IntPtr.Zero, dacl, IntPtr.Zero); // kernel object, DACL_SECURITY_INFORMATION
             if (result != 0) throw new Win32Exception((int)result);
         } finally {
             if (descriptor != IntPtr.Zero) LocalFree(descriptor);
@@ -235,7 +260,7 @@ Start-Sleep -Seconds 90
         throw "Gate probe did not write its result (exit code $($gateProcess.ExitCode)); stderr=$gateErrorText; stdout=$gateOutputText"
     }
     $result = Get-Content -LiteralPath $outFile -Raw | ConvertFrom-Json
-    if ($gateProcess.ExitCode -ne 0 -or -not ($result.GateSid -eq $gateSid -and -not $result.GateIsAdministrator -and -not $result.GateHasCustodianSid -and $result.ReadAllowed -and $result.ExecuteAllowed -and $result.WriteDenied -and $result.DeleteDenied -and $result.AclChangeDenied -and $result.LedgerReadDenied -and $result.LedgerWriteDenied -and $result.KillDenied)) {
+    if ($gateProcess.ExitCode -ne 0 -or -not ($result.GateSid -eq $gateSid -and -not $result.GateIsAdministrator -and -not $result.GateHasCustodianSid -and $result.ReadAllowed -and $result.ExecuteAllowed -and $result.WriteDenied -and $result.DeleteDenied -and $result.AclChangeDenied -and $result.LedgerReadDenied -and $result.LedgerWriteDenied -and $result.KillDenied -and $result.ProcessDaclChangeDenied)) {
         throw "Gate isolation probe failed with exit code $($gateProcess.ExitCode); observed result: $($result | ConvertTo-Json -Compress)"
     }
 
@@ -253,7 +278,7 @@ Start-Sleep -Seconds 90
     Write-Output 'GATE_CAN_READ_AND_EXECUTE_READONLY_IMAGE=YES'
     Write-Output 'GATE_CAN_WRITE_DELETE_OR_CHANGE_ACL=NO'
     Write-Output 'GATE_CAN_READ_OR_WRITE_LEDGER=NO'
-    Write-Output 'GATE_CAN_TERMINATE_CUSTODIAN_PROCESS=NO'
+    Write-Output 'GATE_CAN_TERMINATE_OR_CHANGE_PROCESS_DACL=NO'
     Write-Output 'CUSTODIAN_POSITIVE_CONTROL=PASS'
     Write-Output 'SCOPE=LOCAL_OS_PRINCIPAL_ONLY_NOT_EXTERNAL_CUSTODY'
 }
