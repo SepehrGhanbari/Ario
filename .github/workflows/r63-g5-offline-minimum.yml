@@ -1,0 +1,58 @@
+name: R63 G5 retained public historical minimum (research only)
+on:
+  push:
+    branches:
+      - research/r63-g5-offline-pinned-minimum-20261122
+    paths:
+      - .github/workflows/r63-g5-offline-minimum.yml
+      - research/r63_g5_floor_custody_ci/offline_minimum/**
+      - research/r63_g5_floor_custody_ci/G5_SYNTHETIC_PUBLIC_CHECKPOINT.json
+      - research/r63_g5_floor_custody_ci/spend_chain_v2.py
+permissions:
+  contents: read
+jobs:
+  no-keys-pinned-minimum:
+    name: synthetic pinned floor / ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13"
+      - name: Generate deterministic original V9-like seq2/seq3 journals
+        shell: pwsh
+        run: |
+          python -B research/r63_g5_floor_custody_ci/offline_minimum/generate_research_fixtures.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Python independent positive and negative controls
+        shell: pwsh
+        run: |
+          python -B research/r63_g5_floor_custody_ci/offline_minimum/test_g5_floor.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Portable offline-phone JavaScript crypto logic controls
+        shell: pwsh
+        run: |
+          node research/r63_g5_floor_custody_ci/offline_minimum/test_mobile_g5.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Explicit fail-closed CLI outcome for self-consistent seq2 rollback
+        shell: pwsh
+        run: |
+          $dir = 'research/r63_g5_floor_custody_ci/offline_minimum'
+          $cp = Join-Path $dir 'pinned_synthetic_seq3_checkpoint.json'
+          $v1 = Join-Path $dir 'synthetic_rollback_seq2_v1.jsonl'
+          $v2 = Join-Path $dir 'synthetic_rollback_seq2_v2.jsonl'
+          $response = & python -B (Join-Path $dir 'g5_retained_floor.py') --v1 $v1 --v2 $v2 --checkpoint $cp --independent-pin-confirmed
+          $exit = $LASTEXITCODE
+          Write-Host ('EXPECTED_SIMULATED_EXTERNAL_PIN_'+$response+' EXIT='+$exit)
+          if ($response -ne 'HOLD_ROLLBACK' -or $exit -ne 2) { throw 'FAIL_OPEN_OLD_JOURNAL' }
+          $response = & python -B (Join-Path $dir 'g5_retained_floor.py') --v1 $v1 --v2 $v2 --checkpoint $cp
+          $exit = $LASTEXITCODE
+          Write-Host ('ACTUAL_UNPROVEN_INDEPENDENCE_'+$response+' EXIT='+$exit)
+          if ($response -ne 'HOLD_INDEPENDENT_PIN_NOT_ESTABLISHED' -or $exit -ne 2) { throw 'FALSE_INDEPENDENT_CUSTODY_CLAIM' }
