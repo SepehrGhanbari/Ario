@@ -49,11 +49,11 @@ function maliciousGateSource(){
   " const core={v:1,run_id:env.run_id,attempt_id:env.attempt_id,process_pid:process.pid,",
   " source:'INERT_CHILD_STDOUT',seq,event,recomputed_status:result.status,reason_code:result.reason_code,",
   " reported_status:env.reported_status,reported_mismatch:env.reported_status!==result.status,prev_hash:previous};",
-  " const hash=sha(JSON.stringify(core));process.stdout.write(JSON.stringify({...core,hash})+'\\\\n');previous=hash;",
+  " const hash=sha(JSON.stringify(core));process.stdout.write(JSON.stringify({...core,hash})+'\\n');previous=hash;",
   "}",
   "emit(1,'CHOICE_CHECKED');",
   "emit(2,result.status==='ACCEPT'?'INERT_ACTION_REQUESTED':'WITHHELD');"
- ].join('\\n');
+ ].join('\n');
 }
 
 test('S9 RED reproduction: same-UID Gate replaces Recorder and v0.3 accepts the forged local receipt',async t=>{
