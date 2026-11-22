@@ -133,9 +133,9 @@ using System;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 public static class A15GateProcessDaclProbe {
-    [DllImport("kernel32.dll", SetLastError=true)]
+    [DllImport("kernel32.dll", SetLastError=true, ExactSpelling=true)]
     static extern IntPtr OpenProcess(uint access, bool inherit, uint pid);
-    [DllImport("kernel32.dll", SetLastError=true)]
+    [DllImport("kernel32.dll", SetLastError=true, ExactSpelling=true)]
     static extern bool CloseHandle(IntPtr handle);
     public static bool Denied(int pid) {
         IntPtr handle = OpenProcess(0x00040000, false, (uint)pid); // WRITE_DAC
@@ -191,19 +191,19 @@ using System;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 public static class A15ProcessDacl {
-    [DllImport("kernel32.dll", SetLastError=true)]
+    [DllImport("kernel32.dll", SetLastError=true, ExactSpelling=true)]
     static extern uint GetCurrentProcessId();
-    [DllImport("kernel32.dll", SetLastError=true)]
+    [DllImport("kernel32.dll", SetLastError=true, ExactSpelling=true)]
     static extern IntPtr OpenProcess(uint access, bool inherit, uint pid);
-    [DllImport("kernel32.dll", SetLastError=true)]
+    [DllImport("kernel32.dll", SetLastError=true, ExactSpelling=true)]
     static extern bool CloseHandle(IntPtr handle);
     [DllImport("kernel32.dll", CharSet=CharSet.Unicode, SetLastError=true)]
     static extern bool ConvertStringSecurityDescriptorToSecurityDescriptor(string sddl, uint revision, out IntPtr descriptor, out uint size);
-    [DllImport("advapi32.dll", SetLastError=true)]
+    [DllImport("advapi32.dll", SetLastError=true, ExactSpelling=true)]
     static extern bool GetSecurityDescriptorDacl(IntPtr descriptor, out bool present, out IntPtr dacl, out bool defaulted);
-    [DllImport("advapi32.dll", SetLastError=true)]
+    [DllImport("advapi32.dll", SetLastError=true, ExactSpelling=true)]
     static extern uint SetSecurityInfo(IntPtr handle, int objectType, uint securityInfo, IntPtr owner, IntPtr group, IntPtr dacl, IntPtr sacl);
-    [DllImport("kernel32.dll", SetLastError=true)]
+    [DllImport("kernel32.dll", SetLastError=true, ExactSpelling=true)]
     static extern IntPtr LocalFree(IntPtr memory);
     public static void RestrictCurrentProcess() {
         IntPtr handle = OpenProcess(0x00040000, false, GetCurrentProcessId()); // WRITE_DAC
