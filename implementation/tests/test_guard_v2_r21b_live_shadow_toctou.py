@@ -66,3 +66,57 @@ def test_post_sample_rest_revision_change_cannot_admit_complete_observation(
     assert summary["research_observation"] == "INCOMPLETE_OR_CHANGED_HOLD"
     assert all(x.get("final_rest_scope_check") == "CHANGED_HOLD"
                for x in summary["results"])
+
+
+
+class StableFinalRest(ChangingFinalRest):
+    def get_json(self, url):
+        item = super().get_json(url)
+        if url != live.rest.API:
+            item["head"]["sha"] = HEAD
+        return item
+
+
+class FinalReadUnavailable(ChangingFinalRest):
+    def get_json(self, url):
+        if url != live.rest.API:
+            number = int(url.rsplit("/", 1)[-1])
+            if self.number_reads.get(number, 0) >= 1:
+                raise live.rest.ReadUnknown("GITHUB_HTTP_503")
+        return super().get_json(url)
+
+
+def _run_with_fake(monkeypatch, capsys, fake_cls):
+    monkeypatch.setenv("GITHUB_REPOSITORY", live.REPO)
+    monkeypatch.setenv(
+        "GITHUB_REF", "refs/heads/research/r21b-shadow-reader-v1-v2-20261122")
+    monkeypatch.setenv("GITHUB_TOKEN", "SYNTHETIC_NEVER_SENT")
+    monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
+    monkeypatch.setattr(live.rest, "GitHubReadOnly", fake_cls)
+    monkeypatch.setattr(live.shadow, "ReadOnlyGraphQLB", lambda token: object())
+    monkeypatch.setattr(live.shadow, "compare_shadow", synthetic_stable_shadow)
+    code = live.main()
+    summary = json.loads(capsys.readouterr().out.split("ARIO_R21B_LIVE_SHADOW ", 1)[1])
+    return code, summary
+
+
+def test_stable_rest_bracketing_is_completed_but_never_authoritative(
+        monkeypatch, capsys):
+    code, result = _run_with_fake(monkeypatch, capsys, StableFinalRest)
+    assert code == 0
+    assert result["research_observation"] == "TWO_COMPLETE_NONATTESTED"
+    assert result["disposition"] == "HOLD"
+    assert result["merge_authorized"] is False
+    assert result["trust_activated"] is False
+    assert all(x["final_rest_scope_check"] == "STABLE_NONATOMIC"
+               for x in result["results"])
+
+
+def test_final_rest_network_503_fails_closed_without_leaking_token(
+        monkeypatch, capsys):
+    code, result = _run_with_fake(monkeypatch, capsys, FinalReadUnavailable)
+    assert code == 2
+    assert result["research_observation"] == "INCOMPLETE_OR_CHANGED_HOLD"
+    assert all(x["reason"] == "READ_OR_REVISION_UNAVAILABLE"
+               for x in result["results"])
+    assert "SYNTHETIC_NEVER_SENT" not in json.dumps(result)
