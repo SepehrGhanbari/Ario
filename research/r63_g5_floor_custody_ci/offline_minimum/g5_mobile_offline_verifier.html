@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'">
+<title>Ario G5 — Offline historical minimum floor</title>
+<style>
+body{font:16px/1.7 system-ui,Tahoma,sans-serif;max-width:720px;margin:auto;padding:18px;color:#1e293b;background:#fafafa}
+section{border:1px solid #d4d4d8;border-radius:12px;padding:14px;margin:16px 0;background:white}
+h1{font-size:1.35rem}h2{font-size:1.04rem}p{margin:.6em 0}code,pre{direction:ltr;text-align:left;word-break:break-all;white-space:pre-wrap;font-size:.85rem}
+button,input{font:inherit;max-width:100%;margin:7px 0}button{padding:9px 18px;border:1px solid #7e8da3;border-radius:8px;background:#f3f4f6;cursor:pointer}
+#result{font-weight:bold;padding:12px;background:#f4f4f5;border-radius:9px;direction:ltr;text-align:left}
+.small{font-size:.88rem;color:#52525b}
+</style>
+</head>
+<body>
+<h1>آزمایش آریو G5 — بررسی آفلاینِ حداقل تاریخچه</h1>
+<p><strong>RESEARCH_ONLY / NO_SIGNER / NO_TRUST_ACTIVATION</strong></p>
+<section>
+<h2>مرجع ثابت داخل این نسخهٔ تأییدکننده</h2>
+<p><b>epoch:</b> <code id="epoch">research_nov_2026_no_signer</code></p>
+<p><b>seq:</b> <strong>3</strong></p>
+<p><b>head:</b></p>
+<pre id="head">6e1d74f7860e0173b9b049487a6a89428439a987809cf363fa27503ae0b06ea1</pre>
+<p class="small">این مرجع در فایلِ تأییدکننده ثابت است، از فایلی که دسکتاپ پیشنهاد می‌کند گرفته نمی‌شود. به این معنی نیست که «آخرین» وضعیت شبکه را می‌دانیم.</p>
+</section>
+<section>
+<h2>۱. انتخاب تصویر دفترهای آزمایشی</h2>
+<p>فایل JSON صادرشده از دسکتاپ را انتخاب کن. برنامه خودش زنجیرهٔ V1/V2 را از بایت‌ها بازسازی می‌کند.</p>
+<input id="candidate" type="file" accept=".json,application/json">
+<button id="verify" type="button">بررسی و تصمیم</button>
+<div id="result" role="status" aria-live="polite">HOLD_NO_CANDIDATE</div>
+<pre id="detail"></pre>
+</section>
+<section>
+<h2>۲. ذخیرهٔ مرجع روی دستگاه جدا</h2>
+<button id="download" type="button">دریافت فایل حداقل وضعیت ثابت</button>
+<p class="small">فایل تأییدکننده، مرجع و خروجی را فقط روی دستگاهِ جدا و خارج از همگام‌سازی با دسکتاپ نگه دار. هیچ درخواست شبکه‌ای از این صفحه ارسال نمی‌شود. خروجی برای اثبات دسترسی‌ناپذیری گوشی از طرف دسکتاپ کافی نیست.</p>
+</section>
+<script>
+'use strict';
+// G5_MIN_FLOOR_VERIFIER_BEGIN: independently reviewable immutable test-only pin.
+const G5 = Object.freeze({
+  epoch:'research_nov_2026_no_signer',
+  minSeq:3,
+  minHead:'6e1d74f7860e0173b9b049487a6a89428439a987809cf363fa27503ae0b06ea1',
+  checkpointSha256:'e218d3d05a613024eb26a8e67052aeb61d77d14d6be8ecdede2ed5c27c1a78db',
+  rekorHistoricalIndex:4033996846,
+  version:'ARIO_R63_SPEND_V2_RESEARCH',
+  domain:'ARIO-R63/spend/v2\0'
+});
+const enc=new TextEncoder();
+const dec=new TextDecoder('utf-8',{fatal:true});
+function hexU8(x){return Array.from(new Uint8Array(x),v=>v.toString(16).padStart(2,'0')).join('');}
+function asBytes(x){if(x instanceof Uint8Array)return x;throw Error('MUST_BE_BYTES');}
+async function sha256(data){
+  if(!globalThis.crypto || !crypto.subtle)throw Error('CRYPTO_NOT_AVAILABLE');
+  return hexU8(await crypto.subtle.digest('SHA-256',asBytes(data)));
+}
+function canonical(x){
+ if(x===null)return 'null';
+ if(typeof x==='string'){
+   if(/[^\x00-\x7f]/.test(x))throw Error('NONASCII_FIELD');
+   return JSON.stringify(x);
+ }
+ if(typeof x==='number'){if(!Number.isSafeInteger(x))throw Error('NONINTEGER');return String(x);}
+ if(typeof x==='boolean')return x?'true':'false';
+ if(Array.isArray(x))return '['+x.map(canonical).join(',')+']';
+ if(x && typeof x==='object')return '{'+Object.keys(x).sort().map(k=>canonical(k)+':'+canonical(x[k])).join(',')+'}';
+ throw Error('UNSUPPORTED_CANONICAL_TYPE');
+}
+function parseLines(bytes){
+ if(bytes.length && bytes[bytes.length-1]!==10)throw Error('PARTIAL_LINE');
+ if(bytes.some(x=>x>127))throw Error('NONASCII_BYTES');
+ const lines=dec.decode(bytes).split('\n');
+ if(bytes.length)lines.pop();else return [];
+ if(lines.length>100000)throw Error('TOO_MANY_RECORDS');
+ return lines.map(line=>{
+   if(!line || line.length>8192)throw Error('BAD_LINE_LENGTH');
+   const obj=JSON.parse(line);
+   if(canonical(obj)!==line)throw Error('NONCANONICAL_RECORD');
+   return obj;
+ });
+}
+function isHash(x){return typeof x==='string' && /^[0-9a-f]{64}$/.test(x);}
+function base64Bytes(x){
+ if(typeof x!=='string'||x.length>15000000||!/^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(x))throw Error('BAD_BASE64');
+ const bin=atob(x);const out=new Uint8Array(bin.length);
+ for(let i=0;i<bin.length;i++)out[i]=bin.charCodeAt(i);
+ return out;
+}
+async function snapshot(pairs){return sha256(enc.encode(canonical([...pairs].sort((a,b)=>a[0]<b[0]?-1:a[0]>b[0]?1:0))));}
+async function verifyRecords(v1,v2){
+ const j1=parseLines(v1),j2=parseLines(v2);
+ if(j1.length!==j2.length)throw Error('V1_V2_COUNT_SPLIT');
+ let pairs=[],prev='0'.repeat(64),prefix=null;
+ for(let i=0;i<j2.length;i++){
+   const e=j2[i];
+   if(!e||typeof e!=='object'||Array.isArray(e)||
+      Object.keys(e).sort().join(',')!=='after,before,hash,id,nonce,prev,seq,version')throw Error('INVALID_V2_SCHEMA');
+   if(e.version!==G5.version || !isHash(e.nonce) || !isHash(e.id))throw Error('BAD_V2_ITEM');
+   if(e.seq!==i+1 || e.prev!==prev)throw Error('V2_LINK_BROKEN');
+   if(pairs.some(p=>p[0]===e.nonce||p[1]===e.id))throw Error('REUSED_RESERVATION');
+   if(canonical(j1[i])!==canonical([e.nonce,e.id]))throw Error('V1_V2_MISMATCH');
+   if(e.before!==await snapshot(pairs) || e.after!==await snapshot([...pairs,[e.nonce,e.id]]))throw Error('R60_COMMITMENT_BROKEN');
+   const body={...e};delete body.hash;
+   const computed=await sha256(enc.encode(G5.domain+canonical(body)));
+   if(e.hash!==computed)throw Error('V2_HASH_BROKEN');
+   pairs.push([e.nonce,e.id]);prev=computed;
+   if(i+1===G5.minSeq)prefix=prev;
+ }
+ return {seq:j2.length,head:prev,prefix};
+}
+async function verifyCandidate(x){
+ if(!x||typeof x!=='object'||Array.isArray(x)||
+    Object.keys(x).sort().join(',')!=='epoch,v1_b64,v2_b64')return {verdict:'HOLD_BAD_CANDIDATE_FORMAT'};
+ if(x.epoch!==G5.epoch)return {verdict:'HOLD_WRONG_EPOCH'};
+ try {
+  const v1=base64Bytes(x.v1_b64),v2=base64Bytes(x.v2_b64);
+  const r=await verifyRecords(v1,v2);
+  if(r.seq<G5.minSeq)return {verdict:'HOLD_ROLLBACK',seq:r.seq,head:r.head};
+  if(r.prefix!==G5.minHead)return {verdict:'HOLD_FORK',seq:r.seq,head:r.head};
+  return {verdict:'CONSISTENT_WITH_HISTORICAL_MINIMUM_ONLY_NOT_LATEST',seq:r.seq,head:r.head};
+ }catch(e){return {verdict:'HOLD_INVALID_JOURNAL_OR_CRYPTO',reason:String(e.message||e)}}
+}
+// G5_MIN_FLOOR_VERIFIER_END
+const fileBox=document.getElementById('candidate');
+document.getElementById('verify').onclick=async()=>{
+ document.getElementById('result').textContent='HOLD_VALIDATING';
+ try{
+  const file=fileBox.files && fileBox.files[0];
+  if(!file){document.getElementById('result').textContent='HOLD_NO_CANDIDATE';return;}
+  if(file.size>11000000){document.getElementById('result').textContent='HOLD_OVERSIZED_CANDIDATE';return;}
+  const data=JSON.parse(await file.text());
+  const result=await verifyCandidate(data);
+  document.getElementById('result').textContent=result.verdict;
+  document.getElementById('detail').textContent=JSON.stringify(result,null,2);
+ }catch(e){document.getElementById('result').textContent='HOLD_INVALID_INPUT';document.getElementById('detail').textContent=String(e.message||e)}
+};
+document.getElementById('download').onclick=()=>{
+ const record=JSON.stringify({scope:'RESEARCH_ONLY_PINNED_MINIMUM_NOT_LATEST',epoch:G5.epoch,seq:G5.minSeq,head:G5.minHead,original_checkpoint_sha256:G5.checkpointSha256,rekor_historical_index:G5.rekorHistoricalIndex},null,2)+'\n';
+ const blob=new Blob([record],{type:'application/json'});
+ const link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download='G5-PHONE-PINNED-MINIMUM-SEQ3.json';
+ link.click();URL.revokeObjectURL(link.href);
+};
+</script>
+</body>
+</html>
