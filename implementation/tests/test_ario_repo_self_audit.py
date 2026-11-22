@@ -329,9 +329,10 @@ def test_newer_run_from_another_workflow_does_not_shadow_target_workflow():
     assert call(f)["required_check_observation"] == "REPORTED_SUCCESS_BY_LINKED_PR_RUN"
 
 
-def test_workflow_run_requires_positive_workflow_and_run_numbers():
+@pytest.mark.parametrize("field", ["workflow_id", "run_number"])
+def test_workflow_run_requires_positive_workflow_and_run_numbers(field):
     f = Fake()
-    f.runs["workflow_runs"][0].pop("workflow_id")
+    f.runs["workflow_runs"][0].pop(field)
     result = call(f)
     assert result["reason"] == "INVALID_RUN"
     assert result["required_check_observation"] == "NOT_CONFIRMED"

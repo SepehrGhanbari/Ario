@@ -222,7 +222,7 @@ def validate_file(path: Path, number: int, head: str, source: str,
     if reader_exit == 0:
         _assert(value["reason"] in SUCCESS_REASONS and
                 value.get("review_graph_sample") == "SAMPLED_STABLE_UNATTESTED" and
-                value.get("review_graph_reason", SUCCESS_GRAPH_REASON) == SUCCESS_GRAPH_REASON and
+                value.get("review_graph_reason") == SUCCESS_GRAPH_REASON and
                 value.get("review_freshness") == FRESHNESS and
                 "error_type" not in value and
                 value.get("source_commit_sha") == source,

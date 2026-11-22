@@ -192,9 +192,12 @@ def observe(pr_number: int, expected_head: str, *,
             raise ReadUnknown("RUNS_INCOMPLETE")
         linked = []
         run_ids = set()
+        workflow_run_numbers = set()
         for record in runs:
             run = _object(record, "RUN")
             if (not _positive(run.get("id")) or not _positive(run.get("run_attempt"))
+                    or not _positive(run.get("workflow_id"))
+                    or not _positive(run.get("run_number"))
                     or run.get("head_sha") != expected_head
                     or run.get("event") != "pull_request"
                     or run["id"] in run_ids
@@ -206,12 +209,29 @@ def observe(pr_number: int, expected_head: str, *,
                        != (run.get("conclusion") is not None)):
                 raise ReadUnknown("INVALID_RUN")
             run_ids.add(run["id"])
+            workflow_sequence = (run["workflow_id"], run["run_number"])
+            if workflow_sequence in workflow_run_numbers:
+                raise ReadUnknown("DUPLICATE_WORKFLOW_RUN_NUMBER")
+            workflow_run_numbers.add(workflow_sequence)
             if links_pr(run.get("pull_requests"), pr_number, first["id"], expected_head):
                 linked.append({
                     "id": run["id"], "attempt": run["run_attempt"],
+                    "workflow_id": run["workflow_id"],
+                    "run_number": run["run_number"],
                     "status": run["status"], "conclusion": run.get("conclusion"),
                 })
-        # Correlate a named GitHub Actions check to a PR-linked workflow run.
+        # A green job from an older run is stale when a newer run of the SAME
+        # workflow is linked to this PR and exact head. GitHub's run_number is
+        # monotonic within a workflow; run_attempt orders reruns of that run.
+        # The newest run must itself own the named job and be completed green.
+        latest_by_workflow = {}
+        for run in linked:
+            current = latest_by_workflow.get(run["workflow_id"])
+            sequence = (run["run_number"], run["attempt"])
+            if current is None or sequence > (current["run_number"], current["attempt"]):
+                latest_by_workflow[run["workflow_id"]] = run
+
+        # Correlate a named GitHub Actions check to the latest PR-linked run.
         # Merely seeing a success check on the same SHA is insufficient:
         # push and pull_request events can publish identically named checks.
         linked_by_id = {run["id"]: run for run in linked}
@@ -225,7 +245,11 @@ def observe(pr_number: int, expected_head: str, *,
                 continue
             linked_run = linked_by_id.get(int(match.group(1)))
             if linked_run is not None:
-                pr_regression_jobs.append((check, linked_run))
+                latest = latest_by_workflow.get(linked_run["workflow_id"])
+                if (latest is not None
+                        and latest["id"] == linked_run["id"]
+                        and latest["attempt"] == linked_run["attempt"]):
+                    pr_regression_jobs.append((check, linked_run))
         named_regression_confirmed = (
             len(pr_regression_jobs) == 1
             and all(
