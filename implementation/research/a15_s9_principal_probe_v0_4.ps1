@@ -101,9 +101,11 @@ exit 0
     $argumentLine = '-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "' + $probe + '" -ProtectedFile "' + $recorder + '" -ServicePid ' + $service.Id + ' -LedgerFile "' + $ledger + '" -OutputFile "' + $outFile + '"'
     $gateProcess = Start-Process -FilePath $powerShell -Credential $gateCredential -ArgumentList $argumentLine -PassThru -Wait -WindowStyle Hidden
 
-    if ($gateProcess.ExitCode -ne 0) { throw "Gate isolation probe failed with exit code $($gateProcess.ExitCode)." }
-    if (-not (Test-Path -LiteralPath $outFile)) { throw 'Gate probe did not write its result.' }
+    if (-not (Test-Path -LiteralPath $outFile)) { throw "Gate probe did not write its result (exit code $($gateProcess.ExitCode))." }
     $result = Get-Content -LiteralPath $outFile -Raw | ConvertFrom-Json
+    if ($gateProcess.ExitCode -ne 0 -or -not ($result.ReadAllowed -and $result.WriteDenied -and $result.DeleteDenied -and $result.KillDenied -and $result.AclChangeDenied -and $result.LedgerReadDenied -and $result.LedgerWriteDenied)) {
+        throw "Gate isolation probe failed with exit code $($gateProcess.ExitCode); observed result: $($result | ConvertTo-Json -Compress)"
+    }
     if (-not ($result.ReadAllowed -and $result.WriteDenied -and $result.DeleteDenied -and $result.KillDenied -and $result.AclChangeDenied -and $result.LedgerReadDenied -and $result.LedgerWriteDenied)) {
         throw "Unexpected Gate access result: $($result | ConvertTo-Json -Compress)"
     }
