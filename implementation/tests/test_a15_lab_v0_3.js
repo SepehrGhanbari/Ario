@@ -170,12 +170,12 @@ test('v0.3: recorder receipt from a wrong PID is rejected by verifier',async()=>
  assert.equal(checked.status,'EVIDENCE_CONFLICT');
 });
 
-test('v0.3: child supervisor captures EPIPE without crashing the parent (S10)',async t=>{
+test('v0.3: child supervisor captures platform-specific early-close errors without crashing the parent (S10)',async t=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'a15-v03-epipe-'));
  t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
  const child=path.join(dir,'close-stdin.js');fs.writeFileSync(child,"require('node:fs').closeSync(0);process.exit(0);",'utf8');
  const r=await runChild(child,'x'.repeat(1024*1024),{timeoutMs:1500,maxInputBytes:2*1024*1024,maxStdoutBytes:1024,maxStderrBytes:1024});
- assert.equal(r.stdin_error,'EPIPE');
+ assert.equal(r.stdin_error,process.platform==='win32'?'EOF':'EPIPE');
 });
 
 test('v0.3: stderr flood is bounded and reported as UNKNOWN',async t=>{
