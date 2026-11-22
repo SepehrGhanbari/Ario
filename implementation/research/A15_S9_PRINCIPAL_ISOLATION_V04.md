@@ -52,7 +52,7 @@ A separate local user is an acceptable synthetic test identity; it is not the fi
 
 - test_a15_s9_v0_4.js: reproduces the v0.3 same-UID replacement attack and confirms the old verifier accepts the forged local receipt.
 - a15_s9_principal_probe_v0_4.sh: on Linux, creates disposable identities with cleanup ownership flags; the Gate process verifies its real UID/EUID and supplementary groups, reads and executes the read-only image, and must receive exact EACCES/EPERM denials for overwrite, delete, chmod, rename, ledger read/write, and process signaling. A Custodian positive control reads the image and appends to its own ledger.
-- a15_s9_principal_probe_v0_4.ps1: on Windows, creates disposable local accounts with per-run cleanup flags; the Gate probe verifies its SID, non-administrator status and absence of the Custodian SID, reads and executes the image, and classifies file, ACL, ledger and process failures only when the underlying error is access-denied. The Custodian SID/process owner and a positive ledger-write control are checked.
+- a15_s9_principal_probe_v0_4.ps1: on Windows, creates disposable local accounts with per-run cleanup flags; the Gate probe verifies its SID, non-administrator status and absence of the Custodian SID, reads and executes the image, and classifies file, ACL, ledger and process failures only when the underlying error is access-denied. The Custodian process applies a protected process-object DACL (System, Administrators, and Owner Rights only); Gate must be denied both PROCESS_TERMINATE and WRITE_DAC. The Custodian process owner and positive ledger-write control are checked.
 - The workflow runs frozen G0/G1, v0.2, v0.3 and the S9 exploit reproduction in separate steps so a later successful native command cannot mask an earlier failure, then runs the OS-principal probes on Linux and Windows.
 
 An independent review found and drove fixes for unsafe cleanup of pre-existing identities, a misplaced Linux chmod check, Windows native-exit masking, and denial checks that previously accepted unrelated errors. The revised probes track only resources created by the current run, check exact permission-denied outcomes, and include positive controls.
@@ -76,7 +76,7 @@ If one human or one automation account controls both OS identities and the host 
 1. The v0.3 same-UID forged-receipt attack is reproducible and retained as a negative control.
 2. On Linux and Windows, Gate cannot replace, edit, rename, or delete the protected Custodian image.
 3. Gate cannot read, append, truncate, or replace the Custodian ledger.
-4. Gate cannot terminate, stop, reconfigure, or impersonate the Custodian service.
+4. Gate cannot terminate the Custodian process or open it for WRITE_DAC in the Windows probe. Service Control Manager stop/reconfigure rights and service-account impersonation remain future integration gates.
 5. Custodian can independently recompute the original request and reject a forged Gate verdict.
 6. Durable replay, crash/restart, lost-response, truncation, and rollback probes pass.
 7. Independent reviewers inspect the threat model, implementation, and exact CI evidence.
