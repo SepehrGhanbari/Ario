@@ -139,3 +139,31 @@ Final run `45070448595` was independently checked against GitHub API:
 ### 8.7 Governance
 
 PR #337 remains open Draft/HOLD and is still stacked on #335. #335 and parent #333 remain open Draft/HOLD. No merge, main update, force-push, ruleset/required-check change, real key, signature, trust activation, Genesis, memory admission or production action occurred. Status remains `RESEARCH_ONLY / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTION / NO_AUTOMATIC_MERGE`.
+
+## 9. Final residual-boundary control and final code/test head
+
+### 9.1 PR revision after the second identity sample
+
+A separate synthetic control changes the PR head immediately after the second PR identity GET has returned its old response, before the final Check Runs and workflow-run requests. As expected for a non-atomic sequential reader, the later requests remain pinned to the old SHA and cannot retroactively observe that PR revision. The control is intentionally **not** described as a successful freshness guarantee: `workflow_freshness` is `SAMPLED_NOT_ATOMIC`, overall `status` remains `UNKNOWN`, `merge_authorized` remains false, and `execution_attestation` remains `NOT_ESTABLISHED`. This complements the rerun-after-final-workflow-sample residual control in section 8.4.
+
+### 9.2 Final code/test head and CI
+
+Final code/test head: `67c480ed9becf4d57669fed6909401af1a23289c`.
+
+[Implementation Regression 45070794094](https://github.com/SepehrGhanbari/Ario/actions/runs/45070794094): **3/3 jobs SUCCESS**.
+
+| Environment | Passed | Skipped |
+|---|---:|---:|
+| Linux / Python 3.13 | 2,004 | 7 |
+| Linux / Python 3.14 | 2,004 | 7 |
+| Windows / Python 3.13 | 1,984 | 27 |
+
+Each environment reported 273 passing subtests. [Ario Repo Self Audit Research 45070794130](https://github.com/SepehrGhanbari/Ario/actions/runs/45070794130) succeeded. [Published TXT Restore Security 45070794022](https://github.com/SepehrGhanbari/Ario/actions/runs/45070794022) completed **10/10 jobs SUCCESS**.
+
+### 9.3 Final-head GitHub API cross-check
+
+Run `45070794094` was independently checked against GitHub API: canonical workflow ID `379498305`, path `.github/workflows/implementation-regression.yml`, run number `3653`, attempt `1`, event `pull_request`, PR #337 and exact head `67c480ed9becf4d57669fed6909401af1a23289c`. Its attempt-specific jobs collection has 3 jobs. `m0-regression` Job ID `137357047100` matches Check Run ID `137357047100`, app ID `15368`, exact head/run/attempt, completed/success and exact job details URL.
+
+### 9.4 Governance
+
+PR #337 remains open Draft/HOLD and stacked on #335. #335 and parent #333 remain open Draft/HOLD. No merge, main update, force-push, ruleset/required-check change, key, signature, trust activation, Genesis, memory admission or production action occurred. `RESEARCH_ONLY / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTION / NO_AUTOMATIC_MERGE`.
