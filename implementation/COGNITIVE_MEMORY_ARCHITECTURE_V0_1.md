@@ -73,6 +73,15 @@ Ario's cognitive memory architecture grounds biological memory mechanisms (Tulvi
   - `T-PROS-01 (Safe Predicate Sandbox)`: Predicate conditions are strictly validated against an allowlisted AST subset. Arbitrary calls (`Call`), imports (`Import`), lambdas, loops, or dunders (`__*`) raise `ProspectiveSecurityError`.
   - `T-PROS-02 (Deterministic Expiration)`: Intentions evaluated after their TTL epoch transition to `EXPIRED` and never trigger execution payloads.
 
+### Module 4: `WorkingMemoryBuffer` (`implementation/core/working_memory.py`)
+- **Biological Correlate**: Central Executive & Episodic Buffer (Baddeley & Hitch; Nelson Cowan 4-chunk capacity model).
+- **Function**: Manages the agent's bounded attentional focus, dynamic salience weighting, temporal decay, adaptive forgetting, and metacognitive confidence calibration.
+- **Invariants**:
+  - `T-WM-01 (Strict Cowan Bound)`: Working memory buffer capacity is strictly constrained to $K=4$ active informational chunks by default to prevent context pollution and attention exhaustion.
+  - `T-WM-02 (Provenance Gate)`: Every ingested chunk must carry an audited `SourceAttribution` verified by `SourceMonitoringGuard`. Unattributed claims are rejected fail-closed (`SourceMonitoringError`).
+  - `T-WM-03 (Dual Eviction Fate)`: High-salience/rehearsed chunks are automatically promoted to Long-Term Memory via `ConsolidationEngine`; low-salience noise is adaptively forgotten without LTM pollution.
+  - `T-WM-04 (Metacognitive Monitoring)`: Real-time assessment flags ungrounded hypotheses, active contradictions across co-residing chunks, and recommends directed recall when empirical grounding is insufficient.
+
 ---
 
 ## 3. Data Contracts

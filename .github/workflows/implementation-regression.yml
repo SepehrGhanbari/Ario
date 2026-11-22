@@ -34,7 +34,12 @@ jobs:
             tests/test_cognitive_memory_security_boundaries.py \
             tests/test_cognitive_memory_cli.py \
             tests/test_cognitive_memory_crash_recovery.py \
-            tests/test_ledger_memory_bridge.py
+            tests/test_ledger_memory_bridge.py \
+            tests/test_working_memory.py \
+            tests/test_working_memory_boundaries.py \
+            tests/test_working_memory_benchmark.py \
+            tests/test_working_memory_fuzz.py \
+            tests/test_policy_comparison.py
 
   cognitive-memory-invariants:
     name: Cognitive Memory Invariants, Crash Recovery & Security
@@ -61,7 +66,28 @@ jobs:
             tests/test_cognitive_memory_security_boundaries.py \
             tests/test_cognitive_memory_cli.py \
             tests/test_cognitive_memory_crash_recovery.py \
-            tests/test_ledger_memory_bridge.py
+            tests/test_ledger_memory_bridge.py \
+            tests/test_working_memory.py \
+            tests/test_working_memory_boundaries.py \
+            tests/test_working_memory_benchmark.py \
+            tests/test_working_memory_fuzz.py \
+            tests/test_policy_comparison.py
+      - name: Repeat randomized tests with an explicit reproduction seed
+        run: ARIO_FUZZ_SEED=8675309 python -m pytest -v tests/test_working_memory_fuzz.py
+      - name: Run multi-scenario benchmarks and save machine-readable outputs
+        run: |
+          mkdir -p benchmark-artifacts
+          python benchmarks/benchmark_working_memory.py --events 200 --capacity 4 --output benchmark-artifacts/working-memory.json
+          python benchmarks/policy_comparison.py --events 200 --capacity 4 --seed 42 \
+            --output benchmark-artifacts/policy-comparison.json \
+            --markdown benchmark-artifacts/policy-comparison.md
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: cognitive-memory-benchmarks-${{ github.run_id }}
+          path: implementation/benchmark-artifacts/
+          if-no-files-found: error
+          retention-days: 30
 
   windows-differential-advisory:
     # Informational pilot. Do not configure this as a required status check.
