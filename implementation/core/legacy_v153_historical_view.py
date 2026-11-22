@@ -15,6 +15,7 @@ from __future__ import annotations
 from collections import Counter
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -119,8 +120,19 @@ def _decode_record(text: str) -> dict[str, Any]:
     def reject_constant(_token: str) -> Any:
         _fail("HOLD_NONFINITE_JSON")
 
+    def reject_overflowing_float(token: str) -> float:
+        value = float(token)
+        if not math.isfinite(value):
+            _fail("HOLD_NONFINITE_JSON")
+        return value
+
     try:
-        record = json.loads(text, object_pairs_hook=unique_pairs, parse_constant=reject_constant)
+        record = json.loads(
+            text,
+            object_pairs_hook=unique_pairs,
+            parse_constant=reject_constant,
+            parse_float=reject_overflowing_float,
+        )
     except HistoricalViewHold:
         raise
     except (ValueError, TypeError, RecursionError):
