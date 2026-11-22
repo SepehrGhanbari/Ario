@@ -89,9 +89,16 @@ def main() -> int:
             pin = live_pin(number, rest_reader)
             graphql_reader = shadow.ReadOnlyGraphQLB(token)
             result = shadow.compare_shadow(pin, graphql_reader)
-            results.append(summarize(number, result))
-        except (ValueError, TypeError, KeyError, OSError, OverflowError,
-                RecursionError):
+            # Bracket both complete GraphQL observations with a FINAL read-only
+            # REST scope check. A head/base/PR identity change after sampling
+            # must never be called a completed observation. Still non-atomic.
+            final_pin = live_pin(number, rest_reader)
+            record = summarize(number, result)
+            record["final_rest_scope_check"] = (
+                "STABLE_NONATOMIC" if final_pin == pin else "CHANGED_HOLD")
+            results.append(record)
+        except (rest.ReadUnknown, ValueError, TypeError, KeyError, OSError,
+                AttributeError, OverflowError, RecursionError):
             results.append({
                 "pr": number, "status": "UNKNOWN", "disposition": "HOLD",
                 "merge_authorized": False,
@@ -99,7 +106,8 @@ def main() -> int:
             })
     completed = all(
         r.get("v1_status") == "SAMPLED_STABLE_UNATTESTED" and
-        r.get("v2_reason") == "B_SAMPLES_EQUAL_NONATTESTED"
+        r.get("v2_reason") == "B_SAMPLES_EQUAL_NONATTESTED" and
+        r.get("final_rest_scope_check") == "STABLE_NONATOMIC"
         for r in results
     )
     out = {
