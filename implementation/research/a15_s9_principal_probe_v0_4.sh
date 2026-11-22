@@ -102,7 +102,11 @@ denied("executable overwrite", lambda: append_file(recorder, "MALICIOUS_REPLACEM
 denied("executable delete", lambda: os.unlink(recorder))
 denied("executable chmod", lambda: os.chmod(recorder, 0o660))
 denied("executable rename", lambda: os.rename(recorder, recorder + ".renamed"))
-denied("ledger read", lambda: open(ledger, "r", encoding="utf-8").read())
+def read_file(path):
+    with open(path, "r", encoding="utf-8") as stream:
+        return stream.read()
+
+denied("ledger read", lambda: read_file(ledger))
 denied("ledger append", lambda: append_file(ledger, "FORGED\n"))
 
 print(json.dumps({
@@ -174,17 +178,27 @@ print("CUSTODIAN_READ_IMAGE_AND_APPEND_LEDGER=PASS")
 PY
 
 grep -q 'CUSTODIAN_WRITE' "$ledger_file"
-if runuser -u "$gate_user" -- python3 - "$ledger_file" <<'PY'
+runuser -u "$gate_user" -- python3 - "$ledger_file" "$gate_uid" "$custodian_gid" <<'PY'
+import errno
+import os
 import sys
-with open(sys.argv[1], "a", encoding="utf-8") as stream:
-    stream.write("FORGED_AFTER_CUSTODIAN\n")
+ledger, expected_uid, custodian_gid = sys.argv[1:]
+expected_uid = int(expected_uid)
+custodian_gid = int(custodian_gid)
+if os.getuid() != expected_uid or os.geteuid() != expected_uid or expected_uid == 0:
+    raise SystemExit("FAIL: post-write probe is not running as Gate")
+if custodian_gid in os.getgroups():
+    raise SystemExit("FAIL: Gate inherited Custodian group")
+try:
+    with open(ledger, "a", encoding="utf-8") as stream:
+        stream.write("FORGED_AFTER_CUSTODIAN\n")
+except PermissionError as exc:
+    if exc.errno not in (errno.EACCES, errno.EPERM):
+        raise SystemExit(f"FAIL: unexpected permission errno={exc.errno}")
+    print("GATE_LEDGER_WRITE_AFTER_CUSTODIAN_DENIED=PASS")
+else:
+    raise SystemExit("FAIL: Gate wrote ledger after Custodian update")
 PY
-then
-  echo "FAIL: Gate wrote ledger after Custodian update" >&2; exit 1
-else
-  status=$?
-  [ "$status" -eq 1 ] || { echo "FAIL: unexpected Gate ledger probe exit=$status" >&2; exit 1; }
-fi
 
 echo "S9_OS_PRINCIPAL_BOUNDARY=PASS"
 echo "GATE_UID=$gate_uid"
