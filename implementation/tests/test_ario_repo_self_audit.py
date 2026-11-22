@@ -420,7 +420,7 @@ def test_workflow_id_is_pinned_even_when_path_matches():
 def test_exact_attempt_jobs_endpoint_is_read_and_bound():
     f = Fake()
     result = call(f)
-    assert f.calls[-1] == (
+    assert f.calls[-2] == (
         mod.API + "/actions/runs/100/attempts/1/jobs?per_page=100"
     )
     assert result["canonical_workflow_observation"] == "MATCH"
