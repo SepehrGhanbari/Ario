@@ -94,3 +94,25 @@ def test_complete_non_authoritative_success_shape_retained(tmp_path):
                                  "head_sha":HEAD,"base_sha":"c"*40})
     assert accepts(tmp_path, full, exit_code=0)
     assert not accepts(tmp_path, full, exit_code=2)
+
+
+@pytest.mark.parametrize("value", [
+    "OK_TO_MERGE", "MERGE_PERMITTED", "APPROVED", "GREEN_TO_MERGE",
+    "OnBehalfOfHuman", "OSError_BUY",
+])
+def test_error_type_authority_confusion_rejected(tmp_path, value):
+    assert not accepts(tmp_path, report("TRUSTED_OBSERVER_INITIALIZATION_FAILED",
+                                        error_type=value))
+
+
+@pytest.mark.parametrize("value", [
+    "ReadUnknown", "ReviewGraphUnknown", "ValueError", "TypeError", "OSError",
+    "TimeoutError", "URLError", "ConnectionResetError", "SSLError",
+])
+def test_error_type_known_exception_classes_accepted(tmp_path, value):
+    assert accepts(tmp_path, report("TRUSTED_OBSERVER_INITIALIZATION_FAILED",
+                                    error_type=value))
+
+
+def test_error_type_rejected_when_reason_is_not_init(tmp_path):
+    assert not accepts(tmp_path, report("UNKNOWN", error_type="OSError"))
