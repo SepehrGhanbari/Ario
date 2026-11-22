@@ -17,3 +17,9 @@
 - **Executed GREEN (isolated local Python, after targeted fix):** four explicitly chosen controls passed: prior permission then correction => WITHHOLD; correction then new permission => CURRENT_REF_ONLY; prior permission then new model interpretation => WITHHOLD; explicit withdrawal => DENY. These are researcher-authored controls, not an independent study.
 - Added two corpus-adjacent unittest regression cases to this Draft PR; **full unittest corpus execution and GitHub-hosted execution not yet claimed**. Repository `implementation-regression.yml` runs tests under `implementation/tests/` and does not automatically invoke these separate research-directory tests.
 - Permission now invalidates whenever an interpretation ref changes; withdrawal still denies. No real authentication, privacy-policy decision, memory integration, or trust authority was introduced.
+
+## 2026-11-22 supplementary negative: wrong historical speaker attribution
+
+- **Executed RED on source-matched research v0.2:** a fictional `RECORDED_STATEMENT` with `subject_ref=SUBJECT-A` but `actor_ref=OTHER-PERSON` was incorrectly placed under `historical_statement_refs=['STMT-T1']`. The old code did not check the declared speaker for historical records.
+- **Executed GREEN:** a narrow check requires actor/subject reference equality before including a historical statement. Mismatched actor returns `HISTORICAL_ATTRIBUTION_MISMATCH`, does not include the forged historical reference and withholds future use. A new regression test was added. Equality of **caller-declared refs does not authenticate a real human**.
+- Existing eight research unittests were rerun locally after the fix and passed; the additional ninth test is committed for exact-head execution. No core memory or real identity changes.
