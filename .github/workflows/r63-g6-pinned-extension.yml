@@ -1,0 +1,59 @@
+name: R63 G6 frozen V9 V2 candidate extension over pinned seq3 (research only)
+on:
+  push:
+    branches:
+      - research/r63-g6-one-step-pinned-extension-20261122
+    paths:
+      - .github/workflows/r63-g6-pinned-extension.yml
+      - research/r63_g5_floor_custody_ci/offline_minimum_extension/**
+      - research/r63_g5_floor_custody_ci/spend_chain_v2.py
+permissions:
+  contents: read
+jobs:
+  pinned-extension:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, ubuntu-24.04]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13"
+      - name: Rebuild exact frozen-V9-format G4 synthetic sequence, append one research event
+        shell: pwsh
+        run: |
+          $d='research/r63_g5_floor_custody_ci/offline_minimum_extension'
+          python -B (Join-Path $d 'build_g6_fixtures.py')
+          if ($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
+      - name: Test 28 negative/positive controls without real keys
+        shell: pwsh
+        run: |
+          $d='research/r63_g5_floor_custody_ci/offline_minimum_extension'
+          python -B (Join-Path $d 'test_g6_extension_gate.py')
+          if ($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
+      - name: Positive research candidate but no latest trust promotion
+        shell: pwsh
+        run: |
+          $d='research/r63_g5_floor_custody_ci/offline_minimum_extension'
+          $r=& python -B (Join-Path $d 'g6_extension_gate.py') --v1 (Join-Path $d 'candidate_seq4_v1.jsonl') --v2 (Join-Path $d 'candidate_seq4_v2.jsonl') --pin (Join-Path $d 'G6_PHONE_NOTE_UNCHANGED_SEQ3_RESEARCH_INPUT.json') --operator-reports-phone-separate
+          $exit=$LASTEXITCODE
+          Write-Host $r
+          $o=$r|ConvertFrom-Json
+          if ($exit -ne 0 -or $o.verdict -ne 'CANDIDATE_EXTENDS_PINNED_SEQ3_ONLY_NOT_APPROVED_AS_LATEST' -or $o.automatic_remote_latest -ne 'NOT_ESTABLISHED') {
+            throw 'G6_POSITIVE_CANDIDATE_OUTSIDE_PROOF'
+          }
+      - name: Fail closed when independent phone note observation is not provided
+        shell: pwsh
+        run: |
+          $d='research/r63_g5_floor_custody_ci/offline_minimum_extension'
+          $r=& python -B (Join-Path $d 'g6_extension_gate.py') --v1 (Join-Path $d 'candidate_seq4_v1.jsonl') --v2 (Join-Path $d 'candidate_seq4_v2.jsonl') --pin (Join-Path $d 'G6_PHONE_NOTE_UNCHANGED_SEQ3_RESEARCH_INPUT.json')
+          $exit=$LASTEXITCODE
+          Write-Host $r
+          $o=$r|ConvertFrom-Json
+          if ($exit -ne 2 -or $o.verdict -ne 'HOLD_PHONE_SEPARATION_NOT_ATTESTED') {throw 'G6_FAIL_OPEN'}
+          exit 0
