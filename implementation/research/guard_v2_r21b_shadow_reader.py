@@ -129,8 +129,13 @@ class V1ProjectionRecorder:
         if len(self.pages) >= 2 * 3 * v1.MAX_PAGES:
             raise v1.ReviewGraphUnknown("SHADOW_REPLAY_BUDGET_EXCEEDED")
         page = self.reader.get_page(kind, number, cursor)
-        projected = _project_v1(page, kind)  # can fail before recording
-        self.pages.append((kind, number, cursor, copy.deepcopy(page)))
+        # One snapshot of the externally supplied page is the common source of
+        # BOTH the V1 projection and the raw V2 replay. Previously independent
+        # deepcopies of the caller object could observe different values if it
+        # was mutated between them (reproduced by R21B race falsifier).
+        snapshot = copy.deepcopy(page)
+        projected = _project_v1(snapshot, kind)  # can fail before recording
+        self.pages.append((kind, number, cursor, snapshot))
         return projected
 
 
