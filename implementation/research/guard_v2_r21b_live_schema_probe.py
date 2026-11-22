@@ -174,6 +174,38 @@ def main() -> int:
         missing_actor_node_id = sum(
             isinstance(x, dict) and isinstance(x.get("author"), dict)
             and "id" not in x["author"] for x in nodes)
+        # Supplemental public review example: #295 currently has 0 review
+        # nodes. Query a historically reviewed PR (#183) with the SAME fixed
+        # selection. Never print author name, login, Node.id or review content.
+        example = post(token, REVIEW_QUERY, {"owner": "SepehrGhanbari",
+                                             "repo": "Ario", "number": 183})
+        if example.get("errors"):
+            return report("REVIEWED_PR_EXACT_B_QUERY_ERROR",
+                          safe_error_kinds=safe_graphql_error_kinds(example["errors"]),
+                          main_query_ok=True, schema_ok=True)
+        ex_repository = (example.get("data") or {}).get("repository")
+        ex_pr = ex_repository.get("pullRequest") if isinstance(ex_repository, dict) else None
+        ex_reviews = ex_pr.get("reviews") if isinstance(ex_pr, dict) else None
+        ex_nodes = ex_reviews.get("nodes") if isinstance(ex_reviews, dict) else None
+        if type(ex_nodes) is not list:
+            return report("REVIEWED_PR_SAMPLE_UNKNOWN", main_query_ok=True, schema_ok=True)
+        actor_types = sorted({
+            item["author"].get("__typename") for item in ex_nodes
+            if type(item) is dict and type(item.get("author")) is dict
+            and type(item["author"].get("__typename")) is str
+        })
+        example_summary = {
+            "sample_pr": 183,
+            "sample_review_count": len(ex_nodes),
+            "sample_author_actor_types": actor_types,
+            "sample_null_authors": sum(type(item) is dict and item.get("author") is None
+                                       for item in ex_nodes),
+            "sample_null_commits": sum(type(item) is dict and item.get("commit") is None
+                                       for item in ex_nodes),
+            "sample_node_id_fragment_absent": sum(
+                type(item) is dict and type(item.get("author")) is dict
+                and "id" not in item["author"] for item in ex_nodes),
+        }
         return report(
             "SCHEMA_AND_QUERY_VERIFIED_NON_AUTHORITATIVE",
             schema_ok=True, exact_query_syntax_ok=True,
@@ -183,7 +215,7 @@ def main() -> int:
             actor_possible_types=sorted(t["name"] for t in
                                         types["actor"].get("possibleTypes", [])
                                         if isinstance(t, dict) and t.get("name")),
-            reviewed_pr=295, returned_nodes=len(nodes),
+            reviewed_pr=295, **example_summary, returned_nodes=len(nodes),
             reported_total_count=reviews["totalCount"],
             missing_selected_fields_count=absent,
             null_author_count=null_authors, null_commit_count=null_commits,
