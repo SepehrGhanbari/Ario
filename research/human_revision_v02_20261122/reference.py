@@ -50,6 +50,9 @@ def project(events, *, subject_ref, scope):
             result["unresolved"].append("OUT_OF_SCOPE_EVENT")
             continue
         if kind == "RECORDED_STATEMENT":
+            if event["actor_ref"] != subject_ref:
+                result["unresolved"].append("HISTORICAL_ATTRIBUTION_MISMATCH")
+                continue
             statements.add(event["ref"])
             result["historical_statement_refs"].append(event["ref"])
             continue
