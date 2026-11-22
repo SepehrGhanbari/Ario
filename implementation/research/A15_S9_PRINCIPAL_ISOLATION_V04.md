@@ -51,9 +51,11 @@ A separate local user is an acceptable synthetic test identity; it is not the fi
 ## 4. What this v0.4 probe actually tests
 
 - test_a15_s9_v0_4.js: reproduces the v0.3 same-UID replacement attack and confirms the old verifier accepts the forged local receipt.
-- a15_s9_principal_probe_v0_4.sh: on Linux, creates disposable Gate/Custodian users and checks distinct UIDs, read-only executable access, denied overwrite/delete, denied ledger access, and denied termination of a Custodian-owned process.
-- a15_s9_principal_probe_v0_4.ps1: on Windows, creates disposable local accounts and checks equivalent file/ledger ACL and process-termination boundaries.
-- The workflow runs the frozen G0/G1, v0.2 and v0.3 suites as regression controls, then runs the S9 exploit and OS-principal probes on Linux and Windows.
+- a15_s9_principal_probe_v0_4.sh: on Linux, creates disposable identities with cleanup ownership flags; the Gate process verifies its real UID/EUID and supplementary groups, reads and executes the read-only image, and must receive exact EACCES/EPERM denials for overwrite, delete, chmod, rename, ledger read/write, and process signaling. A Custodian positive control reads the image and appends to its own ledger.
+- a15_s9_principal_probe_v0_4.ps1: on Windows, creates disposable local accounts with per-run cleanup flags; the Gate probe verifies its SID, non-administrator status and absence of the Custodian SID, reads and executes the image, and classifies file, ACL, ledger and process failures only when the underlying error is access-denied. The Custodian SID/process owner and a positive ledger-write control are checked.
+- The workflow runs frozen G0/G1, v0.2, v0.3 and the S9 exploit reproduction in separate steps so a later successful native command cannot mask an earlier failure, then runs the OS-principal probes on Linux and Windows.
+
+An independent review found and drove fixes for unsafe cleanup of pre-existing identities, a misplaced Linux chmod check, Windows native-exit masking, and denial checks that previously accepted unrelated errors. The revised probes track only resources created by the current run, check exact permission-denied outcomes, and include positive controls.
 
 This is a **kernel-enforced boundary feasibility probe**, not an integrated Custodian broker. It does not yet prove a complete end-to-end request/receipt path, service-manager hardening, named-pipe/socket peer authentication, durable replay protection, or external custody.
 
