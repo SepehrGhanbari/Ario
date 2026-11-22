@@ -685,3 +685,12 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - Bounded correction head `174bcec886139fe86475916994dfb9dea55a6571`: [CI 44942451503](https://github.com/SepehrGhanbari/Ario/actions/runs/44942451503) **SUCCESS** Linux 1657 passed/7 skipped/2 warnings/273 subtests; Windows 1656 passed/8 skipped/2 warnings/273 subtests; CPython 3.14 1657 passed/7 skipped/2 warnings/273 subtests. Both W42 negative controls now PASS without test source edits (Git test blob `3f5ad1e2eab028fdd9ec9ef79d010725621f1c26` unchanged).
 - The fix monitors POSIX fstat identity, size, mtime/ctime and two read images, and uses Windows leaf SHARE_READ to refuse normal competing writers. These narrow tests DO NOT prove atomicity for arbitrary in-place or privileged/mapped writes or historical event truth, freshness, memory admission, signer or trust authority. Old log prefix and original RED code/tests remain in Git history.
 - No unrelated code, parser, real event ledger, memory, signature pin, governance or production changes. Follow-up must check exact final-head CI and TXT security workflows before research-only merge.
+
+
+## 2026-11-22 — V15.3 historical reader rejects overflowing JSON float exponents
+
+- Finding: Python's default JSON float parser converts syntactically valid exponent values such as `1e999` and `-1e999` to non-finite `inf` / `-inf`. The existing `parse_constant` guard rejected literal `NaN` / `Infinity` tokens but did not cover this numeric-overflow path.
+- Bounded change is isolated on `fix/v153-json-nonfinite-floats`, based on main commit `15ebc65ca97f26396c152811a94646f86cbbfffe`. Only `implementation/core/legacy_v153_historical_view.py`, its focused test file, and this append-only log are in scope.
+- Parser now supplies a `parse_float` hook and rejects any converted value for which `math.isfinite` is false, using the existing constant failure code `HOLD_NONFINITE_JSON`. Finite large exponent `1e308` remains accepted.
+- Focused tests now cover `NaN`, `Infinity`, `-Infinity`, `1e999`, `-1e999`, plus the finite positive control. Synthetic fixtures only.
+- No private archive, conversation history, working-memory cache, runtime, signer, credentials, or trust state was accessed or changed. No PR has been opened and no merge has occurred at the time of this entry; validation is pending.
