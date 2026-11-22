@@ -746,3 +746,24 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - GitHub Actions run 45066500022 completed successfully on both ubuntu-latest and windows-latest.
 - Each platform reports 56/56 frozen G0/G1, 22/22 historical v0.2, and 21/21 v0.3 tests; zero failures.
 - The only subsequent branch change is this append-only ENGINEERING_LOG.md entry; no source, test, documentation, or workflow bytes are changed by this record.
+
+
+## 2026-11-23 — A15 S9 v0.4 OS-principal isolation feasibility (Draft PR #338)
+
+- Branch: research/a15-s9-principal-isolation-v0_4-20261123, stacked on Draft PR #334 exact base 35f9171b751033ab20a491a1f90c6b1b2334f7a4. Tested source head: f98a6a6d91e10156291c1880bcf0a717976eb351.
+- Added six new files only: the same-UID forged-receipt RED reproduction, Linux and Windows OS-principal probes, English/Persian architecture notes, and a dedicated cross-platform workflow. v0.3 and earlier source/evidence files were not edited.
+- Exact-head Actions run 45070673263 passed on both ubuntu-latest and windows-latest. Each OS passed 56/56 frozen G0/G1, 22/22 historical v0.2, 21/21 v0.3, and 1/1 S9 RED-reproduction tests: **100/100 per platform, zero failures**. The OS-principal probe itself also reported S9_OS_PRINCIPAL_BOUNDARY=PASS on both platforms.
+- Linux evidence: Gate UID/EUID 1002 and Custodian UID 1003; Gate can read/execute the read-only service image, while exact EACCES/EPERM checks deny overwrite, delete, chmod, rename, ledger read/write, and SIGTERM to the Custodian-owned process. Custodian positive control can read the image and append to its own ledger.
+- Windows evidence: disposable Gate and Custodian accounts are distinct and both non-administrators. Gate can read/execute the image but cannot write/delete/change its ACL, read/write the private ledger, open the Custodian process for WRITE_DAC, or terminate it. The Custodian process applies a protected process-object DACL for SYSTEM, Administrators and Owner Rights; Custodian positive ledger-write control passes.
+- Important finding: separate local Windows user credentials alone did **not** prevent Gate from terminating a process started as Custodian. The probe was strengthened to apply and test a protected process-object DACL; current exact-head Windows CI passes. This is still not a Windows Service Control Manager/service-SID deployment test.
+- The S9 RED reproduction deliberately confirms the v0.3 same-UID attack: Gate replaces Recorder with a program that emits a structurally valid self-hashed local receipt, and the v0.3 verifier accepts it as INERT_ACTION_LOCAL_RECEIPT_ONLY. A passing reproduction is evidence of the old vulnerability, not a fix.
+- Independent automated review findings were corrected: cleanup only removes accounts/directories created by this run; Linux chmod/rename checks execute independently; permission denials are checked by their actual OS error; Gate/Custodian effective identities and positive controls are verified; Windows native test commands are isolated into separate workflow steps; and the Windows process DACL is explicitly applied and tested.
+- Exact new file blob SHAs:
+  - test_a15_s9_v0_4.js = 89465a77a05d0865e2120a16c070548026f6e2cd
+  - a15_s9_principal_probe_v0_4.sh = 17861469af4b6d14d383cad611159f9d8dccafe5
+  - a15_s9_principal_probe_v0_4.ps1 = de6da7e19e2dbc4a6757e0169e12ab44b240a04b
+  - A15_S9_PRINCIPAL_ISOLATION_V04.md = 08671e59e9097c9e08c65fbaf3831ef01abb88dd
+  - A15_S9_PRINCIPAL_ISOLATION_V04_FA.md = 2529028f87141e5c99431a1660ef9062de21d234
+  - a15-s9-principal-isolation-v04.yml = 4a27c324260e67f9d17521452bb6329cde787b3e
+- Remaining blockers: no integrated Custodian broker/IPC yet; no independent recomputation service request path; no durable replay/receipt protocol or crash/restart/rollback tests; no Linux systemd service installation; no Windows service-SID/SCM ACL deployment; and no separately administered external custodian. Root/Administrator and host/kernel compromise remain outside this local boundary.
+- Disposition remains **S9 RED / NOT ESTABLISHED**. Draft/HOLD only; no real keys, signer, trust activation, production, or merge. Automated reviewer re-review is requested; no independent human approval is claimed.
