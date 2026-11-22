@@ -26,7 +26,8 @@ class Fake:
              "status": "in_progress", "conclusion": None, "app": {"id": 15368}},
         ]}
         self.runs = {"total_count": 1, "workflow_runs": [{
-            "id": 100, "run_attempt": 1, "head_sha": HEAD,
+            "id": 100, "workflow_id": 4242, "run_number": 10,
+            "run_attempt": 1, "head_sha": HEAD,
             "event": "pull_request", "status": "completed", "conclusion": "success",
             "pull_requests": [{"id": 987, "number": PR, "head": {"sha": HEAD}}],
         }]}
@@ -279,3 +280,58 @@ def test_incoherent_pr_run_state_is_unknown(status, conclusion):
     f = Fake()
     f.runs["workflow_runs"][0].update(status=status, conclusion=conclusion)
     assert call(f)["reason"] == "INVALID_RUN"
+
+
+# R22: a prior green run must not qualify when the same workflow has a newer run.
+@pytest.mark.parametrize(("status", "conclusion"), [
+    ("queued", None),
+    ("in_progress", None),
+    ("completed", "failure"),
+])
+def test_older_green_run_does_not_mask_newer_same_workflow_run(status, conclusion):
+    f = Fake()
+    newer = copy.deepcopy(f.runs["workflow_runs"][0])
+    newer.update(id=101, run_number=11, status=status, conclusion=conclusion)
+    f.runs["workflow_runs"].append(newer)
+    f.runs["total_count"] = 2
+
+    result = call(f)
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+    assert result["linked_run_count"] == 2
+
+
+def test_latest_successful_same_workflow_run_can_be_confirmed():
+    f = Fake()
+    newer = copy.deepcopy(f.runs["workflow_runs"][0])
+    newer.update(id=101, run_number=11)
+    f.runs["workflow_runs"].append(newer)
+    f.runs["total_count"] = 2
+
+    latest_check = copy.deepcopy(f.checks["check_runs"][0])
+    latest_check.update(
+        id=3,
+        details_url="https://github.com/SepehrGhanbari/Ario/actions/runs/101/job/3",
+    )
+    f.checks["check_runs"] = [latest_check]
+    f.checks["total_count"] = 1
+
+    assert call(f)["required_check_observation"] == "REPORTED_SUCCESS_BY_LINKED_PR_RUN"
+
+
+def test_newer_run_from_another_workflow_does_not_shadow_target_workflow():
+    f = Fake()
+    other = copy.deepcopy(f.runs["workflow_runs"][0])
+    other.update(id=101, workflow_id=9999, run_number=1,
+                 status="queued", conclusion=None)
+    f.runs["workflow_runs"].append(other)
+    f.runs["total_count"] = 2
+
+    assert call(f)["required_check_observation"] == "REPORTED_SUCCESS_BY_LINKED_PR_RUN"
+
+
+def test_workflow_run_requires_positive_workflow_and_run_numbers():
+    f = Fake()
+    f.runs["workflow_runs"][0].pop("workflow_id")
+    result = call(f)
+    assert result["reason"] == "INVALID_RUN"
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
