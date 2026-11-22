@@ -51,6 +51,7 @@ jobs:
           if ($obj.verdict -ne 'HOLD_ROLLBACK' -or $obj.reference_origin -ne 'CALLER_SUPPLIED_UNVERIFIED__PHONE_ORIGIN_NOT_ATTESTED' -or $exit -ne 2) {
             throw 'FAIL_OPEN_PHONE_REFERENCE_PROVENANCE'
           }
+          exit 0 # Python exit 2 is the expected fail-closed HOLD; the harness succeeded.
       - name: Portable offline-phone JavaScript crypto logic controls
         shell: pwsh
         run: |
