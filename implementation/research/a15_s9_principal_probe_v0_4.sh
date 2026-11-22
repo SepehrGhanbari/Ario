@@ -5,7 +5,7 @@ if [ "$(id -u)" -ne 0 ]; then
   echo "S9 probe requires a privileged CI coordinator to provision disposable OS identities." >&2
   exit 77
 fi
-for command in useradd userdel groupadd groupdel runuser python3; do
+for command in useradd userdel groupadd groupdel runuser python3 node; do
   command -v "$command" >/dev/null || { echo "MISSING_TOOL:$command" >&2; exit 78; }
 done
 
@@ -62,6 +62,8 @@ custodian_gid="$(id -g "$custodian_user")"
 [ "$gate_uid" != "$custodian_uid" ] || { echo "FAIL: identities unexpectedly equal" >&2; exit 1; }
 
 # The Gate process itself verifies its effective identity and performs every negative probe.
+node_path="$(command -v node)"
+runuser -u "$gate_user" -- "$node_path" "$recorder_file" | grep -q "A15_CUSTODIAN_IMAGE_V04"
 runuser -u "$gate_user" -- python3 - "$recorder_file" "$ledger_file" "$gate_uid" "$custodian_gid" <<'PY'
 import errno
 import json
@@ -203,7 +205,7 @@ PY
 echo "S9_OS_PRINCIPAL_BOUNDARY=PASS"
 echo "GATE_UID=$gate_uid"
 echo "CUSTODIAN_UID=$custodian_uid"
-echo "GATE_CAN_READ_EXECUTABLE=YES"
+echo "GATE_CAN_READ_AND_EXECUTE_READONLY_IMAGE=YES"
 echo "GATE_CAN_WRITE_DELETE_CHMOD_RENAME_EXECUTABLE=NO"
 echo "GATE_CAN_READ_OR_WRITE_LEDGER=NO"
 echo "GATE_CAN_TERMINATE_CUSTODIAN_PROCESS=NO"
