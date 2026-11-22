@@ -130,7 +130,9 @@ def test_incomplete_pages_are_unknown(which):
 def test_wrong_pr_binding_is_not_a_linked_run():
     f = Fake()
     f.runs["workflow_runs"][0]["pull_requests"][0]["id"] = 2000
-    assert call(f)["linked_run_count"] == 0
+    result = call(f)
+    assert result["reason"] == "RUN_PR_ASSOCIATION_MISMATCH"
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
 
 
 def test_http_403_is_unknown():
