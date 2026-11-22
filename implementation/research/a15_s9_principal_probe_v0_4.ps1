@@ -22,6 +22,8 @@ $ledger = Join-Path $protected 'ledger.jsonl'
 $probe = Join-Path $root 'gate-probe.ps1'
 $custodianProbe = Join-Path $root 'custodian-probe.ps1'
 $outFile = Join-Path $gateOut 'result.json'
+$gateStdout = Join-Path $gateOut 'gate.stdout.txt'
+$gateStderr = Join-Path $gateOut 'gate.stderr.txt'
 $service = $null
 $createdGateUser = $false
 $createdCustodianUser = $false
@@ -165,9 +167,13 @@ Add-Content -LiteralPath $LedgerFile -Value 'CUSTODIAN_WRITE' -ErrorAction Stop
     }
 
     $argumentLine = '-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "' + $probe + '" -ProtectedFile "' + $recorder + '" -ServicePid ' + $service.Id + ' -LedgerFile "' + $ledger + '" -OutputFile "' + $outFile + '" -ExpectedGateSid "' + $gateSid + '" -CustodianSid "' + $custodianSid + '"'
-    $gateProcess = Start-Process -FilePath $powerShell -Credential $gateCredential -ArgumentList $argumentLine -PassThru -Wait -WindowStyle Hidden
+    $gateProcess = Start-Process -FilePath $powerShell -Credential $gateCredential -ArgumentList $argumentLine -PassThru -Wait -WindowStyle Hidden -RedirectStandardOutput $gateStdout -RedirectStandardError $gateStderr
 
-    if (-not (Test-Path -LiteralPath $outFile)) { throw "Gate probe did not write its result (exit code $($gateProcess.ExitCode))." }
+    if (-not (Test-Path -LiteralPath $outFile)) {
+        $gateErrorText = if (Test-Path -LiteralPath $gateStderr) { Get-Content -LiteralPath $gateStderr -Raw } else { 'NO_STDERR_CAPTURED' }
+        $gateOutputText = if (Test-Path -LiteralPath $gateStdout) { Get-Content -LiteralPath $gateStdout -Raw } else { 'NO_STDOUT_CAPTURED' }
+        throw "Gate probe did not write its result (exit code $($gateProcess.ExitCode)); stderr=$gateErrorText; stdout=$gateOutputText"
+    }
     $result = Get-Content -LiteralPath $outFile -Raw | ConvertFrom-Json
     if ($gateProcess.ExitCode -ne 0 -or -not ($result.GateSid -eq $gateSid -and -not $result.GateIsAdministrator -and -not $result.GateHasCustodianSid -and $result.ReadAllowed -and $result.ExecuteAllowed -and $result.WriteDenied -and $result.DeleteDenied -and $result.AclChangeDenied -and $result.LedgerReadDenied -and $result.LedgerWriteDenied -and $result.KillDenied)) {
         throw "Gate isolation probe failed with exit code $($gateProcess.ExitCode); observed result: $($result | ConvertTo-Json -Compress)"
