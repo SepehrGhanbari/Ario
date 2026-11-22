@@ -72,7 +72,7 @@ def post(token: str, query: str, variables: dict | None = None) -> dict:
 def field_map(type_obj: dict | None) -> dict:
     if not isinstance(type_obj, dict) or not isinstance(type_obj.get("fields"), list):
         return {}
-    return {f["name"]: f["type"] for f in type_obj["fields"]
+    return {f["name"]: f.get("type") for f in type_obj["fields"]
             if isinstance(f, dict) and isinstance(f.get("name"), str)}
 
 
