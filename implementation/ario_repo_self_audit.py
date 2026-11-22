@@ -39,7 +39,7 @@ LIMITATIONS = [
     "GitHub Actions success is not independently attested test execution",
     "The repository author may also control tests and workflow definitions",
     "Two PR GET samples and repeated metadata reads do not form an atomic or permanent snapshot",
-    "Post-job re-reads narrow but cannot eliminate the final GitHub API race",
+    "The final workflow-run sample is last, but a rerun after that sample remains unobservable",
     "This probe does not validate job logs, code quality, truth or merge eligibility",
     "No memory update, M0 evidence admission, real signer, Genesis or trust permission",
 ]
@@ -142,8 +142,9 @@ def _unknown(reason: str, **extra) -> dict:
 
 
 
-def _check_snapshot(value: Any, expected_head: str, label: str) -> tuple:
-    """Project a complete Check Runs page onto fields that affect job binding."""
+def _check_snapshot(value: Any, expected_head: str, target_run_id: int,
+                    target_check_id: int, label: str) -> tuple:
+    """Project checks for the selected canonical run onto binding fields."""
     obj = _object(value, label)
     records = obj.get("check_runs")
     count = obj.get("total_count")
@@ -170,12 +171,17 @@ def _check_snapshot(value: Any, expected_head: str, label: str) -> tuple:
             raise ReadUnknown("INVALID_OR_DUPLICATE_CHECK")
         ids.add(item["id"])
         if item["name"] == CANONICAL_JOB_NAME and app["id"] == ACTIONS_APP_ID:
-            relevant.append((
-                item["id"], item["name"], item["head_sha"], app["id"],
-                item["status"], item.get("conclusion"), details,
-            ))
-    # Order and presentation-only API fields (output, timestamps, URLs) are
-    # deliberately excluded; only canonical binding fields define drift.
+            match = CHECK_JOB.fullmatch(details) if isinstance(details, str) else None
+            points_to_target_run = (
+                match is not None and int(match.group(1)) == target_run_id
+            )
+            if item["id"] == target_check_id or points_to_target_run:
+                relevant.append((
+                    item["id"], item["name"], item["head_sha"], app["id"],
+                    item["status"], item.get("conclusion"), details,
+                ))
+    # Old-attempt canonical checks and unrelated checks do not affect the
+    # selected latest run. Order and presentation-only fields are excluded.
     return tuple(sorted(relevant))
 
 
@@ -190,7 +196,7 @@ def _run_snapshot(value: Any, expected_head: str, pr_number: int,
         raise ReadUnknown(label + "_INCOMPLETE")
     run_ids = set()
     workflow_sequences = set()
-    relevant = []
+    latest_canonical = None
     for record in records:
         run = _object(record, "RUN_RECHECK")
         if (not _positive(run.get("id")) or not _positive(run.get("run_attempt"))
@@ -230,15 +236,19 @@ def _run_snapshot(value: Any, expected_head: str, pr_number: int,
                     raise ReadUnknown("RUN_PR_ASSOCIATION_MISMATCH")
             link_view.append((item["id"], item["number"], link_head["sha"]))
 
-        if links_pr(pr_links, pr_number, pr_id, expected_head):
-            relevant.append((
+        if (run["workflow_id"] == CANONICAL_WORKFLOW_ID
+                and links_pr(pr_links, pr_number, pr_id, expected_head)):
+            candidate = (
                 run["id"], run["workflow_id"], run["path"], run["run_number"],
                 run["run_attempt"], run["head_sha"], run["event"],
                 run["status"], run.get("conclusion"), tuple(sorted(link_view)),
-            ))
-    # Unlinked runs and presentation-only fields do not affect this PR's
-    # canonical workflow selection. Every record is still validated above.
-    return tuple(sorted(relevant))
+            )
+            sequence = (run["run_number"], run["run_attempt"])
+            if latest_canonical is None or sequence > latest_canonical[0]:
+                latest_canonical = (sequence, candidate)
+    # Only the latest PR-linked run of the pinned workflow can change the
+    # decision. Older runs and other workflows are validated but not compared.
+    return () if latest_canonical is None else (latest_canonical[1],)
 
 def observe(pr_number: int, expected_head: str, *,
             repository: str = REPOSITORY, reader: Any = None) -> dict:
@@ -286,7 +296,6 @@ def observe(pr_number: int, expected_head: str, *,
                 "conclusion": item.get("conclusion"), "app_id": app["id"],
                 "details_url": details,
             })
-        check_snapshot = _check_snapshot(check_obj, expected_head, "CHECKS")
         runs_url = (API + "/actions/runs?head_sha=" + expected_head
                      + "&event=pull_request&per_page=100")
         runs_obj = _object(source.get_json(runs_url), "RUNS")
@@ -343,9 +352,6 @@ def observe(pr_number: int, expected_head: str, *,
                     "path": run["path"],
                     "status": run["status"], "conclusion": run.get("conclusion"),
                 })
-        run_snapshot = _run_snapshot(
-            runs_obj, expected_head, pr_number, first["id"], "RUNS"
-        )
         # A green job from an older run is stale when a newer run of the SAME
         # workflow is linked to this PR and exact head. GitHub's run_number is
         # monotonic within a workflow; run_attempt orders reruns of that run.
@@ -442,9 +448,16 @@ def observe(pr_number: int, expected_head: str, *,
             raise ReadUnknown("PR_CHANGED_BETWEEN_SAMPLES")
 
         if named_regression_confirmed:
+            check_snapshot = _check_snapshot(
+                check_obj, expected_head, run["id"], check["id"], "CHECKS"
+            )
+            run_snapshot = _run_snapshot(
+                runs_obj, expected_head, pr_number, first["id"], "RUNS"
+            )
             final_check_obj = source.get_json(checks_url)
             final_check_snapshot = _check_snapshot(
-                final_check_obj, expected_head, "CHECKS_RECHECK"
+                final_check_obj, expected_head, run["id"], check["id"],
+                "CHECKS_RECHECK"
             )
             if final_check_snapshot != check_snapshot:
                 raise ReadUnknown("CHECKS_CHANGED_DURING_OBSERVATION")
@@ -467,6 +480,9 @@ def observe(pr_number: int, expected_head: str, *,
             "required_check_observation": (
                 "REPORTED_SUCCESS_BY_LINKED_PR_RUN"
                 if named_regression_confirmed else "NOT_CONFIRMED"
+            ),
+            "workflow_freshness": (
+                "SAMPLED_NOT_ATOMIC" if named_regression_confirmed else "NOT_CONFIRMED"
             ),
         })
     except (ReadUnknown, ValueError, TypeError, OSError, UnicodeError,
