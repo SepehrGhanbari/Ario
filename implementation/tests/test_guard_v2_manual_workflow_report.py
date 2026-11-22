@@ -29,6 +29,7 @@ def diagnostic(reason, complete=False):
         report.update({
             "source_commit_sha": "b" * 40,
             "review_graph_sample": "SAMPLED_STABLE_UNATTESTED",
+            "review_graph_reason": "TWO_COMPLETE_GRAPH_SAMPLES_MATCH",
             "review_freshness": "TWO_SAMPLED_GRAPHS_MATCH_NON_ATOMIC",
             "first_digest": "c" * 64,
             "second_digest": "c" * 64,

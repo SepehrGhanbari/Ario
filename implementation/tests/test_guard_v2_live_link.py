@@ -29,7 +29,8 @@ class FakeReader:
              "details_url": "https://github.com/SepehrGhanbari/Ario/actions/runs/83/job/41"},
         ]}
         self.runs = {"total_count": 1, "workflow_runs": [
-            {"id": 83, "run_attempt": 1, "head_sha": HEAD, "event": "pull_request",
+            {"id": 83, "workflow_id": 4242, "run_number": 10,
+             "run_attempt": 1, "head_sha": HEAD, "event": "pull_request",
              "status": "completed", "conclusion": "success",
              "pull_requests": [{"id": pr_id, "number": pr_number,
                                 "head": {"sha": HEAD}}]},
