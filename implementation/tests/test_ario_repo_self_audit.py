@@ -26,10 +26,14 @@ class Fake:
              "status": "in_progress", "conclusion": None, "app": {"id": 15368}},
         ]}
         self.runs = {"total_count": 1, "workflow_runs": [{
-            "id": 100, "workflow_id": 4242, "run_number": 10,
+            "id": 100, "workflow_id": 379498305, "path": ".github/workflows/implementation-regression.yml", "run_number": 10,
             "run_attempt": 1, "head_sha": HEAD,
             "event": "pull_request", "status": "completed", "conclusion": "success",
             "pull_requests": [{"id": 987, "number": PR, "head": {"sha": HEAD}}],
+        }]}
+        self.jobs = {"total_count": 1, "jobs": [{
+            "id": 1, "run_id": 100, "run_attempt": 1, "head_sha": HEAD,
+            "name": "m0-regression", "status": "completed", "conclusion": "success",
         }]}
         self.calls = []
         self.next_pr = None
@@ -47,6 +51,8 @@ class Fake:
             return copy.deepcopy(self.checks)
         if "/actions/runs?" in url:
             return copy.deepcopy(self.runs)
+        if "/attempts/" in url and "/jobs?" in url:
+            return copy.deepcopy(self.jobs)
         raise AssertionError("unexpected URL " + url)
 
 
@@ -366,4 +372,34 @@ def test_newer_run_with_mismatched_target_pr_link_fails_closed():
 
     result = call(f)
     assert result["reason"] == "RUN_PR_ASSOCIATION_MISMATCH"
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+
+
+# R22.1 RED controls: same-named checks from noncanonical workflows must not qualify.
+def test_same_named_green_job_from_different_workflow_is_not_confirmed():
+    f = Fake()
+    f.runs["workflow_runs"][0].update(
+        workflow_id=4242, path=".github/workflows/other.yml"
+    )
+    result = call(f)
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+
+
+def test_canonical_workflow_id_with_wrong_path_is_not_confirmed():
+    f = Fake()
+    f.runs["workflow_runs"][0]["path"] = ".github/workflows/renamed-or-other.yml"
+    result = call(f)
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+
+
+# The latest run record says attempt 2. The check still points to the old
+# attempt-1 job ID; attempt 2 owns a different job ID and is green.
+def test_prior_attempt_check_cannot_stand_in_for_latest_attempt_job():
+    f = Fake()
+    f.runs["workflow_runs"][0]["run_attempt"] = 2
+    f.jobs = {"total_count": 1, "jobs": [{
+        "id": 3, "run_id": 100, "run_attempt": 2, "head_sha": HEAD,
+        "name": "m0-regression", "status": "completed", "conclusion": "success",
+    }]}
+    result = call(f)
     assert result["required_check_observation"] == "NOT_CONFIRMED"
