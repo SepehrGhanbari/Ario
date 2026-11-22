@@ -738,3 +738,11 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - Workflow run 45066370881 completed successfully on both ubuntu-latest and windows-latest.
 - The exact test logs show 56/56 frozen G0/G1, 22/22 historical v0.2, and 21/21 v0.3 tests on each platform; zero failures on both jobs.
 - This run used the same v0.3 source/test/workflow blobs recorded above. After the run, only the append-only ENGINEERING_LOG.md was changed; the v0.3 source, test and workflow blobs were not changed. A documentation-only checkpoint is being added to trigger a final run against the newest branch head.
+
+
+### A15 v0.3 exact-head Linux/Windows rerun — 2026-11-22
+
+- Final documentation/source checkpoint commit tested: 11a49fe68cefdc9a742f5717d9dcc696b404fe61.
+- GitHub Actions run 45066500022 completed successfully on both ubuntu-latest and windows-latest.
+- Each platform reports 56/56 frozen G0/G1, 22/22 historical v0.2, and 21/21 v0.3 tests; zero failures.
+- The only subsequent branch change is this append-only ENGINEERING_LOG.md entry; no source, test, documentation, or workflow bytes are changed by this record.
