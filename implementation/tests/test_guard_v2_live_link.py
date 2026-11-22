@@ -80,7 +80,7 @@ def test_live_pr_ci_and_synthetic_matching_guard_stays_reviewable_only():
     assert r["disposition"] == "REVIEWABLE_ONLY"
     assert r["ci_observation"] == "REPORTED_SUCCESS_BY_LINKED_PR_RUN"
     assert fake.pr_reads == 4
-    assert len(fake.log) == 7
+    assert len(fake.log) == 9
 
 
 def test_without_live_review_evidence_stays_hold():
