@@ -469,3 +469,90 @@ def test_missing_workflow_path_is_unknown():
     result = call(f)
     assert result["reason"] == "INVALID_RUN"
     assert result["required_check_observation"] == "NOT_CONFIRMED"
+
+
+# Independent R22.1 adversarial review: rerun race and malformed evidence controls.
+class RerunDuringAttemptRead(Fake):
+    """A newer attempt starts after the initial runs/checks reads but before return."""
+    def get_json(self, url):
+        if "/attempts/" in url and "/jobs?" in url:
+            self.calls.append(url)
+            old_attempt_jobs = copy.deepcopy(self.jobs)
+            self.runs = {"total_count": 1, "workflow_runs": [{
+                "id": 100, "workflow_id": 379498305,
+                "path": ".github/workflows/implementation-regression.yml",
+                "run_number": 10, "run_attempt": 2, "head_sha": HEAD,
+                "event": "pull_request", "status": "in_progress", "conclusion": None,
+                "pull_requests": [{"id": 987, "number": PR, "head": {"sha": HEAD}}],
+            }]}
+            self.checks = {"total_count": 1, "check_runs": [{
+                "id": 3, "name": "m0-regression", "head_sha": HEAD,
+                "status": "in_progress", "conclusion": None, "app": {"id": 15368},
+                "details_url": "https://github.com/SepehrGhanbari/Ario/actions/runs/100/job/3",
+            }]}
+            return old_attempt_jobs
+        return super().get_json(url)
+
+
+def test_rerun_started_after_initial_run_read_cannot_leave_attempt_one_green():
+    f = RerunDuringAttemptRead()
+    result = call(f)
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+    assert result["attempt_binding_observation"] != "MATCH"
+
+
+def test_prior_attempt_job_is_rejected_even_when_check_and_job_ids_match():
+    f = Fake()
+    f.runs["workflow_runs"][0]["run_attempt"] = 2
+    f.checks["check_runs"][0].update(
+        id=3,
+        details_url="https://github.com/SepehrGhanbari/Ario/actions/runs/100/job/3",
+    )
+    f.jobs = {"total_count": 1, "jobs": [{
+        "id": 3, "run_id": 100, "run_attempt": 1, "head_sha": HEAD,
+        "name": "m0-regression", "status": "completed", "conclusion": "success",
+    }]}
+    result = call(f)
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+    assert result["attempt_binding_observation"] == "NOT_CONFIRMED"
+
+
+@pytest.mark.parametrize("field", ["run_id", "run_attempt", "head_sha", "status", "conclusion"])
+def test_missing_required_attempt_job_field_never_confirms(field):
+    f = Fake()
+    del f.jobs["jobs"][0][field]
+    result = call(f)
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+    assert result["attempt_binding_observation"] == "NOT_CONFIRMED"
+
+
+def test_duplicate_workflow_run_sequence_is_unknown():
+    f = Fake()
+    duplicate = copy.deepcopy(f.runs["workflow_runs"][0])
+    duplicate["id"] = 101
+    duplicate["run_attempt"] = 2
+    f.runs["workflow_runs"].append(duplicate)
+    f.runs["total_count"] = 2
+    result = call(f)
+    assert result["status"] == "UNKNOWN"
+    assert result["reason"] == "DUPLICATE_WORKFLOW_RUN_NUMBER"
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+
+
+def test_more_than_one_hundred_attempt_jobs_is_unknown_not_partial_green():
+    f = Fake()
+    f.jobs["total_count"] = 101
+    result = call(f)
+    assert result["status"] == "UNKNOWN"
+    assert result["reason"] == "JOBS_INCOMPLETE"
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+
+
+def test_duplicate_attempt_job_id_is_unknown():
+    f = Fake()
+    f.jobs["jobs"].append(copy.deepcopy(f.jobs["jobs"][0]))
+    f.jobs["total_count"] = 2
+    result = call(f)
+    assert result["status"] == "UNKNOWN"
+    assert result["reason"] == "INVALID_OR_DUPLICATE_JOB"
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
