@@ -96,7 +96,7 @@ def test_t_cons_03_contradiction_preservation():
     }
     engine.ingest_event_stream([(h1, ev1)])
     node_id_1 = list(engine.nodes.values())[0].node_id
-    assert engine.nodes[node_id_1].status == NodeEpistemicStatus.ACCEPTED
+    assert engine.nodes[node_id_1].status == NodeEpistemicStatus.RECORDED
 
     ev2 = {
         "concept": "request_204",
@@ -129,13 +129,16 @@ def test_t_cons_04_decay_and_saliency_retrieval():
     decayed = engine.retrieve_active_context(concept_cue="routine")
     assert len(decayed) == 0  # Below 0.3 threshold
 
-    # But still present in memory graph and can be reinforced
+    # New unverified observations remain in the graph; attention does not
+    # magically rise without independently validated corroboration.
     h2 = _make_dummy_hash("routine_check_revisited")
     engine.ingest_event_stream([(h2, ev1)])
     reactivated = engine.retrieve_active_context(concept_cue="routine")
-    assert len(reactivated) == 1
-    assert reactivated[0].reinforcement_count == 2
-    assert reactivated[0].saliency_score >= 0.3
+    assert len(reactivated) == 0
+    retained = list(engine.nodes.values())[0]
+    assert retained.reinforcement_count == 1
+    assert retained.saliency_score < 0.3
+    assert set(retained.source_event_hashes) == {h1, h2}
 
 
 def test_invalid_node_instantiation():
@@ -181,7 +184,7 @@ def test_t_cons_05_contestation_report_clean_empty(tmp_path: Path):
     engine.ingest_event_stream([(h1, {"concept": "crypto", "assertion": "SHA256 required"})])
     report2 = engine.generate_contestation_report()
     assert report2.total_nodes == 1
-    assert report2.accepted_nodes_count == 1
+    assert report2.accepted_nodes_count == 0
     assert report2.contested_nodes_count == 0
     assert len(report2.conflicts) == 0
 

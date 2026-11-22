@@ -40,9 +40,9 @@ class LedgerMemoryBridgeTests(unittest.TestCase):
             self.assertGreaterEqual(summary.nodes_consolidated, 2)
             self.assertEqual(summary.contested_nodes_count, 0)
 
-            # Check that step observation is marked as SUPPORTED empirical evidence
+            # Tool outcome is structurally recorded, not independent witness proof.
             tool_node = [n for n in bridge.engine.nodes.values() if "agent_tool:file_fingerprint" in n.concept][0]
-            self.assertEqual(tool_node.status, NodeEpistemicStatus.SUPPORTED)
+            self.assertEqual(tool_node.status, NodeEpistemicStatus.RECORDED)
 
     def test_bridge_detects_contradictory_step_results_as_contested(self):
         """Conflicting observations on the same target must yield CONTESTED without erasure."""
@@ -143,8 +143,9 @@ class LedgerMemoryBridgeTests(unittest.TestCase):
             engine.ingest_event_stream([(fake_hash, {"concept": "rumor", "assertion": "unverified claim"})])
 
         node = list(engine.nodes.values())[0]
-        self.assertEqual(node.reinforcement_count, 10)
-        self.assertGreater(node.saliency_score, 0.9)
+        self.assertEqual(node.reinforcement_count, 1)
+        self.assertEqual(len(node.source_event_hashes), 10)
+        self.assertEqual(node.saliency_score, 0.7)
         # Saliency increased, but epistemic status strictly stayed RECORDED:
         self.assertEqual(node.status, NodeEpistemicStatus.RECORDED)
         self.assertNotEqual(node.status, NodeEpistemicStatus.SUPPORTED)
