@@ -96,15 +96,49 @@ def report(status: str, **details) -> int:
     return 0 if status == "SCHEMA_AND_QUERY_VERIFIED_NON_AUTHORITATIVE" else 2
 
 
+def safe_graphql_error_kinds(errors: object) -> list[str]:
+    """Classify errors without emitting messages that might contain user data."""
+    kinds = []
+    for item in errors if isinstance(errors, list) else []:
+        msg = str(item.get("message", "")).lower() if isinstance(item, dict) else ""
+        if "resource not accessible" in msg or "permission" in msg:
+            kinds.append("PERMISSION_OR_SCOPE")
+        elif "doesn't exist" in msg or "cannot query field" in msg or "undefinedfield" in msg:
+            kinds.append("INVALID_FIELD_OR_SCHEMA")
+        elif "introspection" in msg or "__type" in msg:
+            kinds.append("INTROSPECTION_RELATED")
+        elif "could not resolve" in msg or "not found" in msg:
+            kinds.append("RESOURCE_NOT_VISIBLE")
+        elif "rate limit" in msg:
+            kinds.append("RATE_LIMIT")
+        elif "variable" in msg or "argument" in msg:
+            kinds.append("QUERY_ARGUMENT_ERROR")
+        else:
+            kinds.append("UNCLASSIFIED_GRAPHQL_ERROR")
+    return sorted(set(kinds))
+
+
 def main() -> int:
     token = os.environ.get("GITHUB_TOKEN")
     if not token:
         return report("NO_EPHEMERAL_TOKEN")
     try:
+        # Validate the EXACT proposed field selection even when the token
+        # cannot introspect schema types. Never assume introspection access.
+        exact = post(token, REVIEW_QUERY, {"owner": "SepehrGhanbari",
+                                          "repo": "Ario", "number": 295})
+        if exact.get("errors"):
+            return report("EXACT_B_QUERY_GRAPHQL_ERROR",
+                          graphql_error_count=len(exact["errors"]),
+                          safe_error_kinds=safe_graphql_error_kinds(exact["errors"]),
+                          query_sha256=hashlib.sha256(REVIEW_QUERY.encode()).hexdigest())
         schema = post(token, SCHEMA_QUERY)
         if schema.get("errors"):
             return report("SCHEMA_INTROSPECTION_ERROR",
-                          graphql_error_count=len(schema["errors"]))
+                          graphql_error_count=len(schema["errors"]),
+                          safe_error_kinds=safe_graphql_error_kinds(schema["errors"]),
+                          exact_query_syntax_ok=True,
+                          query_sha256=hashlib.sha256(REVIEW_QUERY.encode()).hexdigest())
         types = schema.get("data") or {}
         review = field_map(types.get("review"))
         actor = field_map(types.get("actor"))
@@ -119,13 +153,6 @@ def main() -> int:
                           review_fields_present=sorted(required & review.keys()),
                           actor_direct_id="id" in actor,
                           node_id="id" in node, commit_oid="oid" in commit)
-        exact = post(token, REVIEW_QUERY, {"owner": "SepehrGhanbari",
-                                          "repo": "Ario", "number": 295})
-        if exact.get("errors"):
-            return report("EXACT_B_QUERY_GRAPHQL_ERROR",
-                          graphql_error_count=len(exact["errors"]),
-                          schema_ok=True,
-                          query_sha256=hashlib.sha256(REVIEW_QUERY.encode()).hexdigest())
         repository = (exact.get("data") or {}).get("repository")
         pr = repository.get("pullRequest") if isinstance(repository, dict) else None
         reviews = pr.get("reviews") if isinstance(pr, dict) else None
