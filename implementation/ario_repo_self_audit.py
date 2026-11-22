@@ -18,6 +18,10 @@ from pr_ci_github_evidence import links_pr, read_bounded_body
 REPOSITORY = "SepehrGhanbari/Ario"
 API = "https://api.github.com/repos/" + REPOSITORY
 SCHEMA = "ARIO-REPO-SELF-AUDIT-0.1"
+CANONICAL_WORKFLOW_ID = 379498305
+CANONICAL_WORKFLOW_PATH = ".github/workflows/implementation-regression.yml"
+CANONICAL_JOB_NAME = "m0-regression"
+ACTIONS_APP_ID = 15368
 SHA = re.compile(r"[0-9a-f]{40}\Z")
 # GitHub check-run details URLs bind the named job to its actual workflow run.
 # A push check with the same name is NOT evidence of a PR job.
@@ -29,6 +33,7 @@ ALLOWED = (
     re.compile(r"pulls/[1-9][0-9]*\Z"),
     re.compile(r"commits/[0-9a-f]{40}/check-runs\?per_page=100\Z"),
     re.compile(r"actions/runs\?head_sha=[0-9a-f]{40}&event=pull_request&per_page=100\Z"),
+    re.compile(r"actions/runs/[1-9][0-9]*/attempts/[1-9][0-9]*/jobs\?per_page=100\Z"),
 )
 LIMITATIONS = [
     "GitHub Actions success is not independently attested test execution",
@@ -198,6 +203,7 @@ def observe(pr_number: int, expected_head: str, *,
             if (not _positive(run.get("id")) or not _positive(run.get("run_attempt"))
                     or not _positive(run.get("workflow_id"))
                     or not _positive(run.get("run_number"))
+                    or not isinstance(run.get("path"), str) or not run["path"]
                     or run.get("head_sha") != expected_head
                     or run.get("event") != "pull_request"
                     or run["id"] in run_ids
@@ -234,6 +240,7 @@ def observe(pr_number: int, expected_head: str, *,
                     "id": run["id"], "attempt": run["run_attempt"],
                     "workflow_id": run["workflow_id"],
                     "run_number": run["run_number"],
+                    "path": run["path"],
                     "status": run["status"], "conclusion": run.get("conclusion"),
                 })
         # A green job from an older run is stale when a newer run of the SAME
@@ -247,13 +254,12 @@ def observe(pr_number: int, expected_head: str, *,
             if current is None or sequence > (current["run_number"], current["attempt"]):
                 latest_by_workflow[run["workflow_id"]] = run
 
-        # Correlate a named GitHub Actions check to the latest PR-linked run.
-        # Merely seeing a success check on the same SHA is insufficient:
-        # push and pull_request events can publish identically named checks.
+        # Correlate the check to the latest run of the pinned canonical workflow.
+        # A same-named job from another workflow is not a substitute.
         linked_by_id = {run["id"]: run for run in linked}
         pr_regression_jobs = []
         for check in observed_checks:
-            if check["name"] != "m0-regression" or check["app_id"] != 15368:
+            if check["name"] != CANONICAL_JOB_NAME or check["app_id"] != ACTIONS_APP_ID:
                 continue
             details = check.get("details_url")
             match = CHECK_JOB.fullmatch(details) if isinstance(details, str) else None
@@ -264,16 +270,66 @@ def observe(pr_number: int, expected_head: str, *,
                 latest = latest_by_workflow.get(linked_run["workflow_id"])
                 if (latest is not None
                         and latest["id"] == linked_run["id"]
-                        and latest["attempt"] == linked_run["attempt"]):
+                        and latest["attempt"] == linked_run["attempt"]
+                        and linked_run["workflow_id"] == CANONICAL_WORKFLOW_ID
+                        and linked_run["path"] == CANONICAL_WORKFLOW_PATH):
                     pr_regression_jobs.append((check, linked_run))
-        named_regression_confirmed = (
-            len(pr_regression_jobs) == 1
-            and all(
-                check["status"] == "completed" and check["conclusion"] == "success"
-                and run["status"] == "completed" and run["conclusion"] == "success"
-                for check, run in pr_regression_jobs
-            )
+
+        canonical_workflow_observation = (
+            "MATCH" if len(pr_regression_jobs) == 1 else "NOT_CONFIRMED"
         )
+        attempt_binding_observation = "NOT_CONFIRMED"
+        named_regression_confirmed = False
+        if len(pr_regression_jobs) == 1:
+            check, run = pr_regression_jobs[0]
+            jobs_url = (
+                API + "/actions/runs/" + str(run["id"]) + "/attempts/"
+                + str(run["attempt"]) + "/jobs?per_page=100"
+            )
+            jobs_obj = _object(source.get_json(jobs_url), "JOBS")
+            jobs = jobs_obj.get("jobs")
+            job_count = jobs_obj.get("total_count")
+            if (type(job_count) is not int or not 0 <= job_count <= 100
+                    or not isinstance(jobs, list) or len(jobs) != job_count):
+                raise ReadUnknown("JOBS_INCOMPLETE")
+            job_ids = set()
+            for record in jobs:
+                item = _object(record, "JOB")
+                if not _positive(item.get("id")) or item["id"] in job_ids:
+                    raise ReadUnknown("INVALID_OR_DUPLICATE_JOB")
+                job_ids.add(item["id"])
+            selected_jobs = [job for job in jobs if job.get("name") == CANONICAL_JOB_NAME]
+            if len(selected_jobs) == 1:
+                job = selected_jobs[0]
+                job_status = job.get("status")
+                job_conclusion = job.get("conclusion")
+                job_state_coherent = (
+                    job_status in ("queued", "in_progress", "completed")
+                    and job_conclusion in (
+                        None, "success", "failure", "neutral", "skipped",
+                        "cancelled", "timed_out", "action_required", "stale",
+                    )
+                    and ((job_status == "completed") == (job_conclusion is not None))
+                )
+                job_bound = (
+                    job["id"] == check["id"]
+                    and _positive(job.get("run_id")) and job["run_id"] == run["id"]
+                    and _positive(job.get("run_attempt")) and job["run_attempt"] == run["attempt"]
+                    and isinstance(job.get("head_sha"), str)
+                    and SHA.fullmatch(job["head_sha"]) is not None
+                    and job["head_sha"] == expected_head
+                    and job_state_coherent
+                    and job_status == check["status"]
+                    and job_conclusion == check["conclusion"]
+                )
+                if job_bound:
+                    attempt_binding_observation = "MATCH"
+                named_regression_confirmed = (
+                    job_bound
+                    and job_status == "completed" and job_conclusion == "success"
+                    and check["status"] == "completed" and check["conclusion"] == "success"
+                    and run["status"] == "completed" and run["conclusion"] == "success"
+                )
         last = _identity(source.get_json(url), pr_number)
         if last != first:
             raise ReadUnknown("PR_CHANGED_BETWEEN_SAMPLES")
@@ -284,6 +340,8 @@ def observe(pr_number: int, expected_head: str, *,
             "checks": observed_checks,
             "linked_run_count": len(linked),
             "linked_runs": linked,
+            "canonical_workflow_observation": canonical_workflow_observation,
+            "attempt_binding_observation": attempt_binding_observation,
             "required_check_observation": (
                 "REPORTED_SUCCESS_BY_LINKED_PR_RUN"
                 if named_regression_confirmed else "NOT_CONFIRMED"
