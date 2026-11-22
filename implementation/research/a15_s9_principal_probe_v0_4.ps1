@@ -35,7 +35,7 @@ try {
     $custodianPrincipal = "$($env:COMPUTERNAME)\$custodianUser"
 
     # Gate can read the probe and write only to its own result directory.
-    & icacls.exe $root /grant ("{0}:(OI)(CI)(RX)" -f $gatePrincipal) | Out-Null
+    & icacls.exe $root /grant ("{0}:(OI)(CI)(RX)" -f $gatePrincipal) ("{0}:(OI)(CI)(RX)" -f $custodianPrincipal) | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'Could not grant Gate traversal/read access to test root.' }
     & icacls.exe $gateOut /inheritance:r /grant:r "NT AUTHORITY\SYSTEM:(OI)(CI)(F)" "BUILTIN\Administrators:(OI)(CI)(F)" ("{0}:(OI)(CI)(M)" -f $gatePrincipal) | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'Could not isolate Gate output directory.' }
@@ -52,11 +52,16 @@ try {
     '{"seq":1,"event":"GENESIS_SYNTHETIC"}' | Set-Content -LiteralPath $ledger -Encoding UTF8
     & icacls.exe $protected /setowner $custodianPrincipal /T /C | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'Could not set Custodian as protected directory/file owner.' }
+    & icacls.exe $ledger /inheritance:r /grant:r "NT AUTHORITY\SYSTEM:F" "BUILTIN\Administrators:F" ("{0}:F" -f $custodianPrincipal) | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'Could not isolate the custodian ledger ACL.' }
+    & icacls.exe $ledger /setowner $custodianPrincipal | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'Could not set Custodian as ledger owner.' }
 
     $probeText = @'
 param(
     [Parameter(Mandatory=$true)][string]$ProtectedFile,
     [Parameter(Mandatory=$true)][int]$ServicePid,
+    [Parameter(Mandatory=$true)][string]$LedgerFile,
     [Parameter(Mandatory=$true)][string]$OutputFile
 )
 $ErrorActionPreference = 'Stop'
@@ -64,17 +69,23 @@ $readAllowed = $false
 $writeDenied = $false
 $deleteDenied = $false
 $killDenied = $false
+$ledgerReadDenied = $false
+$ledgerWriteDenied = $false
 try { Get-Content -LiteralPath $ProtectedFile -ErrorAction Stop | Out-Null; $readAllowed = $true } catch {}
 try { Add-Content -LiteralPath $ProtectedFile -Value 'MALICIOUS_REPLACEMENT' -ErrorAction Stop } catch { $writeDenied = $true }
 try { Remove-Item -LiteralPath $ProtectedFile -Force -ErrorAction Stop } catch { $deleteDenied = $true }
+try { Get-Content -LiteralPath $LedgerFile -ErrorAction Stop | Out-Null } catch { $ledgerReadDenied = $true }
+try { Add-Content -LiteralPath $LedgerFile -Value 'FORGED_LEDGER_ENTRY' -ErrorAction Stop } catch { $ledgerWriteDenied = $true }
 try { Stop-Process -Id $ServicePid -Force -ErrorAction Stop } catch { $killDenied = $true }
 [pscustomobject]@{
     ReadAllowed = $readAllowed
     WriteDenied = $writeDenied
     DeleteDenied = $deleteDenied
     KillDenied = $killDenied
+    LedgerReadDenied = $ledgerReadDenied
+    LedgerWriteDenied = $ledgerWriteDenied
 } | ConvertTo-Json -Compress | Set-Content -LiteralPath $OutputFile -Encoding UTF8
-if (-not ($readAllowed -and $writeDenied -and $deleteDenied -and $killDenied)) { exit 9 }
+if (-not ($readAllowed -and $writeDenied -and $deleteDenied -and $killDenied -and $ledgerReadDenied -and $ledgerWriteDenied)) { exit 9 }
 exit 0
 '@
     $probeText | Set-Content -LiteralPath $probe -Encoding UTF8
@@ -84,13 +95,13 @@ exit 0
     Start-Sleep -Milliseconds 400
     if ($service.HasExited) { throw 'Custodian process exited before the Gate probe.' }
 
-    $argumentLine = '-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "' + $probe + '" -ProtectedFile "' + $recorder + '" -ServicePid ' + $service.Id + ' -OutputFile "' + $outFile + '"'
+    $argumentLine = '-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "' + $probe + '" -ProtectedFile "' + $recorder + '" -ServicePid ' + $service.Id + ' -LedgerFile "' + $ledger + '" -OutputFile "' + $outFile + '"'
     $gateProcess = Start-Process -FilePath $powerShell -Credential $gateCredential -ArgumentList $argumentLine -PassThru -Wait -WindowStyle Hidden
 
     if ($gateProcess.ExitCode -ne 0) { throw "Gate isolation probe failed with exit code $($gateProcess.ExitCode)." }
     if (-not (Test-Path -LiteralPath $outFile)) { throw 'Gate probe did not write its result.' }
     $result = Get-Content -LiteralPath $outFile -Raw | ConvertFrom-Json
-    if (-not ($result.ReadAllowed -and $result.WriteDenied -and $result.DeleteDenied -and $result.KillDenied)) {
+    if (-not ($result.ReadAllowed -and $result.WriteDenied -and $result.DeleteDenied -and $result.KillDenied -and $result.LedgerReadDenied -and $result.LedgerWriteDenied)) {
         throw "Unexpected Gate access result: $($result | ConvertTo-Json -Compress)"
     }
     if (-not (Test-Path -LiteralPath $recorder)) { throw 'Gate removed the protected service image.' }
@@ -103,6 +114,7 @@ exit 0
     Write-Output 'GATE_CAN_READ_EXECUTABLE=YES'
     Write-Output 'GATE_CAN_WRITE_OR_DELETE_EXECUTABLE=NO'
     Write-Output 'GATE_CAN_TERMINATE_CUSTODIAN_PROCESS=NO'
+    Write-Output 'GATE_CAN_READ_OR_WRITE_LEDGER=NO'
     Write-Output 'SCOPE=LOCAL_OS_PRINCIPAL_ONLY_NOT_EXTERNAL_CUSTODY'
 }
 finally {
