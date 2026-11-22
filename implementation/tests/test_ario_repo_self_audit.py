@@ -351,3 +351,17 @@ def test_missing_or_empty_run_pr_association_cannot_leave_old_green_eligible(lin
     result = call(f)
     assert result["reason"] == "RUN_PR_ASSOCIATION_INCOMPLETE"
     assert result["required_check_observation"] == "NOT_CONFIRMED"
+
+
+
+def test_newer_run_with_mismatched_target_pr_link_fails_closed():
+    f = Fake()
+    newer = copy.deepcopy(f.runs["workflow_runs"][0])
+    newer.update(id=101, run_number=11, status="queued", conclusion=None)
+    newer["pull_requests"][0]["head"]["sha"] = "d" * 40
+    f.runs["workflow_runs"].append(newer)
+    f.runs["total_count"] = 2
+
+    result = call(f)
+    assert result["reason"] == "RUN_PR_ASSOCIATION_MISMATCH"
+    assert result["required_check_observation"] == "NOT_CONFIRMED"

@@ -219,6 +219,12 @@ def observe(pr_number: int, expected_head: str, *,
                         or not isinstance(link_head.get("sha"), str)
                         or not SHA.fullmatch(link_head["sha"])):
                     raise ReadUnknown("INVALID_RUN_PR_ASSOCIATION")
+                # A partial/mismatched identity for the requested PR is not
+                # evidence that this newer same-head run belongs elsewhere.
+                if item["number"] == pr_number or item["id"] == first["id"]:
+                    if (item["number"] != pr_number or item["id"] != first["id"]
+                            or link_head["sha"] != expected_head):
+                        raise ReadUnknown("RUN_PR_ASSOCIATION_MISMATCH")
             workflow_sequence = (run["workflow_id"], run["run_number"])
             if workflow_sequence in workflow_run_numbers:
                 raise ReadUnknown("DUPLICATE_WORKFLOW_RUN_NUMBER")
