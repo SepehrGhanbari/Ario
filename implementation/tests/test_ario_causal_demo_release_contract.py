@@ -52,7 +52,7 @@ def test_strict_csp_has_no_inline_style_or_event_handler_attributes() -> None:
 def test_synthetic_scope_is_explicit_and_no_live_operations_are_claimed() -> None:
     html = HTML_PATH.read_text(encoding="utf-8")
     assert "no file is read" in html
-    assert "no tool is run" in html
+    assert "no tool is executed" in html
     assert "no hash is computed" in html
     assert "no memory is written" in html
     assert "دموی آموزشی کاملاً ساختگی است" in html
