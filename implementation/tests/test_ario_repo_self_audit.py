@@ -570,3 +570,82 @@ def test_duplicate_attempt_job_id_is_unknown():
     assert result["status"] == "UNKNOWN"
     assert result["reason"] == "INVALID_OR_DUPLICATE_JOB"
     assert result["required_check_observation"] == "NOT_CONFIRMED"
+
+
+# Second independent pass against #337: the final PR GET currently occurs
+# after the final run sample. A rerun can begin during that PR GET and escape.
+class RerunDuringFinalPrRead(Fake):
+    def __init__(self, changed):
+        super().__init__()
+        self.changed = changed
+
+    def get_json(self, url):
+        is_second_pr_read = (
+            url.endswith("/pulls/295")
+            and sum(x.endswith("/pulls/295") for x in self.calls) == 1
+        )
+        if is_second_pr_read:
+            if self.changed in ("checks", "both"):
+                self.checks = {"total_count": 1, "check_runs": [{
+                    "id": 3, "name": "m0-regression", "head_sha": HEAD,
+                    "status": "in_progress", "conclusion": None,
+                    "app": {"id": 15368},
+                    "details_url": "https://github.com/SepehrGhanbari/Ario/actions/runs/100/job/3",
+                }]}
+            if self.changed in ("runs", "both"):
+                self.runs = {"total_count": 1, "workflow_runs": [{
+                    "id": 100, "workflow_id": 379498305,
+                    "path": ".github/workflows/implementation-regression.yml",
+                    "run_number": 10, "run_attempt": 2, "head_sha": HEAD,
+                    "event": "pull_request", "status": "in_progress", "conclusion": None,
+                    "pull_requests": [{"id": 987, "number": PR, "head": {"sha": HEAD}}],
+                }]}
+        return super().get_json(url)
+
+
+@pytest.mark.parametrize(("changed", "reason"), [
+    ("checks", "CHECKS_CHANGED_DURING_OBSERVATION"),
+    ("runs", "RUNS_CHANGED_DURING_OBSERVATION"),
+    ("both", "CHECKS_CHANGED_DURING_OBSERVATION"),
+])
+def test_rerun_during_final_pr_identity_read_is_caught_by_final_metadata_samples(changed, reason):
+    f = RerunDuringFinalPrRead(changed)
+    result = call(f)
+    assert result["status"] == "UNKNOWN"
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+    assert result["reason"] == reason
+
+
+class BenignMetadataNoiseBetweenSamples(Fake):
+    """Same relevant evidence, but API ordering and presentation fields differ."""
+    def __init__(self):
+        super().__init__()
+        self.check_reads = 0
+        self.run_reads = 0
+
+    def get_json(self, url):
+        if "/check-runs?" in url:
+            self.check_reads += 1
+            if self.check_reads == 2:
+                changed = copy.deepcopy(self.checks)
+                changed["check_runs"].reverse()
+                for item in changed["check_runs"]:
+                    item["output"] = {"title": "Harmless presentation update"}
+                return changed
+        if "/actions/runs?" in url:
+            self.run_reads += 1
+            if self.run_reads == 2:
+                changed = copy.deepcopy(self.runs)
+                changed["workflow_runs"].reverse()
+                for item in changed["workflow_runs"]:
+                    item["updated_at"] = "2026-11-23T00:00:00Z"
+                    item["display_title"] = "Harmless presentation update"
+                return changed
+        return super().get_json(url)
+
+
+def test_reordered_records_and_unrelated_presentation_metadata_do_not_create_false_unknown():
+    f = BenignMetadataNoiseBetweenSamples()
+    result = call(f)
+    assert result["required_check_observation"] == "REPORTED_SUCCESS_BY_LINKED_PR_RUN"
+    assert result["attempt_binding_observation"] == "MATCH"
