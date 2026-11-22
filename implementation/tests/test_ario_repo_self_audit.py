@@ -63,7 +63,7 @@ def call(fake=None):
 def test_bound_pr_and_checks_remain_non_authoritative():
     f = Fake()
     result = call(f)
-    assert len(f.calls) == 4
+    assert len(f.calls) == 5
     assert result["pr_sample_consistency"] == "SAME_AT_TWO_SAMPLED_READS"
     assert result["required_check_observation"] == "REPORTED_SUCCESS_BY_LINKED_PR_RUN"
     assert result["linked_run_count"] == 1
@@ -322,6 +322,10 @@ def test_latest_successful_same_workflow_run_can_be_confirmed():
     )
     f.checks["check_runs"] = [latest_check]
     f.checks["total_count"] = 1
+    f.jobs = {"total_count": 1, "jobs": [{
+        "id": 3, "run_id": 101, "run_attempt": 1, "head_sha": HEAD,
+        "name": "m0-regression", "status": "completed", "conclusion": "success",
+    }]}
 
     assert call(f)["required_check_observation"] == "REPORTED_SUCCESS_BY_LINKED_PR_RUN"
 
@@ -402,4 +406,66 @@ def test_prior_attempt_check_cannot_stand_in_for_latest_attempt_job():
         "name": "m0-regression", "status": "completed", "conclusion": "success",
     }]}
     result = call(f)
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+
+
+def test_workflow_id_is_pinned_even_when_path_matches():
+    f = Fake()
+    f.runs["workflow_runs"][0]["workflow_id"] = 4242
+    result = call(f)
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+    assert result["canonical_workflow_observation"] == "NOT_CONFIRMED"
+
+
+def test_exact_attempt_jobs_endpoint_is_read_and_bound():
+    f = Fake()
+    result = call(f)
+    assert f.calls[-1] == (
+        mod.API + "/actions/runs/100/attempts/1/jobs?per_page=100"
+    )
+    assert result["canonical_workflow_observation"] == "MATCH"
+    assert result["attempt_binding_observation"] == "MATCH"
+
+
+def test_attempt_jobs_incomplete_collection_is_unknown():
+    f = Fake()
+    f.jobs["total_count"] = 2
+    result = call(f)
+    assert result["status"] == "UNKNOWN"
+    assert result["reason"] == "JOBS_INCOMPLETE"
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+
+
+@pytest.mark.parametrize(("field", "value"), [
+    ("id", 3),
+    ("run_id", 101),
+    ("run_attempt", 2),
+    ("head_sha", "f" * 40),
+    ("status", "in_progress"),
+    ("conclusion", "failure"),
+    ("name", "different-job"),
+])
+def test_canonical_job_must_bind_to_exact_check_run_and_attempt(field, value):
+    f = Fake()
+    f.jobs["jobs"][0][field] = value
+    result = call(f)
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+    assert result["attempt_binding_observation"] == "NOT_CONFIRMED"
+
+
+def test_ambiguous_canonical_attempt_jobs_are_not_confirmed():
+    f = Fake()
+    duplicate = copy.deepcopy(f.jobs["jobs"][0])
+    duplicate["id"] = 2
+    f.jobs["jobs"].append(duplicate)
+    f.jobs["total_count"] = 2
+    result = call(f)
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+
+
+def test_missing_workflow_path_is_unknown():
+    f = Fake()
+    f.runs["workflow_runs"][0].pop("path")
+    result = call(f)
+    assert result["reason"] == "INVALID_RUN"
     assert result["required_check_observation"] == "NOT_CONFIRMED"
