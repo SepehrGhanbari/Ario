@@ -103,12 +103,21 @@ def main() -> int:
             except (OSError, subprocess.TimeoutExpired):
                 print(f"ARIO_DEMO_BROWSER_HOLD:{name}:execution-error")
                 return 2
-            matched = re.search(r"ARIO_DEMO_BROWSER_(PASS|FAIL):([^<\r\n]*)", result.stdout)
-            if result.returncode != 0 or not matched or matched.group(1) != "PASS":
+            # Require the actual DOM element emitted by the EXECUTED script.
+            # A loose regex for PASS can match the JavaScript source text
+            # printed by --dump-dom and falsely report success.
+            matched = re.search(
+                r'<pre id="ario-browser-smoke">ARIO_DEMO_BROWSER_(PASS|FAIL):([^<]*)</pre>',
+                result.stdout,
+            )
+            checks = matched.group(2).strip() if matched else ""
+            if (result.returncode != 0 or not matched or
+                    matched.group(1) != "PASS" or
+                    not checks.isdecimal() or int(checks) < 18):
                 print(f"ARIO_DEMO_BROWSER_FAIL:{name}:"
-                      f"{matched.group(2) if matched else 'no-result'}")
+                      f"{checks if matched else 'NO_EXECUTED_DOM_MARKER'}")
                 return 1
-            print(f"ARIO_DEMO_BROWSER_PASS:{name}:{matched.group(2)}")
+            print(f"ARIO_DEMO_BROWSER_PASS:{name}:{checks}")
     print("ARIO_DEMO_BROWSER_RESULT:PASS_STATIC_LOCAL_ONLY_NOT_SCREEN_READER")
     return 0
 
