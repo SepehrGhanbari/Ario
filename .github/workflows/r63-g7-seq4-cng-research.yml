@@ -1,0 +1,99 @@
+name: R63 G7 seq4 bounded disposable CNG checkpoint (research only)
+on:
+  push:
+    branches:
+      - research/r63-g7-seq4-native-cng-integration-20261122
+    paths:
+      - .github/workflows/r63-g7-seq4-cng-research.yml
+      - research/r63_g5_floor_custody_ci/g7_native_checkpoint/**
+      - research/r63_g5_floor_custody_ci/offline_minimum_extension/**
+      - research/r63_g5_floor_custody_ci/spend_chain_v2.py
+      - research/r63_v10_native_replay_ci/Invoke-NativePublicReceipt.ps1
+permissions:
+  contents: read
+jobs:
+  source-and-negative-controls:
+    name: seq4 source-bound pre-sign checks / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, ubuntu-24.04]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13"
+      - name: Reconstruct frozen G4 raw seq3 and reviewed seq4 candidate
+        shell: pwsh
+        run: |
+          python -B research/r63_g5_floor_custody_ci/offline_minimum_extension/build_g6_fixtures.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Cross-platform fail-closed pre-sign controls
+        shell: pwsh
+        run: |
+          python -B research/r63_g5_floor_custody_ci/g7_native_checkpoint/test_g7_preflight.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -B research/r63_g5_floor_custody_ci/offline_minimum_extension/test_g6_extension_gate.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+  native-disposable-signature-integration:
+    runs-on: windows-2022
+    timeout-minutes: 12
+    needs: source-and-negative-controls
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13"
+      - name: One native NCryptSignHash for source-bound seq4 candidate, never an Ario approval
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $g6 = 'research/r63_g5_floor_custody_ci/offline_minimum_extension'
+          $g7 = 'research/r63_g5_floor_custody_ci/g7_native_checkpoint/g7_preflight.py'
+          $native = './research/r63_v10_native_replay_ci/Invoke-NativePublicReceipt.ps1'
+          $root = Join-Path $env:RUNNER_TEMP 'g7-test-only-disposable-cng'
+          python -B (Join-Path $g6 'build_g6_fixtures.py')
+          if ($LASTEXITCODE -ne 0) { throw 'FROZEN_G6_FIXTURE_FAILED' }
+          python -B $g7 --mode prepare --g6-dir $g6 --out $root
+          if ($LASTEXITCODE -ne 0) { throw 'G7_SOURCE_PREFLIGHT_HOLD_NO_CNG' }
+          & $native -Mode Produce -Root $root
+          if (-not $?) { throw 'NATIVE_DISPOSABLE_CNG_FAILED' }
+          $pin = [IO.File]::ReadAllText((Join-Path $root 'expected-public-pin.sha256')).Trim()
+          & $native -Mode Verify -Root $root -ExpectedPublicPin $pin
+          if (-not $?) { throw 'PUBLIC_ONLY_SIGNATURE_VERIFICATION_FAILED' }
+          & $native -Mode Negative -Root $root -ExpectedPublicPin $pin
+          if (-not $?) { throw 'BAD_SIG_OR_MUTATED_PAYLOAD_NOT_REJECTED' }
+          python -B $g7 --mode verify --g6-dir $g6 --out $root
+          if ($LASTEXITCODE -ne 0) { throw 'POST_SIGNATURE_JOURNAL_CHANGED' }
+          $bad = Join-Path $env:RUNNER_TEMP 'g7-tampered-v2.jsonl'
+          $raw = [IO.File]::ReadAllBytes((Join-Path $g6 'candidate_seq4_v2.jsonl'))
+          $raw[0] = $raw[0] -bxor 1
+          [IO.File]::WriteAllBytes($bad, $raw)
+          $rejected = & python -B $g7 --mode verify --g6-dir $g6 --out $root --candidate-v2-override $bad
+          $rejectCode = $LASTEXITCODE
+          Write-Host ('POSTSIGN_JOURNAL_TAMPER='+$rejected+' EXIT='+$rejectCode)
+          if ($rejectCode -ne 2 -or -not ($rejected -match '^HOLD_')) { throw 'POSTSIGN_TAMPER_FAIL_OPEN' }
+          if ([IO.File]::Exists((Join-Path $root 'private-key.bin'))) { throw 'PRIVATE_KEY_EXPORT_FORBIDDEN' }
+          Write-Host 'G7_ONE_NATIVE_DISPOSABLE_SIGNATURE=PASS'
+          Write-Host 'G7_INDEPENDENT_CUSTODY=NOT_ESTABLISHED'
+          Write-Host 'G7_REAL_V9_SIGNER=NOT_EXECUTED'
+          Write-Host 'G7_SEQ4_LATEST_APPROVAL=NOT_ESTABLISHED'
+          Write-Host 'G7_PRODUCTION=NO_GO'
+      - name: Preserve public-only synthetic evidence, even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r63-g7-native-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/g7-test-only-disposable-cng/payload.bin
+            ${{ runner.temp }}/g7-test-only-disposable-cng/candidate-metadata.json
+            ${{ runner.temp }}/g7-test-only-disposable-cng/receipt-public.json
+            ${{ runner.temp }}/g7-test-only-disposable-cng/expected-public-pin.sha256
+          if-no-files-found: warn
+          retention-days: 30
