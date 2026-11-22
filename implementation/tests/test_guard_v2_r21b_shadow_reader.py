@@ -70,7 +70,7 @@ def test_enriched_v1_projection_matches_real_old_legacy_digest():
 
 @pytest.mark.parametrize("field,value", [
     ("author", {"__typename": "Bot", "login": "other", "id": "BOT_9"}),
-    ("authorAssociation", "NONE"),
+    ("authorAssociation", "COLLABORATOR"),
     ("commit", {"oid": "f" * 40}),
     ("lastEditedAt", "2026-11-22T20:00:00Z"),
 ])
