@@ -35,7 +35,7 @@ A fresh standard-library-only Python audit parsed bytes of all uploaded artifact
 - Raw V1 = **408 bytes / 3 canonical ordered rows**; raw V2 = **1,485 bytes / 3 complete canonical events**. Recomputed all three V2 event hashes and domain prefix, sequential indices/predecessors, unique nonce/IDs, R60 sorted `before`/`after` content commitments, final head, and exact V1/V2 append-order coherence: **PASS**.
 - SHA256 V1 = `2e1918b2c890dcf337b314692d7201a8cbdc223046322ea45953615de3144ec8`; SHA256 V2 = `9c221fa381fed4cfecc71d89e285bdb8ecc0995bfb49f8572a3177bbd4c66ac0`.
 - Final V2 head = **`6e1d74f7860e0173b9b049487a6a89428439a987809cf363fa27503ae0b06ea1`**.
-- Raw `server-peer-log.txt` reproduces the JSON's **all 10 log lines** (four SID/response pairs plus PID, writer SID and permit/deny totals) exactly.
+- Raw `server-peer-log.txt` reproduces the JSON's **all 12 log lines** (four SID/response pairs plus PID, writer SID and permit/deny totals) exactly.
 
 The guest report records an *OS-token impersonation-gated Named Pipe*: authorized reader account SID `...-1001` obtains `RESERVED_ONLY_NO_SIGN` on first request and `ALREADY_RESERVED_NO_APPEND` on repeat. A synthetic rogue account `...-1002` claiming authorized SID and an admin token `...-504` both receive `HOLD_PEER_IDENTITY` and no new reservation. Writer's guest token `...-1000`; the three non-admin synthetic accounts have distinct SIDs. Parent-directory DACL readback shows writer Modify, reader/rogue RX, Administrators/SYSTEM Full Control. Authorized reader can read V1/V2 but two *direct* append attempts produce guest-reported `ACCESS_DENIED`; no independent external Windows event trace of denials exists.
 
