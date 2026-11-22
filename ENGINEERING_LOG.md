@@ -724,3 +724,10 @@ Limits: this corrects exception consistency, not an established evidence-admissi
   - a15-stage2-v03-lab.yml = ce7fa315d2dcd4f30fec1364f88e0cdaafad4bba
 - The new workflow runs the unchanged 56-test G0/G1 suite, historical 22-test v0.2 suite, and new 21-test v0.3 suite on Ubuntu and Windows. Exact-head CI remains pending until GitHub Actions completes.
 - No real keys, signer, browser send, provider receipt, independent witness, trust activation, production path, automatic merge or manual merge. All outputs remain local synthetic research only.
+
+
+### A15 v0.3 cross-platform S10 test correction — 2026-11-22
+
+- First exact-head Actions attempt: Ubuntu v0.3 job passed; Windows v0.3 job failed only because Node 22 on Windows reports EOF for the closed child stdin pipe, while POSIX reports EPIPE. The supervisor captured the Windows stream error; the test had asserted the POSIX-specific code.
+- Updated the S10 assertion to require EPIPE on POSIX and EOF on Windows, and clarified the documentation. The runner still treats any non-null stdin error as UNKNOWN and never promotes it to an observed result.
+- This is a platform-specific expected-code correction, not a weakening of the fail-closed behavior. The new exact-head Linux/Windows rerun is pending; do not treat the initial Windows job as a pass.
