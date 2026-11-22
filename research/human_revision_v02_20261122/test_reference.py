@@ -54,6 +54,15 @@ class CorpusTests(unittest.TestCase):
         self.assertIn("DUPLICATE_EVENT_ID", out["unresolved"])
         self.assertEqual(out["future_use"], "WITHHOLD")
 
+    def test_historical_statement_from_other_actor_is_not_attributed_to_subject(self):
+        cases = json.loads((ROOT / "synthetic_cases.json").read_text())
+        events = copy.deepcopy(cases[0]["events"])
+        events[0]["actor_ref"] = "OTHER-PERSON"
+        observed = project(events, subject_ref="SUBJECT-A", scope="PERSONALIZATION")
+        self.assertEqual(observed["historical_statement_refs"], [])
+        self.assertIn("HISTORICAL_ATTRIBUTION_MISMATCH", observed["unresolved"])
+        self.assertEqual(observed["future_use"], "WITHHOLD")
+
     def test_old_permission_cannot_transfer_to_corrected_interpretation(self):
         cases = json.loads((ROOT / "synthetic_cases.json").read_text())
         events = copy.deepcopy(cases[0]["events"])
