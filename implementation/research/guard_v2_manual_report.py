@@ -36,6 +36,64 @@ TOKEN = re.compile(r"[A-Z0-9_]{1,256}\Z")
 ERROR_TYPE = re.compile(r"[A-Za-z_][A-Za-z0-9_]{0,63}\Z")
 SUCCESS_GRAPH_REASON = "TWO_COMPLETE_GRAPH_SAMPLES_MATCH"
 FRESHNESS = "TWO_SAMPLED_GRAPHS_MATCH_NON_ATOMIC"
+SUCCESS_REASONS = frozenset({"PR_DRAFT_READ_ONLY_HOLD", "LIVE_READ_ONLY_NON_ATOMIC_HOLD"})
+# Keys only a COMPLETED observation sets (guard_v2_trusted_manual.observe sets
+# them last, immediately before the success reason). A failed run never has them.
+SUCCESS_ONLY_KEYS = frozenset({"live_identity", "review_freshness"})
+SAMPLE_VALUES = frozenset({"SAMPLED_STABLE_UNATTESTED", "UNKNOWN"})
+# CLOSED failure-reason vocabulary: every reason the manual reader can emit on a
+# failed run, derived from the pinned sources (guard_v2_review_graph.py,
+# guard_v2_trusted_manual.py, ario_repo_self_audit.GitHubReadOnly.get_json).
+# test_r21_vocabulary.py re-derives these sets by AST and fails on drift in either
+# direction. There is deliberately NO keyword denylist and NO open fallback: an
+# unlisted token on a failed run is rejected (fail-closed, report is replaced by
+# INVALID_DIAGNOSTIC_JSON by the workflow, exit code stays nonzero).
+GRAPH_REASON_LITERALS = frozenset({
+    "DUPLICATE_GRAPH_NODE_ID", "GRAPHQL_DATA_MISSING", "GRAPHQL_ERROR_OR_MISSING_PAGE",
+    "GRAPHQL_HTTP_NOT_200", "GRAPHQL_NETWORK_UNKNOWN", "GRAPHQL_RESPONSE_TOO_LARGE",
+    "GRAPH_COLLECTION_OVERFLOW", "GRAPH_PAGE_TOO_LARGE", "GRAPH_PR_IDENTITY_MISMATCH",
+    "GRAPH_PR_REVISION_CHANGED", "GRAPH_TOTAL_CHANGED_DURING_PAGES",
+    "IDENTITY_CHANGED_DURING_PAGINATION", "INCOMPLETE_GRAPH_COLLECTION",
+    "INCOMPLETE_THREAD_REPLIES", "INVALID_GRAPHQL_TARGET", "INVALID_GRAPH_NODE",
+    "INVALID_GRAPH_PR_STATE", "INVALID_ISSUE_COMMENT", "INVALID_OR_DUPLICATE_THREAD_REPLY",
+    "INVALID_OR_REPEATED_GRAPH_CURSOR", "INVALID_PAGE_CURSOR", "INVALID_REVIEW",
+    "INVALID_THREAD_STATE", "MALFORMED_BIGINT_ID", "MALFORMED_GRAPHQL_ENVELOPE",
+    "MALFORMED_GRAPHQL_JSON", "MALFORMED_GRAPH_CONNECTION", "MALFORMED_GRAPH_PAGE_INFO",
+    "MALFORMED_OR_UNAVAILABLE_GRAPH", "MAX_GRAPH_PAGES_EXCEEDED", "MISSING_READ_ONLY_TOKEN",
+    "PULL_REQUEST_NOT_VISIBLE", "REPOSITORY_NOT_VISIBLE",
+    "REVIEW_GRAPH_CHANGED_BETWEEN_SAMPLES",
+    "UNASSESSED", "UNKNOWN",
+})
+MANUAL_REASON_LITERALS = frozenset({
+    "INVALID_FIXED_TARGET_OR_SOURCE_SHA", "MALFORMED_REST_REPOSITORY_OR_PR",
+    "READER_OR_METADATA_UNAVAILABLE", "REST_PR_BASE_OR_STATE_UNEXPECTED",
+    "REST_PR_CHANGED_DURING_GRAPH_READ", "REST_PR_IDENTITY_OR_HEAD_MISMATCH",
+    "REST_PR_METADATA_MISSING", "TRUSTED_OBSERVER_INITIALIZATION_FAILED",
+})
+HTTP_REASON = re.compile(r"GRAPHQL_HTTP_[0-9]{3}\Z")
+# ario_repo_self_audit.GitHubReadOnly.get_json is the ONLY REST call the manual
+# reader makes (it uses rest.API, rest.GitHubReadOnly, rest.ReadUnknown only), so
+# its ReadUnknown reasons are the complete REST vocabulary. GITHUB_HTTP_### is
+# bounded to three digits: http.client rejects status lines outside 100..999.
+REST_REASON_LITERALS = frozenset({
+    "FORBIDDEN_HOST", "FORBIDDEN_PATH", "NON_200_RESPONSE",
+    "INCOMPLETE_OR_OVERSIZED_RESPONSE", "GITHUB_READ_UNAVAILABLE",
+    "INVALID_JSON", "INVALID_API_JSON",
+})
+REST_HTTP_REASON = re.compile(r"GITHUB_HTTP_[0-9]{3}\Z")
+
+
+def _failure_token_ok(value: Any) -> bool:
+    if not _token(value) or value in SUCCESS_REASONS or value == SUCCESS_GRAPH_REASON:
+        return False
+    if value in GRAPH_REASON_LITERALS or value in MANUAL_REASON_LITERALS:
+        return True
+    if HTTP_REASON.fullmatch(value):
+        return True
+    if value.startswith("GRAPH_") and (value[6:] in GRAPH_REASON_LITERALS or
+                                       HTTP_REASON.fullmatch(value[6:])):
+        return True
+    return value in REST_REASON_LITERALS or REST_HTTP_REASON.fullmatch(value) is not None
 
 
 def _token(value: Any) -> bool:
@@ -106,8 +164,12 @@ def validate_file(path: Path, number: int, head: str, source: str,
     _assert(_token(value.get("reason")), "INVALID_REPORT_REASON")
     # Optional fields are typed on EVERY exit code, not only on success:
     # a failed run's artifact is still read by humans and tools.
-    for key in ("review_graph_sample", "review_graph_reason"):
-        _assert(key not in value or _token(value[key]), "INVALID_OPTIONAL_FIELD")
+    _assert("review_graph_sample" not in value or
+            (type(value["review_graph_sample"]) is str and
+             value["review_graph_sample"] in SAMPLE_VALUES),
+            "INVALID_OPTIONAL_FIELD")
+    _assert("review_graph_reason" not in value or _token(value["review_graph_reason"]),
+            "INVALID_OPTIONAL_FIELD")
     _assert("review_freshness" not in value or value["review_freshness"] == FRESHNESS,
             "INVALID_OPTIONAL_FIELD")
     _assert("error_type" not in value or
@@ -132,9 +194,19 @@ def validate_file(path: Path, number: int, head: str, source: str,
             value.get("atomic_merge_attestation") == EXPECTED_NOT_ESTABLISHED and
             value.get("source_provenance") == "PROVIDED_BY_CALLER_NOT_INDEPENDENTLY_VERIFIED",
             "INVALID_REPORT_BOUNDARY")
+    if reader_exit != 0:
+        # The reader returns 0 only for a completed observation, and a completed
+        # observation is the only path that sets these. A nonzero exit therefore
+        # cannot legitimately carry a success shape or a decision-like reason.
+        _assert(not (SUCCESS_ONLY_KEYS & set(value)), "SUCCESS_SHAPE_ON_FAILED_RUN")
+        _assert(_failure_token_ok(value["reason"]), "INVALID_FAILURE_REASON")
+        # review_graph_reason may legitimately be the graph success token when the
+        # later REST recheck failed, so only decision-like text is rejected here.
+        _assert("review_graph_reason" not in value or
+                value["review_graph_reason"] == SUCCESS_GRAPH_REASON or
+                _failure_token_ok(value["review_graph_reason"]), "INVALID_FAILURE_REASON")
     if reader_exit == 0:
-        _assert(value["reason"] in ("PR_DRAFT_READ_ONLY_HOLD",
-                                     "LIVE_READ_ONLY_NON_ATOMIC_HOLD") and
+        _assert(value["reason"] in SUCCESS_REASONS and
                 value.get("review_graph_sample") == "SAMPLED_STABLE_UNATTESTED" and
                 value.get("review_graph_reason", SUCCESS_GRAPH_REASON) == SUCCESS_GRAPH_REASON and
                 value.get("review_freshness") == FRESHNESS and
