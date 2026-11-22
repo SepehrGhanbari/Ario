@@ -633,6 +633,15 @@ class BenignMetadataNoiseBetweenSamples(Fake):
                 changed["check_runs"].reverse()
                 for item in changed["check_runs"]:
                     item["output"] = {"title": "Harmless presentation update"}
+                # A stale canonical check for an older run is not the selected
+                # latest-attempt check and must not create false UNKNOWN.
+                changed["check_runs"].append({
+                    "id": 9, "name": "m0-regression", "head_sha": HEAD,
+                    "status": "completed", "conclusion": "success",
+                    "app": {"id": 15368},
+                    "details_url": "https://github.com/SepehrGhanbari/Ario/actions/runs/99/job/9",
+                })
+                changed["total_count"] += 1
                 return changed
         if "/actions/runs?" in url:
             self.run_reads += 1
@@ -642,6 +651,17 @@ class BenignMetadataNoiseBetweenSamples(Fake):
                 for item in changed["workflow_runs"]:
                     item["updated_at"] = "2026-11-23T00:00:00Z"
                     item["display_title"] = "Harmless presentation update"
+                # A complete run for another PR/workflow is irrelevant to the
+                # selected canonical run and must not create false UNKNOWN.
+                changed["workflow_runs"].append({
+                    "id": 101, "workflow_id": 4242,
+                    "path": ".github/workflows/other.yml", "run_number": 1,
+                    "run_attempt": 1, "head_sha": HEAD, "event": "pull_request",
+                    "status": "completed", "conclusion": "success",
+                    "pull_requests": [{"id": 2000, "number": 500,
+                                       "head": {"sha": HEAD}}],
+                })
+                changed["total_count"] += 1
                 return changed
         return super().get_json(url)
 
@@ -651,6 +671,46 @@ def test_reordered_records_and_unrelated_presentation_metadata_do_not_create_fal
     result = call(f)
     assert result["required_check_observation"] == "REPORTED_SUCCESS_BY_LINKED_PR_RUN"
     assert result["attempt_binding_observation"] == "MATCH"
+    assert result["workflow_freshness"] == "SAMPLED_NOT_ATOMIC"
+
+
+class RerunImmediatelyAfterFinalWorkflowSample(Fake):
+    """Model a rerun beginning after the last GET has returned its old sample."""
+    def __init__(self):
+        super().__init__()
+        self.run_reads = 0
+
+    def get_json(self, url):
+        result = super().get_json(url)
+        if "/actions/runs?" in url:
+            self.run_reads += 1
+            if self.run_reads == 2:
+                self.runs = {"total_count": 1, "workflow_runs": [{
+                    "id": 100, "workflow_id": 379498305,
+                    "path": ".github/workflows/implementation-regression.yml",
+                    "run_number": 10, "run_attempt": 2, "head_sha": HEAD,
+                    "event": "pull_request", "status": "in_progress", "conclusion": None,
+                    "pull_requests": [{"id": 987, "number": PR, "head": {"sha": HEAD}}],
+                }]}
+                self.checks = {"total_count": 1, "check_runs": [{
+                    "id": 3, "name": "m0-regression", "head_sha": HEAD,
+                    "status": "in_progress", "conclusion": None,
+                    "app": {"id": 15368},
+                    "details_url": "https://github.com/SepehrGhanbari/Ario/actions/runs/100/job/3",
+                }]}
+        return result
+
+
+def test_rerun_after_final_workflow_sample_is_explicitly_non_atomic_residual():
+    f = RerunImmediatelyAfterFinalWorkflowSample()
+    result = call(f)
+    # The last GET returned a valid old sample before the synthetic rerun began.
+    # No sequential reader can observe a change that occurs after its final read.
+    assert result["required_check_observation"] == "REPORTED_SUCCESS_BY_LINKED_PR_RUN"
+    assert result["workflow_freshness"] == "SAMPLED_NOT_ATOMIC"
+    assert result["status"] == "UNKNOWN"
+    assert result["merge_authorized"] is False
+    assert result["execution_attestation"] == "NOT_ESTABLISHED"
 
 
 class MalformedFinalMetadataRecheck(Fake):
