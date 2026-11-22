@@ -36,3 +36,8 @@ S9 is deliberately expected to remain RED: the Gate and Recorder still share the
 3. Require CI to pass on the exact PR head, including the unchanged v0.2 suite.
 4. Keep the PR Draft/HOLD until independent reviewers examine the source and threat model.
 5. No automatic merge, manual merge, trust activation or production promotion is requested.
+
+
+## CI checkpoint
+
+GitHub Actions run 45066370881 completed successfully on both Ubuntu and Windows. The job logs show 56/56 frozen G0/G1 tests, 22/22 historical v0.2 tests, and 21/21 v0.3 tests on each platform, with zero failures. This checkpoint is documentation-only; it does not alter the tested source or test files. A new run is expected after this document update so the latest PR head is checked again.
