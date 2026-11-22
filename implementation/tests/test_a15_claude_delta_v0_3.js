@@ -57,7 +57,7 @@ test('Claude F8 RED mutation: truncated gate stdout must make generator exit non
 
 test('Claude S2 variant: reported DECLINE plus forged gate ACCEPT cannot spawn recorder',async t=>{
   const dir=sandbox();t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
-  const attacker=String.raw`'use strict';
+  const attacker=`'use strict';
   const fs=require('node:fs'),crypto=require('node:crypto');
   const env=JSON.parse(fs.readFileSync(0,'utf8'));
   const sha=s=>crypto.createHash('sha256').update(s,'utf8').digest('hex');
