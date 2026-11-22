@@ -685,3 +685,81 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - Bounded correction head `174bcec886139fe86475916994dfb9dea55a6571`: [CI 44942451503](https://github.com/SepehrGhanbari/Ario/actions/runs/44942451503) **SUCCESS** Linux 1657 passed/7 skipped/2 warnings/273 subtests; Windows 1656 passed/8 skipped/2 warnings/273 subtests; CPython 3.14 1657 passed/7 skipped/2 warnings/273 subtests. Both W42 negative controls now PASS without test source edits (Git test blob `3f5ad1e2eab028fdd9ec9ef79d010725621f1c26` unchanged).
 - The fix monitors POSIX fstat identity, size, mtime/ctime and two read images, and uses Windows leaf SHARE_READ to refuse normal competing writers. These narrow tests DO NOT prove atomicity for arbitrary in-place or privileged/mapped writes or historical event truth, freshness, memory admission, signer or trust authority. Old log prefix and original RED code/tests remain in Git history.
 - No unrelated code, parser, real event ledger, memory, signature pin, governance or production changes. Follow-up must check exact final-head CI and TXT security workflows before research-only merge.
+
+
+
+## 2026-11-22 — #295 R17 manual diagnostic validator adversarial RED-to-patch (DRAFT / HOLD)
+
+- **Authorized scope:** founder-approved limited change to
+  \`implementation/research/guard_v2_manual_report.py\`,
+  \`implementation/tests/test_guard_v2_manual_report_r17.py\`, this
+  append-only \`ENGINEERING_LOG.md\`, and
+  \`implementation/research/GUARD_V2_TRUSTED_EXECUTION_LAB.md\`.
+  No merge, push to \`main\`, destructive cleanup, review gate activation,
+  key, signer, trust, Genesis or production. #306 remains untouched.
+- **Verified recovery anchors:** source HEAD
+  \`bfb24113af2f0c43072c9f254983f3d1e4424ce7\`;
+  original validator immutable Git blob
+  \`09dd41d5f2b878a82f731068b9a9dc2d12b11ff1\`;
+  original engineering log blob
+  \`f31e040666f53891f9141b767ebfbe9aaa5d2f58\`;
+  original research lab blob
+  \`91e843ce6b793c489c74e59846773c2df6d1b245\`.
+  Existing files and older revisions are preserved via Git parent history.
+- **Independent review:** R17 supplied by Perplexity includes one
+  \`r17_proposed.patch\`, 12 test cases and a written report. Reviewer
+  states Python 3.14.8 patch+tests green locally; these are
+  reviewer-reported results, **not** our remote CI.
+- **Actual hosted RED:** first append-only test commit
+  \`9200eb5a8fc090da749227c6ceb5d5464424ec43\`, original test Git
+  blob \`cf2dc9f174dbb6cffd84d5dd2a964a27ea9eded9\`
+  (the original uploaded bytes). Actions push run 44956804464:
+  **9 failed, 1853 passed, 7 skipped, 273 subtests passed**. The
+  failures are four top-level unknown/homoglyph keys, raw non-ASCII,
+  extra nested \`live_identity\` key, and three noncanonical PR numbers;
+  three legitimate reader-shaped cases remain positive controls.
+- **Correction:** apply only the three R17 patch hunks; patched
+  validator Git blob \`1956f99275e7da94fed234e2c418f43f4088f7c3\`.
+  Closed top-level/identity key sets, ASCII report check and plain decimal
+  CLI arguments. Keep the report **HOLD**; job-green does not mean
+  source truth or merge authority. Matching SHA-256-looking fields are
+  not independently recomputed or authenticated.
+- **Validation:** require exact-head Linux Python 3.13/3.14, Windows,
+  focused R17, existing 160 advisory tests, and 10 restore/manifest jobs.
+  The independent provider GraphQL read and branch-ref dispatch ambiguity
+  are explicitly **UNKNOWN** until a separately authorized test.
+
+
+## 2026-11-22 — #295 R19 independent value-shape validation RED→GREEN (DRAFT/HOLD)
+
+- Owner authorized **immediate**, bounded research changes to:
+  `implementation/research/guard_v2_manual_report.py`,
+  `implementation/tests/test_guard_v2_manual_report_r17.py`,
+  new `implementation/tests/test_guard_v2_manual_report_r19.py`,
+  `implementation/research/GUARD_V2_TRUSTED_EXECUTION_LAB.md`, and
+  this append-only `ENGINEERING_LOG.md`. No other paths or production surfaces.
+- Before any change, #295 was OPEN/DRAFT at `7577b7c8440d31d6934a98b1d7e0bb99292e30af`;
+  main was `9dd4dda2784fe90e8dda0bb5142ea81167a64869`.
+  Original recoverable Git blobs: validator `1956f99275e7da94fed234e2c418f43f4088f7c3`,
+  R17 `cf2dc9f174dbb6cffd84d5dd2a964a27ea9eded9`,
+  research doc `7c2bed5889aad62f9d7ea2a238d5f806c2cb8fea`,
+  log `c3da873e6ced6b47b3eaa063c73cce8f851205e0`.
+- R19 input from independent Perplexity reviewer: 17 pytest cases and
+  `r19_proposed.patch`; all 17 cases preserved byte-identically as Git blob
+  `0c7e3476143fefa4b9e6f35363271933e527787e`.
+  Test-only RED commit `a5dec0890f8d4b178be848b0f9e6c492ecb0f03b`,
+  Actions push run 44958673546: **8 failed / 1871 passed / 7 skipped /
+  273 subtests passed**. No attempt to conceal/redesign the negative cases.
+- R19 source patch applied byte-for-byte to validator, whose Git blob becomes
+  `614e6317af90b02058ac9c9c59eac8c7ea450fde`, plus exactly one correction
+  to the R17 positive case, new blob `e52f02c387acc4ee6050e3f556b7314f91e9057d`.
+  Only allowed-key *values* are tightened. Report remains HOLD/no authority.
+- Research note above records the scope and unresolved token-shaped-but-
+  semantically-false reason strings, unverified historical digests, branch/ref
+  source custody and non-atomic review sampling.
+- Validation required: exact-head hosted Linux 3.13/3.14, Windows, 160
+  synthetic advisory tests and Restore/Manifest 10-job matrix. Do not claim
+  successful GREEN unless each exact SHA/run is checked independently.
+- No force-push, merge, secret exposure, ruleset change, signer, trust, Genesis,
+  Check publication, history deletion, production or #306 modification.
+
