@@ -164,7 +164,9 @@ def _ascii_decimal_or_none(text):
         return text
     if not (isinstance(text, str) and text.isascii() and text.isdigit()):
         return None
-    return int(text)
+    significant = text.lstrip("0") or "0"
+    # The maximum permitted value is 10000. Avoid unbounded int conversion.
+    return int(significant) if len(significant) <= 5 else None
 
 
 def main(argv=None) -> int:

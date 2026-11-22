@@ -12,10 +12,10 @@ from __future__ import annotations
 import copy
 import dataclasses
 import functools
-import itertools
 import hashlib
 import json
 import os
+import re
 import sys
 import stat
 import threading
@@ -303,6 +303,23 @@ MAX_LEDGER_BYTES = 64 * 1024 * 1024
 MAX_LEDGER_STRUCTURE_MARKERS = 100_000  # research-only structural ceiling
 MAX_DIRECT_EVENT_APPROX_BYTES = 2 * 1024 * 1024
 MAX_DIRECT_BATCH_APPROX_BYTES = 32 * 1024 * 1024
+_JSON_WHITESPACE = b" \t\r\n"
+_STORED_SHA256 = re.compile(r"[0-9a-f]{64}")
+
+
+def _direct_batch_bytes_after(payload: Any, used: int) -> int:
+    if not isinstance(payload, dict):
+        raise ConsolidationError("HOLD_EVENT_MUST_BE_JSON_OBJECT")
+    remaining = min(MAX_DIRECT_EVENT_APPROX_BYTES, MAX_DIRECT_BATCH_APPROX_BYTES - used)
+    return used + _approximate_event_size(payload, remaining)
+
+
+def _event_digest(event: dict) -> str:
+    try:
+        encoded = json.dumps(event, sort_keys=True, allow_nan=False).encode("utf-8")
+    except (TypeError, ValueError, OverflowError, RecursionError) as exc:
+        raise ConsolidationError("HOLD_EVENT_NOT_JSON_SERIALIZABLE") from exc
+    return hashlib.sha256(encoded).hexdigest()
 
 
 class ConsolidationEngine:
@@ -362,7 +379,7 @@ class ConsolidationEngine:
                         return _held("HOLD_LEDGER_BYTES_TOO_LARGE", line_no)
                     if len(raw_line) > MAX_LEDGER_LINE_BYTES:
                         return _held("HOLD_LEDGER_LINE_TOO_LARGE", line_no)
-                    clean = raw_line.strip()
+                    clean = raw_line.strip(_JSON_WHITESPACE)
                     if not clean:
                         continue
                     try:
@@ -517,7 +534,7 @@ class ConsolidationEngine:
                     if len(raw_line) > MAX_LEDGER_LINE_BYTES:
                         raise ConsolidationError(
                             f"HOLD_LEDGER_LINE_TOO_LARGE: line {line_no}")
-                    clean_line = raw_line.strip()
+                    clean_line = raw_line.strip(_JSON_WHITESPACE)
                     if not clean_line:
                         continue
                     if len(events) >= self.max_batch_events:
@@ -573,16 +590,19 @@ class ConsolidationEngine:
         try:
             # Fail closed on unbounded generators rather than exhausting memory.
             limit = _checked_batch_limit(self.max_batch_events)
-            events = list(itertools.islice(events, limit + 1))
-            if len(events) > limit:
-                raise ConsolidationError("HOLD_BATCH_TOO_LARGE")
+            batch = []
             estimated_batch = 0
-            for _claimed_hash, payload in events:
-                if isinstance(payload, dict):
-                    estimated_batch += _approximate_event_size(
-                        payload, min(MAX_DIRECT_EVENT_APPROX_BYTES,
-                                     MAX_DIRECT_BATCH_APPROX_BYTES - estimated_batch))
-
+            for record in events:
+                if len(batch) >= limit:
+                    raise ConsolidationError("HOLD_BATCH_TOO_LARGE")
+                event_hash, payload = record
+                estimated_batch = _direct_batch_bytes_after(payload, estimated_batch)
+                batch.append((event_hash, payload))
+            # A generator can update a previously yielded record. Recheck the
+            # finished batch before taking the lock or copying the graph.
+            estimated_batch = 0
+            for _, payload in batch:
+                estimated_batch = _direct_batch_bytes_after(payload, estimated_batch)
         finally:
             local.materializing = False
         with self._batch_lock:
@@ -590,7 +610,7 @@ class ConsolidationEngine:
                 raise ConsolidationError("HOLD_REENTRANT_EVENT_BATCH")
             self._batch_running = True
             try:
-                return self._ingest_event_stream_locked(events)
+                return self._ingest_event_stream_locked(batch)
             finally:
                 self._batch_running = False
 
@@ -622,13 +642,31 @@ class ConsolidationEngine:
                     or any(state.get(key) for key in keys)):
                 raise ConsolidationError(
                     "HOLD_LEGACY_SNAPSHOT_REPLAY_INDEX_MISSING")
+        hashes = state.get("_ledger_hashes")
+        nodes = state.get("_nodes")
+        links = state.get("_links")
+        if not isinstance(hashes, set) or not isinstance(nodes, dict) or not isinstance(links, list):
+            raise ConsolidationError("HOLD_INVALID_SNAPSHOT_REPLAY_INDEX")
+        if not hashes and (nodes or links or state.get("_legacy_aliases")):
+            raise ConsolidationError("HOLD_INVALID_SNAPSHOT_REPLAY_INDEX")
         for key in keys:
-            if key in state and not isinstance(state[key], dict):
+            index = state.get(key, {})
+            if not isinstance(index, dict) or index.keys() != hashes:
                 raise ConsolidationError("HOLD_INVALID_SNAPSHOT_REPLAY_INDEX")
+            if any(not isinstance(digest, str) or not _STORED_SHA256.fullmatch(digest)
+                   for digest in index.values()):
+                raise ConsolidationError("HOLD_INVALID_SNAPSHOT_REPLAY_INDEX")
+        if any(not isinstance(h, str) or not _STORED_SHA256.fullmatch(h) for h in hashes):
+            raise ConsolidationError("HOLD_INVALID_SNAPSHOT_REPLAY_INDEX")
+        if (any(not isinstance(node, SemanticNode) or not hashes.issuperset(node.source_event_hashes)
+                for node in nodes.values())
+                or any(not isinstance(link, CausalLink) or not hashes.issuperset(link.evidence_hashes)
+                       for link in links)):
+            raise ConsolidationError("HOLD_INVALID_SNAPSHOT_REPLAY_INDEX")
         self.__dict__.update(state)
         self.max_batch_events = limit
         for key in keys:
-            self.__dict__.setdefault(key, {})
+            self.__dict__[key] = state.get(key, {})
         self._batch_running = False
         self._batch_lock = threading.RLock()
 
@@ -654,13 +692,7 @@ class ConsolidationEngine:
                 if not isinstance(h, str) or len(h) != 64 or any(c not in "0123456789abcdef" for c in h.lower()):
                     raise ConsolidationError(f"invalid event sha256 hash: {h}")
                 h = h.lower()  # one event identity regardless of hex case
-                if not isinstance(ev, dict):
-                    raise ConsolidationError("HOLD_EVENT_MUST_BE_JSON_OBJECT")
-                try:
-                    encoded = json.dumps(ev, sort_keys=True, allow_nan=False).encode("utf-8")
-                except (TypeError, ValueError, OverflowError) as exc:
-                    raise ConsolidationError("HOLD_EVENT_NOT_JSON_SERIALIZABLE") from exc
-                digest = hashlib.sha256(encoded).hexdigest()
+                digest = _event_digest(ev)
                 # Only WM's structural record can vary in *attentional score*
                 # without becoming a new evidence identity. All other fields
                 # remain strictly bound to the event hash.
@@ -675,10 +707,7 @@ class ConsolidationEngine:
                 ):
                     stable_record = dict(ev)
                     stable_record.pop("saliency_score")
-                    stable_bytes = json.dumps(
-                        stable_record, sort_keys=True, allow_nan=False
-                    ).encode("utf-8")
-                    stable = hashlib.sha256(stable_bytes).hexdigest()
+                    stable = _event_digest(stable_record)
                 if h in self._event_payload_digests:
                     if (
                         self._event_payload_digests[h] != digest
