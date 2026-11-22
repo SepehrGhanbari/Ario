@@ -24,6 +24,8 @@ $probe = Join-Path $root 'gate-probe.ps1'
 $custodianProbe = Join-Path $root 'custodian-probe.ps1'
 $outFile = Join-Path $gateOut 'result.json'
 $readyFile = Join-Path $custOut 'service.ready'
+$serviceStdout = Join-Path $custOut 'service.stdout.txt'
+$serviceStderr = Join-Path $custOut 'service.stderr.txt'
 $gateStdout = Join-Path $gateOut 'gate.stdout.txt'
 $gateStderr = Join-Path $gateOut 'gate.stderr.txt'
 $service = $null
@@ -234,10 +236,14 @@ Start-Sleep -Seconds 90
 
     $powerShell = Join-Path $PSHOME 'pwsh.exe'
     $serviceArgs = '-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "' + $custodianProbe + '" -LedgerFile "' + $ledger + '" -ProtectedFile "' + $recorder + '" -ReadyFile "' + $readyFile + '" -ExpectedCustodianSid "' + $custodianSid + '"'
-    $service = Start-Process -FilePath $powerShell -Credential $custodianCredential -ArgumentList $serviceArgs -PassThru -WindowStyle Hidden
+    $service = Start-Process -FilePath $powerShell -Credential $custodianCredential -ArgumentList $serviceArgs -PassThru -WindowStyle Hidden -RedirectStandardOutput $serviceStdout -RedirectStandardError $serviceStderr
     for ($waitIndex = 0; $waitIndex -lt 150; $waitIndex++) {
         if (Test-Path -LiteralPath $readyFile) { break }
-        if ($service.HasExited) { throw 'Custodian service exited before applying its process DACL.' }
+        if ($service.HasExited) {
+            $serviceErrorText = if (Test-Path -LiteralPath $serviceStderr) { Get-Content -LiteralPath $serviceStderr -Raw } else { 'NO_STDERR_CAPTURED' }
+            $serviceOutputText = if (Test-Path -LiteralPath $serviceStdout) { Get-Content -LiteralPath $serviceStdout -Raw } else { 'NO_STDOUT_CAPTURED' }
+            throw "Custodian service exited before applying its process DACL (exit code $($service.ExitCode)); stderr=$serviceErrorText; stdout=$serviceOutputText"
+        }
         Start-Sleep -Milliseconds 100
     }
     if (-not (Test-Path -LiteralPath $readyFile)) { throw 'Custodian service did not publish its protected-ready marker.' }
