@@ -85,6 +85,7 @@ jobs:
           Write-Host 'G7_REAL_V9_SIGNER=NOT_EXECUTED'
           Write-Host 'G7_SEQ4_LATEST_APPROVAL=NOT_ESTABLISHED'
           Write-Host 'G7_PRODUCTION=NO_GO'
+          exit 0 # the final deliberately rejected native Python control exited 2
       - name: Preserve public-only synthetic evidence, even on failure
         if: always()
         uses: actions/upload-artifact@v4
