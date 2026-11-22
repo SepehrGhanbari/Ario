@@ -61,6 +61,8 @@ def project(events, *, subject_ref, scope):
             result["system_interpretation_refs"].append(event["ref"])
             # A late model summary must never overwrite an accepted correction.
             if not after_correction:
+                if current != event["ref"] and permission == "GRANTED_FOR_CURRENT_ONLY":
+                    permission = "UNKNOWN"  # permission was tied to prior interpretation
                 current = event["ref"]
             continue
         if kind in PERSON_ACTIONS:
@@ -71,6 +73,8 @@ def project(events, *, subject_ref, scope):
                 if current is None or event["target_ref"] != current:
                     result["unresolved"].append("AMBIGUOUS_OR_STALE_CORRECTION_TARGET")
                     continue
+                if current != event["ref"] and permission == "GRANTED_FOR_CURRENT_ONLY":
+                    permission = "UNKNOWN"  # correction cannot inherit old consent
                 current, after_correction = event["ref"], True
             elif kind == "USE_PERMISSION":
                 if not current or event["target_ref"] != current:
