@@ -236,7 +236,9 @@ def test_ledger_shrinking_raises_non_erasure_violation(tmp_path: Path):
 
     engine = ConsolidationEngine()
 
-    # Monkey-patch stat to simulate file shrinkage during read
+    # Simulate shrinkage at the post-read Path.stat (the reader now does
+    # one pre-open Path.stat and one final Path.stat; fstat uses the fd).
+    # This preserves the T-CONS-02 injection despite the reader refactor.
     orig_stat = Path.stat
     calls = []
 
@@ -244,7 +246,7 @@ def test_ledger_shrinking_raises_non_erasure_violation(tmp_path: Path):
         res = orig_stat(self, *args, **kwargs)
         if self == ledger_path:
             calls.append(1)
-            if len(calls) >= 3:
+            if len(calls) >= 2:
                 import os
                 return os.stat_result((res.st_mode, res.st_ino, res.st_dev, res.st_nlink, res.st_uid, res.st_gid, res.st_size - 10, res.st_atime, res.st_mtime, res.st_ctime))
         return res
