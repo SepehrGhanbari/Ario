@@ -731,3 +731,10 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - First exact-head Actions attempt: Ubuntu v0.3 job passed; Windows v0.3 job failed only because Node 22 on Windows reports EOF for the closed child stdin pipe, while POSIX reports EPIPE. The supervisor captured the Windows stream error; the test had asserted the POSIX-specific code.
 - Updated the S10 assertion to require EPIPE on POSIX and EOF on Windows, and clarified the documentation. The runner still treats any non-null stdin error as UNKNOWN and never promotes it to an observed result.
 - This is a platform-specific expected-code correction, not a weakening of the fail-closed behavior. The new exact-head Linux/Windows rerun is pending; do not treat the initial Windows job as a pass.
+
+
+### A15 v0.3 first Linux/Windows CI result — 2026-11-22
+
+- Workflow run 45066370881 completed successfully on both ubuntu-latest and windows-latest.
+- The exact test logs show 56/56 frozen G0/G1, 22/22 historical v0.2, and 21/21 v0.3 tests on each platform; zero failures on both jobs.
+- This run used the same v0.3 source/test/workflow blobs recorded above. After the run, only the append-only ENGINEERING_LOG.md was changed; the v0.3 source, test and workflow blobs were not changed. A documentation-only checkpoint is being added to trigger a final run against the newest branch head.
