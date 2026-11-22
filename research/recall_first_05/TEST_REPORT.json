@@ -1,0 +1,36 @@
+{
+  "date": "2026-11-22",
+  "environment": "offline isolated Linux research container; not Windows or Ario runtime",
+  "mutation_tests": {
+    "attempted": 4,
+    "expected_assertion_red_detected": 4,
+    "undetected": 0
+  },
+  "normal_tests": {
+    "errors": 0,
+    "failures": 0,
+    "passed": 42,
+    "total": 42
+  },
+  "not_established": [
+    "independent review authority",
+    "independent rollback-resistant floor",
+    "general bilingual entailment",
+    "Windows runtime",
+    "GitHub Actions run",
+    "Ario operational memory integration",
+    "truth/evidence promotion"
+  ],
+  "project": "RECALL-FIRST-05",
+  "python": "3.13.5",
+  "schema": "ario-research-report/1",
+  "source_sha256": {
+    "MUTATION_NEGATIVE.log": "ff7565c347fcf56de8abd25b37f81b01fa9203d39603a20c175291f49f14344b",
+    "POSITIVE.log": "52087f2538ab63f32b540ac3deb1207ca5f3788a1cc8823848847bf0f7790c62",
+    "README.md": "932e0bde7eafbebe57419b8e548c5e68f22d6b4c5f2cb826655670db4e4fcb5c",
+    "equivalence_read_view.py": "4ded0151de5effe8a5568f31280dda4be4782d653e1b631183cdd446da22f73b",
+    "mutation_probe.py": "c25a7ff0943805013b10cf434ed881c7ac7d6634176193d463d74dc78d870e28",
+    "test_equivalence_read_view.py": "3062a68c0bf6543515479991593505614f64a0ebe22d51340eb20a6485f60ea5"
+  },
+  "status": "RESEARCH_ONLY / SYNTHETIC_EXECUTED / NO_MERGE"
+}
