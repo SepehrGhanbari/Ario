@@ -704,3 +704,23 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - Local Node v22.16.0: node --test implementation/tests/test_a15_lab_v0_2.js -> 22 PASS, 0 FAIL. Parent #328 prior suite had 56 PASS. Combined current-head CI is to be checked separately. Piping a generator preview into head caused EPIPE due to early pipe closing; this truncated preview is NOT evidence of a completed run. Full direct-to-file generation is the documented route.
 - Pre-publication raw synthetic sample (local only, not a browser ledger): six observations in the disposable archive at evidence/sample_observations.jsonl, SHA256 3e10cc106db18d5759e55594a4d2055b04680bbced97d84301d644e35a83fe72 (9810 bytes). BOUNDED_ACCEPT -> INERT_ACTION_OBSERVED_ONLY; REFUSE_FORGED_ACCEPT, NO_INHERITED_PROMISE, NO_HIGH_RISK, NO_INFINITE_REQUEST -> REFUSAL_OBSERVED_REPORT_CONFLICT; UNKNOWN_FORGED_ACCEPT -> UNKNOWN_WITHHELD_REPORT_CONFLICT. PIDs are local execution instances, not stable authentication. Stage-2 generator and CI are reproducible repository evidence.
 - Critical boundary: the runner forwards a STRICTLY INERT command based on the second Gate frame BEFORE full evidence verification; not an enforcement boundary for arbitrary actions. The two processes share one OS user and control plane. No independent custodian, service receipt, causal sender, secure operational autonomy, philosophical freedom or live provider-message delivery is established. Unknown concurrent-session exclusion remains UNKNOWN. PR DRAFT / HOLD / NO_MERGE.
+
+
+## 2026-11-22 — A15 v0.3 hardened local lab (stacked Draft PR; RESEARCH_ONLY / HOLD)
+
+- Parent and exact base: Draft PR #330 head dbba43852f3a6b309696060b0acc52d69a4e9dc2; this follow-up branch is research/a15-stage2-v0_3-hardening-20261122, stacked on research/a15-stage2-inert-dual-process-20261122. Historical v0.2 source and tests are unchanged.
+- Added versioned files only: a15_child_supervisor_v0_3.js, a15_choice_transport_lab_v0_3.js, a15_inert_recorder_v0_3.js, a15_observation_gate_v0_3.js, a15_lab_runner_v0_3.js, test_a15_lab_v0_3.js, A15_STAGE2_V03.md, and .github/workflows/a15-stage2-v03-lab.yml.
+- Local Node v22.16.0 combined test run: node --test implementation/tests/test_a15_lab_v0_2.js implementation/tests/test_a15_lab_v0_3.js -> **43 PASS / 0 FAIL** (22 historical v0.2 + 21 new v0.3). The v0.2 suite file and all v0.2 source bytes were preserved exactly. The 56-test G0/G1 suite was not rerun locally in this workspace; the new PR workflow includes it and will be checked on the exact PR head.
+- New v0.3 controls cover exact envelope keys and total UTF-8 size, accessor/Proxy inputs, UTF-8 choice limits, full Gate verification before Recorder spawn, original-input recomputation, exact reason/event consistency, timeout, hard kill after stdout/stderr overflow, EPIPE capture, same-ID in-process replay rejection, Recorder failure, and S9 same-UID Recorder rewrite.
+- **S9 remains RED by design:** a Gate process sharing the same OS identity and writable directory can rewrite the Recorder file. This is documented as an architecture boundary, not claimed fixed. Replay remains an in-process Set, not durable custody. Caller-supplied preference/authorization/renewal provenance remains unresolved.
+- Exact local Git blob SHA checks:
+  - a15_child_supervisor_v0_3.js = 3910be6466e518ed15384d7b21aaa8193d341e57
+  - a15_choice_transport_lab_v0_3.js = b2465404447c925a5ae7bf301b576fc44a64e7eb
+  - a15_inert_recorder_v0_3.js = c9b14eaf53ac1a0e8dabbad43b9c86a6d0441862
+  - a15_lab_runner_v0_3.js = d895d017d124492d6cda5486510d718909b9a8f7
+  - a15_observation_gate_v0_3.js = a31c81f6745496de2e57805e8009b7f16531c5d3
+  - test_a15_lab_v0_3.js = 98291acdbefc0d01534a46a6dfe34bed2d32ea09
+  - A15_STAGE2_V03.md = ad4a9e4319c489117d545d3fa627a70e866d5829
+  - a15-stage2-v03-lab.yml = ce7fa315d2dcd4f30fec1364f88e0cdaafad4bba
+- The new workflow runs the unchanged 56-test G0/G1 suite, historical 22-test v0.2 suite, and new 21-test v0.3 suite on Ubuntu and Windows. Exact-head CI remains pending until GitHub Actions completes.
+- No real keys, signer, browser send, provider receipt, independent witness, trust activation, production path, automatic merge or manual merge. All outputs remain local synthetic research only.
