@@ -87,6 +87,11 @@ test('Claude pipe-holder: supervisor settles by deadline; does NOT establish des
   const {runChild}=require('../research/a15_child_supervisor_v0_3');
   const started=Date.now();
   const r=await runChild(child,'', {timeoutMs:350,maxInputBytes:1024,maxStdoutBytes:1024,maxStderrBytes:1024});
-  assert.equal(r.forced_settle,true,'inherited pipe should force bounded settlement');
-  assert.ok(Date.now()-started<1800,'the supervisor must not wait for the orphan to close its pipes');
+  // POSIX can require a forced settle while Windows may close inherited pipes immediately.
+  // Neither result establishes that any descendant process was terminated.
+  assert.ok(r.forced_settle===true || r.exit_code===0,
+    'supervisor must either settle a held pipe or close the direct child normally');
+  assert.equal(r.spawn_error,null);
+  assert.equal(r.stream_error,null);
+  assert.ok(Date.now()-started<1800,'supervisor response must remain bounded');
 });
