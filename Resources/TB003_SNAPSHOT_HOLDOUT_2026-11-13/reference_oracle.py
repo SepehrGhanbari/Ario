@@ -15,6 +15,28 @@ def adjudicate(item: dict[str, Any]) -> dict[str, Any]:
               "source_independence": "UNKNOWN", "reason": []}
     if item.get("other_witness_custodians") != ["P2"]:
         raise ValueError("UNSUPPORTED_WITNESS_B_CONFIGURATION")
+    # Independent raw declarations: never hide these behind an invalid holder
+    # or incomplete transfer sequence. They are NOT authenticated real custody.
+    compromised = set(item.get("compromised_custodians", []))
+    witness_b = set(item["other_witness_custodians"])
+    declared_facts = []
+    if item["common_control"]:
+        declared_facts.append("DECLARED_COMMON_ADMIN_CONTROL")
+    if item["shared_storage"]:
+        declared_facts.append("DECLARED_SHARED_STORAGE")
+    if item["common_source"]:
+        declared_facts.append("DECLARED_COMMON_SOURCE")
+    if compromised & witness_b:
+        declared_facts.append("DECLARED_COMPROMISED_WITNESS_B")
+    if item["declared_holder"] in compromised:
+        declared_facts.append("DECLARED_COMPROMISED_NOMINATED_HOLDER")
+    transfer_actors = {v for move in item["transfers"]
+                       for v in (move["from"], move["to"])}
+    if compromised & transfer_actors:
+        declared_facts.append("DECLARED_COMPROMISED_TRANSFER_ACTOR")
+    report["declared_negative_facts"] = sorted(set(declared_facts))
+    report["transfer_surface_authentication"] = "NOT_ESTABLISHED"
+    report["independence_authority"] = "LAB_DECLARED_ONLY"
     # Source provenance is an orthogonal axis, not conditional on custody validity.
     if item["common_source"]:
         report["source_independence"] = "COMMON_SOURCE_DETECTED"
