@@ -197,7 +197,7 @@ public static class A15ProcessDacl {
     static extern IntPtr OpenProcess(uint access, bool inherit, uint pid);
     [DllImport("kernel32.dll", SetLastError=true, ExactSpelling=true)]
     static extern bool CloseHandle(IntPtr handle);
-    [DllImport("kernel32.dll", CharSet=CharSet.Unicode, SetLastError=true)]
+    [DllImport("advapi32.dll", EntryPoint="ConvertStringSecurityDescriptorToSecurityDescriptorW", CharSet=CharSet.Unicode, SetLastError=true, ExactSpelling=true)]
     static extern bool ConvertStringSecurityDescriptorToSecurityDescriptor(string sddl, uint revision, out IntPtr descriptor, out uint size);
     [DllImport("advapi32.dll", SetLastError=true, ExactSpelling=true)]
     static extern bool GetSecurityDescriptorDacl(IntPtr descriptor, out bool present, out IntPtr dacl, out bool defaulted);
