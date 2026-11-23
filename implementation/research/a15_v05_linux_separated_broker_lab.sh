@@ -98,6 +98,11 @@ first="$(make_request ATT_V05_FIRST)"
 check_response "$(gate_call "$first")" INERT_RECORDED_UNATTESTED_ORIGIN false 1
 check_response "$(gate_call "$first")" REPLAY_DURABLE_LOCAL_RECEIPT_ONLY true 1
 
+# Negative peer-identity control: even a privileged caller cannot claim to be Gate.
+unauthorized="$(printf '%s\n' "$first" | "$python" "$install/custodian.py" client --socket "$socket_path")"
+"$python" -c 'import json,sys; r=json.loads(sys.argv[1]); assert r["status"]=="UNKNOWN_PEER_IDENTITY_DENIED"; assert r["execution_authorized"] is False' "$unauthorized"
+echo "WRONG_PEER_UID_DENIED=PASS"
+
 # Kernel file permissions: Gate cannot read/change private state or replace the broker image.
 runuser -u "$gate" -- "$python" - "$state" "$install/custodian.py" <<'PY'
 import errno,os,sys
@@ -115,6 +120,21 @@ for name,attempt in (
   assert exc.errno in (errno.EACCES,errno.EPERM),name
  else:raise SystemExit("GATE_BOUNDARY_BYPASSED:"+name)
 print("GATE_LEDGER_AND_IMAGE_DENIALS=PASS")
+PY
+
+# A Gate-UID process cannot signal a running Custodian-UID broker.
+service_pid="$(ps -u "$cust" -o pid=,args= | awk '/custodian.py serve/ { print $1; exit }')"
+[ -n "$service_pid" ] || { echo "Could not identify Custodian broker PID" >&2; exit 2; }
+runuser -u "$gate" -- "$python" - "$service_pid" <<'PY'
+import errno,os,sys
+pid=int(sys.argv[1])
+try:
+ os.kill(pid,0)
+except PermissionError as exc:
+ assert exc.errno==errno.EPERM
+ print("GATE_SIGNAL_CUSTODIAN_DENIED=PASS")
+else:
+ raise SystemExit("GATE_COULD_SIGNAL_CUSTODIAN_PROCESS")
 PY
 
 # Crash with a live transaction. On restart, request was not consumed.
