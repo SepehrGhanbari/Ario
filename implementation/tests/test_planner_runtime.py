@@ -94,6 +94,8 @@ class LocalOllamaPlannerTests(unittest.TestCase):
             (body, [("Content-Length", str(len(body)))]),
             (body, [("Content-Length", "000" + str(len(body)))]),
             (chunked, [("Transfer-Encoding", "chunked")]),
+            (chunked, [("Transfer-Encoding", "chunked ")]),
+            (chunked, [("Transfer-Encoding", "ChUnKeD\t")]),
         ]
         with tempfile.TemporaryDirectory() as directory:
             self._populate_planner_context(directory)
