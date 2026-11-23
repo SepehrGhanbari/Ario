@@ -82,6 +82,10 @@ class BrokerCore(unittest.TestCase):
         self.assertEqual((one["seq"],one["head_hash"]), (replay["seq"],replay["head_hash"]))
         conflict=b.consume(request(changes={"preference":"DECLINE"}))
         self.assertEqual(conflict["status"],"EVIDENCE_CONFLICT_ID_REUSED")
+        # A different caller-reported verdict is also a changed request, even
+        # when the policy input bytes stay identical.
+        changed_claim=b.consume(request(claim="DECLINE"))
+        self.assertEqual(changed_claim["status"],"EVIDENCE_CONFLICT_ID_REUSED")
         self.assertEqual(b.verify()[0],1)
 
     def test_commit_chain_persists_across_restart(self):
