@@ -695,3 +695,14 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - Source patch SHA-256: `0ca52f97c71141893b685fe4fc6d3b2ceebe6a90f9f84627a6d1aa7759bc68cc`. Codex reports 3/3 targeted tests on Windows Python 3.12.14 and 3.13.16, and 4 relevant existing positives on 3.13.16. Those results belong to the locally patched base, not to newly created GitHub PR CI.
 - `#336` addresses non-finite JSON in the isolated V15.3 historical reader; it does not replace these changes nor establish a general `bounded_json.py` finite-only policy.
 - Status: `RESEARCH_ONLY / DRAFT / HOLD / NO_AUTOMATIC_MERGE / NO_TRUST_ACTIVATION / NO_PRODUCTION`; fresh exact-head Linux and Windows CI, independent review and explicit owner merge decision remain separate gates.
+
+
+## 2026-11-23 — PR #340 HTTP Content-Length follow-up (research-only stacked draft)
+
+- Found during independent Codex review of #340 at head `15e189104dc61e1e1fe862e2a692cbaf5782fb74`. HTTPResponse.read(MAX_RESPONSE_BYTES + 1) can return at EOF with bytes still outstanding against a declared Content-Length, without raising IncompleteRead when a size argument is used. A syntactically valid truncated body could otherwise proceed to JSON decoding.
+- Minimal synthetic-only candidate captures `response.length` immediately after bounded read, rejects positive outstanding bytes before `loads_bounded`, and retains valid full-length and unknown-length handling. No live Ollama, private data, signer, trust, or production test.
+- Owner-uploaded Codex candidate files (CRLF) SHA-256: `ario_planner.py` `23de2063ee6c6cd1d2c3a980df823f3406625386b9b81aa1ab7d06c7bd401b61`; `test_planner_runtime.py` `e4b4fec91f23f036e3a1eae0f411f792bfffcafc5819aabf33e6e8995b3b0b7e`. Git branch uses LF line endings consistent with existing files, with post-change Git blob SHAs `fc0468215da305bd2bcb7a34d2985ad735f0249d` and `2a697cb9aa7b55b10fd62e855605d1b11ae73917`. Bytes differ by line-ending normalization only.
+- Independent isolated Python 3.13.5 check reproduced incomplete known-length response (2 bytes read of 3 declared; remaining=1), complete known-length (remaining=0), and unknown-length (remaining=None). Uploaded targeted tests passed 2/2 using explicit minimal stubs; **not full Ario integration CI**. Codex separately reported focused Python 3.12 and 3.13 success on its local candidate, not verified here.
+- Separate stacked PR against #340's source branch for review. Parent #340 remains unmodified and unmerged. New exact-head Linux/Windows CI and independent review remain required. No broad HTTP/parser policy, ruleset, historical data, keys, trust activation, signer, or automatic merge.
+
+Status: RESEARCH_ONLY / DRAFT / HOLD / NO_MERGE / NO_TRUST_ACTIVATION / NO_PRODUCTION.
