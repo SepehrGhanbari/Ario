@@ -131,11 +131,31 @@ class Journal:
         path = root / "custodian.sqlite3"
         if path.is_symlink():
             raise ValueError("symlinked ledger")
+        # G-RED1 (CUST-08 handoff, 2026-11-23): a missing file is an explicit
+        # first boot; an existing file that is not a valid SQLite container with
+        # the events schema must fail closed BEFORE any schema mutation, because
+        # SQLite silently re-initializes 0/1-byte and foreign-byte files, which
+        # would rebirth wiped history as a fresh GENESIS ledger. A same-admin
+        # local guard still cannot prove authentic history: valid-prefix
+        # rollback of a well-formed ledger stays undetectable here and requires
+        # an external retained (seq, hash) checkpoint (residual RED).
+        fresh_provisioning = not path.exists()
+        if not fresh_provisioning:
+            if path.stat().st_size < 100:
+                raise ValueError("existing ledger smaller than a SQLite header; refusing silent rebirth")
+            with open(path, "rb") as f:
+                if f.read(16) != b"SQLite format 3\x00":
+                    raise ValueError("existing ledger is not a SQLite database; refusing silent rebirth")
         self.conn = sqlite3.connect(str(path), timeout=2, isolation_level=None)
         try:
             self.conn.execute("PRAGMA journal_mode=DELETE")
             self.conn.execute("PRAGMA synchronous=FULL")
             self.conn.execute("PRAGMA temp_store=MEMORY")
+            if not fresh_provisioning:
+                schema = self.conn.execute(
+                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='events'").fetchone()
+                if schema is None:
+                    raise ValueError("existing ledger lacks the events schema; refusing to treat it as a fresh GENESIS ledger")
             self.conn.execute("""CREATE TABLE IF NOT EXISTS events (
               seq INTEGER PRIMARY KEY, request_key TEXT NOT NULL UNIQUE,
               input_hash TEXT NOT NULL, decision TEXT NOT NULL, reason TEXT NOT NULL,
@@ -172,12 +192,22 @@ class Journal:
             existing = self.conn.execute("""SELECT seq,input_hash,decision,reason,disposition,hash
                      FROM events WHERE request_key=?""", (key,)).fetchone()
             if existing:
-                seq, old_hash, decision, reason, disposition, head = existing
+                seq, old_hash, decision, reason, disposition, event_hash = existing
+                # G-RED2 (CUST-08 handoff, 2026-11-23): the replayed row is a
+                # HISTORICAL event, not the chain tip. head_hash keeps its
+                # point-in-time meaning (hash of the event receipt being
+                # replayed) so idempotent retries compare the original receipt;
+                # chain_head_* is the tip as observed inside this serialized
+                # read and may advance afterwards (no lease is held).
+                tip = self.conn.execute(
+                    "SELECT seq,hash FROM events ORDER BY seq DESC LIMIT 1").fetchone()
                 self.conn.execute("COMMIT")
                 if old_hash != input_hash:
                     return limited("EVIDENCE_CONFLICT_ID_REUSED", replayed=True)
                 return limited("REPLAY_DURABLE_LOCAL_RECEIPT_ONLY", replayed=True,
-                               seq=seq, head_hash=head, policy_decision=decision,
+                               seq=seq, event_hash=event_hash, head_hash=event_hash,
+                               chain_head_seq=tip[0], chain_head_hash=tip[1],
+                               policy_decision=decision,
                                reason_code=reason, original_disposition=disposition)
             verdict, reason = decide(req["choice_json"])  # independent of Gate claim
             if claim != verdict:
@@ -204,6 +234,7 @@ class Journal:
             if crash_key == key and crash_at == "AFTER_COMMIT_BEFORE_REPLY":
                 os._exit(78)  # response deliberately lost, durable receipt remains
             return limited(disposition, replayed=False, seq=seq, head_hash=head,
+                           chain_head_seq=seq, chain_head_hash=head,
                            policy_decision=verdict, reason_code=reason,
                            gate_claim_mismatch=(claim != verdict))
         except BaseException:

@@ -150,6 +150,44 @@ class BrokerCore(unittest.TestCase):
         self.assertFalse(ref["replayed"])
         self.assertEqual(ref["seq"],2)
 
+    def test_gred1_zero_and_one_byte_ledger_fail_closed_no_rebirth(self):
+        a=self.journal()
+        a.consume(request(attempt="ATT_V05_G1A"))
+        a.conn.close()
+        kept=(self.state/"custodian.sqlite3").read_bytes()
+        for size in (0,1):
+            with open(self.state/"custodian.sqlite3","wb") as f:
+                f.write(kept[:size])
+            with self.assertRaises(ValueError):
+                j=self.journal()
+                j.conn.close()
+        # The truncated ledger never re-entered service, so the consumed ID
+        # was not silently re-recorded on top of a fresh GENESIS row.
+
+    def test_gred1_first_boot_provisioning_stays_allowed(self):
+        fresh=Path(self.tmp.name)/"fresh"
+        j=broker.Journal(fresh)
+        self.addCleanup(j.conn.close)
+        r=j.consume(request(attempt="ATT_V05_G1_FRESH"))
+        self.assertEqual(r["seq"],1)
+        self.assertFalse(r["replayed"])
+
+    def test_gred2_replay_separates_event_from_chain_head(self):
+        a=self.journal()
+        r1=a.consume(request(attempt="ATT_V05_G2_1"))
+        r2=a.consume(request(attempt="ATT_V05_G2_2",changes={"preference":"UNKNOWN"},claim="UNKNOWN"))
+        self.assertEqual((r1["chain_head_seq"],r1["chain_head_hash"]),(1,r1["head_hash"]))
+        a.conn.close()
+        b=self.journal()
+        rep=b.consume(request(attempt="ATT_V05_G2_1"))
+        self.assertTrue(rep["replayed"])
+        self.assertEqual(rep["seq"],1)
+        self.assertEqual(rep["event_hash"],r1["head_hash"])
+        self.assertEqual(rep["head_hash"],r1["head_hash"])
+        self.assertEqual((rep["chain_head_seq"],rep["chain_head_hash"]),(2,r2["head_hash"]))
+        self.assertNotEqual(rep["chain_head_hash"],rep["event_hash"])
+        b.conn.close()
+
     def test_rejects_duplicate_keys_and_unbounded_wire(self):
         req=request()
         self.assertIsNotNone(broker.validate_request(broker.encode(req).encode()))
