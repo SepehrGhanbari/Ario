@@ -66,7 +66,7 @@ def decide(choice_json):
         obj = parse(choice_json)
         if not isinstance(obj, dict) or len(obj) != len(REQUIRED):
             return "UNKNOWN", "INVALID_INPUT"
-        if tuple(obj) != REQUIRED or encode(obj) != choice_json:
+        if set(obj) != set(REQUIRED) or encode(obj) != choice_json:
             return "UNKNOWN", "INVALID_INPUT"
         if type(obj["explicit_renewal"]) is not bool:
             return "UNKNOWN", "INVALID_INPUT"
