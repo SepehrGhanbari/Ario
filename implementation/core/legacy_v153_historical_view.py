@@ -124,6 +124,12 @@ def _decode_record(text: str) -> dict[str, Any]:
         value = float(token)
         if not math.isfinite(value):
             _fail("HOLD_NONFINITE_JSON")
+        # JSON float tokens can also silently underflow to positive or negative
+        # zero. Nonzero significands must not be reinterpreted as zero.
+        # Inspect only the significand: digits in the exponent are not value.
+        significand = token.lower().split("e", 1)[0]
+        if value == 0.0 and any(digit in "123456789" for digit in significand):
+            _fail("HOLD_JSON_FLOAT_UNDERFLOW")
         return value
 
     try:

@@ -211,6 +211,38 @@ class TestLegacyHistoricalView(unittest.TestCase):
                 with self.assertRaisesRegex(HistoricalViewHold, "HOLD_NONFINITE_JSON"):
                     self.view()
 
+    def test_nonzero_json_float_underflow_fails_closed(self):
+        # Both signs and grammar variants are synthetic JSON number tokens.
+        for token in (b"1e-10000", b"-1e-10000", b"1E-999", b"-3.50e-9999", b"1e-324"):
+            with self.subTest(token=token.decode("ascii")):
+                self.make_fixture()
+                original = self.path.read_bytes()
+                raw = original.replace(b'"concepts": []', b'"concepts": [' + token + b']', 1)
+                self.assertNotEqual(raw, original)
+                self.path.write_bytes(raw)
+                self.digest = hashlib.sha256(raw).hexdigest()
+                with self.assertRaisesRegex(HistoricalViewHold, "HOLD_JSON_FLOAT_UNDERFLOW"):
+                    self.view()
+
+    def test_zero_json_float_lexemes_remain_allowed(self):
+        for token in (b"0.0", b"-0.0", b"0e-10000", b"-0.000E+10000"):
+            with self.subTest(token=token.decode("ascii")):
+                self.make_fixture()
+                original = self.path.read_bytes()
+                raw = original.replace(b'"concepts": []', b'"concepts": [' + token + b']', 1)
+                self.assertNotEqual(raw, original)
+                self.path.write_bytes(raw)
+                self.digest = hashlib.sha256(raw).hexdigest()
+                self.assertEqual(self.view().inspect()["record_count"], 2)
+
+    def test_finite_subnormal_json_float_is_allowed(self):
+        original = self.path.read_bytes()
+        raw = original.replace(b'"concepts": []', b'"concepts": [5e-324]', 1)
+        self.assertNotEqual(raw, original)
+        self.path.write_bytes(raw)
+        self.digest = hashlib.sha256(raw).hexdigest()
+        self.assertEqual(self.view().inspect()["record_count"], 2)
+
     def test_finite_large_exponent_json_is_allowed(self):
         raw = self.path.read_bytes().replace(
             b'"concepts": []', b'"concepts": [1e308]', 1
