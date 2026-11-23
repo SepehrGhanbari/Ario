@@ -46,7 +46,9 @@ class BrokerCore(unittest.TestCase):
         self.state=Path(self.tmp.name)/"state"
 
     def journal(self):
-        return broker.Journal(self.state)
+        opened=broker.Journal(self.state)
+        self.addCleanup(opened.conn.close)  # Windows holds SQLite files until explicit close
+        return opened
 
     def test_frozen_policy_recalculation_fails_closed_on_forged_gate_claim(self):
         s=self.journal()
