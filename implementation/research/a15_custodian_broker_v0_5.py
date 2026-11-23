@@ -132,14 +132,18 @@ class Journal:
         if path.is_symlink():
             raise ValueError("symlinked ledger")
         self.conn = sqlite3.connect(str(path), timeout=2, isolation_level=None)
-        self.conn.execute("PRAGMA journal_mode=DELETE")
-        self.conn.execute("PRAGMA synchronous=FULL")
-        self.conn.execute("PRAGMA temp_store=MEMORY")
-        self.conn.execute("""CREATE TABLE IF NOT EXISTS events (
-          seq INTEGER PRIMARY KEY, request_key TEXT NOT NULL UNIQUE,
-          input_hash TEXT NOT NULL, decision TEXT NOT NULL, reason TEXT NOT NULL,
-          disposition TEXT NOT NULL, prev_hash TEXT NOT NULL, hash TEXT NOT NULL)""")
-        self.verify()
+        try:
+            self.conn.execute("PRAGMA journal_mode=DELETE")
+            self.conn.execute("PRAGMA synchronous=FULL")
+            self.conn.execute("PRAGMA temp_store=MEMORY")
+            self.conn.execute("""CREATE TABLE IF NOT EXISTS events (
+              seq INTEGER PRIMARY KEY, request_key TEXT NOT NULL UNIQUE,
+              input_hash TEXT NOT NULL, decision TEXT NOT NULL, reason TEXT NOT NULL,
+              disposition TEXT NOT NULL, prev_hash TEXT NOT NULL, hash TEXT NOT NULL)""")
+            self.verify()
+        except BaseException:
+            self.conn.close()  # fail-closed even when verification failed on Windows
+            raise
 
     def verify(self):
         integrity = self.conn.execute("PRAGMA integrity_check").fetchone()
@@ -161,7 +165,7 @@ class Journal:
     def consume(self, req):
         # Single owner process and SQLite BEGIN IMMEDIATE serialize concurrent clients.
         key = req["run_id"] + "|" + req["attempt_id"]
-        input_hash = digest(req["choice_json"])
+        input_hash = digest(encode(req))  # bind exact Gate claim and source bytes to consumed ID
         claim = req["claimed_status"]
         self.conn.execute("BEGIN IMMEDIATE")
         try:
