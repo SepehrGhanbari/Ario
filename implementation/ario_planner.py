@@ -473,10 +473,14 @@ def request_plan(
         try:
             with _open_local_ollama(request, timeout=timeout) as response:
                 raw = response.read(MAX_RESPONSE_BYTES + 1)
+                remaining = getattr(response, "length", None)
         except (http.client.HTTPException, OSError) as exc:
             raise AgentRequestError(f"could not obtain a response from local Ollama: {exc}") from exc
         if len(raw) > MAX_RESPONSE_BYTES:
             raise AgentRequestError("Ollama response exceeded the 1 MB safety limit")
+        # HTTPResponse.read(n) can return at EOF with declared body bytes outstanding.
+        if isinstance(remaining, int) and remaining > 0:
+            raise AgentRequestError("Ollama response ended before its declared Content-Length")
         try:
             envelope = loads_bounded(raw.decode("utf-8"))
             content = envelope["message"]["content"]
