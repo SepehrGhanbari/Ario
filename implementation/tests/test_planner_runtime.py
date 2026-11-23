@@ -1,3 +1,4 @@
+import http.client
 import io
 import json
 import socket
@@ -21,6 +22,45 @@ def ollama_response(payload):
 
 
 class LocalOllamaPlannerTests(unittest.TestCase):
+    def response_from_memory(self, body, declared_length):
+        header = b"" if declared_length is None else f"Content-Length: {declared_length}\r\n".encode("ascii")
+        stream = io.BytesIO(b"HTTP/1.1 200 OK\r\n" + header + b"\r\n" + body)
+        source = MagicMock(spec=socket.socket)
+        source.makefile.return_value = stream
+        response = http.client.HTTPResponse(source)
+        response.begin()
+        self.addCleanup(response.close)
+        return response
+
+    @patch("ario_planner.run_workflow")
+    @patch("ario_planner._open_local_ollama")
+    def test_short_fixed_length_response_stops_before_json(self, open_response, run_workflow):
+        open_response.return_value = self.response_from_memory(b"{}", 3)
+        with tempfile.TemporaryDirectory() as directory:
+            ledger = Path(directory) / "ledger.jsonl"
+            stderr = io.StringIO()
+            with patch.object(ario_planner, "loads_bounded", wraps=ario_planner.loads_bounded) as decode:
+                with redirect_stderr(stderr):
+                    rc = ario_planner.main(["--workspace", directory, "--goal", "Review the planner",
+                                            "--ledger", str(ledger), "--execute"])
+            self.assertEqual(rc, 2)
+            self.assertEqual(json.loads(stderr.getvalue())["status"], "UNKNOWN")
+            self.assertFalse(ledger.exists())
+            run_workflow.assert_not_called()
+            open_response.assert_called_once()
+            decode.assert_not_called()
+
+    @patch("ario_planner._open_local_ollama")
+    def test_complete_known_and_unknown_lengths_accept_normal_plan(self, open_response):
+        body = json.dumps({"message": {"content": json.dumps(self.valid_recommendation())}}).encode()
+        with tempfile.TemporaryDirectory() as directory:
+            self._populate_planner_context(directory)
+            for length in (len(body), None):
+                with self.subTest(declared_length=length):
+                    open_response.return_value = self.response_from_memory(body, length)
+                    result = request_plan("Review the planner", directory)
+                    self.assertTrue(result["stages"])
+
     def valid_workflow(self):
         return {
             "workflow_id": "WF-TEST",
