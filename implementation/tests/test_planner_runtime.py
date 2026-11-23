@@ -1,3 +1,4 @@
+import http.client
 import io
 import json
 import socket
@@ -21,6 +22,281 @@ def ollama_response(payload):
 
 
 class LocalOllamaPlannerTests(unittest.TestCase):
+    def response_from_memory(self, body, declared_length):
+        header = b"" if declared_length is None else f"Content-Length: {declared_length}\r\n".encode("ascii")
+        stream = io.BytesIO(b"HTTP/1.1 200 OK\r\n" + header + b"\r\n" + body)
+        source = MagicMock(spec=socket.socket)
+        source.makefile.return_value = stream
+        response = ario_planner._StrictOllamaHTTPResponse(source)
+        response.begin()
+        self.addCleanup(response.close)
+        return response
+
+    def response_with_wire_headers(self, body, headers, wrap=False):
+        header_lines = b"".join(name.encode("ascii") + b": " + value.encode("ascii") + b"\r\n"
+                                for name, value in headers)
+        source = MagicMock(spec=socket.socket)
+        source.makefile.return_value = io.BytesIO(b"HTTP/1.1 200 OK\r\n" + header_lines + b"\r\n" + body)
+        response = ario_planner._StrictOllamaHTTPResponse(source)
+        response.begin()
+        self.addCleanup(response.close)
+        if wrap:
+            # urllib.request returns an addinfourl wrapper around HTTPResponse.
+            from urllib.response import addinfourl
+            return addinfourl(response, response.headers, "http://127.0.0.1:11434/api/chat", 200)
+        return response
+
+    @patch("ario_planner.run_workflow")
+    @patch("ario_planner._open_local_ollama")
+    def test_malformed_http_framing_fails_before_decode_or_execution(self, open_response, run_workflow):
+        body = json.dumps({"message": {"content": json.dumps(self.valid_recommendation())}}).encode()
+        n = str(len(body))
+        cases = {
+            "conflicting_duplicate": [("Content-Length", n), ("Content-Length", str(len(body) + 1))],
+            "identical_duplicate": [("Content-Length", n), ("Content-Length", n)],
+            "comma_conflict": [("Content-Length", f"{n}, {len(body) + 1}")],
+            "comma_identical": [("Content-Length", f"{n},{n}")],
+            "negative": [("Content-Length", "-1")],
+            "plus": [("Content-Length", "+1")],
+            "nonnumeric": [("Content-Length", "invalid")],
+            "huge_digits": [("Content-Length", "9" * 100)],
+            "empty": [("Content-Length", "")],
+            "transfer_and_length": [("Transfer-Encoding", "chunked"), ("Content-Length", n)],
+            "unsupported_transfer": [("Transfer-Encoding", "identity")],
+            "comma_transfer": [("Transfer-Encoding", "gzip, chunked")],
+            "duplicate_transfer": [("Transfer-Encoding", "chunked"), ("Transfer-Encoding", "chunked")],
+            "short_body": [("Content-Length", str(len(body) + 1))],
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            self._populate_planner_context(directory)
+            ledger = Path(directory) / "events.jsonl"
+            for wrap in (False, True):
+                for label, headers in cases.items():
+                    with self.subTest(wrap=wrap, case=label):
+                        open_response.return_value = self.response_with_wire_headers(body, headers, wrap)
+                        with patch.object(ario_planner, "loads_bounded", wraps=ario_planner.loads_bounded) as decode:
+                            with redirect_stderr(io.StringIO()) as stderr:
+                                rc = ario_planner.main(["--workspace", directory, "--goal", "Review the planner",
+                                                        "--ledger", str(ledger), "--execute"])
+                        self.assertEqual(rc, 2)
+                        self.assertEqual(json.loads(stderr.getvalue())["status"], "UNKNOWN")
+                        self.assertFalse(ledger.exists())
+                        decode.assert_not_called()
+            run_workflow.assert_not_called()
+            self.assertEqual(open_response.call_count, 2 * len(cases))
+
+    @patch("ario_planner._open_local_ollama")
+    def test_supported_http_framing_preserves_valid_plans(self, open_response):
+        body = json.dumps({"message": {"content": json.dumps(self.valid_recommendation())}}).encode()
+        chunked = f"{len(body):X}\r\n".encode() + body + b"\r\n0\r\n\r\n"
+        cases = [
+            (body, []),
+            (body, [("Content-Length", str(len(body)))]),
+            (body, [("Content-Length", "000" + str(len(body)))]),
+            (chunked, [("Transfer-Encoding", "chunked")]),
+            (chunked, [("Transfer-Encoding", "chunked ")]),
+            (chunked, [("Transfer-Encoding", "ChUnKeD\t")]),
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            self._populate_planner_context(directory)
+            for wrap in (False, True):
+                for wire_body, headers in cases:
+                    with self.subTest(wrap=wrap, headers=headers):
+                        open_response.return_value = self.response_with_wire_headers(wire_body, headers, wrap)
+                        self.assertTrue(request_plan("Review the planner", directory)["stages"])
+
+    @patch("ario_planner.run_workflow")
+    @patch("ario_planner._open_local_ollama")
+    def test_chunk_size_and_trailer_grammar_rejected_before_decode(self, open_response, run_workflow):
+        body = json.dumps({"message": {"content": json.dumps(self.valid_recommendation())}}).encode()
+        size = f"{len(body):X}".encode()
+        cases = {
+            "chunk_size_lf": size + b"\n" + body + b"\r\n0\r\n\r\n",
+            "leading_space": b" " + size + b"\r\n" + body + b"\r\n0\r\n\r\n",
+            "signed_chunk_size": b"+" + size + b"\r\n" + body + b"\r\n0\r\n\r\n",
+            "malformed_extension": size + b';x="unterminated\r\n' + body + b"\r\n0\r\n\r\n",
+            "last_chunk_lf": size + b"\r\n" + body + b"\r\n0\n\r\n",
+            "missing_trailer_end": size + b"\r\n" + body + b"\r\n0\r\n",
+            "trailer_lf": size + b"\r\n" + body + b"\r\n0\r\nX-Review: yes\n\n",
+            "trailer_without_name": size + b"\r\n" + body + b"\r\n0\r\n bad\r\n\r\n",
+            "forbidden_trailer": size + b"\r\n" + body + b"\r\n0\r\nContent-Length: 1\r\n\r\n",
+            "oversized_chunk_size": b"F" * 200 + b"\r\n" + body + b"\r\n0\r\n\r\n",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            self._populate_planner_context(directory)
+            ledger = Path(directory) / "events.jsonl"
+            for wrap in (False, True):
+                for label, wire in cases.items():
+                    with self.subTest(wrap=wrap, malformed=label):
+                        open_response.return_value = self.response_with_wire_headers(
+                            wire, [("Transfer-Encoding", "chunked")], wrap
+                        )
+                        with patch.object(ario_planner, "loads_bounded", wraps=ario_planner.loads_bounded) as decode:
+                            with redirect_stderr(io.StringIO()) as stderr:
+                                rc = ario_planner.main([
+                                    "--workspace", directory, "--goal", "Review the planner",
+                                    "--ledger", str(ledger), "--execute",
+                                ])
+                        self.assertEqual(rc, 2)
+                        self.assertEqual(json.loads(stderr.getvalue())["status"], "UNKNOWN")
+                        decode.assert_not_called()
+                        self.assertFalse(ledger.exists())
+            run_workflow.assert_not_called()
+
+    @patch("ario_planner._open_local_ollama")
+    def test_valid_chunk_extension_trailer_and_two_chunks(self, open_response):
+        body = json.dumps({"message": {"content": json.dumps(self.valid_recommendation())}}).encode()
+        left, right = body[:len(body) // 2], body[len(body) // 2:]
+        fixtures = (
+            f'{len(body):X};audit=ok\r\n'.encode() + body + b"\r\n0\r\n\r\n",
+            f'{len(body):X};audit="reviewed"\r\n'.encode() + body + b"\r\n0\r\n\r\n",
+            f'{len(body):X}\r\n'.encode() + body + b"\r\n0\r\nX-Review: yes\r\n\r\n",
+            f'{len(left):X}\r\n'.encode() + left + b"\r\n" +
+            f'{len(right):X}\r\n'.encode() + right + b"\r\n0\r\n\r\n",
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            self._populate_planner_context(directory)
+            for wrap in (False, True):
+                for wire in fixtures:
+                    with self.subTest(wrap=wrap, fixture_size=len(wire)):
+                        open_response.return_value = self.response_with_wire_headers(
+                            wire, [("Transfer-Encoding", "chunked")], wrap
+                        )
+                        self.assertTrue(request_plan("Review the planner", directory)["stages"])
+
+    @patch("ario_planner.run_workflow")
+    @patch("ario_planner._open_local_ollama")
+    def test_too_many_chunk_headers_fail_closed(self, open_response, run_workflow):
+        body = json.dumps({"message": {"content": json.dumps(self.valid_recommendation())}}).encode()
+        # Prefix with valid JSON whitespace: without an explicit chunk-count
+        # bound, the decoded JSON would still be accepted as a valid plan.
+        wire = (b"1\r\n \r\n" * ario_planner._MAX_OLLAMA_CHUNKS
+                + f"{len(body):X}\r\n".encode() + body + b"\r\n0\r\n\r\n")
+        with tempfile.TemporaryDirectory() as directory:
+            self._populate_planner_context(directory)
+            ledger = Path(directory) / "events.jsonl"
+            for wrap in (False, True):
+                with self.subTest(wrap=wrap):
+                    open_response.return_value = self.response_with_wire_headers(
+                        wire, [("Transfer-Encoding", "chunked")], wrap
+                    )
+                    with patch.object(ario_planner, "loads_bounded", wraps=ario_planner.loads_bounded) as decode:
+                        with redirect_stderr(io.StringIO()) as stderr:
+                            rc = ario_planner.main([
+                                "--workspace", directory, "--goal", "Review the planner",
+                                "--ledger", str(ledger), "--execute",
+                            ])
+                    self.assertEqual(rc, 2)
+                    self.assertEqual(json.loads(stderr.getvalue())["status"], "UNKNOWN")
+                    self.assertFalse(ledger.exists())
+                    decode.assert_not_called()
+            run_workflow.assert_not_called()
+
+    @patch("ario_planner.run_workflow")
+    @patch("ario_planner._open_local_ollama")
+    def test_invalid_chunk_data_terminator_never_decodes_or_executes(self, open_response, run_workflow):
+        body = json.dumps({"message": {"content": json.dumps(self.valid_recommendation())}}).encode()
+        midpoint = len(body) // 2
+        part1, part2 = body[:midpoint], body[midpoint:]
+        malformed = {
+            "XX": f"{len(body):X}\r\n".encode() + body + b"XX0\r\n\r\n",
+            "LF_only": f"{len(body):X}\r\n".encode() + body + b"\n\n0\r\n\r\n",
+            "CR_wrong": f"{len(body):X}\r\n".encode() + body + b"\rX0\r\n\r\n",
+            "no_delimiter": f"{len(body):X}\r\n".encode() + body + b"0\r\n\r\n",
+            "second_chunk": (f"{len(part1):X}\r\n".encode() + part1 + b"\r\n"
+                             + f"{len(part2):X}\r\n".encode() + part2 + b"XX0\r\n\r\n"),
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            self._populate_planner_context(directory)
+            ledger = Path(directory) / "ledger.jsonl"
+            for wrap in (False, True):
+                for label, wire in malformed.items():
+                    with self.subTest(wrap=wrap, malformed=label):
+                        open_response.return_value = self.response_with_wire_headers(
+                            wire, [("Transfer-Encoding", "chunked")], wrap
+                        )
+                        with patch.object(ario_planner, "loads_bounded", wraps=ario_planner.loads_bounded) as decode:
+                            with redirect_stderr(io.StringIO()) as stderr:
+                                rc = ario_planner.main([
+                                    "--workspace", directory, "--goal", "Review the planner",
+                                    "--ledger", str(ledger), "--execute",
+                                ])
+                        self.assertEqual(rc, 2)
+                        self.assertEqual(json.loads(stderr.getvalue())["status"], "UNKNOWN")
+                        decode.assert_not_called()
+                        self.assertFalse(ledger.exists())
+            self.assertEqual(open_response.call_count, 2 * len(malformed))
+            run_workflow.assert_not_called()
+
+    @patch("ario_planner._open_local_ollama")
+    def test_valid_two_chunk_message_retains_normal_planning(self, open_response):
+        body = json.dumps({"message": {"content": json.dumps(self.valid_recommendation())}}).encode()
+        a, b = body[:len(body) // 2], body[len(body) // 2:]
+        wire = f"{len(a):X}\r\n".encode() + a + b"\r\n" + f"{len(b):X}\r\n".encode() + b + b"\r\n0\r\n\r\n"
+        with tempfile.TemporaryDirectory() as directory:
+            self._populate_planner_context(directory)
+            for wrap in (False, True):
+                with self.subTest(wrap=wrap):
+                    open_response.return_value = self.response_with_wire_headers(
+                        wire, [("Transfer-Encoding", "chunked")], wrap
+                    )
+                    self.assertTrue(request_plan("Review the planner", directory)["stages"])
+
+    def test_local_http_opener_uses_strict_response_class(self):
+        request = ario_planner.urllib.request.Request("http://127.0.0.1:11434/api/chat", data=b"{}")
+        with patch.object(ario_planner.urllib.request, "build_opener") as build:
+            ario_planner._open_local_ollama(request, timeout=3)
+            handlers = build.call_args.args
+            strict = [handler for handler in handlers if isinstance(handler, ario_planner._StrictOllamaHTTPHandler)]
+            self.assertEqual(len(strict), 1)
+            self.assertIs(ario_planner._StrictOllamaHTTPConnection.response_class,
+                          ario_planner._StrictOllamaHTTPResponse)
+            with patch.object(strict[0], "do_open") as do_open:
+                strict[0].http_open(request)
+            self.assertIs(do_open.call_args.args[0], ario_planner._StrictOllamaHTTPConnection)
+
+    @patch("ario_planner._open_local_ollama")
+    def test_long_zero_padded_content_length_stays_valid(self, open_response):
+        body = json.dumps({"message": {"content": json.dumps(self.valid_recommendation())}}).encode()
+        wire_length = "0" * 32 + str(len(body))
+        with tempfile.TemporaryDirectory() as directory:
+            self._populate_planner_context(directory)
+            for wrap in (False, True):
+                with self.subTest(wrap=wrap):
+                    open_response.return_value = self.response_with_wire_headers(
+                        body, [("Content-Length", wire_length)], wrap
+                    )
+                    self.assertTrue(request_plan("Review the planner", directory)["stages"])
+
+    @patch("ario_planner.run_workflow")
+    @patch("ario_planner._open_local_ollama")
+    def test_short_fixed_length_response_stops_before_json(self, open_response, run_workflow):
+        open_response.return_value = self.response_from_memory(b"{}", 3)
+        with tempfile.TemporaryDirectory() as directory:
+            ledger = Path(directory) / "ledger.jsonl"
+            stderr = io.StringIO()
+            with patch.object(ario_planner, "loads_bounded", wraps=ario_planner.loads_bounded) as decode:
+                with redirect_stderr(stderr):
+                    rc = ario_planner.main(["--workspace", directory, "--goal", "Review the planner",
+                                            "--ledger", str(ledger), "--execute"])
+            self.assertEqual(rc, 2)
+            self.assertEqual(json.loads(stderr.getvalue())["status"], "UNKNOWN")
+            self.assertFalse(ledger.exists())
+            run_workflow.assert_not_called()
+            open_response.assert_called_once()
+            decode.assert_not_called()
+
+    @patch("ario_planner._open_local_ollama")
+    def test_complete_known_and_unknown_lengths_accept_normal_plan(self, open_response):
+        body = json.dumps({"message": {"content": json.dumps(self.valid_recommendation())}}).encode()
+        with tempfile.TemporaryDirectory() as directory:
+            self._populate_planner_context(directory)
+            for length in (len(body), None):
+                with self.subTest(declared_length=length):
+                    open_response.return_value = self.response_from_memory(body, length)
+                    result = request_plan("Review the planner", directory)
+                    self.assertTrue(result["stages"])
+
     def valid_workflow(self):
         return {
             "workflow_id": "WF-TEST",

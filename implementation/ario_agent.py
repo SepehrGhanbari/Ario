@@ -921,7 +921,7 @@ def inspect_task_history(task_id: str, ledger_path: str | Path) -> dict:
                 "event_count": len(events), "automatic_resume": False, "write_performed": False}
     if finishes:
         final_status = finishes[0].get("status")
-        if final_status not in {"COMPLETED", "STOPPED"}:
+        if final_status not in ("COMPLETED", "STOPPED"):
             return {"task_id": task_id, "status": "UNKNOWN",
                     "error": "unrecognized terminal status in ledger",
                     "event_count": len(events), "automatic_resume": False, "write_performed": False}
