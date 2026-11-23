@@ -685,3 +685,13 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - Bounded correction head `174bcec886139fe86475916994dfb9dea55a6571`: [CI 44942451503](https://github.com/SepehrGhanbari/Ario/actions/runs/44942451503) **SUCCESS** Linux 1657 passed/7 skipped/2 warnings/273 subtests; Windows 1656 passed/8 skipped/2 warnings/273 subtests; CPython 3.14 1657 passed/7 skipped/2 warnings/273 subtests. Both W42 negative controls now PASS without test source edits (Git test blob `3f5ad1e2eab028fdd9ec9ef79d010725621f1c26` unchanged).
 - The fix monitors POSIX fstat identity, size, mtime/ctime and two read images, and uses Windows leaf SHARE_READ to refuse normal competing writers. These narrow tests DO NOT prove atomicity for arbitrary in-place or privileged/mapped writes or historical event truth, freshness, memory admission, signer or trust authority. Old log prefix and original RED code/tests remain in Git history.
 - No unrelated code, parser, real event ledger, memory, signature pin, governance or production changes. Follow-up must check exact final-head CI and TXT security workflows before research-only merge.
+
+
+## 2026-11-23 — PR #298 post-merge residual structured-error corrections (research only)
+
+- Independent Codex report and patch reviewed against the real `main` commit `15ebc65ca97f26396c152811a94646f86cbbfffe`; original #298 already merged on 2026-11-21 (final historical head `850e17d0`). Do not reinterpret the historical `92e30739` verdict as the verdict for the merged tree.
+- Three narrow residuals: truncated Ollama HTTP response may raise `http.client.HTTPException` outside the structured planner input outcome; non-string planner recommendation paths may throw at a set lookup; non-string task terminal status may throw during history inspection.
+- Two production-source files plus one focused test file changed; new negative tests preserve `UNKNOWN / exit 2`, bounded correction, no ledger creation on planner failures, and unchanged ledger bytes on read-only task inspection.
+- Source patch SHA-256: `0ca52f97c71141893b685fe4fc6d3b2ceebe6a90f9f84627a6d1aa7759bc68cc`. Codex reports 3/3 targeted tests on Windows Python 3.12.14 and 3.13.16, and 4 relevant existing positives on 3.13.16. Those results belong to the locally patched base, not to newly created GitHub PR CI.
+- `#336` addresses non-finite JSON in the isolated V15.3 historical reader; it does not replace these changes nor establish a general `bounded_json.py` finite-only policy.
+- Status: `RESEARCH_ONLY / DRAFT / HOLD / NO_AUTOMATIC_MERGE / NO_TRUST_ACTIVATION / NO_PRODUCTION`; fresh exact-head Linux and Windows CI, independent review and explicit owner merge decision remain separate gates.
