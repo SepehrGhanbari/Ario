@@ -1,0 +1,33 @@
+name: A15 synthetic custodian broker and floor v0.1 (HOLD)
+on:
+  pull_request:
+    paths:
+      - 'implementation/research/a15_custodian_broker_v0_1.js'
+      - 'implementation/research/a15_external_floor_simulator_v0_1.js'
+      - 'implementation/research/a15_custodian_receipt_verifier_v0_1.js'
+      - 'implementation/research/A15_CUSTODIAN_BROKER_V01.md'
+      - 'implementation/research/A15_CUSTODIAN_BROKER_V01_FA.md'
+      - 'implementation/tests/test_a15_custodian_broker_v0_1.js'
+      - '.github/workflows/a15-custodian-broker-v01.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  synthetic-only:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run synthetic two-process broker and floor crash/replay/fork tests
+        run: node --test implementation/tests/test_a15_custodian_broker_v0_1.js
+      - name: Clarify security scope
+        run: echo "RESEARCH_ONLY SYNTHETIC; SAME_ADMIN_RESET_EXPECTED_RED; NO_REAL_KEYS; NO_TRUST_ACTIVATION"
