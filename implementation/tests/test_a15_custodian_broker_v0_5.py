@@ -180,5 +180,44 @@ class BrokerCore(unittest.TestCase):
                 c=dict(CHOICE);c.update(changes)
                 self.assertEqual(broker.decide(broker.encode(c)),(status,reason))
 
+
+    def test_cross_language_parity_with_frozen_node_policy(self):
+        node=shutil.which("node")
+        if not node:
+            self.skipTest("Node is required to compare with the frozen A15 JavaScript policy")
+        samples=[broker.encode(CHOICE)]
+        samples.append(broker.encode(dict(reversed(list(CHOICE.items())))))
+        for changes in (
+            {"actor":"OTHER"}, {"role":"REVIEW"},
+            {"risk":"HIGH","authorization":"UNKNOWN"}, {"risk":"UNKNOWN"},
+            {"duration":"UNBOUNDED"}, {"origin":"PREDECESSOR"},
+            {"origin":"PREDECESSOR","explicit_renewal":True},
+            {"usefulness":"FUTILE"}, {"evidence":"CONFLICT"},
+            {"authorization":"DENIED"}, {"authorization":"UNKNOWN"},
+            {"preference":"DECLINE"}, {"preference":"UNKNOWN"},
+            {"duration":"UNKNOWN"}, {"explicit_renewal":True}):
+            case=dict(CHOICE);case.update(changes)
+            samples.append(broker.encode(case))
+        samples.extend([
+            broker.encode({**CHOICE,"actor":123}),
+            broker.encode({**CHOICE,"authorization":"AWESOME"}),
+            broker.encode({**CHOICE,"authorization":None}),
+            broker.encode({**CHOICE,"extra":"FORGED"}),
+            broker.encode({k:v for k,v in CHOICE.items() if k!="risk"}),
+            '{"actor":"ARIO","actor":"OTHER"}',
+            json.dumps(CHOICE,indent=2),
+            "NOT-JSON"
+        ])
+        source=str(SRC.parent/"a15_procedural_choice_v0_1.js")
+        script=('const d=require(process.argv[1]).decide;'
+                'const xs=JSON.parse(require("node:fs").readFileSync(0,"utf8"));'
+                'process.stdout.write(JSON.stringify(xs.map(s=>{const x=d(s);return [x.status,x.reason_code];})));')
+        completed=subprocess.run([node,"-e",script,source],
+                                 input=json.dumps(samples),text=True,encoding="utf-8",
+                                 capture_output=True,timeout=10,check=True)
+        expected=json.loads(completed.stdout)
+        actual=[list(broker.decide(sample)) for sample in samples]
+        self.assertEqual(actual,expected)
+
 if __name__=="__main__":
     unittest.main(verbosity=2)
