@@ -431,12 +431,39 @@ def _validate_ollama_response_framing(response) -> int | None:
     if not lengths:
         return None
     raw = lengths[0].strip(" \t")
-    if not re.fullmatch(r"[0-9]{1,20}", raw, flags=re.ASCII):
+    if not re.fullmatch(r"[0-9]+", raw, flags=re.ASCII):
         raise AgentRequestError("Ollama response has invalid Content-Length")
-    length = int(raw)
-    if length > MAX_RESPONSE_BYTES:
+    # Strip zeroes before conversion so long valid zero-padded values do not
+    # consume Python's max integer digit budget.
+    significant = raw.lstrip("0") or "0"
+    limit = str(MAX_RESPONSE_BYTES)
+    if len(significant) > len(limit) or (len(significant) == len(limit) and significant > limit):
         raise AgentRequestError("Ollama response declared an oversized body")
-    return length
+    return int(significant)
+
+
+class _StrictOllamaHTTPResponse(http.client.HTTPResponse):
+    """Reject invalid chunk-data separators before decoded bytes reach the planner."""
+
+    def _get_chunk_left(self):
+        # CPython's HTTPResponse normally discards these two bytes without
+        # verifying CRLF. Consume them strictly, then let stdlib handle the
+        # next chunk-size line without discarding a second pair.
+        if self.chunk_left == 0:
+            if self._safe_read(2) != b"\r\n":
+                self._close_conn()
+                raise http.client.HTTPException("invalid Ollama HTTP chunk-data terminator")
+            self.chunk_left = None
+        return super()._get_chunk_left()
+
+
+class _StrictOllamaHTTPConnection(http.client.HTTPConnection):
+    response_class = _StrictOllamaHTTPResponse
+
+
+class _StrictOllamaHTTPHandler(urllib.request.HTTPHandler):
+    def http_open(self, req):
+        return self.do_open(_StrictOllamaHTTPConnection, req)
 
 
 class _NoOllamaRedirects(urllib.request.HTTPRedirectHandler):
@@ -450,6 +477,7 @@ def _open_local_ollama(request: urllib.request.Request, *, timeout: int):
     """Use a request-local transport without proxy discovery or redirects."""
     opener = urllib.request.build_opener(
         urllib.request.ProxyHandler({}), _NoOllamaRedirects(),
+        _StrictOllamaHTTPHandler(),
     )
     return opener.open(request, timeout=timeout)
 
