@@ -27,7 +27,7 @@ class LocalOllamaPlannerTests(unittest.TestCase):
         stream = io.BytesIO(b"HTTP/1.1 200 OK\r\n" + header + b"\r\n" + body)
         source = MagicMock(spec=socket.socket)
         source.makefile.return_value = stream
-        response = http.client.HTTPResponse(source)
+        response = ario_planner._StrictOllamaHTTPResponse(source)
         response.begin()
         self.addCleanup(response.close)
         return response
@@ -37,7 +37,7 @@ class LocalOllamaPlannerTests(unittest.TestCase):
                                 for name, value in headers)
         source = MagicMock(spec=socket.socket)
         source.makefile.return_value = io.BytesIO(b"HTTP/1.1 200 OK\r\n" + header_lines + b"\r\n" + body)
-        response = http.client.HTTPResponse(source)
+        response = ario_planner._StrictOllamaHTTPResponse(source)
         response.begin()
         self.addCleanup(response.close)
         if wrap:
@@ -102,6 +102,82 @@ class LocalOllamaPlannerTests(unittest.TestCase):
                     with self.subTest(wrap=wrap, headers=headers):
                         open_response.return_value = self.response_with_wire_headers(wire_body, headers, wrap)
                         self.assertTrue(request_plan("Review the planner", directory)["stages"])
+
+    @patch("ario_planner.run_workflow")
+    @patch("ario_planner._open_local_ollama")
+    def test_invalid_chunk_data_terminator_never_decodes_or_executes(self, open_response, run_workflow):
+        body = json.dumps({"message": {"content": json.dumps(self.valid_recommendation())}}).encode()
+        midpoint = len(body) // 2
+        part1, part2 = body[:midpoint], body[midpoint:]
+        malformed = {
+            "XX": f"{len(body):X}\r\n".encode() + body + b"XX0\r\n\r\n",
+            "LF_only": f"{len(body):X}\r\n".encode() + body + b"\n\n0\r\n\r\n",
+            "CR_wrong": f"{len(body):X}\r\n".encode() + body + b"\rX0\r\n\r\n",
+            "no_delimiter": f"{len(body):X}\r\n".encode() + body + b"0\r\n\r\n",
+            "second_chunk": (f"{len(part1):X}\r\n".encode() + part1 + b"\r\n"
+                             + f"{len(part2):X}\r\n".encode() + part2 + b"XX0\r\n\r\n"),
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            self._populate_planner_context(directory)
+            ledger = Path(directory) / "ledger.jsonl"
+            for wrap in (False, True):
+                for label, wire in malformed.items():
+                    with self.subTest(wrap=wrap, malformed=label):
+                        open_response.return_value = self.response_with_wire_headers(
+                            wire, [("Transfer-Encoding", "chunked")], wrap
+                        )
+                        with patch.object(ario_planner, "loads_bounded", wraps=ario_planner.loads_bounded) as decode:
+                            with redirect_stderr(io.StringIO()) as stderr:
+                                rc = ario_planner.main([
+                                    "--workspace", directory, "--goal", "Review the planner",
+                                    "--ledger", str(ledger), "--execute",
+                                ])
+                        self.assertEqual(rc, 2)
+                        self.assertEqual(json.loads(stderr.getvalue())["status"], "UNKNOWN")
+                        decode.assert_not_called()
+                        self.assertFalse(ledger.exists())
+            self.assertEqual(open_response.call_count, 2 * len(malformed))
+            run_workflow.assert_not_called()
+
+    @patch("ario_planner._open_local_ollama")
+    def test_valid_two_chunk_message_retains_normal_planning(self, open_response):
+        body = json.dumps({"message": {"content": json.dumps(self.valid_recommendation())}}).encode()
+        a, b = body[:len(body) // 2], body[len(body) // 2:]
+        wire = f"{len(a):X}\r\n".encode() + a + b"\r\n" + f"{len(b):X}\r\n".encode() + b + b"\r\n0\r\n\r\n"
+        with tempfile.TemporaryDirectory() as directory:
+            self._populate_planner_context(directory)
+            for wrap in (False, True):
+                with self.subTest(wrap=wrap):
+                    open_response.return_value = self.response_with_wire_headers(
+                        wire, [("Transfer-Encoding", "chunked")], wrap
+                    )
+                    self.assertTrue(request_plan("Review the planner", directory)["stages"])
+
+    def test_local_http_opener_uses_strict_response_class(self):
+        request = ario_planner.urllib.request.Request("http://127.0.0.1:11434/api/chat", data=b"{}")
+        with patch.object(ario_planner.urllib.request, "build_opener") as build:
+            ario_planner._open_local_ollama(request, timeout=3)
+            handlers = build.call_args.args
+            strict = [handler for handler in handlers if isinstance(handler, ario_planner._StrictOllamaHTTPHandler)]
+            self.assertEqual(len(strict), 1)
+            self.assertIs(ario_planner._StrictOllamaHTTPConnection.response_class,
+                          ario_planner._StrictOllamaHTTPResponse)
+            with patch.object(strict[0], "do_open") as do_open:
+                strict[0].http_open(request)
+            self.assertIs(do_open.call_args.args[0], ario_planner._StrictOllamaHTTPConnection)
+
+    @patch("ario_planner._open_local_ollama")
+    def test_long_zero_padded_content_length_stays_valid(self, open_response):
+        body = json.dumps({"message": {"content": json.dumps(self.valid_recommendation())}}).encode()
+        wire_length = "0" * 32 + str(len(body))
+        with tempfile.TemporaryDirectory() as directory:
+            self._populate_planner_context(directory)
+            for wrap in (False, True):
+                with self.subTest(wrap=wrap):
+                    open_response.return_value = self.response_with_wire_headers(
+                        body, [("Content-Length", wire_length)], wrap
+                    )
+                    self.assertTrue(request_plan("Review the planner", directory)["stages"])
 
     @patch("ario_planner.run_workflow")
     @patch("ario_planner._open_local_ollama")
