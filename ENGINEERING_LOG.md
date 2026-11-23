@@ -737,3 +737,15 @@ RESEARCH_ONLY / DRAFT / HOLD / NO_AUTOMATIC_MERGE / NO_TRUST_ACTIVATION / NO_PRO
 - This revises the previous candidate, not a CI finding; **new exact-head Linux, Windows and Python 3.14 CI and independent re-review still required**. Private CPython HTTPResponse subclassing is a maintenance dependency, and an isolated test is not a general security proof. No merge / no automatic approval.
 
 RESEARCH_ONLY / DRAFT / HOLD / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTION.
+
+
+## 2026-11-23 — Codex R4 independent review: valid Transfer-Encoding trailing OWS
+
+- At PR #341 head `cad58c40ebebcb2b7e59cc473be568631fbd10ea`, Codex found a low-severity interoperability issue: Python's standard `http.client.HTTPResponse.begin()` can leave a valid, unambiguous `Transfer-Encoding: chunked ` or `ChUnKeD\t` response marked as non-chunked. Our later validator already trims OWS but rejected the response because the underlying decoder chose the wrong read mode. This is a false rejection, not a demonstrated authorization bypass.
+- Codex supplied a two-file narrow patch `pr341-r4-ows.patch`, SHA-256 `448f8166bf96b0e5e4b1fc15eeb8f28afbb1ba7773d9a1ee07e2c949d2ef3d98`; its exact preimage Git blobs are `1aebd77011ec1b3df60f906bd0eb62cea3b442bc` / `468ec2f1d9c79fddb4d4ee8af9a39b6ccbd35617`.
+- Minimal fix overrides `_StrictOllamaHTTPResponse.begin` to recognize one unambiguous chunked field after normal HTTP parsing, only when not already chunked, no declared body length, and no Content-Length field. It initializes chunk state and recomputes connection-close behavior. Existing duplicate/framing rejection and strict chunk-size, CRLF, and trailer checks remain intact.
+- Regression adds valid trailing-space and trailing-tab Transfer-Encoding variants to normal two-chunk tests; direct response and actual local urllib opener were independently exercised by Codex on Windows CPython 3.12.14, 3.13.16, and 3.14.10. Codex reports all 4 previous failure variants passing, 34/34 independent boundary/socket checks and 39/39 repository tests per interpreter after patch. Those were local candidate runs, not GitHub CI for this new branch head.
+- Independent additional CPython 3.13.5 in-memory `HTTPResponse` experiment reproduced stock-reader misdecoding and corrected decoding with the patched `begin()` logic. No full local repository test, no live Ollama, no real key, and no production certification was established here.
+- Previous exact-head GitHub CI at `cad58c40ebebcb2b7e59cc473be568631fbd10ea` was 13/13 successful jobs, but only a fresh new-head CI can validate this candidate. Keep PR #341 Draft/HOLD and #340 unchanged pending review and explicit owner disposition. Historical evidence and original RED behavior remain in Git history.
+
+RESEARCH_ONLY / DRAFT / HOLD / NO_AUTOMATIC_MERGE / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTION.
