@@ -459,6 +459,19 @@ _MAX_OLLAMA_CHUNK_LINE = 4096
 class _StrictOllamaHTTPResponse(http.client.HTTPResponse):
     """Fail closed on malformed chunk framing before returning decoded body bytes."""
 
+    def begin(self):
+        super().begin()
+        if self.chunked or self.length is not None or "Content-Length" in self.headers:
+            return
+        # http.client can leave trailing field whitespace in a transfer coding.
+        # Recognize one unambiguous chunked field before getresponse() decides
+        # whether the connection can be reused.
+        values = self.headers.get_all("Transfer-Encoding", [])
+        if len(values) == 1 and values[0].strip(" \t").lower() == "chunked":
+            self.chunked = True
+            self.chunk_left = None
+            self.will_close = self._check_close()
+
     def _invalid_chunk(self, reason: str) -> None:
         self._close_conn()
         raise http.client.HTTPException("invalid Ollama HTTP chunked response: " + reason)
