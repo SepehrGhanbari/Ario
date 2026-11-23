@@ -5,6 +5,7 @@ on:
       - 'implementation/research/a15_s9_principal_probe_v0_4.*'
       - 'implementation/research/A15_S9_PRINCIPAL_ISOLATION_V04*'
       - 'implementation/tests/test_a15_s9_v0_4.js'
+      - 'implementation/tests/test_a15_custody_gap_v0_4.js'
       - '.github/workflows/a15-s9-principal-isolation-v04.yml'
       - 'implementation/research/a15_*v0_3.js'
       - 'implementation/tests/test_a15_lab_v0_3.js'
@@ -34,6 +35,8 @@ jobs:
         run: node --test implementation/tests/test_a15_lab_v0_3.js
       - name: S9 same-UID forged-receipt RED reproduction
         run: node --test implementation/tests/test_a15_s9_v0_4.js
+      - name: Synthetic custody and origin RED reproductions (not a security pass)
+        run: node --test implementation/tests/test_a15_custody_gap_v0_4.js
       - name: Linux OS-principal ACL and process boundary probe
         if: runner.os == 'Linux'
         shell: bash
