@@ -35,3 +35,10 @@ The divergent #334 head is `91e2bb45f9cc19d57465bab3414ed210286688c4`. To build 
 5. Obtain independent threat-model/security review and a separately observed operational trace before any production consideration.
 
 **No results in this file claim S9 solved, independent custody achieved, user intent proven, trusted evidence admitted, or trust/signer/production activated.**
+
+## v0.5.1 journal-safety addendum (CUST-08 G-RED1/G-RED2 patch, Draft PR #346, HEAD a5f5e8652542beb54caa9a97ff0ea6da5168af5c)
+
+- G-RED1: an existing custodian.sqlite3 that is smaller than a SQLite container header (100 bytes, magic bytes "SQLite format 3" + NUL), is not a SQLite database, or lacks the events schema now fails closed on reopen; it is never silently re-initialized into a fresh GENESIS ledger. A missing file remains the explicit-first-boot case. Local hashes still cannot prove authentic history: valid-prefix rollback of a well-formed ledger stays undetectable here and requires the external retained (seq, hash) checkpoint (residual RED, honestly preserved).
+- G-RED2: replay receipts now return event_hash (hash of the replayed historical event; head_hash keeps this original-receipt meaning for idempotent retries) together with point-in-time chain_head_seq / chain_head_hash read inside the same serialized transaction; the chain tip may advance after the read (no lease). Fresh-commit responses include the same chain-head fields. The chained-hash core and verify() are unchanged.
+- Added additive regression tests: test_gred1_zero_and_one_byte_ledger_fail_closed_no_rebirth, test_gred1_first_boot_provisioning_stays_allowed, test_gred2_replay_separates_event_from_chain_head. All 12 existing core tests, preserved REDs and the Linux two-UID lab are untouched; execution_authorized stays false and origin_attested stays false everywhere.
+- Cross-enrollment dedup namespace (Vibe F1) and group-writable socket-parent mode guard (Vibe F2) are deliberately NOT patched in this bounded step (handoff ordering: secondary, after the two REDs).
