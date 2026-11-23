@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import argparse
 import http.client
+import email.message
 import json
 import os
+import re
 import socket
 import sys
 import urllib.error
@@ -409,6 +411,34 @@ def _build_deterministic_workflow(goal: str, recommendation: dict, root: Path) -
     return workflow
 
 
+def _validate_ollama_response_framing(response) -> int | None:
+    """Validate declared body framing before parsing, in addition to bounded read."""
+    headers = getattr(response, "headers", None)
+    # Production urllib responses expose email.message.Message. Synthetic
+    # legacy response doubles without real HTTP headers retain their old path.
+    if not isinstance(headers, email.message.Message):
+        return None
+    lengths = headers.get_all("Content-Length", [])
+    transfers = headers.get_all("Transfer-Encoding", [])
+    if transfers:
+        if lengths or len(transfers) != 1 or transfers[0].strip(" \t").lower() != "chunked":
+            raise AgentRequestError("Ollama response has ambiguous HTTP transfer framing")
+        if getattr(response, "chunked", True) is False:
+            raise AgentRequestError("Ollama response has unsupported HTTP chunk framing")
+        return None
+    if len(lengths) > 1:
+        raise AgentRequestError("Ollama response has duplicate Content-Length headers")
+    if not lengths:
+        return None
+    raw = lengths[0].strip(" \t")
+    if not re.fullmatch(r"[0-9]{1,20}", raw, flags=re.ASCII):
+        raise AgentRequestError("Ollama response has invalid Content-Length")
+    length = int(raw)
+    if length > MAX_RESPONSE_BYTES:
+        raise AgentRequestError("Ollama response declared an oversized body")
+    return length
+
+
 class _NoOllamaRedirects(urllib.request.HTTPRedirectHandler):
     """Keep local planning traffic at the validated endpoint, including retries."""
 
@@ -472,12 +502,15 @@ def request_plan(
         )
         try:
             with _open_local_ollama(request, timeout=timeout) as response:
+                expected_length = _validate_ollama_response_framing(response)
                 raw = response.read(MAX_RESPONSE_BYTES + 1)
                 remaining = getattr(response, "length", None)
         except (http.client.HTTPException, OSError) as exc:
             raise AgentRequestError(f"could not obtain a response from local Ollama: {exc}") from exc
         if len(raw) > MAX_RESPONSE_BYTES:
             raise AgentRequestError("Ollama response exceeded the 1 MB safety limit")
+        if expected_length is not None and len(raw) != expected_length:
+            raise AgentRequestError("Ollama response length differs from Content-Length")
         # HTTPResponse.read(n) can return at EOF with declared body bytes outstanding.
         if isinstance(remaining, int) and remaining > 0:
             raise AgentRequestError("Ollama response ended before its declared Content-Length")
