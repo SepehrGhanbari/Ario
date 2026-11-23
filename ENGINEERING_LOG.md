@@ -687,6 +687,70 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - No unrelated code, parser, real event ledger, memory, signature pin, governance or production changes. Follow-up must check exact final-head CI and TXT security workflows before research-only merge.
 
 
+## 2026-11-23 — PR #298 post-merge residual structured-error corrections (research only)
+
+- Independent Codex report and patch reviewed against the real `main` commit `15ebc65ca97f26396c152811a94646f86cbbfffe`; original #298 already merged on 2026-11-21 (final historical head `850e17d0`). Do not reinterpret the historical `92e30739` verdict as the verdict for the merged tree.
+- Three narrow residuals: truncated Ollama HTTP response may raise `http.client.HTTPException` outside the structured planner input outcome; non-string planner recommendation paths may throw at a set lookup; non-string task terminal status may throw during history inspection.
+- Two production-source files plus one focused test file changed; new negative tests preserve `UNKNOWN / exit 2`, bounded correction, no ledger creation on planner failures, and unchanged ledger bytes on read-only task inspection.
+- Source patch SHA-256: `0ca52f97c71141893b685fe4fc6d3b2ceebe6a90f9f84627a6d1aa7759bc68cc`. Codex reports 3/3 targeted tests on Windows Python 3.12.14 and 3.13.16, and 4 relevant existing positives on 3.13.16. Those results belong to the locally patched base, not to newly created GitHub PR CI.
+- `#336` addresses non-finite JSON in the isolated V15.3 historical reader; it does not replace these changes nor establish a general `bounded_json.py` finite-only policy.
+- Status: `RESEARCH_ONLY / DRAFT / HOLD / NO_AUTOMATIC_MERGE / NO_TRUST_ACTIVATION / NO_PRODUCTION`; fresh exact-head Linux and Windows CI, independent review and explicit owner merge decision remain separate gates.
+
+
+## 2026-11-23 — PR #340 HTTP Content-Length follow-up (research-only stacked draft)
+
+- Found during independent Codex review of #340 at head `15e189104dc61e1e1fe862e2a692cbaf5782fb74`. HTTPResponse.read(MAX_RESPONSE_BYTES + 1) can return at EOF with bytes still outstanding against a declared Content-Length, without raising IncompleteRead when a size argument is used. A syntactically valid truncated body could otherwise proceed to JSON decoding.
+- Minimal synthetic-only candidate captures `response.length` immediately after bounded read, rejects positive outstanding bytes before `loads_bounded`, and retains valid full-length and unknown-length handling. No live Ollama, private data, signer, trust, or production test.
+- Owner-uploaded Codex candidate files (CRLF) SHA-256: `ario_planner.py` `23de2063ee6c6cd1d2c3a980df823f3406625386b9b81aa1ab7d06c7bd401b61`; `test_planner_runtime.py` `e4b4fec91f23f036e3a1eae0f411f792bfffcafc5819aabf33e6e8995b3b0b7e`. Git branch uses LF line endings consistent with existing files, with post-change Git blob SHAs `fc0468215da305bd2bcb7a34d2985ad735f0249d` and `2a697cb9aa7b55b10fd62e855605d1b11ae73917`. Bytes differ by line-ending normalization only.
+- Independent isolated Python 3.13.5 check reproduced incomplete known-length response (2 bytes read of 3 declared; remaining=1), complete known-length (remaining=0), and unknown-length (remaining=None). Uploaded targeted tests passed 2/2 using explicit minimal stubs; **not full Ario integration CI**. Codex separately reported focused Python 3.12 and 3.13 success on its local candidate, not verified here.
+- Separate stacked PR against #340's source branch for review. Parent #340 remains unmodified and unmerged. New exact-head Linux/Windows CI and independent review remain required. No broad HTTP/parser policy, ruleset, historical data, keys, trust activation, signer, or automatic merge.
+
+Status: RESEARCH_ONLY / DRAFT / HOLD / NO_MERGE / NO_TRUST_ACTIVATION / NO_PRODUCTION.
+
+ 
+## 2026-11-23 — Grok adversarial review of #340/#341: strict HTTP framing follow-up
+
+- Independent review pinned #340 head `15e189104dc61e1e1fe862e2a692cbaf5782fb74` (PASS narrowly) and #341 original head `d22d73575e5874e84d10026280d230880b7a8033` (REVISE). Its local synthetic tests showed that conflicting/duplicate Content-Length, invalid Content-Length such as negative or comma-combined values, and ambiguous Transfer-Encoding framing could bypass the original #341 guard. Two earlier exact-head PR-triggered CI workflows were green but did not cover those negative cases.
+- This append-only correction applies **only** to the #341 source branch and its planner test file. With actual `email.message.Message` headers from HTTPResponse / urllib, reject duplicate Content-Length even if identical; reject invalid or overlong numeric values, non-chunked/duplicate Transfer-Encoding, and simultaneous Content-Length plus Transfer-Encoding; compare the full decoded body byte count with a single accepted Content-Length. Keep existing 1 MB cap and outstanding-read check. Missing length and valid single chunked transfer remain supported. Existing synthetic MagicMock doubles without real HTTP header metadata retain their prior compatibility behavior.
+- New regression tests use real stdlib `http.client.HTTPResponse` via an in-memory fake socket, with and without the `urllib.response.addinfourl` wrapper; 14 malformed/short cases in two wrappers must yield UNKNOWN/exit 2 before JSON decode or workflow execution, without ledger creation. Four positive framing forms in two wrappers must still produce valid plans.
+- Independent isolated Python 3.13.5 stubbed-dependency tests: **RED** on prior #341 candidate (malformed framing accepted or unreliably handled); **GREEN** on revised candidate (new tests + existing fixed-length/valid-plan controls, 5/5 test methods passing). This is **not** a full-repository test, Windows confirmation, live Ollama run, or production security proof. Fresh GitHub exact-head CI and independent review remain required.
+- No historical, private, memory, signer, trust, Genesis, ruleset or production changes. `#340` remains unchanged and draft. `#341` remains HOLD with no automatic merge, no signer, no real keys, no trust activation or production.
+
+RESEARCH_ONLY / DRAFT / HOLD / NO_AUTOMATIC_MERGE / NO_TRUST_ACTIVATION / NO_PRODUCTION.
+
+ 
+## 2026-11-23 — Grok V0 follow-up: strict HTTP chunk-data delimiter (PR #341)
+
+- Grok's independent revised-head review of `bb50177fadd7e5fae3dd89584921e6198c03f54f` reported **REVISE**. Old duplicate/ambiguous Content-Length bypasses were closed, but CPython 3.13.17 HTTPResponse.read() silently discarded arbitrary two bytes after each chunk. Replacing required CRLF with `XX` in a synthetic chunked body led to `COMPLETED/exit 0` and a synthetic 7-event ledger under `--execute`. No live Ollama or real authority was tested.
+- Reproduced the underlying issue independently on local CPython 3.13.5. A response with chunk-data terminator `XX` was accepted by the stock HTTPResponse and rejected by a strict subclass, while a valid CRLF-terminated response remained accepted. A synthetic 127.0.0.1 HTTP test additionally confirmed the replacement HTTPHandler selects the strict HTTPConnection.response_class in normal urllib transport and fails on the malformed response.
+- Limited correction: a dedicated response subclass checks exactly `b"\\r\\n"` at the private CPython chunk-boundary method, before returning decoded body bytes. A fixed loopback-only urllib opener installs the strict connection for real HTTP responses; existing no-proxy/no-redirect rules are retained. Existing HTTPException catches continue yielding structured UNKNOWN rather than execution.
+- Additional compatibility correction: accept decimal Content-Length with any count of leading zeroes within HTTP parser bounds. Compare significant decimal digits to the 1 MB limit *before* numeric conversion, avoiding the historical `{1,20}` false rejection and Python large-int conversion; malformed or oversized lengths still reject.
+- New regressions: malformed per-chunk delimiters with direct HTTPResponse-subclass and urllib addinfourl wrapper, including two-chunk variants; valid two-chunk behavior; explicit transport class installation; and 32+ leading zeroes. They assert rejection before JSON and no ledger/workflow execution for malformed cases. Existing #341 tests still cover duplicated/invalid Content-Length and Transfer-Encoding policy.
+- Independent reproduction on 3.13.5 covers HTTPResponse subclass and a local mock server only, not real Ollama, nor an exact-head GitHub CI run. Fresh CI, checks for private HTTP parsing changes on other Python versions, and independent re-review are still required. This is RESEARCH_ONLY / DRAFT / HOLD / NO_AUTOMATIC_MERGE / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTION.
+
+ 
+## 2026-11-23 — Independent review of #341: additional RFC 9112 chunk framing bypasses
+
+- Independent read-only review of head `7dbbd678684fc7c182183ec4ad5739c259da732d` on local CPython 3.13.5 established: the existing `_get_chunk_left` fix correctly rejects malformed chunk-data CRLF, but CPython default `_read_next_chunk_size` accepts LF-only size lines, whitespace/signed hex values, LF-only final-chunk syntax, absent final CRLF, and malformed trailer termination. Both direct HTTPResponse and urllib addinfourl wrappers reproduced acceptance. RFC 9112 requires proper CRLF chunk framing; existing #341 CI did not exercise those cases.
+- Minimal source-side repair in this same draft PR: retain the strict chunk-data delimiter, and additionally override chunk-size-line and trailer parsing to reject malformed/ambiguous line endings and syntax, enforce a 4096-byte size-line budget, 5000 chunk limit, <=1 MB decoded body budget, and 32-field/64KiB trailer bounds. Valid HTTP token/quoted-string chunk extensions and properly formed benign trailers are supported; framing fields in trailers are rejected. No real network integration, trust/signing code, private memory, or historical file changed.
+- Independent isolated Python 3.13.5 candidate harness checked 16 wire patterns (10 malformed / 6 valid) in direct and wrapped HTTPResponse forms, 32/32 expected classifications. Original source gap reproduction and proposed correction were tested without live Ollama or real keys. Added repository regression methods validate UNKNOWN/exit 2, decode not called, and no workflow/ledger on bad framing, with valid extension, valid trailer and multi-chunk positives and over-chunk limit negative.
+- This revises the previous candidate, not a CI finding; **new exact-head Linux, Windows and Python 3.14 CI and independent re-review still required**. Private CPython HTTPResponse subclassing is a maintenance dependency, and an isolated test is not a general security proof. No merge / no automatic approval.
+
+RESEARCH_ONLY / DRAFT / HOLD / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTION.
+
+
+## 2026-11-23 — Codex R4 independent review: valid Transfer-Encoding trailing OWS
+
+- At PR #341 head `cad58c40ebebcb2b7e59cc473be568631fbd10ea`, Codex found a low-severity interoperability issue: Python's standard `http.client.HTTPResponse.begin()` can leave a valid, unambiguous `Transfer-Encoding: chunked ` or `ChUnKeD\t` response marked as non-chunked. Our later validator already trims OWS but rejected the response because the underlying decoder chose the wrong read mode. This is a false rejection, not a demonstrated authorization bypass.
+- Codex supplied a two-file narrow patch `pr341-r4-ows.patch`, SHA-256 `448f8166bf96b0e5e4b1fc15eeb8f28afbb1ba7773d9a1ee07e2c949d2ef3d98`; its exact preimage Git blobs are `1aebd77011ec1b3df60f906bd0eb62cea3b442bc` / `468ec2f1d9c79fddb4d4ee8af9a39b6ccbd35617`.
+- Minimal fix overrides `_StrictOllamaHTTPResponse.begin` to recognize one unambiguous chunked field after normal HTTP parsing, only when not already chunked, no declared body length, and no Content-Length field. It initializes chunk state and recomputes connection-close behavior. Existing duplicate/framing rejection and strict chunk-size, CRLF, and trailer checks remain intact.
+- Regression adds valid trailing-space and trailing-tab Transfer-Encoding variants to normal two-chunk tests; direct response and actual local urllib opener were independently exercised by Codex on Windows CPython 3.12.14, 3.13.16, and 3.14.10. Codex reports all 4 previous failure variants passing, 34/34 independent boundary/socket checks and 39/39 repository tests per interpreter after patch. Those were local candidate runs, not GitHub CI for this new branch head.
+- Independent additional CPython 3.13.5 in-memory `HTTPResponse` experiment reproduced stock-reader misdecoding and corrected decoding with the patched `begin()` logic. No full local repository test, no live Ollama, no real key, and no production certification was established here.
+- Previous exact-head GitHub CI at `cad58c40ebebcb2b7e59cc473be568631fbd10ea` was 13/13 successful jobs, but only a fresh new-head CI can validate this candidate. Keep PR #341 Draft/HOLD and #340 unchanged pending review and explicit owner disposition. Historical evidence and original RED behavior remain in Git history.
+
+RESEARCH_ONLY / DRAFT / HOLD / NO_AUTOMATIC_MERGE / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTION.
+
+
 ## 2026-11-22 — V15.3 historical reader rejects overflowing JSON float exponents
 
 - Finding: Python's default JSON float parser converts syntactically valid exponent values such as `1e999` and `-1e999` to non-finite `inf` / `-inf`. The existing `parse_constant` guard rejected literal `NaN` / `Infinity` tokens but did not cover this numeric-overflow path.
