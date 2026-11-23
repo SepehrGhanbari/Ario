@@ -777,3 +777,56 @@ def test_pr_revision_after_final_identity_sample_is_explicitly_non_atomic_residu
     assert result["status"] == "UNKNOWN"
     assert result["merge_authorized"] is False
     assert result["execution_attestation"] == "NOT_ESTABLISHED"
+
+
+
+def _next_link_transport(link):
+    raw = b'{"total_count":0,"check_runs":[]}'
+    headers = Message()
+    headers.add_header("Content-Length", str(len(raw)))
+    if link is not None:
+        headers.add_header("Link", link)
+
+    class Response:
+        status = 200
+
+        def __init__(self):
+            self.headers = headers
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return None
+
+        def read(self, maximum):
+            return raw
+
+    reader = mod.GitHubReadOnly()
+    reader.opener = Mock()
+    reader.opener.open.return_value = Response()
+    return reader
+
+
+@pytest.mark.parametrize("link", [
+    '<https://api.github.com/x?page=2>; rel="next"',
+    '<https://api.github.com/x?page=2>; rel=next',
+    '<https://api.github.com/x?page=2>; REL="NEXT"',
+    '<https://api.github.com/x?page=1>; rel="first", <https://api.github.com/x?page=2>; rel="next"',
+])
+def test_r22_2_next_page_link_must_fail_closed(link):
+    reader = _next_link_transport(link)
+    with pytest.raises(mod.ReadUnknown, match="PAGINATION_NEXT_LINK_PRESENT"):
+        reader.get_json(mod.API + "/commits/" + HEAD + "/check-runs?per_page=100")
+
+
+@pytest.mark.parametrize("link", [
+    None,
+    '<https://api.github.com/x>; rel="first"',
+    '<https://api.github.com/x>; rel="nextpage"',
+])
+def test_r22_2_non_next_link_remains_accepted(link):
+    reader = _next_link_transport(link)
+    assert reader.get_json(
+        mod.API + "/commits/" + HEAD + "/check-runs?per_page=100"
+    )["total_count"] == 0
