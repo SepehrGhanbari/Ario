@@ -11,9 +11,18 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from bounded_json import loads_bounded
+from bounded_json import load_json_file_bounded
+from ledger_streaming import LedgerLineLimitExceeded, iter_bounded_ledger_lines
+
 
 MAX_STEPS = 8
 MAX_READ_BYTES = 20_000
+# Lock PID is an OS process identifier, not an unbounded JSON integer.
+# Bound to the portable 32-bit unsigned PID representation on Windows/Linux.
+MAX_LOCK_PID = (1 << 32) - 1
+# Research-only history budget; legitimate bounded agent tasks emit <= 26 lifecycle events.
+MAX_TASK_HISTORY_EVENTS = 128
 ALLOWED_TOOLS = {"inspect_directory", "read_text", "file_fingerprint", "inspect_backup", "recovery_preflight", "git_status", "compile_python", "run_tests", "replace_text", "restore_backup", "verify_text"}
 
 
@@ -28,6 +37,20 @@ RUN_TEST_MODULES = {
 
 class AgentRequestError(ValueError):
     pass
+
+
+def _integers_fit_json_output(value: Any) -> bool:
+    """Check decimal output without building a second serialized report."""
+    if isinstance(value, dict):
+        return all(_integers_fit_json_output(item) for item in value.values())
+    if isinstance(value, list):
+        return all(_integers_fit_json_output(item) for item in value)
+    if isinstance(value, int):
+        try:
+            int.__repr__(value)  # The standard JSON encoder uses the base int representation.
+        except ValueError:
+            return False
+    return True
 
 
 def _test_target(action: dict) -> str:
@@ -134,6 +157,8 @@ def parse_task(payload: Any) -> dict:
             start_line = action["start_line"]
             if isinstance(start_line, bool) or not isinstance(start_line, int) or start_line < 1:
                 raise AgentRequestError(f"actions[{index}].start_line must be a positive integer")
+            if not _integers_fit_json_output(start_line):
+                raise AgentRequestError(f"actions[{index}].start_line exceeds the integer output limit")
         if "expected_next_start_line" in action or "expected_truncated" in action:
             if tool != "read_text":
                 raise AgentRequestError(f"actions[{index}] chunk expectations are valid only for read_text")
@@ -144,6 +169,8 @@ def parse_task(payload: Any) -> dict:
             expected_next = action["expected_next_start_line"]
             if isinstance(expected_next, bool) or not isinstance(expected_next, int) or expected_next < 1:
                 raise AgentRequestError(f"actions[{index}].expected_next_start_line must be a positive integer")
+            if not _integers_fit_json_output(expected_next):
+                raise AgentRequestError(f"actions[{index}].expected_next_start_line exceeds the integer output limit")
             if not isinstance(action["expected_truncated"], bool):
                 raise AgentRequestError(f"actions[{index}].expected_truncated must be a boolean")
         seen.add(step_id)
@@ -587,30 +614,33 @@ def _append_event(ledger: Path, event: dict) -> None:
 
 
 def _ensure_task_id_unused(ledger: Path, task_id: str) -> None:
-    """Refuse duplicate task IDs before any task action or ledger append."""
+    """Refuse duplicate task IDs before any action, without loading the entire ledger."""
     if not ledger.exists():
         return
     try:
-        lines = ledger.read_text(encoding="utf-8-sig").splitlines()
+        for line_number, line in iter_bounded_ledger_lines(ledger):
+            if not line.strip():
+                continue
+            try:
+                event = loads_bounded(line)
+            except json.JSONDecodeError as exc:
+                raise AgentRequestError(
+                    f"existing ledger is malformed at line {line_number}; refusing to start a task"
+                ) from exc
+            if not isinstance(event, dict):
+                raise AgentRequestError(
+                    f"existing ledger has an invalid event at line {line_number}; refusing to start a task"
+                )
+            if event.get("task_id") == task_id:
+                raise AgentRequestError(
+                    f"task_id {task_id!r} already exists in the ledger; refusing duplicate execution"
+                )
     except OSError as exc:
         raise AgentRequestError(f"cannot inspect existing ledger before execution: {exc}") from exc
-    for line_number, line in enumerate(lines, start=1):
-        if not line.strip():
-            continue
-        try:
-            event = json.loads(line)
-        except json.JSONDecodeError as exc:
-            raise AgentRequestError(
-                f"existing ledger is malformed at line {line_number}; refusing to start a task"
-            ) from exc
-        if not isinstance(event, dict):
-            raise AgentRequestError(
-                f"existing ledger has an invalid event at line {line_number}; refusing to start a task"
-            )
-        if event.get("task_id") == task_id:
-            raise AgentRequestError(
-                f"task_id {task_id!r} already exists in the ledger; refusing duplicate execution"
-            )
+    except UnicodeError as exc:
+        raise AgentRequestError("existing ledger has invalid UTF-8; refusing to start a task") from exc
+    except LedgerLineLimitExceeded as exc:
+        raise AgentRequestError(str(exc)) from exc
 
 
 def run_task(payload: Any, workspace: str | Path, ledger_path: str | Path) -> dict:
@@ -809,7 +839,7 @@ def inspect_execution_lock(ledger_path: str | Path) -> dict:
         ),
     }
     try:
-        record = json.loads(raw.decode("utf-8"))
+        record = loads_bounded(raw.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError):
         result["status"] = "UNKNOWN"
         result["error"] = "lock content is not valid UTF-8 JSON"
@@ -819,6 +849,7 @@ def inspect_execution_lock(ledger_path: str | Path) -> dict:
         or not isinstance(record.get("pid"), int)
         or isinstance(record.get("pid"), bool)
         or record["pid"] <= 0
+        or record["pid"] > MAX_LOCK_PID
         or not isinstance(record.get("task_id"), str)
         or not record["task_id"].strip()
         or not isinstance(record.get("started_at"), str)
@@ -839,27 +870,36 @@ def inspect_task_history(task_id: str, ledger_path: str | Path) -> dict:
     if not isinstance(task_id, str) or not task_id.strip():
         raise AgentRequestError("task_id must be a non-empty string")
     ledger = Path(ledger_path)
+    events = []
+    # Retain only fields used by lifecycle validation/output. Large observation
+    # payloads must not accumulate in memory while scanning historical events.
+    relevant_fields = (
+        "event", "status", "step_id", "tool", "timestamp", "goal",
+        "step_ids", "success_criteria_ids", "criterion_id",
+    )
     try:
-        raw_lines = ledger.read_text(encoding="utf-8-sig").splitlines()
-    except OSError as exc:
+        for line_number, line in iter_bounded_ledger_lines(ledger):
+            if not line.strip():
+                continue
+            try:
+                event = loads_bounded(line)
+            except json.JSONDecodeError:
+                return {"task_id": task_id, "status": "UNKNOWN",
+                        "error": f"malformed JSONL ledger at line {line_number}",
+                        "automatic_resume": False, "write_performed": False}
+            if not isinstance(event, dict) or not isinstance(event.get("event"), str):
+                return {"task_id": task_id, "status": "UNKNOWN",
+                        "error": f"invalid event shape at line {line_number}",
+                        "automatic_resume": False, "write_performed": False}
+            if event.get("task_id") == task_id:
+                if len(events) >= MAX_TASK_HISTORY_EVENTS:
+                    return {"task_id": task_id, "status": "UNKNOWN",
+                            "error": "task history event-count limit exceeded",
+                            "automatic_resume": False, "write_performed": False}
+                events.append({key: event[key] for key in relevant_fields if key in event})
+    except (OSError, UnicodeError, LedgerLineLimitExceeded) as exc:
         return {"task_id": task_id, "status": "UNKNOWN", "error": str(exc),
                 "automatic_resume": False, "write_performed": False}
-    events = []
-    for line_number, line in enumerate(raw_lines, start=1):
-        if not line.strip():
-            continue
-        try:
-            event = json.loads(line)
-        except json.JSONDecodeError:
-            return {"task_id": task_id, "status": "UNKNOWN",
-                    "error": f"malformed JSONL ledger at line {line_number}",
-                    "automatic_resume": False, "write_performed": False}
-        if not isinstance(event, dict) or not isinstance(event.get("event"), str):
-            return {"task_id": task_id, "status": "UNKNOWN",
-                    "error": f"invalid event shape at line {line_number}",
-                    "automatic_resume": False, "write_performed": False}
-        if event.get("task_id") == task_id:
-            events.append(event)
     starts = [event for event in events if event["event"] == "TASK_STARTED"]
     finishes = [event for event in events if event["event"] == "TASK_FINISHED"]
     steps = [event for event in events if event["event"] == "STEP_OBSERVED"]
@@ -881,7 +921,7 @@ def inspect_task_history(task_id: str, ledger_path: str | Path) -> dict:
                 "event_count": len(events), "automatic_resume": False, "write_performed": False}
     if finishes:
         final_status = finishes[0].get("status")
-        if final_status not in {"COMPLETED", "STOPPED"}:
+        if final_status not in ("COMPLETED", "STOPPED"):
             return {"task_id": task_id, "status": "UNKNOWN",
                     "error": "unrecognized terminal status in ledger",
                     "event_count": len(events), "automatic_resume": False, "write_performed": False}
@@ -957,7 +997,7 @@ def inspect_task_history(task_id: str, ledger_path: str | Path) -> dict:
     else:
         status = "INCOMPLETE"
         next_state = "UNKNOWN"
-    return {
+    report = {
         "task_id": task_id,
         "status": status,
         "goal": starts[0].get("goal"),
@@ -977,6 +1017,25 @@ def inspect_task_history(task_id: str, ledger_path: str | Path) -> dict:
             "Execution may have stopped between an action and its ledger observation. Inspect actual workspace and backup state before creating a new task; never replay the old task automatically."
         ),
     }
+    if not _integers_fit_json_output(report):
+        return {"task_id": task_id, "status": "UNKNOWN",
+                "error": "task history contains an integer exceeding the output limit",
+                "event_count": len(events), "automatic_resume": False, "write_performed": False}
+    return report
+
+
+def _write_inspection_json(value: dict) -> None:
+    """Write one legacy-compatible JSON line without building a full JSON string.
+
+    The inspection report can retain 128 projected metadata entries.  Creating
+    a second, monolithic JSON string before print() can sharply increase peak
+    process memory.  JSONEncoder.iterencode preserves the exact canonical
+    ensure_ascii=False/sort_keys=True text and streams fragments to stdout.
+    """
+    encoder = json.JSONEncoder(ensure_ascii=False, sort_keys=True)
+    for fragment in encoder.iterencode(value):
+        sys.stdout.write(fragment)
+    sys.stdout.write("\n")
 
 
 def main(argv=None) -> int:
@@ -995,11 +1054,11 @@ def main(argv=None) -> int:
             return 0 if result["status"] in {"NO_LOCK", "LOCK_PRESENT"} else 2
         if args.inspect_task_id is not None:
             result = inspect_task_history(args.inspect_task_id, args.ledger)
-            print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+            _write_inspection_json(result)
             return 0 if result["status"] in {"COMPLETED", "STOPPED"} else 2
         if not args.workspace:
             parser.error("--workspace is required with --task")
-        payload = json.loads(Path(args.task).read_text(encoding="utf-8-sig"))
+        payload = load_json_file_bounded(args.task)
         result = run_task(payload, args.workspace, args.ledger)
         print(json.dumps(result, ensure_ascii=False, sort_keys=True))
         return 0 if result["status"] == "COMPLETED" else 2

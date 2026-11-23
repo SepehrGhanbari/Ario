@@ -1,0 +1,94 @@
+name: Published TXT Restore Security
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  restore-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-2022]
+        python: ["3.11", "3.12"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Run isolated restore security tests
+        working-directory: releases/ai-readable-full-2026-11-11-05ba5c9
+        run: python -m unittest -v test_restore_from_txt.py test_make_export_path_policy.py test_verify_pinned_manifest.py
+
+  manifest-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-2022]
+        python: ["3.11", "3.12"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Run manifest builder unit tests
+        run: python -m unittest discover -s scripts -p test_public_package_manifest_v3.py -v
+      - name: Rebuild V3 from pinned Git blobs
+        run: >-
+          python scripts/build_public_package_manifest_v3.py
+          --repo .
+          --manifest-v2 papers/creation-without-sovereignty/2026-11-11/PUBLIC_PACKAGE_FILE_MANIFEST.json
+          --ref 2e7f83c6c7518012bed7fedfb12103ce9b7222ea
+          --output manifest-v3.generated.json
+      - name: Verify committed V3 against exact Git blob bytes
+        run: python -c "import pathlib,subprocess; a=pathlib.Path('manifest-v3.generated.json').read_bytes(); b=subprocess.check_output(['git','show','HEAD:papers/creation-without-sovereignty/2026-11-11/PUBLIC_PACKAGE_FILE_MANIFEST_V3.json']); assert a==b, 'V3 differs from deterministic Git-blob rebuild'"
+
+  generator-roundtrip:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-2022]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Clone pinned source repository
+        run: git clone --no-local . releases/ai-readable-full-2026-11-11-05ba5c9/source
+      - name: Checkout release source commit
+        run: git -C releases/ai-readable-full-2026-11-11-05ba5c9/source checkout 05ba5c960aaea96fc6bb80504b53b4d47e7d42f5
+      - name: Build ZIP and TXT
+        run: python releases/ai-readable-full-2026-11-11-05ba5c9/make_export.py
+      - name: Restore TXT with hardened consumer
+        run: >-
+          python releases/ai-readable-full-2026-11-11-05ba5c9/RESTORE_FROM_TXT_HARDENED.py
+          releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/ario-full.txt
+          "${{ runner.temp }}/ario-restored"
+      - name: Independently verify TXT against pinned manifest bytes
+        run: >-
+          python releases/ai-readable-full-2026-11-11-05ba5c9/verify_pinned_manifest.py
+          --txt releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/ario-full.txt
+          --manifest releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/ario-manifest.json
+          --expected-manifest-sha256 f86fb10ef3eb71dd6e3c348b3f0c9b42c88b3837ae889918c33d8f5d62fe11d8
+      - name: Compare restored files to pinned Git blobs
+        run: >-
+          python papers/creation-without-sovereignty/2026-11-11/verify_snapshot_roundtrip.py
+          --source releases/ai-readable-full-2026-11-11-05ba5c9/source
+          --restored "${{ runner.temp }}/ario-restored"
+      - name: Upload generated release artifacts
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ario-05ba5c9-restore-review-candidate-unpublished
+          path: |
+            releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/ario-full.zip
+            releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/ario-full.txt
+            releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/ario-manifest.json
+            releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/checksums.json
+            releases/ai-readable-full-2026-11-11-05ba5c9/artifacts/VERIFY_PINNED_MANIFEST.py
