@@ -29,16 +29,17 @@ def _csp_value() -> str:
 
 
 def test_exact_inline_style_and_script_hashes_are_allowlisted() -> None:
+    # CSP hashes must match delivered inline text bytes, including whitespace.
     html = HTML_PATH.read_text(encoding="utf-8")
     csp = _csp_value()
     style_blocks = _inline_blocks("style", html)
     script_blocks = _inline_blocks("script", html)
     assert style_blocks and script_blocks
     for block in style_blocks:
-        digest = base64.b64encode(hashlib.sha256(block.strip().encode("utf-8")).digest()).decode("ascii")
+        digest = base64.b64encode(hashlib.sha256(block.encode("utf-8")).digest()).decode("ascii")
         assert f"sha256-{digest}" in csp, f"style hash is not allowlisted: {digest}"
     for block in script_blocks:
-        digest = base64.b64encode(hashlib.sha256(block.strip().encode("utf-8")).digest()).decode("ascii")
+        digest = base64.b64encode(hashlib.sha256(block.encode("utf-8")).digest()).decode("ascii")
         assert f"sha256-{digest}" in csp, f"script hash is not allowlisted: {digest}"
 
 

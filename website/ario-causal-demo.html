@@ -7,8 +7,7 @@
 <link rel="canonical" href="https://ario-research-independent.vercel.app/ario-causal-demo.html">
 <meta name="description" content="Synthetic Ario teaching prototype for evidence provenance and dependency states. No real file access, tool execution, hashing, memory writes, or causal inference.">
 <title>Ario Evidence Dependency DAG — Synthetic Teaching Demo</title>
-<style>
-:root {
+<style>:root {
   --ink: #22303c;
   --paper: #f6f4ee;
   --card: #ffffff;
@@ -122,8 +121,7 @@ h2 { margin: 0 0 14px; font-size: 1.2rem; color: var(--accent); }
 .expl-card b { display: block; margin-bottom: 6px; color: var(--ink); }
 footer { border-top: 1px solid var(--line); padding: 22px 0; font-size: 0.84rem; color: var(--mut); }
 footer a { color: var(--accent); text-decoration: none; }
-footer a:hover { text-decoration: underline; }
-</style>
+footer a:hover { text-decoration: underline; }</style>
 </head>
 <body>
 <header>
@@ -205,8 +203,7 @@ footer a:hover { text-decoration: underline; }
   </div>
 </footer>
 
-<script>
-var currentLang = 'fa';
+<script>var currentLang = 'fa';
 var currentScenario = 'base';
 var selectedNodeId = 'N2';
 
@@ -484,7 +481,6 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('btn-base').addEventListener('click', function() { selectScenario('base'); });
   document.getElementById('btn-fals').addEventListener('click', function() { selectScenario('fals'); });
   document.getElementById('btn-self').addEventListener('click', function() { selectScenario('self'); });
-});
-</script>
+});</script>
 </body>
 </html>
