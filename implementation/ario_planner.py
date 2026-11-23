@@ -442,17 +442,66 @@ def _validate_ollama_response_framing(response) -> int | None:
     return int(significant)
 
 
+# Restrict chunk extensions to the HTTP token/quoted-string syntax (RFC 9112).
+_HTTP_TOKEN = rb"[!#$%&'*+\-.^_`|~0-9A-Za-z]+"
+_HTTP_QUOTED = rb'"(?:[\t\x20-\x21\x23-\x5b\x5d-\x7e\x80-\xff]|\\[\t\x20-\x7e\x80-\xff])*"'
+_HTTP_CHUNK_LINE = re.compile(
+    rb"([0-9A-Fa-f]+)(?:[ \t]*;[ \t]*" + _HTTP_TOKEN
+    + rb"(?:[ \t]*=[ \t]*(?:" + _HTTP_TOKEN + rb"|" + _HTTP_QUOTED + rb"))?)*\Z"
+)
+_HTTP_TRAILER_LINE = re.compile(_HTTP_TOKEN + rb":[\t\x20-\x7e\x80-\xff]*\Z")
+_MAX_OLLAMA_CHUNKS = 5000
+_MAX_OLLAMA_TRAILER_BYTES = 64 * 1024
+_MAX_OLLAMA_TRAILER_FIELDS = 32
+_MAX_OLLAMA_CHUNK_LINE = 4096
+
+
 class _StrictOllamaHTTPResponse(http.client.HTTPResponse):
-    """Reject invalid chunk-data separators before decoded bytes reach the planner."""
+    """Fail closed on malformed chunk framing before returning decoded body bytes."""
+
+    def _invalid_chunk(self, reason: str) -> None:
+        self._close_conn()
+        raise http.client.HTTPException("invalid Ollama HTTP chunked response: " + reason)
+
+    def _read_next_chunk_size(self):
+        line = self.fp.readline(_MAX_OLLAMA_CHUNK_LINE + 1)
+        if len(line) > _MAX_OLLAMA_CHUNK_LINE or not line.endswith(b"\r\n"):
+            self._invalid_chunk("chunk-size line requires bounded CRLF")
+        match = _HTTP_CHUNK_LINE.fullmatch(line[:-2])
+        if match is None:
+            self._invalid_chunk("malformed chunk-size or extension")
+        count = getattr(self, "_ario_chunks_seen", 0) + 1
+        if count > _MAX_OLLAMA_CHUNKS:
+            self._invalid_chunk("too many chunks")
+        self._ario_chunks_seen = count
+        significant = match.group(1).lstrip(b"0") or b"0"
+        ceiling = format(MAX_RESPONSE_BYTES, "x").encode("ascii")
+        if (len(significant) > len(ceiling)
+                or (len(significant) == len(ceiling) and significant.lower() > ceiling)):
+            self._invalid_chunk("chunk size exceeds response budget")
+        return int(significant, 16)
+
+    def _read_and_discard_trailer(self):
+        total = 0
+        for _ in range(_MAX_OLLAMA_TRAILER_FIELDS + 1):
+            line = self.fp.readline(http.client._MAXLINE + 1)
+            total += len(line)
+            if (total > _MAX_OLLAMA_TRAILER_BYTES or len(line) > http.client._MAXLINE
+                    or not line.endswith(b"\r\n")):
+                self._invalid_chunk("trailer line exceeds limit or lacks CRLF")
+            if line == b"\r\n":
+                return
+            if _HTTP_TRAILER_LINE.fullmatch(line[:-2]) is None:
+                self._invalid_chunk("malformed trailer field")
+            if line.split(b":", 1)[0].lower() in {b"content-length", b"transfer-encoding"}:
+                self._invalid_chunk("forbidden framing field in trailer")
+        self._invalid_chunk("too many trailer fields")
 
     def _get_chunk_left(self):
-        # CPython's HTTPResponse normally discards these two bytes without
-        # verifying CRLF. Consume them strictly, then let stdlib handle the
-        # next chunk-size line without discarding a second pair.
+        # CPython discards two unvalidated bytes between chunks; require CRLF.
         if self.chunk_left == 0:
             if self._safe_read(2) != b"\r\n":
-                self._close_conn()
-                raise http.client.HTTPException("invalid Ollama HTTP chunk-data terminator")
+                self._invalid_chunk("missing chunk-data CRLF")
             self.chunk_left = None
         return super()._get_chunk_left()
 
