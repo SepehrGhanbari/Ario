@@ -1,0 +1,47 @@
+name: A15 S9 v0.4 OS-principal isolation probe
+on:
+  pull_request:
+    paths:
+      - 'implementation/research/a15_s9_principal_probe_v0_4.*'
+      - 'implementation/research/A15_S9_PRINCIPAL_ISOLATION_V04*'
+      - 'implementation/tests/test_a15_s9_v0_4.js'
+      - 'implementation/tests/test_a15_custody_gap_v0_4.js'
+      - '.github/workflows/a15-s9-principal-isolation-v04.yml'
+      - 'implementation/research/a15_*v0_3.js'
+      - 'implementation/tests/test_a15_lab_v0_3.js'
+      - 'implementation/tests/test_a15_lab_v0_2.js'
+      - 'implementation/tests/test_a15_research.js'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  s9-principal-isolation:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Frozen G0/G1 tests
+        run: node --test implementation/tests/test_a15_research.js
+      - name: Historical v0.2 regression tests
+        run: node --test implementation/tests/test_a15_lab_v0_2.js
+      - name: v0.3 regression tests
+        run: node --test implementation/tests/test_a15_lab_v0_3.js
+      - name: S9 same-UID forged-receipt RED reproduction
+        run: node --test implementation/tests/test_a15_s9_v0_4.js
+      - name: Synthetic custody and origin RED reproductions (not a security pass)
+        run: node --test implementation/tests/test_a15_custody_gap_v0_4.js
+      - name: Linux OS-principal ACL and process boundary probe
+        if: runner.os == 'Linux'
+        shell: bash
+        run: sudo -n bash implementation/research/a15_s9_principal_probe_v0_4.sh
+      - name: Windows OS-principal ACL and process boundary probe
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File implementation/research/a15_s9_principal_probe_v0_4.ps1
