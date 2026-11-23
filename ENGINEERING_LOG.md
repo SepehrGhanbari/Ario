@@ -706,3 +706,14 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - Separate stacked PR against #340's source branch for review. Parent #340 remains unmodified and unmerged. New exact-head Linux/Windows CI and independent review remain required. No broad HTTP/parser policy, ruleset, historical data, keys, trust activation, signer, or automatic merge.
 
 Status: RESEARCH_ONLY / DRAFT / HOLD / NO_MERGE / NO_TRUST_ACTIVATION / NO_PRODUCTION.
+
+ 
+## 2026-11-23 — Grok adversarial review of #340/#341: strict HTTP framing follow-up
+
+- Independent review pinned #340 head `15e189104dc61e1e1fe862e2a692cbaf5782fb74` (PASS narrowly) and #341 original head `d22d73575e5874e84d10026280d230880b7a8033` (REVISE). Its local synthetic tests showed that conflicting/duplicate Content-Length, invalid Content-Length such as negative or comma-combined values, and ambiguous Transfer-Encoding framing could bypass the original #341 guard. Two earlier exact-head PR-triggered CI workflows were green but did not cover those negative cases.
+- This append-only correction applies **only** to the #341 source branch and its planner test file. With actual `email.message.Message` headers from HTTPResponse / urllib, reject duplicate Content-Length even if identical; reject invalid or overlong numeric values, non-chunked/duplicate Transfer-Encoding, and simultaneous Content-Length plus Transfer-Encoding; compare the full decoded body byte count with a single accepted Content-Length. Keep existing 1 MB cap and outstanding-read check. Missing length and valid single chunked transfer remain supported. Existing synthetic MagicMock doubles without real HTTP header metadata retain their prior compatibility behavior.
+- New regression tests use real stdlib `http.client.HTTPResponse` via an in-memory fake socket, with and without the `urllib.response.addinfourl` wrapper; 14 malformed/short cases in two wrappers must yield UNKNOWN/exit 2 before JSON decode or workflow execution, without ledger creation. Four positive framing forms in two wrappers must still produce valid plans.
+- Independent isolated Python 3.13.5 stubbed-dependency tests: **RED** on prior #341 candidate (malformed framing accepted or unreliably handled); **GREEN** on revised candidate (new tests + existing fixed-length/valid-plan controls, 5/5 test methods passing). This is **not** a full-repository test, Windows confirmation, live Ollama run, or production security proof. Fresh GitHub exact-head CI and independent review remain required.
+- No historical, private, memory, signer, trust, Genesis, ruleset or production changes. `#340` remains unchanged and draft. `#341` remains HOLD with no automatic merge, no signer, no real keys, no trust activation or production.
+
+RESEARCH_ONLY / DRAFT / HOLD / NO_AUTOMATIC_MERGE / NO_TRUST_ACTIVATION / NO_PRODUCTION.
