@@ -27,7 +27,7 @@ getent passwd "$gate" >/dev/null && { echo 'unexpected gate collision' >&2; exit
 getent passwd "$cust" >/dev/null && { echo 'unexpected custodian collision' >&2; exit 2; }
 groupadd "$group"; made_group=1
 useradd --no-create-home --shell /usr/sbin/nologin --groups "$group" "$gate"; made_gate=1
-useradd --no-create-home --shell /usr/sbin/nologin "$cust"; made_cust=1
+useradd --no-create-home --shell /usr/sbin/nologin --groups "$group" "$cust"; made_cust=1
 gate_uid="$(id -u "$gate")"
 cust_uid="$(id -u "$cust")"
 gate_gid="$(getent group "$group" | cut -d: -f3)"
