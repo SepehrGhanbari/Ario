@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import http.client
 import json
 import os
 import socket
@@ -297,6 +298,8 @@ def _parse_recommendation(payload: Any, observation: dict) -> dict:
         )
     implementation_path = payload["implementation_path"]
     test_path = payload["test_path"]
+    if not isinstance(implementation_path, str) or not isinstance(test_path, str):
+        raise AgentRequestError("recommendation paths must be strings")
     available = {item.get("path") for item in observation.get("planning_context", [])}
     allowed_pairs = {
         ("implementation/ario_planner.py", "implementation/tests/test_planner_runtime.py"),
@@ -470,7 +473,7 @@ def request_plan(
         try:
             with _open_local_ollama(request, timeout=timeout) as response:
                 raw = response.read(MAX_RESPONSE_BYTES + 1)
-        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        except (http.client.HTTPException, OSError) as exc:
             raise AgentRequestError(f"could not obtain a response from local Ollama: {exc}") from exc
         if len(raw) > MAX_RESPONSE_BYTES:
             raise AgentRequestError("Ollama response exceeded the 1 MB safety limit")
