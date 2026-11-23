@@ -32,6 +32,77 @@ class LocalOllamaPlannerTests(unittest.TestCase):
         self.addCleanup(response.close)
         return response
 
+    def response_with_wire_headers(self, body, headers, wrap=False):
+        header_lines = b"".join(name.encode("ascii") + b": " + value.encode("ascii") + b"\r\n"
+                                for name, value in headers)
+        source = MagicMock(spec=socket.socket)
+        source.makefile.return_value = io.BytesIO(b"HTTP/1.1 200 OK\r\n" + header_lines + b"\r\n" + body)
+        response = http.client.HTTPResponse(source)
+        response.begin()
+        self.addCleanup(response.close)
+        if wrap:
+            # urllib.request returns an addinfourl wrapper around HTTPResponse.
+            from urllib.response import addinfourl
+            return addinfourl(response, response.headers, "http://127.0.0.1:11434/api/chat", 200)
+        return response
+
+    @patch("ario_planner.run_workflow")
+    @patch("ario_planner._open_local_ollama")
+    def test_malformed_http_framing_fails_before_decode_or_execution(self, open_response, run_workflow):
+        body = json.dumps({"message": {"content": json.dumps(self.valid_recommendation())}}).encode()
+        n = str(len(body))
+        cases = {
+            "conflicting_duplicate": [("Content-Length", n), ("Content-Length", str(len(body) + 1))],
+            "identical_duplicate": [("Content-Length", n), ("Content-Length", n)],
+            "comma_conflict": [("Content-Length", f"{n}, {len(body) + 1}")],
+            "comma_identical": [("Content-Length", f"{n},{n}")],
+            "negative": [("Content-Length", "-1")],
+            "plus": [("Content-Length", "+1")],
+            "nonnumeric": [("Content-Length", "invalid")],
+            "huge_digits": [("Content-Length", "9" * 100)],
+            "empty": [("Content-Length", "")],
+            "transfer_and_length": [("Transfer-Encoding", "chunked"), ("Content-Length", n)],
+            "unsupported_transfer": [("Transfer-Encoding", "identity")],
+            "comma_transfer": [("Transfer-Encoding", "gzip, chunked")],
+            "duplicate_transfer": [("Transfer-Encoding", "chunked"), ("Transfer-Encoding", "chunked")],
+            "short_body": [("Content-Length", str(len(body) + 1))],
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            self._populate_planner_context(directory)
+            ledger = Path(directory) / "events.jsonl"
+            for wrap in (False, True):
+                for label, headers in cases.items():
+                    with self.subTest(wrap=wrap, case=label):
+                        open_response.return_value = self.response_with_wire_headers(body, headers, wrap)
+                        with patch.object(ario_planner, "loads_bounded", wraps=ario_planner.loads_bounded) as decode:
+                            with redirect_stderr(io.StringIO()) as stderr:
+                                rc = ario_planner.main(["--workspace", directory, "--goal", "Review the planner",
+                                                        "--ledger", str(ledger), "--execute"])
+                        self.assertEqual(rc, 2)
+                        self.assertEqual(json.loads(stderr.getvalue())["status"], "UNKNOWN")
+                        self.assertFalse(ledger.exists())
+                        decode.assert_not_called()
+            run_workflow.assert_not_called()
+            self.assertEqual(open_response.call_count, 2 * len(cases))
+
+    @patch("ario_planner._open_local_ollama")
+    def test_supported_http_framing_preserves_valid_plans(self, open_response):
+        body = json.dumps({"message": {"content": json.dumps(self.valid_recommendation())}}).encode()
+        chunked = f"{len(body):X}\r\n".encode() + body + b"\r\n0\r\n\r\n"
+        cases = [
+            (body, []),
+            (body, [("Content-Length", str(len(body)))]),
+            (body, [("Content-Length", "000" + str(len(body)))]),
+            (chunked, [("Transfer-Encoding", "chunked")]),
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            self._populate_planner_context(directory)
+            for wrap in (False, True):
+                for wire_body, headers in cases:
+                    with self.subTest(wrap=wrap, headers=headers):
+                        open_response.return_value = self.response_with_wire_headers(wire_body, headers, wrap)
+                        self.assertTrue(request_plan("Review the planner", directory)["stages"])
+
     @patch("ario_planner.run_workflow")
     @patch("ario_planner._open_local_ollama")
     def test_short_fixed_length_response_stops_before_json(self, open_response, run_workflow):
