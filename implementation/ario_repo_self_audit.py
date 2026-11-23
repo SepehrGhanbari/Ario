@@ -29,6 +29,10 @@ CHECK_JOB = re.compile(
     r"https://github[.]com/SepehrGhanbari/Ario/actions/runs/"
     r"([1-9][0-9]*)/job/([1-9][0-9]*)\Z"
 )
+# An explicit next-page link overrides an apparently complete first page.
+# GitHub's REST API uses the Link header to advertise further pages.
+NEXT_LINK = re.compile(r'rel\s*=\s*"?[^",;]*\bnext\b', re.IGNORECASE)
+
 ALLOWED = (
     re.compile(r"pulls/[1-9][0-9]*\Z"),
     re.compile(r"commits/[0-9a-f]{40}/check-runs\?per_page=100\Z"),
@@ -96,6 +100,9 @@ class GitHubReadOnly:
             with self.opener.open(request, timeout=12) as response:
                 if response.status != 200:
                     raise ReadUnknown("NON_200_RESPONSE")
+                for link in response.headers.get_all("Link", []):
+                    if NEXT_LINK.search(link):
+                        raise ReadUnknown("PAGINATION_NEXT_LINK_PRESENT")
                 try:
                     data = read_bounded_body(response, 400_000)
                 except ValueError as exc:
