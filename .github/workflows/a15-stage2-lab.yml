@@ -1,0 +1,24 @@
+name: A15 inert dual-process research lab
+on:
+  pull_request:
+    paths:
+      - 'implementation/research/a15_*v0_2.js'
+      - 'implementation/research/A15_STAGE2_FA.md'
+      - 'implementation/tests/test_a15_lab_v0_2.js'
+      - '.github/workflows/a15-stage2-lab.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  synthetic-dual-process-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run G0/G1 frozen tests and inert provenance lab
+        run: |
+          node --test implementation/tests/test_a15_research.js
+          node --test implementation/tests/test_a15_lab_v0_2.js

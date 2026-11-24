@@ -694,3 +694,55 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - Code provenance: newly added source and test Git blob SHAs: a15_g0_frozen.js=e5a9174a274f2df598b743cb9142c70340e00010; a15_gui_evidence_gate_v0_1.js=80968015891cd958ce8a366c4483b6955721ca6b; a15_procedural_choice_v0_1.js=e2ca2f9d910997e0f64faf04beb005c5b2a93db6; test_a15_research.js=755145330a87647ee65f849f4321a962720b4f0a. These Git blob SHA values were checked against independently locally run file bytes.
 - Local validation on Node v22.16.0: node --test implementation/tests/test_a15_research.js -> 56 passed, 0 failed. Includes 14 frozen G0 cases, 32 frozen G1 cases, adversarial negative cases, procedural choice cases and independent finite 531441-vector classification enumeration (exactly one GUI-tier positive). GitHub Actions outcome at time of writing: UNKNOWN until this branch's workflow run is inspected.
 - Results strictly synthetic: no provider receipt, causal sender, exact user-message delivery, independent concurrent-session exclusion, behavioral autonomy, philosophical freedom, identity or runtime authority established. No G2 send or browser mutation. Empty hazards list is not an attestation. #157 R4/R5 remain unverified dispatches, not fabricated model replies. Any issue close or PR merge requires distinct review.
+
+
+## 2026-11-22 — A15 stage 2 inert dual-process source and evidence review (separate stacked Draft PR; HOLD)
+
+- Authorized scope: added implementation/research/a15_choice_transport_lab_v0_2.js, a15_inert_recorder_v0_2.js, a15_observation_gate_v0_2.js, a15_lab_runner_v0_2.js, a15_generate_lab_evidence_v0_2.js, A15_STAGE2_FA.md, implementation/tests/test_a15_lab_v0_2.js, .github/workflows/a15-stage2-lab.yml; appended this log only. Branch created from #328 head f7798cf116869fddbb8aaa069b7666293a5a8202; #328 itself unchanged. No file deletion, G0/G1 frozen edits, A15 participant record changes, secrets, real keys, browser Send, trust or operational activation.
+- Existing log preserved: pre-append Git blob SHA 735fa0a7fbbcb029111713434ba18cbabc4cf12b recoverable at immutable parent commit f7798cf116869fddbb8aaa069b7666293a5a8202. Previous log contents were retained as exact prefix. Added files were absent at branch base.
+- Exact Git blob SHA matches vs locally executed zip: a15_choice_transport_lab_v0_2.js=6e0226368d433abea3e484e62888fe0a62f2392e; a15_inert_recorder_v0_2.js=f3a048f0fe10e4b243d2c103fbb0e8105d5af267; a15_observation_gate_v0_2.js=1871ac78cdf27e719653ae1a9d56ce6d8278f233; a15_lab_runner_v0_2.js=9af32ef8f629b27201c47ebb890022e5f20ef3d2; a15_generate_lab_evidence_v0_2.js=bfc0193070a51bf356d97fbf1e9cba20d0a69785; test_a15_lab_v0_2.js=7df05f11df84f8ff24ace529eff4b0fd065c9dd0; workflow=d938454059118c36c3e7846966d4e63a8d8f58f0. Inherited choice source blob e2ca2f9d910997e0f64faf04beb005c5b2a93db6 matched standalone archive. Persian README intentionally updated for accurate publication status and threat boundary disclosures.
+- Local Node v22.16.0: node --test implementation/tests/test_a15_lab_v0_2.js -> 22 PASS, 0 FAIL. Parent #328 prior suite had 56 PASS. Combined current-head CI is to be checked separately. Piping a generator preview into head caused EPIPE due to early pipe closing; this truncated preview is NOT evidence of a completed run. Full direct-to-file generation is the documented route.
+- Pre-publication raw synthetic sample (local only, not a browser ledger): six observations in the disposable archive at evidence/sample_observations.jsonl, SHA256 3e10cc106db18d5759e55594a4d2055b04680bbced97d84301d644e35a83fe72 (9810 bytes). BOUNDED_ACCEPT -> INERT_ACTION_OBSERVED_ONLY; REFUSE_FORGED_ACCEPT, NO_INHERITED_PROMISE, NO_HIGH_RISK, NO_INFINITE_REQUEST -> REFUSAL_OBSERVED_REPORT_CONFLICT; UNKNOWN_FORGED_ACCEPT -> UNKNOWN_WITHHELD_REPORT_CONFLICT. PIDs are local execution instances, not stable authentication. Stage-2 generator and CI are reproducible repository evidence.
+- Critical boundary: the runner forwards a STRICTLY INERT command based on the second Gate frame BEFORE full evidence verification; not an enforcement boundary for arbitrary actions. The two processes share one OS user and control plane. No independent custodian, service receipt, causal sender, secure operational autonomy, philosophical freedom or live provider-message delivery is established. Unknown concurrent-session exclusion remains UNKNOWN. PR DRAFT / HOLD / NO_MERGE.
+
+
+## 2026-11-22 — A15 v0.3 hardened local lab (stacked Draft PR; RESEARCH_ONLY / HOLD)
+
+- Parent and exact base: Draft PR #330 head dbba43852f3a6b309696060b0acc52d69a4e9dc2; this follow-up branch is research/a15-stage2-v0_3-hardening-20261122, stacked on research/a15-stage2-inert-dual-process-20261122. Historical v0.2 source and tests are unchanged.
+- Added versioned files only: a15_child_supervisor_v0_3.js, a15_choice_transport_lab_v0_3.js, a15_inert_recorder_v0_3.js, a15_observation_gate_v0_3.js, a15_lab_runner_v0_3.js, test_a15_lab_v0_3.js, A15_STAGE2_V03.md, and .github/workflows/a15-stage2-v03-lab.yml.
+- Local Node v22.16.0 combined test run: node --test implementation/tests/test_a15_lab_v0_2.js implementation/tests/test_a15_lab_v0_3.js -> **43 PASS / 0 FAIL** (22 historical v0.2 + 21 new v0.3). The v0.2 suite file and all v0.2 source bytes were preserved exactly. The 56-test G0/G1 suite was not rerun locally in this workspace; the new PR workflow includes it and will be checked on the exact PR head.
+- New v0.3 controls cover exact envelope keys and total UTF-8 size, accessor/Proxy inputs, UTF-8 choice limits, full Gate verification before Recorder spawn, original-input recomputation, exact reason/event consistency, timeout, hard kill after stdout/stderr overflow, EPIPE capture, same-ID in-process replay rejection, Recorder failure, and S9 same-UID Recorder rewrite.
+- **S9 remains RED by design:** a Gate process sharing the same OS identity and writable directory can rewrite the Recorder file. This is documented as an architecture boundary, not claimed fixed. Replay remains an in-process Set, not durable custody. Caller-supplied preference/authorization/renewal provenance remains unresolved.
+- Exact local Git blob SHA checks:
+  - a15_child_supervisor_v0_3.js = 3910be6466e518ed15384d7b21aaa8193d341e57
+  - a15_choice_transport_lab_v0_3.js = b2465404447c925a5ae7bf301b576fc44a64e7eb
+  - a15_inert_recorder_v0_3.js = c9b14eaf53ac1a0e8dabbad43b9c86a6d0441862
+  - a15_lab_runner_v0_3.js = d895d017d124492d6cda5486510d718909b9a8f7
+  - a15_observation_gate_v0_3.js = a31c81f6745496de2e57805e8009b7f16531c5d3
+  - test_a15_lab_v0_3.js = 98291acdbefc0d01534a46a6dfe34bed2d32ea09
+  - A15_STAGE2_V03.md = ad4a9e4319c489117d545d3fa627a70e866d5829
+  - a15-stage2-v03-lab.yml = ce7fa315d2dcd4f30fec1364f88e0cdaafad4bba
+- The new workflow runs the unchanged 56-test G0/G1 suite, historical 22-test v0.2 suite, and new 21-test v0.3 suite on Ubuntu and Windows. Exact-head CI remains pending until GitHub Actions completes.
+- No real keys, signer, browser send, provider receipt, independent witness, trust activation, production path, automatic merge or manual merge. All outputs remain local synthetic research only.
+
+
+### A15 v0.3 cross-platform S10 test correction — 2026-11-22
+
+- First exact-head Actions attempt: Ubuntu v0.3 job passed; Windows v0.3 job failed only because Node 22 on Windows reports EOF for the closed child stdin pipe, while POSIX reports EPIPE. The supervisor captured the Windows stream error; the test had asserted the POSIX-specific code.
+- Updated the S10 assertion to require EPIPE on POSIX and EOF on Windows, and clarified the documentation. The runner still treats any non-null stdin error as UNKNOWN and never promotes it to an observed result.
+- This is a platform-specific expected-code correction, not a weakening of the fail-closed behavior. The new exact-head Linux/Windows rerun is pending; do not treat the initial Windows job as a pass.
+
+
+### A15 v0.3 first Linux/Windows CI result — 2026-11-22
+
+- Workflow run 45066370881 completed successfully on both ubuntu-latest and windows-latest.
+- The exact test logs show 56/56 frozen G0/G1, 22/22 historical v0.2, and 21/21 v0.3 tests on each platform; zero failures on both jobs.
+- This run used the same v0.3 source/test/workflow blobs recorded above. After the run, only the append-only ENGINEERING_LOG.md was changed; the v0.3 source, test and workflow blobs were not changed. A documentation-only checkpoint is being added to trigger a final run against the newest branch head.
+
+
+### A15 v0.3 exact-head Linux/Windows rerun — 2026-11-22
+
+- Final documentation/source checkpoint commit tested: 11a49fe68cefdc9a742f5717d9dcc696b404fe61.
+- GitHub Actions run 45066500022 completed successfully on both ubuntu-latest and windows-latest.
+- Each platform reports 56/56 frozen G0/G1, 22/22 historical v0.2, and 21/21 v0.3 tests; zero failures.
+- The only subsequent branch change is this append-only ENGINEERING_LOG.md entry; no source, test, documentation, or workflow bytes are changed by this record.
