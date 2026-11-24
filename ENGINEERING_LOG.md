@@ -904,3 +904,9 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 
 - Parent #356 at 814f69d546d41bb1e30ceac252d215df64d049bc. Actual Google Drive raw object round trip: 515 public synthetic bytes at discovered double-SHA256 address a0ac8945297132b7c869c79b7d08f4b303ee49599112269428013fc83bde3905. Exact-name unique lookup and raw download succeeded via mounted Drive; original bytes match. Separate provider, shared administrative control not excluded.
 - Local 16/16 controls passed, old state unchanged. RECOVERED_LINKED_CANDIDATE_RESEARCH_ONLY; count 2 -> 4. Negative controls local, no live deletion, no fresh blind discovery or independent proof re-verification. Serialized discovery authentication and independently retained latest floor remain unmet. Report and replay fixtures: implementation/research/r22_11_content_recovery/RESEARCH_RECORD.md. NO_GO for trust, production or merge.
+
+
+## 2026-11-24 — R22.12 intact historical replay (research only)
+
+- Parent #358 d9cd078836c25eb02d85483fec937e01855bcc39; all parent PR checks SUCCESS. Exact archived public synthetic R22.10 old/new ZIP pins and CRC verified; intact old envelope and receipt reused. Local structural model 15/15 PASS, no new crypto verification locally (DNS blocked official tool install). Advisory offline verifier workflow supplied; execution result pending at authoring.
+- With retained newer floor, old pair HOLD_ROLLBACK_BELOW_FLOOR. Without floor, HOLD_FRESHNESS_UNKNOWN; when floor itself rolls back, old pair matches retained floor (RED, never current/freshness/admission). Higher candidate HOLD_ADVANCE_UNPROVEN. Report: implementation/research/r22_12_authentic_replay/RESEARCH_RECORD.md. No independent custody, new keys, trust, production or merge.

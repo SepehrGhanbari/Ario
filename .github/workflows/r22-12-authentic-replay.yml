@@ -1,0 +1,51 @@
+name: R22.12 authentic historical replay (advisory)
+on:
+  push:
+    branches:
+      - research/r22-12-authentic-replay-20261124
+    paths:
+      - .github/workflows/r22-12-authentic-replay.yml
+      - implementation/research/r22_12_authentic_replay/replay.py
+permissions:
+  contents: read
+  actions: read
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - name: Install official pinned offline verifier
+        run: |
+          set -euo pipefail
+          for tool in sigsum-policy sigsum-verify; do
+            go install "sigsum.org/sigsum-go/cmd/$tool@v0.14.1"
+          done
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - name: Download exact original public synthetic artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/r22-12"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/14949671120/zip" > "$RUNNER_TEMP/r22-12/old.zip"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/14948912790/zip" > "$RUNNER_TEMP/r22-12/new.zip"
+          cd "$RUNNER_TEMP/r22-12"
+          printf '%s  %s\n' '337fc0e36441c0eb3d4ebeb1736cb83bbea8cb958dd8b5aba846a8c1230fc16d' old.zip '652ff3f19ce4470b82aaf70acf9c2f6e4b0f3aa00a7f7c17a0adc916ba0fd56e' new.zip | sha256sum -c -
+      - name: Reverify original proofs offline and test authentic replay
+        run: |
+          set -euo pipefail
+          python implementation/research/r22_12_authentic_replay/replay.py "$RUNNER_TEMP/r22-12/old.zip" "$RUNNER_TEMP/r22-12/new.zip" | tee "$RUNNER_TEMP/r22-12/results.log"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r22-12-offline-replay-results
+          path: ${{ runner.temp }}/r22-12/results.log
+          if-no-files-found: warn
+          retention-days: 30
