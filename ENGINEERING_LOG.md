@@ -853,3 +853,11 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - Actual REST decoder with synthetic opener: stable, ABA, final replay and full replay produce identical seven-response transcripts and output despite different hidden histories; explicit Age=120 is ignored. Visible changes and simulated 304 fail closed. No actual GitHub replay or TLS compromise demonstrated.
 - Additive diagnostic correction: explicit source_freshness/history_continuity NOT_ESTABLISHED, preserve sample qualifier in Guard bridge, reject promotion by overstated freshness claims. No change to selection, cache policy, endpoint, or authorization. See implementation/research/R22_5_REPLAY_ABA_OBSERVATION_BOUNDARY_2026-11-24.md.
 - Draft/HOLD, no merge, keys, trust, production or memory admission. Exact-head CI required.
+
+
+## 2026-11-24 — R22.6 existing witness integration for CI observation (#350)
+
+- Pinned #349 at bb5acbcb46dbfd700e0d59a66aa05b9b7e363f53. Reuses unchanged checkpoint_prefix_experiment and independent_witness_experiment, and R22.5 actual REST decoder test harness.
+- New 15-case integration test file binds synthetic scope and actual observer transcript/result to bounded four-record journal; separately modelled events populate two slots. Retained two/four-record checkpoint controls exercise replay below floor, resealed deletion/replacement/reordering, same-count fork, conflicting/missing witness, missing floor, epoch replay, shared-admin rollback and missed-event residuals.
+- Prefix PASS is not a floor PASS. Retained anchors constrain the digest as well as count. Neither fixture control nor a conditional match establishes real custody, event truth or trust.
+- Report: implementation/research/R22_6_CI_WITNESS_PREFIX_INTEGRATION_2026-11-24.md. Tests-only code integration; no runtime adapter or actual independent custodian. Draft/HOLD; CI exact-head verification required. No keys, merge, main update, trust activation, evidence admission or production.
