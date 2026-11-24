@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 SRC = Path(__file__).resolve().parents[1] / "research" / "a15_custodian_broker_v0_5.py"
 spec = importlib.util.spec_from_file_location("a15_v05", SRC)
@@ -212,6 +213,82 @@ class BrokerCore(unittest.TestCase):
         self.assertEqual(c.verify()[0],2)
         floor=json.loads((self.state/"custodian.floor.json").read_text())
         self.assertEqual((floor["expected_seq"],floor["expected_hash"]),(2,c.verify()[1]))
+
+    def test_r4_failed_floor_write_holds_fresh_replay_and_new_requests(self):
+        a=self.journal(provision=True)
+        first=a.consume(request(attempt="ATT_R4_FIRST"))
+        self.assertEqual(first["local_floor_confirmation"],"READBACK_MATCH")
+        req=request(attempt="ATT_R4_PENDING")
+        with patch.object(a,"_write_floor",side_effect=OSError("synthetic floor write failure")):
+            held=a.consume(req)
+            self.assertEqual(held["status"],"HOLD_LOCAL_FLOOR_UNCONFIRMED")
+            self.assertEqual(held["local_commit"],"RECORDED")
+            self.assertEqual(held["pending_event_seq"],2)
+            self.assertNotIn("seq",held)
+            self.assertNotIn("head_hash",held)
+            self.assertFalse(held["execution_authorized"])
+            self.assertFalse(held["origin_attested"])
+            self.assertEqual(a.verify()[0],2)
+            floor=json.loads(a.floor_path.read_text())
+            self.assertEqual(floor["expected_seq"],1)
+            retry=a.consume(req)
+            self.assertEqual(retry["status"],"HOLD_LOCAL_FLOOR_UNCONFIRMED")
+            self.assertEqual(retry["pending_event_hash"],held["pending_event_hash"])
+            blocked=a.consume(request(attempt="ATT_R4_OTHER"))
+            self.assertEqual(blocked["status"],"HOLD_LOCAL_FLOOR_UNCONFIRMED")
+            self.assertEqual(blocked["local_commit"],"NOT_ATTEMPTED")
+            self.assertEqual(a.verify()[0],2)
+        replay=a.consume(req)
+        self.assertEqual(replay["status"],"REPLAY_DURABLE_LOCAL_RECEIPT_ONLY")
+        self.assertEqual(replay["event_hash"],held["pending_event_hash"])
+        self.assertEqual(replay["local_floor_confirmation"],"READBACK_MATCH")
+        self.assertEqual(a.verify()[0],2)
+        self.assertEqual(json.loads(a.floor_path.read_text())["expected_seq"],2)
+
+    def test_r4_uncertain_floor_replace_holds_until_confirmed(self):
+        a=self.journal(provision=True)
+        req=request(attempt="ATT_R4_REPLACE")
+        write=a._write_floor
+        def replaced_then_failed(*args):
+            write(*args)
+            raise OSError("synthetic failure after replacement")
+        with patch.object(a,"_write_floor",side_effect=replaced_then_failed):
+            held=a.consume(req)
+        self.assertEqual(held["status"],"HOLD_LOCAL_FLOOR_UNCONFIRMED")
+        self.assertEqual(a.verify()[0],1)
+        self.assertEqual(json.loads(a.floor_path.read_text())["expected_seq"],1)
+        reply=a.consume(req)
+        self.assertTrue(reply["replayed"])
+        self.assertEqual(reply["event_hash"],held["pending_event_hash"])
+        self.assertEqual(reply["local_floor_confirmation"],"READBACK_MATCH")
+
+    def test_r4_cooperative_connections_do_not_regress_floor(self):
+        a=self.journal(provision=True)
+        b=self.journal()
+        confirm=a._confirm_committed_receipt
+        later=[]
+        def interleave(seq, event_hash):
+            # Deterministic schedule: a committed; b advances the same DB;
+            # then a confirms. No OS/process isolation claim.
+            later.append(b.consume(request(attempt="ATT_R4_LATER")))
+            return confirm(seq,event_hash)
+        with patch.object(a,"_confirm_committed_receipt",side_effect=interleave):
+            first=a.consume(request(attempt="ATT_R4_EARLIER"))
+        self.assertEqual(first["seq"],1)
+        self.assertEqual(first["chain_head_seq"],2)
+        self.assertEqual(first["chain_head_hash"],later[0]["event_hash"])
+        self.assertEqual(first["local_floor_confirmation"],"READBACK_MATCH")
+        self.assertEqual(json.loads(a.floor_path.read_text())["expected_seq"],2)
+        self.assertEqual(a.verify()[0],2)
+
+    def test_r4_failed_initial_floor_never_auto_bootstraps(self):
+        with patch.object(broker.Journal,"_write_floor",side_effect=OSError("synthetic provisioning failure")):
+            with self.assertRaises(OSError):
+                self.journal(provision=True)
+        with self.assertRaises((ValueError,sqlite3.Error)):
+            self.journal()
+        with self.assertRaises(ValueError):
+            self.journal(provision=True)
 
     def test_r3_joint_rollback_of_ledger_and_floor_remains_undetectable_RED(self):
         # Preserved RED (deliberately unsolved): the SAME administrator rolling

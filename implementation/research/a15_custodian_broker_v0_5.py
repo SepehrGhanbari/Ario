@@ -132,8 +132,8 @@ class Journal:
                 raise PermissionError("state directory owner/mode not exclusive")
         path = root / "custodian.sqlite3"
         floor_path = root / FLOOR_NAME
-        if path.is_symlink():
-            raise ValueError("symlinked ledger")
+        if path.is_symlink() or floor_path.is_symlink():
+            raise ValueError("symlinked ledger or floor")
         # CUST-08-R3 (handoff 2026-11-24): provisioning and recovery are
         # explicitly separated. Normal reopening NEVER bootstraps: a missing
         # ledger fails closed. provision=True creates a fresh chain only when
@@ -154,6 +154,10 @@ class Journal:
                 raise ValueError("explicit provisioning refused: a ledger file already exists; deleting it is an explicit operator decision, not a provisioning step")
             if floor_path.exists():
                 raise ValueError("explicit provisioning refused: a retained expected floor exists; a new chain would erase recorded history")
+            # Reserve first provisioning atomically. A second opener must not
+            # reset an already provisioned floor to GENESIS.
+            fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+            os.close(fd)
         elif not ledger_exists:
             if floor_path.exists():
                 raise ValueError("ledger missing while a retained expected floor survives; refusing rebirth on normal reopen: fail closed")
@@ -167,11 +171,14 @@ class Journal:
         self.root = root
         self.path = path
         self.floor_path = floor_path
-        self.conn = sqlite3.connect(str(path), timeout=2, isolation_level=None)
+        self.conn = sqlite3.connect(path.absolute().as_uri() + "?mode=rw",
+                                    uri=True, timeout=2, isolation_level=None)
         try:
             self.conn.execute("PRAGMA journal_mode=DELETE")
             self.conn.execute("PRAGMA synchronous=FULL")
             self.conn.execute("PRAGMA temp_store=MEMORY")
+            # All floor comparisons/writes share the SQLite writer lock.
+            self.conn.execute("BEGIN IMMEDIATE")
             if ledger_exists:
                 schema = self.conn.execute(
                     "SELECT 1 FROM sqlite_master WHERE type='table' AND name='events'").fetchone()
@@ -190,6 +197,8 @@ class Journal:
                   disposition TEXT NOT NULL, prev_hash TEXT NOT NULL, hash TEXT NOT NULL)""")
                 self.verify()
                 self._write_floor(floor_path, 0, GENESIS)
+                self._reconcile_floor(floor_path, 0, GENESIS)
+            self.conn.execute("COMMIT")
         except BaseException:
             self.conn.close()  # fail-closed even when verification failed on Windows
             raise
@@ -213,8 +222,10 @@ class Journal:
 
     def _write_floor(self, floor_path, expected_seq, expected_hash):
         """Persist the locally retained expected floor atomically (tmp+rename).
-        A clearly scoped local guard under the same administrator; best effort
-        after commits and never a claim of independent custody."""
+        A clearly scoped local guard under the same administrator.
+        Caller must hold the SQLite writer lock; not independent custody."""
+        if not self.conn.in_transaction:
+            raise RuntimeError("floor write requires the SQLite transaction")
         payload = encode({"format": FLOOR_FORMAT, "ledger": self.path.name,
                           "expected_seq": expected_seq, "expected_hash": expected_hash})
         tmp = floor_path.parent / (FLOOR_NAME + ".tmp")
@@ -232,7 +243,30 @@ class Journal:
         closed; a ledger ahead of the floor is the legitimate crash window
         (durable commit, lost floor write) and is reconciled forward to the
         verified head only. Nothing here proves independent custody."""
-        if not floor_path.exists():
+        if not self.conn.in_transaction:
+            raise RuntimeError("floor reconciliation requires the SQLite transaction")
+        expected_seq, expected_hash = self._read_floor(floor_path)
+        if db_seq < expected_seq:
+            raise ValueError("ledger head is behind the retained expected floor; well-formed empty replacement or valid-prefix rollback detected: fail closed")
+        if expected_seq > 0:
+            row = self.conn.execute("SELECT hash FROM events WHERE seq=?", (expected_seq,)).fetchone()
+            if row is None or row[0] != expected_hash:
+                raise ValueError("ledger diverges from the retained expected floor; fail closed")
+        if db_seq > expected_seq:
+            self._write_floor(floor_path, db_seq, db_head)
+        if self._read_floor(floor_path) != (db_seq, db_head):
+            raise ValueError("retained floor readback does not match verified head")
+        # On POSIX confirm the directory entry too. On Windows this standard
+        # library experiment claims readback, not power-loss durability.
+        if os.name == "posix":
+            fd = os.open(floor_path.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+            try:
+                os.fsync(fd)
+            finally:
+                os.close(fd)
+
+    def _read_floor(self, floor_path):
+        if floor_path.is_symlink() or not floor_path.exists():
             raise ValueError("existing ledger without a retained expected-floor checkpoint: HOLD (no implicit adoption, never a new chain)")
         try:
             floor = parse(floor_path.read_text(encoding="utf-8"))
@@ -249,19 +283,45 @@ class Journal:
                 raise ValueError("ambiguous floor payload")
         except (OSError, ValueError, TypeError, UnicodeError, OverflowError):
             raise ValueError("retained expected floor is missing/ambiguous: HOLD rather than guess history")
-        expected_seq = floor["expected_seq"]
-        expected_hash = floor["expected_hash"]
-        if db_seq < expected_seq:
-            raise ValueError("ledger head is behind the retained expected floor; well-formed empty replacement or valid-prefix rollback detected: fail closed")
-        if expected_seq > 0:
-            row = self.conn.execute("SELECT hash FROM events WHERE seq=?", (expected_seq,)).fetchone()
-            if row is None or row[0] != expected_hash:
-                raise ValueError("ledger diverges from the retained expected floor; fail closed")
-        if db_seq > expected_seq:
-            self._write_floor(floor_path, db_seq, db_head)
+        return floor["expected_seq"], floor["expected_hash"]
+
+    def _confirm_floor_locked(self, event_seq=None, event_hash=None):
+        """Confirm the local floor against a verified tip under the writer lock."""
+        if not self.conn.in_transaction:
+            raise RuntimeError("floor confirmation requires the SQLite transaction")
+        tip = self.verify()
+        if event_seq is not None:
+            row = self.conn.execute("SELECT hash FROM events WHERE seq=?", (event_seq,)).fetchone()
+            if row != (event_hash,):
+                raise ValueError("receipt event absent or changed during local confirmation")
+        self._reconcile_floor(self.floor_path, *tip)
+        return tip
+
+    def _confirm_committed_receipt(self, seq, event_hash):
+        # Reacquire the writer lock AFTER durable COMMIT. Another cooperative
+        # Journal may have advanced the same database in the meantime.
+        self.conn.execute("BEGIN IMMEDIATE")
+        try:
+            tip = self._confirm_floor_locked(seq, event_hash)
+            self.conn.execute("COMMIT")
+            return tip
+        except BaseException:
+            try: self.conn.execute("ROLLBACK")
+            except sqlite3.Error: pass
+            raise
+
+    @staticmethod
+    def _floor_hold(event_seq=None, event_hash=None):
+        # Never use ordinary receipt fields/status to imply confirmation.
+        fields = {"local_floor_confirmation": "UNCONFIRMED",
+                  "local_commit": "RECORDED" if event_seq is not None else "NOT_ATTEMPTED"}
+        if event_seq is not None:
+            fields.update(pending_event_seq=event_seq, pending_event_hash=event_hash)
+        return limited("HOLD_LOCAL_FLOOR_UNCONFIRMED", **fields)
 
     def consume(self, req):
-        # Single owner process and SQLite BEGIN IMMEDIATE serialize concurrent clients.
+        # SQLite BEGIN IMMEDIATE serializes cooperative users of this database.
+        # This is not a guarantee against an administrator replacing its inode.
         key = req["run_id"] + "|" + req["attempt_id"]
         input_hash = digest(encode(req))  # bind exact Gate claim and source bytes to consumed ID
         claim = req["claimed_status"]
@@ -277,16 +337,27 @@ class Journal:
                 # replayed) so idempotent retries compare the original receipt;
                 # chain_head_* is the tip as observed inside this serialized
                 # read and may advance afterwards (no lease is held).
-                tip = self.conn.execute(
-                    "SELECT seq,hash FROM events ORDER BY seq DESC LIMIT 1").fetchone()
-                self.conn.execute("COMMIT")
                 if old_hash != input_hash:
+                    self.conn.execute("COMMIT")
                     return limited("EVIDENCE_CONFLICT_ID_REUSED", replayed=True)
+                try:
+                    tip = self._confirm_floor_locked(seq, event_hash)
+                except (OSError, ValueError, sqlite3.Error):
+                    self.conn.execute("ROLLBACK")
+                    return self._floor_hold(seq, event_hash)
+                self.conn.execute("COMMIT")
                 return limited("REPLAY_DURABLE_LOCAL_RECEIPT_ONLY", replayed=True,
                                seq=seq, event_hash=event_hash, head_hash=event_hash,
                                chain_head_seq=tip[0], chain_head_hash=tip[1],
+                               local_floor_confirmation="READBACK_MATCH",
                                policy_decision=decision,
                                reason_code=reason, original_disposition=disposition)
+            # Do not append more history while a previous floor is unresolved.
+            try:
+                self._confirm_floor_locked()
+            except (OSError, ValueError, sqlite3.Error):
+                self.conn.execute("ROLLBACK")
+                return self._floor_hold()
             verdict, reason = decide(req["choice_json"])  # independent of Gate claim
             if claim != verdict:
                 disposition = "EVIDENCE_CONFLICT_GATE_CLAIM"
@@ -312,11 +383,14 @@ class Journal:
             if crash_key == key and crash_at == "AFTER_COMMIT_BEFORE_REPLY":
                 os._exit(78)  # response deliberately lost, durable receipt remains
             try:
-                self._write_floor(self.floor_path, seq, head)
-            except OSError:
-                pass  # best effort only: the durable commit wins; the next open reconciles a DB-ahead floor
+                tip = self._confirm_committed_receipt(seq, head)
+            except (OSError, ValueError, sqlite3.Error):
+                # The event was committed. Preserve it; do not imply a normal
+                # receipt or retry it as a new event while the DB survives.
+                return self._floor_hold(seq, head)
             return limited(disposition, replayed=False, seq=seq, head_hash=head,
-                           chain_head_seq=seq, chain_head_hash=head,
+                           event_hash=head, chain_head_seq=tip[0], chain_head_hash=tip[1],
+                           local_floor_confirmation="READBACK_MATCH",
                            policy_decision=verdict, reason_code=reason,
                            gate_claim_mismatch=(claim != verdict))
         except BaseException:
