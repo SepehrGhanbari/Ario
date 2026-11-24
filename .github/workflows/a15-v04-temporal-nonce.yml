@@ -1,0 +1,28 @@
+name: A15 v0.4 temporal and durable nonce synthetic tests (HOLD)
+on:
+  pull_request:
+    paths:
+      - 'implementation/research/a15_external_floor_simulator_v0_4.js'
+      - 'implementation/research/a15_outside_minimum_custodian_v0_4.js'
+      - 'implementation/tests/test_a15_v0_4_temporal_nonce.js'
+      - 'implementation/tests/fixtures/a15_v04_floor_worker.js'
+      - 'implementation/research/A15_V04_TEMPORAL_NONCE_RESEARCH_2026-11-24.md'
+      - '.github/workflows/a15-v04-temporal-nonce.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  synthetic-floor-nonce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Synthetic temporal authorization, nonce and process-crash tests
+        run: node --test implementation/tests/test_a15_v0_4_temporal_nonce.js
+      - name: Hold statement
+        run: echo "RESEARCH_ONLY / HOLD / SAME_ADMIN_ROLLBACK_RED / NO_TRUST_ACTIVATION / NO_PRODUCTION"
