@@ -1,0 +1,150 @@
+name: R63 external lab floor bridge (advisory)
+on:
+  push:
+    branches:
+      - research/r63-r22-external-floor-bridge-20261124
+    paths:
+      - .github/workflows/r63-external-floor-bridge.yml
+      - implementation/research/r63_external_floor_bridge/bridge_live.py
+permissions:
+  contents: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - name: Prepare verified lab hash commitments and run negative controls
+        run: |
+          set -euo pipefail
+          python -m pip install coincurve==21.0.0 websockets==15.0.1
+          for tool in sigsum-key sigsum-submit sigsum-verify; do
+            go install "sigsum.org/sigsum-go/cmd/$tool@v0.14.1"
+          done
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+          mkdir -p "$RUNNER_TEMP/r63-first" "$RUNNER_TEMP/r63-second"
+          python implementation/research/r63_external_floor_bridge/bridge_live.py test
+          python implementation/research/r63_external_floor_bridge/bridge_live.py make "$RUNNER_TEMP/r63-first" "$RUNNER_TEMP/r63-second"
+      - name: Publish two sequential hash-only lab envelopes
+        run: |
+          set -euo pipefail
+          A="$RUNNER_TEMP/r63-first"
+          B="$RUNNER_TEMP/r63-second"
+          K=$(mktemp -d "$RUNNER_TEMP/r63-key.XXXXXX")
+          trap 'rm -rf "$K"' EXIT
+          chmod 0700 "$K"
+          sigsum-key generate -o "$K/synthetic-key"
+          cp "$K/synthetic-key.pub" "$A/"
+          cp "$K/synthetic-key.pub" "$B/"
+          for D in "$A" "$B"; do
+            sigsum-submit -P sigsum-test1-2025 -k "$K/synthetic-key" "$D/envelope.json"
+            sigsum-verify -k "$D/synthetic-key.pub" -P sigsum-test1-2025 "$D/envelope.json.proof" < "$D/envelope.json"
+            echo OFFICIAL_TEST_PROOF_VERIFIED
+          done
+          python implementation/research/r63_external_floor_bridge/bridge_live.py bootstrap "$A"
+          python implementation/research/r63_external_floor_bridge/bridge_live.py publish "$B/envelope.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: R63-FIRST-ONLY
+          path: ${{ runner.temp }}/r63-first/
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        with:
+          name: R63-SECOND-REVEAL
+          path: ${{ runner.temp }}/r63-second/
+          if-no-files-found: error
+          retention-days: 30
+  discover:
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@v4
+        with:
+          name: R63-FIRST-ONLY
+          path: ${{ runner.temp }}/r63-first
+      - name: Authenticate first proof and discover without second artifact
+        run: |
+          set -euo pipefail
+          python -m pip install coincurve==21.0.0 websockets==15.0.1
+          go install sigsum.org/sigsum-go/cmd/sigsum-verify@v0.14.1
+          A="$RUNNER_TEMP/r63-first"
+          test ! -e "$RUNNER_TEMP/r63-second"
+          "$(go env GOPATH)/bin/sigsum-verify" -k "$A/synthetic-key.pub" -P sigsum-test1-2025 "$A/envelope.json.proof" < "$A/envelope.json"
+          sha256sum "$A/"* > "$RUNNER_TEMP/first-before.sha256"
+          LAB=$(mktemp -d "$RUNNER_TEMP/r63-discovery.XXXXXX")
+          trap 'rm -rf "$LAB"' EXIT
+          cp implementation/research/r22_10_blind_discovery/{main.go,main_test.go,go.mod} "$LAB/"
+          cp "$A/bootstrap.json" "$LAB/"
+          (cd "$LAB"; go mod tidy; go test -v ./...; go run . | tee "$RUNNER_TEMP/r63-discovery.jsonl")
+          mkdir "$RUNNER_TEMP/r63-recovered"
+          python implementation/research/r63_external_floor_bridge/bridge_live.py recover "$A" "$RUNNER_TEMP/r63-discovery.jsonl" "$RUNNER_TEMP/r63-recovered/envelope.json" | tee "$RUNNER_TEMP/r63-recovered/report.jsonl"
+          sha256sum -c "$RUNNER_TEMP/first-before.sha256"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: R63-BLIND-DISCOVERY
+          path: ${{ runner.temp }}/r63-discovery.jsonl
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        with:
+          name: R63-EXTERNAL-RECOVERED
+          path: ${{ runner.temp }}/r63-recovered/
+          if-no-files-found: error
+          retention-days: 30
+  reveal:
+    needs: discover
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: R63-FIRST-ONLY
+          path: first
+      - uses: actions/download-artifact@v4
+        with:
+          name: R63-SECOND-REVEAL
+          path: second
+      - uses: actions/download-artifact@v4
+        with:
+          name: R63-BLIND-DISCOVERY
+          path: discovery
+      - uses: actions/download-artifact@v4
+        with:
+          name: R63-EXTERNAL-RECOVERED
+          path: recovered
+      - name: Reverify proofs and exact withheld bytes
+        run: |
+          set -euo pipefail
+          go install sigsum.org/sigsum-go/cmd/sigsum-verify@v0.14.1
+          for D in first second; do
+            "$(go env GOPATH)/bin/sigsum-verify" -k "$D/synthetic-key.pub" -P sigsum-test1-2025 "$D/envelope.json.proof" < "$D/envelope.json"
+          done
+          python3 implementation/research/r63_external_floor_bridge/bridge_live.py reveal first second discovery/r63-discovery.jsonl recovered/envelope.json
