@@ -28,9 +28,11 @@ def request(run="RUN_V05_RESEARCH", attempt="ATT_V05_RESEARCH", changes=None, cl
             "choice_json":broker.encode(choice),"claimed_status":claim}
 
 def injected_crash(state, req, phase):
+    # CUST-08-R3: the crash harness starts with EXPLICIT provisioning; every
+    # later open in these tests is recovery mode and must match the floor.
     script = ("import sys, json; sys.path.insert(0,sys.argv[1]);"
               "import a15_custodian_broker_v0_5 as m;"
-              "s=m.Journal(sys.argv[2]);s.consume(json.loads(sys.argv[3]));"
+              "s=m.Journal(sys.argv[2],provision=True);s.consume(json.loads(sys.argv[3]));"
               "sys.exit(0)")
     env=dict(os.environ,
              A15_V05_SYNTHETIC_CRASH_POINT=phase,
@@ -45,13 +47,13 @@ class BrokerCore(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.state=Path(self.tmp.name)/"state"
 
-    def journal(self):
-        opened=broker.Journal(self.state)
+    def journal(self, provision=False):
+        opened=broker.Journal(self.state, provision=provision)
         self.addCleanup(opened.conn.close)  # Windows holds SQLite files until explicit close
         return opened
 
     def test_frozen_policy_recalculation_fails_closed_on_forged_gate_claim(self):
-        s=self.journal()
+        s=self.journal(provision=True)
         req=request(changes={"preference":"DECLINE"},claim="ACCEPT")
         value=s.consume(req)
         self.assertEqual((value["status"],value["policy_decision"],value["reason_code"]),
@@ -61,7 +63,7 @@ class BrokerCore(unittest.TestCase):
         self.assertEqual(s.verify()[0],1)
 
     def test_caller_origin_is_not_authenticated_even_for_policy_accept(self):
-        s=self.journal()
+        s=self.journal(provision=True)
         r=s.consume(request())
         self.assertEqual(r["status"],"INERT_RECORDED_UNATTESTED_ORIGIN")
         self.assertEqual(r["policy_decision"],"ACCEPT")
@@ -72,7 +74,7 @@ class BrokerCore(unittest.TestCase):
 
     def test_idempotent_retry_after_new_journal_object_and_id_collision(self):
         first_req=request()
-        a=self.journal()
+        a=self.journal(provision=True)
         one=a.consume(first_req)
         a.conn.close()
         b=self.journal()
@@ -89,7 +91,7 @@ class BrokerCore(unittest.TestCase):
         self.assertEqual(b.verify()[0],1)
 
     def test_commit_chain_persists_across_restart(self):
-        a=self.journal()
+        a=self.journal(provision=True)
         one=a.consume(request(attempt="ATT_V05_01"))
         two=a.consume(request(attempt="ATT_V05_02",changes={"preference":"UNKNOWN"},claim="UNKNOWN"))
         self.assertEqual((one["seq"],two["seq"]), (1,2))
@@ -118,7 +120,7 @@ class BrokerCore(unittest.TestCase):
         self.assertTrue(retried["replayed"])
 
     def test_corrupted_hash_chain_fails_closed_on_reopen(self):
-        a=self.journal()
+        a=self.journal(provision=True)
         a.consume(request())
         a.conn.execute("UPDATE events SET hash=? WHERE seq=1", ("0"*64,))
         a.conn.close()
@@ -126,7 +128,7 @@ class BrokerCore(unittest.TestCase):
             self.journal()
 
     def test_truncated_database_fails_closed(self):
-        a=self.journal()
+        a=self.journal(provision=True)
         a.consume(request())
         a.conn.close()
         with open(self.state/"custodian.sqlite3","wb") as f:
@@ -134,24 +136,110 @@ class BrokerCore(unittest.TestCase):
         with self.assertRaises((sqlite3.DatabaseError,ValueError)):
             self.journal()
 
-    def test_host_admin_valid_prefix_rollback_remains_undetectable_RED(self):
-        a=self.journal()
-        a.consume(request(attempt="ATT_V05_01"))
+    def test_r3_db_only_prefix_rollback_fails_closed_with_retained_floor(self):
+        # Grok residual 3: restoring an earlier well-formed prefix is now
+        # DETECTED whenever the locally retained expected floor survives.
+        a=self.journal(provision=True)
+        a.consume(request(attempt="ATT_V05_R3_01"))
         a.conn.close()
         old=Path(self.tmp.name)/"old.sqlite3"
         shutil.copyfile(self.state/"custodian.sqlite3",old)
         b=self.journal()
-        b.consume(request(attempt="ATT_V05_02"))
+        b.consume(request(attempt="ATT_V05_R3_02"))
         b.conn.close()
         shutil.copyfile(old,self.state/"custodian.sqlite3")
+        with self.assertRaises(ValueError):
+            c=self.journal()  # ledger head fell behind the retained floor
+            c.conn.close()
+        self.assertEqual((self.state/"custodian.sqlite3").read_bytes(),old.read_bytes())  # untouched; no re-recording
+
+    def test_r3_wellformed_empty_replacement_fails_closed(self):
+        # Grok residual 2: a structurally valid zero-row events DB is never
+        # adopted as the intended original.
+        a=self.journal(provision=True)
+        for attempt in ("ATT_V05_R3_A","ATT_V05_R3_B","ATT_V05_R3_C"):
+            a.consume(request(attempt=attempt))
+        a.conn.close()
+        (self.state/"custodian.sqlite3").unlink()
+        conn=sqlite3.connect(str(self.state/"custodian.sqlite3"))
+        conn.execute("""CREATE TABLE events (
+          seq INTEGER PRIMARY KEY, request_key TEXT NOT NULL UNIQUE,
+          input_hash TEXT NOT NULL, decision TEXT NOT NULL, reason TEXT NOT NULL,
+          disposition TEXT NOT NULL, prev_hash TEXT NOT NULL, hash TEXT NOT NULL)""")
+        conn.commit(); conn.close()
+        with self.assertRaises(ValueError):
+            c=self.journal()  # zero rows behind the retained floor: fail closed
+            c.conn.close()
+
+    def test_r3_missing_ledger_fails_closed_and_provision_refused_while_floor_kept(self):
+        # Grok residual 1: deletion is not an implicit first boot, and the
+        # retained floor forbids a silent new chain even with provision=True.
+        a=self.journal(provision=True)
+        a.consume(request(attempt="ATT_V05_R3_UNLINK"))
+        a.conn.close()
+        (self.state/"custodian.sqlite3").unlink()
+        with self.assertRaises(ValueError):
+            c=self.journal()  # normal reopen never bootstraps a missing ledger
+            c.conn.close()
+        with self.assertRaises(ValueError):
+            j=broker.Journal(self.state, provision=True)
+            j.conn.close()
+
+    def test_r3_missing_or_ambiguous_floor_holds_instead_of_new_chain(self):
+        a=self.journal(provision=True)
+        a.consume(request(attempt="ATT_V05_R3_F1"))
+        a.conn.close()
+        (self.state/"custodian.floor.json").unlink()
+        for payload in (b"", b"{not json", b'{"format":"a15-custodian-floor-v1","ledger":"custodian.sqlite3","expected_seq":0,"expected_hash":"GENESIS","extra":1}'):
+            (self.state/"custodian.floor.json").write_bytes(payload)
+            with self.assertRaises(ValueError):
+                c=self.journal()  # HOLD: no implicit adoption, never a new chain
+                c.conn.close()
+
+    def test_r3_stale_floor_after_commit_crash_recovers_to_durable_head(self):
+        # Positive crash-recovery control: durable commit, lost floor write.
+        # Recovery reconciles forward to the verified head; history is never
+        # silently reset here.
+        a=self.journal(provision=True)
+        a.consume(request(attempt="ATT_V05_R3_S1"))
+        a.conn.close()
+        stale=(self.state/"custodian.floor.json").read_bytes()
+        b=self.journal()
+        b.consume(request(attempt="ATT_V05_R3_S2"))
+        b.conn.close()
+        (self.state/"custodian.floor.json").write_bytes(stale)
         c=self.journal()
-        self.assertEqual(c.verify()[0],1)  # a self-controlled floor CANNOT detect valid rollback
+        self.assertEqual(c.verify()[0],2)
+        floor=json.loads((self.state/"custodian.floor.json").read_text())
+        self.assertEqual((floor["expected_seq"],floor["expected_hash"]),(2,c.verify()[1]))
+
+    def test_r3_joint_rollback_of_ledger_and_floor_remains_undetectable_RED(self):
+        # Preserved RED (deliberately unsolved): the SAME administrator rolling
+        # back the ledger AND the locally retained floor together still erases
+        # the prior DECLINE while appearing healthy. A local floor, flag or CLI
+        # argument is NOT an authenticated independent custody witness; closing
+        # this requires a separately administered external (seq,hash) authority
+        # (a separate control boundary; acceptance gate #2 stays HOLD).
+        a=self.journal(provision=True)
+        a.consume(request(attempt="ATT_V05_01"))
+        a.conn.close()
+        old_db=Path(self.tmp.name)/"old.sqlite3"
+        old_floor=Path(self.tmp.name)/"old.floor.json"
+        shutil.copyfile(self.state/"custodian.sqlite3",old_db)
+        shutil.copyfile(self.state/"custodian.floor.json",old_floor)
+        b=self.journal()
+        b.consume(request(attempt="ATT_V05_02"))
+        b.conn.close()
+        shutil.copyfile(old_db,self.state/"custodian.sqlite3")
+        shutil.copyfile(old_floor,self.state/"custodian.floor.json")
+        c=self.journal()
+        self.assertEqual(c.verify()[0],1)  # joint same-admin rollback CANNOT be detected locally
         ref=c.consume(request(attempt="ATT_V05_02"))
         self.assertFalse(ref["replayed"])
         self.assertEqual(ref["seq"],2)
 
     def test_gred1_zero_and_one_byte_ledger_fail_closed_no_rebirth(self):
-        a=self.journal()
+        a=self.journal(provision=True)
         a.consume(request(attempt="ATT_V05_G1A"))
         a.conn.close()
         kept=(self.state/"custodian.sqlite3").read_bytes()
@@ -165,15 +253,20 @@ class BrokerCore(unittest.TestCase):
         # was not silently re-recorded on top of a fresh GENESIS row.
 
     def test_gred1_first_boot_provisioning_stays_allowed(self):
+        # CUST-08-R3: first boot is still possible, but ONLY explicit (never
+        # implicit during normal reopen, and refused over any existing file).
         fresh=Path(self.tmp.name)/"fresh"
-        j=broker.Journal(fresh)
+        with self.assertRaises(ValueError):
+            j=broker.Journal(fresh)  # reopen of a missing ledger is disabled
+            j.conn.close()
+        j=broker.Journal(fresh, provision=True)
         self.addCleanup(j.conn.close)
         r=j.consume(request(attempt="ATT_V05_G1_FRESH"))
         self.assertEqual(r["seq"],1)
         self.assertFalse(r["replayed"])
 
     def test_gred2_replay_separates_event_from_chain_head(self):
-        a=self.journal()
+        a=self.journal(provision=True)
         r1=a.consume(request(attempt="ATT_V05_G2_1"))
         r2=a.consume(request(attempt="ATT_V05_G2_2",changes={"preference":"UNKNOWN"},claim="UNKNOWN"))
         self.assertEqual((r1["chain_head_seq"],r1["chain_head_hash"]),(1,r1["head_hash"]))

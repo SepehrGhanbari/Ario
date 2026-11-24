@@ -38,6 +38,8 @@ ENUMS = {
 }
 GENESIS = "GENESIS"
 HASH_RE = re.compile(r"[0-9a-f]{64}\Z")
+FLOOR_NAME = "custodian.floor.json"  # locally retained expected floor: scoped local guard, NOT an independent custody witness
+FLOOR_FORMAT = "a15-custodian-floor-v1"
 
 def encode(obj):
     return json.dumps(obj, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
@@ -119,7 +121,7 @@ def ledger_record(seq, request_key, input_hash, verdict, reason, disposition, pr
             "decision":verdict, "reason":reason, "disposition":disposition, "prev_hash":prior}
 
 class Journal:
-    def __init__(self, state_dir):
+    def __init__(self, state_dir, provision=False):
         root = Path(state_dir)
         if root.is_symlink():
             raise ValueError("symlinked state directory")
@@ -129,38 +131,65 @@ class Journal:
             if st.st_uid != os.geteuid() or stat.S_IMODE(st.st_mode) & 0o077:
                 raise PermissionError("state directory owner/mode not exclusive")
         path = root / "custodian.sqlite3"
+        floor_path = root / FLOOR_NAME
         if path.is_symlink():
             raise ValueError("symlinked ledger")
-        # G-RED1 (CUST-08 handoff, 2026-11-23): a missing file is an explicit
-        # first boot; an existing file that is not a valid SQLite container with
-        # the events schema must fail closed BEFORE any schema mutation, because
-        # SQLite silently re-initializes 0/1-byte and foreign-byte files, which
-        # would rebirth wiped history as a fresh GENESIS ledger. A same-admin
-        # local guard still cannot prove authentic history: valid-prefix
-        # rollback of a well-formed ledger stays undetectable here and requires
-        # an external retained (seq, hash) checkpoint (residual RED).
-        fresh_provisioning = not path.exists()
-        if not fresh_provisioning:
+        # CUST-08-R3 (handoff 2026-11-24): provisioning and recovery are
+        # explicitly separated. Normal reopening NEVER bootstraps: a missing
+        # ledger fails closed. provision=True creates a fresh chain only when
+        # neither a ledger nor a retained expected floor exists. While the
+        # locally retained floor survives, a missing ledger, a well-formed
+        # empty (zero-row) replacement, and a valid-prefix rollback all fail
+        # closed instead of being adopted. A missing or ambiguous floor is a
+        # deliberate HOLD: no implicit adoption, never a new chain. The floor
+        # is a clearly scoped local guard under the SAME administrator:
+        # rolling back the ledger and the floor together stays undetectable
+        # here (preserved RED), and no local marker, flag, or CLI argument is
+        # an authenticated independent custody witness. G-RED1 remains: an
+        # existing file that is not a valid SQLite container with the events
+        # schema fails closed BEFORE any schema mutation.
+        ledger_exists = path.exists()
+        if provision:
+            if ledger_exists:
+                raise ValueError("explicit provisioning refused: a ledger file already exists; deleting it is an explicit operator decision, not a provisioning step")
+            if floor_path.exists():
+                raise ValueError("explicit provisioning refused: a retained expected floor exists; a new chain would erase recorded history")
+        elif not ledger_exists:
+            if floor_path.exists():
+                raise ValueError("ledger missing while a retained expected floor survives; refusing rebirth on normal reopen: fail closed")
+            raise ValueError("no ledger to recover and implicit first boot is disabled: pass provision=True only for an explicitly authorized empty state")
+        if ledger_exists:
             if path.stat().st_size < 100:
                 raise ValueError("existing ledger smaller than a SQLite header; refusing silent rebirth")
             with open(path, "rb") as f:
                 if f.read(16) != b"SQLite format 3\x00":
                     raise ValueError("existing ledger is not a SQLite database; refusing silent rebirth")
+        self.root = root
+        self.path = path
+        self.floor_path = floor_path
         self.conn = sqlite3.connect(str(path), timeout=2, isolation_level=None)
         try:
             self.conn.execute("PRAGMA journal_mode=DELETE")
             self.conn.execute("PRAGMA synchronous=FULL")
             self.conn.execute("PRAGMA temp_store=MEMORY")
-            if not fresh_provisioning:
+            if ledger_exists:
                 schema = self.conn.execute(
                     "SELECT 1 FROM sqlite_master WHERE type='table' AND name='events'").fetchone()
                 if schema is None:
                     raise ValueError("existing ledger lacks the events schema; refusing to treat it as a fresh GENESIS ledger")
-            self.conn.execute("""CREATE TABLE IF NOT EXISTS events (
-              seq INTEGER PRIMARY KEY, request_key TEXT NOT NULL UNIQUE,
-              input_hash TEXT NOT NULL, decision TEXT NOT NULL, reason TEXT NOT NULL,
-              disposition TEXT NOT NULL, prev_hash TEXT NOT NULL, hash TEXT NOT NULL)""")
-            self.verify()
+                self.conn.execute("""CREATE TABLE IF NOT EXISTS events (
+                  seq INTEGER PRIMARY KEY, request_key TEXT NOT NULL UNIQUE,
+                  input_hash TEXT NOT NULL, decision TEXT NOT NULL, reason TEXT NOT NULL,
+                  disposition TEXT NOT NULL, prev_hash TEXT NOT NULL, hash TEXT NOT NULL)""")
+                db_seq, db_head = self.verify()
+                self._reconcile_floor(floor_path, db_seq, db_head)
+            else:
+                self.conn.execute("""CREATE TABLE IF NOT EXISTS events (
+                  seq INTEGER PRIMARY KEY, request_key TEXT NOT NULL UNIQUE,
+                  input_hash TEXT NOT NULL, decision TEXT NOT NULL, reason TEXT NOT NULL,
+                  disposition TEXT NOT NULL, prev_hash TEXT NOT NULL, hash TEXT NOT NULL)""")
+                self.verify()
+                self._write_floor(floor_path, 0, GENESIS)
         except BaseException:
             self.conn.close()  # fail-closed even when verification failed on Windows
             raise
@@ -181,6 +210,55 @@ class Journal:
             expected += 1
             previous = actual
         return expected - 1, previous
+
+    def _write_floor(self, floor_path, expected_seq, expected_hash):
+        """Persist the locally retained expected floor atomically (tmp+rename).
+        A clearly scoped local guard under the same administrator; best effort
+        after commits and never a claim of independent custody."""
+        payload = encode({"format": FLOOR_FORMAT, "ledger": self.path.name,
+                          "expected_seq": expected_seq, "expected_hash": expected_hash})
+        tmp = floor_path.parent / (FLOOR_NAME + ".tmp")
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(payload)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, floor_path)
+
+    def _reconcile_floor(self, floor_path, db_seq, db_head):
+        """Recovery-time comparison against the locally retained expected
+        floor. A missing or ambiguous floor is a deliberate HOLD. While the
+        floor survives: a missing ledger (checked before open), a well-formed
+        empty zero-row replacement, and a valid-prefix rollback all fail
+        closed; a ledger ahead of the floor is the legitimate crash window
+        (durable commit, lost floor write) and is reconciled forward to the
+        verified head only. Nothing here proves independent custody."""
+        if not floor_path.exists():
+            raise ValueError("existing ledger without a retained expected-floor checkpoint: HOLD (no implicit adoption, never a new chain)")
+        try:
+            floor = parse(floor_path.read_text(encoding="utf-8"))
+            valid = (isinstance(floor, dict)
+                     and set(floor) == {"format", "ledger", "expected_seq", "expected_hash"}
+                     and floor["format"] == FLOOR_FORMAT
+                     and floor["ledger"] == self.path.name
+                     and type(floor["expected_seq"]) is int
+                     and floor["expected_seq"] >= 0
+                     and type(floor["expected_hash"]) is str
+                     and ((floor["expected_seq"] == 0 and floor["expected_hash"] == GENESIS)
+                          or (floor["expected_seq"] > 0 and HASH_RE.fullmatch(floor["expected_hash"]))))
+            if not valid:
+                raise ValueError("ambiguous floor payload")
+        except (OSError, ValueError, TypeError, UnicodeError, OverflowError):
+            raise ValueError("retained expected floor is missing/ambiguous: HOLD rather than guess history")
+        expected_seq = floor["expected_seq"]
+        expected_hash = floor["expected_hash"]
+        if db_seq < expected_seq:
+            raise ValueError("ledger head is behind the retained expected floor; well-formed empty replacement or valid-prefix rollback detected: fail closed")
+        if expected_seq > 0:
+            row = self.conn.execute("SELECT hash FROM events WHERE seq=?", (expected_seq,)).fetchone()
+            if row is None or row[0] != expected_hash:
+                raise ValueError("ledger diverges from the retained expected floor; fail closed")
+        if db_seq > expected_seq:
+            self._write_floor(floor_path, db_seq, db_head)
 
     def consume(self, req):
         # Single owner process and SQLite BEGIN IMMEDIATE serialize concurrent clients.
@@ -233,6 +311,10 @@ class Journal:
             self.conn.execute("COMMIT")
             if crash_key == key and crash_at == "AFTER_COMMIT_BEFORE_REPLY":
                 os._exit(78)  # response deliberately lost, durable receipt remains
+            try:
+                self._write_floor(self.floor_path, seq, head)
+            except OSError:
+                pass  # best effort only: the durable commit wins; the next open reconciles a DB-ahead floor
             return limited(disposition, replayed=False, seq=seq, head_hash=head,
                            chain_head_seq=seq, chain_head_hash=head,
                            policy_decision=verdict, reason_code=reason,
@@ -251,7 +333,7 @@ def serve(args):
     st = parent.stat()
     if st.st_uid != os.geteuid() or stat.S_IMODE(st.st_mode) & 0o002:
         raise PermissionError("socket directory owner/mode invalid")
-    journal = Journal(args.state_dir)
+    journal = Journal(args.state_dir, provision=args.provision)
     sock_path = Path(args.socket)
     if sock_path.exists() or sock_path.is_symlink():
         raise FileExistsError("socket path already exists; do not unlink an unknown listener")
@@ -309,6 +391,7 @@ def main():
     s.add_argument("--state-dir",required=True)
     s.add_argument("--gate-uid",required=True,type=int)
     s.add_argument("--gate-gid",required=True,type=int)
+    s.add_argument("--provision",action="store_true", help="explicitly provision a fresh empty ledger; refused when a ledger or a retained expected floor already exists")
     c=sub.add_parser("client")
     c.add_argument("--socket",required=True)
     args=parser.parse_args()

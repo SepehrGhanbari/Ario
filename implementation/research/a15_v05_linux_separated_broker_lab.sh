@@ -41,16 +41,19 @@ cp "$broker_source" "$install/custodian.py"
 chown "$cust:$group" "$install/custodian.py"; chmod 0550 "$install/custodian.py"
 
 start_broker() {
-  local crash="$1" target="$2"
+  local crash="$1" target="$2" provision="${3:-}"
+  local provision_flags=()
+  [ "$provision" = "provision" ] && provision_flags+=(--provision)
+
   rm -f "$socket_path" # coordinator recovery only after previous process terminated
   if [ -n "$crash" ]; then
     env A15_V05_SYNTHETIC_CRASH_POINT="$crash" A15_V05_SYNTHETIC_CRASH_REQUEST_ID="$target" \
       runuser -u "$cust" -- "$python" "$install/custodian.py" serve \
-      --socket "$socket_path" --state-dir "$state" --gate-uid "$gate_uid" --gate-gid "$gate_gid" \
+      --socket "$socket_path" --state-dir "$state" --gate-uid "$gate_uid" --gate-gid "$gate_gid" "${provision_flags[@]}" \
       >> "$root/server.log" 2>&1 &
   else
     runuser -u "$cust" -- "$python" "$install/custodian.py" serve \
-      --socket "$socket_path" --state-dir "$state" --gate-uid "$gate_uid" --gate-gid "$gate_gid" \
+      --socket "$socket_path" --state-dir "$state" --gate-uid "$gate_uid" --gate-gid "$gate_gid" "${provision_flags[@]}" \
       >> "$root/server.log" 2>&1 &
   fi
   service_launcher="$!"
@@ -93,7 +96,7 @@ check_response() {
     "$response" "$status" "$replay" "$seq"
 }
 
-start_broker '' ''
+start_broker '' '' provision
 first="$(make_request ATT_V05_FIRST)"
 check_response "$(gate_call "$first")" INERT_RECORDED_UNATTESTED_ORIGIN false 1
 check_response "$(gate_call "$first")" REPLAY_DURABLE_LOCAL_RECEIPT_ONLY true 1
@@ -173,6 +176,16 @@ assert sorted([a["replayed"],b["replayed"]])==[False,True]
 assert {a["status"],b["status"]}=={"INERT_RECORDED_UNATTESTED_ORIGIN","REPLAY_DURABLE_LOCAL_RECEIPT_ONLY"}
 print("CONCURRENT_SINGLE_DURABLE_CONSUMPTION=PASS")
 PY
+
+# Provisioning/recovery separation control (CUST-08-R3): --provision over an
+# existing ledger must fail closed (no silent re-provisioning in service).
+if runuser -u "$cust" -- "$python" "$install/custodian.py" serve \
+  --socket "$socket_path" --state-dir "$state" --gate-uid "$gate_uid" --gate-gid "$gate_gid" --provision \
+  > "$root/provision-refusal.log" 2>&1; then
+  echo 'PROVISION_REFUSAL_BYPASSED' >&2; exit 2
+fi
+[ -S "$socket_path" ] && { echo 'REFUSAL_RUN_CREATED_A_SOCKET' >&2; exit 2; }
+echo "EXPLICIT_PROVISION_REFUSED_ON_EXISTING_LEDGER=PASS"
 echo "A15_V05_LINUX_OS_SEPARATED_BROKER=PASS"
 echo "GATE_UID=$gate_uid CUSTODIAN_UID=$cust_uid"
 echo "CRASH_RECOVERY=PASS LOST_REPLY_IDEMPOTENCE=PASS"
