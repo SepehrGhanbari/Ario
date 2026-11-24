@@ -19,3 +19,8 @@ This mode does NOT perform cryptographic verification. Local installation of sig
 - No global freshness claim. Floor is a trusted-input model using archived newer evidence in memory, not independent persistent custody. This test cannot establish physical separation or a current signed head. Hypothetical field mutations exercise policy only; they are not signed external evidence. No actual network replay or full disk restore.
 
 The old and new artifacts expire according to the R22.10 record; retain original ZIPs separately. Next: actual separately controlled retained floor and authenticated discovery handoff, then real rollback of the publisher without rollback of the floor. Also establish consistency proof for valid advancement before considering a future floor-update protocol.
+
+
+## Verified execution addendum — 2026-11-24
+
+[Run 45455849012](https://github.com/SepehrGhanbari/Ario/actions/runs/45455849012) on exact source HEAD 76ef709bffaa84e72d5546600bb9f6d5a4cba7f0 completed SUCCESS. Pinned official Sigsum v0.14.1 reverified old, new, and intact old replay (3/3 positive); wrong receipt and changed bytes rejected (2/2 negative); all 15 policy cases passed. Artifact 14949877736 ZIP SHA256 e485144d5689a5f4ccb5496f020f0c3467738adde46d283abee34282bf09377a verified against API digest and CRC; expires 2026-12-24. This is an offline replay of actual archived TEST proofs, not a fresh log query or independent floor custody. Rollback of floor itself remains RED. No keys, authority, merge, production or trust activation.

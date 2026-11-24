@@ -910,3 +910,8 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 
 - Parent #358 d9cd078836c25eb02d85483fec937e01855bcc39; all parent PR checks SUCCESS. Exact archived public synthetic R22.10 old/new ZIP pins and CRC verified; intact old envelope and receipt reused. Local structural model 15/15 PASS, no new crypto verification locally (DNS blocked official tool install). Advisory offline verifier workflow supplied; execution result pending at authoring.
 - With retained newer floor, old pair HOLD_ROLLBACK_BELOW_FLOOR. Without floor, HOLD_FRESHNESS_UNKNOWN; when floor itself rolls back, old pair matches retained floor (RED, never current/freshness/admission). Higher candidate HOLD_ADVANCE_UNPROVEN. Report: implementation/research/r22_12_authentic_replay/RESEARCH_RECORD.md. No independent custody, new keys, trust, production or merge.
+
+
+## Verified execution addendum — 2026-11-24
+
+[Run 45455849012](https://github.com/SepehrGhanbari/Ario/actions/runs/45455849012) on exact source HEAD 76ef709bffaa84e72d5546600bb9f6d5a4cba7f0 completed SUCCESS. Pinned official Sigsum v0.14.1 reverified old, new, and intact old replay (3/3 positive); wrong receipt and changed bytes rejected (2/2 negative); all 15 policy cases passed. Artifact 14949877736 ZIP SHA256 e485144d5689a5f4ccb5496f020f0c3467738adde46d283abee34282bf09377a verified against API digest and CRC; expires 2026-12-24. This is an offline replay of actual archived TEST proofs, not a fresh log query or independent floor custody. Rollback of floor itself remains RED. No keys, authority, merge, production or trust activation.
