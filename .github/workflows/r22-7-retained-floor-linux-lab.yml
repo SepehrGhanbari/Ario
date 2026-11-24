@@ -1,0 +1,32 @@
+name: R22.7 retained floor Linux lab (advisory)
+
+on:
+  pull_request:
+    paths:
+      - implementation/tests/test_r22_7_retained_witness_floor.py
+      - implementation/research/r10_durable_monitor/monitor.py
+      - .github/workflows/r22-7-retained-floor-linux-lab.yml
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-two-uid-floor:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'research/r22-7-retained-witness-floor-20261124'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    defaults:
+      run:
+        working-directory: implementation
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13"
+      - run: python -m pip install -r requirements-research.txt
+      - name: Disposable Linux supervisor and two unprivileged synthetic UIDs
+        run: |
+          sudo -n -- "$(command -v python)" -c "import os,sys; assert sys.platform.startswith('linux') and os.geteuid() == 0"
+          sudo -n -- "$(command -v python)" -B -m pytest -p no:cacheprovider -q -rs tests/test_r22_7_retained_witness_floor.py::test_linux_publisher_uid_cannot_restore_witness_floor
