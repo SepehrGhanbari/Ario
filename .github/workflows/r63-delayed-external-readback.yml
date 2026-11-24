@@ -1,0 +1,91 @@
+name: R63 delayed external readback (advisory)
+on:
+  push:
+    branches:
+      - research/r63-r22-external-floor-bridge-20261124
+    paths:
+      - .github/workflows/r63-delayed-external-readback.yml
+permissions:
+  contents: read
+  actions: read
+jobs:
+  delayed-read:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - name: Obtain only original authenticated bootstrap (no new publication)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          LAB="$RUNNER_TEMP/r63-delayed"
+          mkdir "$LAB" "$LAB/first" "$LAB/scanner" "$LAB/output"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/14952299559/zip" > "$LAB/first.zip"
+          echo "e3fddf46811d31d44e47a3f3914baaca18b89c83d5034fdfe2becdde94a2d233  $LAB/first.zip" | sha256sum -c -
+          unzip -q "$LAB/first.zip" -d "$LAB/first"
+          go install sigsum.org/sigsum-go/cmd/sigsum-verify@v0.14.1
+          "$(go env GOPATH)/bin/sigsum-verify" -k "$LAB/first/synthetic-key.pub" -P sigsum-test1-2025 "$LAB/first/envelope.json.proof" < "$LAB/first/envelope.json"
+          cp implementation/research/r22_10_blind_discovery/{main.go,main_test.go,go.mod} "$LAB/scanner/"
+          cp "$LAB/first/bootstrap.json" "$LAB/scanner/"
+          sha256sum "$LAB/first/"* > "$LAB/before.sha256"
+          (cd "$LAB/scanner"; go mod tidy; go run . | tee "$LAB/output/discovery.jsonl")
+      - name: Independent per-relay readback with other endpoint excluded
+        run: |
+          set -euo pipefail
+          python -m pip install coincurve==21.0.0 websockets==15.0.1
+          PYTHONPATH=implementation/research/r63_external_floor_bridge python - <<'PY' | tee "$RUNNER_TEMP/r63-delayed/output/readback.log"
+          import bridge_live as bridge
+          import hashlib, json, os, datetime
+          from pathlib import Path
+          lab=Path(os.environ["RUNNER_TEMP"])/"r63-delayed"
+          a=lab/"first"
+          first=(a/"envelope.json").read_bytes()
+          report=bridge.load_report(lab/"output/discovery.jsonl")
+          target=bridge.target_from(a,report)
+          endpoints=tuple(bridge.transport.RELAYS)
+          valid={}
+          for url in endpoints:
+              bridge.transport.RELAYS=(url,)
+              raw,sources=bridge.transport.fetch(target)
+              try:
+                  bridge.pair(first,raw,target)
+                  assert sources==[url]
+              except (ValueError,AssertionError,TypeError):
+                  print(json.dumps({"relay":url,"result":"HOLD_UNAVAILABLE_OR_INVALID"}),flush=True)
+                  continue
+              valid[url]=raw
+              print(json.dumps({"relay":url,"result":"EXACT_HASH_MATCH","bytes":len(raw),"checksum":target}),flush=True)
+          bridge.transport.RELAYS=()
+          missing,sources=bridge.transport.fetch(target)
+          assert missing is None and sources==[]
+          for label,candidate in [("all_sources_excluded",missing),("old_bytes_replay",first)]:
+              try: bridge.pair(first,candidate,target)
+              except (ValueError,TypeError): print(label,"HOLD PASS",flush=True)
+              else: raise AssertionError(label)
+          if not valid: raise SystemExit("HOLD_NO_EXTERNAL_READBACK")
+          recovered=next(iter(valid.values()))
+          assert all(raw==recovered for raw in valid.values())
+          try: bridge.pair(first,recovered+b" ",target)
+          except (ValueError,TypeError): print("tampered_recovered_bytes HOLD PASS",flush=True)
+          else: raise AssertionError("tamper")
+          (lab/"output/envelope.json").write_bytes(recovered)
+          print(json.dumps({"disposition":"MATCH_R63_LAB_COMMITMENT_ONLY","retrieved_at_utc":datetime.datetime.now(datetime.timezone.utc).isoformat(),"sources":list(valid),"both_available":len(valid)==2,"no_publication":True,"freshness":"NOT_ESTABLISHED","genesis":"NO_GO"}),flush=True)
+          PY
+          sha256sum -c "$RUNNER_TEMP/r63-delayed/before.sha256"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: R63-DELAYED-READBACK
+          path: ${{ runner.temp }}/r63-delayed/output/
+          if-no-files-found: warn
+          retention-days: 30
