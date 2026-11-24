@@ -1,0 +1,13 @@
+# R22.19 — archived challenge lifecycle and atomic session rotation
+
+RESEARCH_ONLY / DRAFT / HOLD / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTION / NO_AUTOMATIC_MERGE.
+
+Parent #371 ffa458c796be75876fc028c0a1361aa2143c9e89; final three PR checks SUCCESS. No duplicate R22.19 found. Reused R22.18 nonce_ledger.py byte-identically (Git blob 2fdf68750ce7a0015fe3c8b51b97693b9346140c) and original R22.17 public synthetic capture artifact 14950269714 SHA256 b7f1702b88241f6062c6e9c3975e5969620e98b6fc47321ca7e91956c7500f8e. No new TSA requests or keys. Historical verifier uses fixed historical validation epoch; not live time.
+
+Actual disposable Linux UID lab, root supervisor, Python 3.13.5 / OpenSSL 3.5.5. Session epoch and challenge rows share one SQLite BEGIN IMMEDIATE transaction with FULL synchronous. Rotate atomically abandons all ISSUED rows and increases epoch; stale caller epoch rejected. Nonce unique across all epochs, terminal rows retained. Issuance is enrollment of two exact historical pinned queries, NOT fresh RNG or a new live issuance protocol. The supervisor chooses operations and caller epoch. No authenticated IPC.
+
+Initial run reached check 26 but failed a test assertion because rows sorted by query hash instead of epoch. Fixed test ordering only; entire corrected run 27/27 PASS. Actual process exit 75/76 before/after rotation commit; verified old response remains cryptographically valid but abandoned after rotation. Stale epoch, current-epoch attempt on abandoned challenge, reissue, cross response, terminal consume/abandon, publisher UID rotation denied, actual publisher epoch-file rollback, missing DB, reconnect, explicit abandon and one actual concurrent rotation/consumption trial. Race permits either serial order (consume before rotation or hold after rotation); no exhaustive interleaving proof. Actual common-root rollback of ledger reproduced consumption of old request (RED). No physical power-loss test or independent admin. No current freshness, external clock, trust, admission or production.
+
+Local source SHA256 0d1a162eb421689b699a59b917a71859700e0f1ebcb25b69a4258a5ec4c6f79a, test 86b8d08736b1b0cf469d479186b452b157de7bbf4c227bd9b12c56f0cc092856, log 9a807404bff7055f850040e80da28fd6d4d6e3d47f1fec0eb384ac3cb3f1413a. Dedicated CI supplied; result pending at authoring. Original capture expires 2026-12-24.
+
+Next: challenge-bound external evidence for the session epoch and terminal transitions; recover using a fresh verifier, with publisher and local ledger rollback. Independent retention of the epoch cannot be inferred from local SQLite or another same-admin store.

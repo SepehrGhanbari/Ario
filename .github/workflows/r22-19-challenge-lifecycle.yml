@@ -1,0 +1,37 @@
+name: R22.19 challenge lifecycle (advisory)
+on:
+  push:
+    branches:
+      - research/r22-19-challenge-lifecycle-20261124
+    paths:
+      - .github/workflows/r22-19-challenge-lifecycle.yml
+      - implementation/research/r22_19_challenge_lifecycle/*.py
+permissions:
+  contents: read
+  actions: read
+jobs:
+  lifecycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Retrieve exact historical synthetic capture
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/14950269714/zip" > "$RUNNER_TEMP/capture.zip"
+          echo "b7f1702b88241f6062c6e9c3975e5969620e98b6fc47321ca7e91956c7500f8e  $RUNNER_TEMP/capture.zip" | sha256sum -c -
+      - name: Actual UID and atomic lifecycle tests
+        run: |
+          set -euo pipefail
+          sudo /usr/bin/python3 "implementation/research/r22_19_challenge_lifecycle/test_lifecycle.py" "$RUNNER_TEMP/capture.zip" | tee "$RUNNER_TEMP/r22-19-results.log"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r22-19-lifecycle-results
+          path: ${{ runner.temp }}/r22-19-results.log
+          if-no-files-found: warn
+          retention-days: 30
