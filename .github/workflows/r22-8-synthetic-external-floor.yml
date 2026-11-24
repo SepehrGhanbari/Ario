@@ -1,0 +1,117 @@
+name: R22.8 synthetic external floor publication (advisory)
+
+# One bounded publication of synthetic bytes only, using the prior R6 TEST-log
+# protocol. This is not a required check and cannot establish an external latest
+# floor, administration independence, signer authority or event completeness.
+on:
+  push:
+    branches:
+      - research/r22-8-witness-receipt-recovery-20261124
+    paths:
+      - .github/workflows/r22-8-synthetic-external-floor.yml
+
+permissions:
+  contents: read
+
+jobs:
+  publish-synthetic-floor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13"
+      - name: Build only the deterministic synthetic R22.7 floor commitments
+        working-directory: implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install -r requirements-research.txt
+          install -d -m 0755 "$RUNNER_TEMP/r22-8-public"
+          PYTHONPATH=.:tests python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          from test_r22_7_retained_witness_floor import history, floor_record, SCOPE
+          from test_r22_8_witness_receipt_recovery import commitment
+          out = Path(os.environ["RUNNER_TEMP"]) / "r22-8-public"
+          rows = history()
+          for n in (2, 4):
+              record = floor_record(rows, n)
+              body = {
+                  "profile": "ARIO-R22.8-PUBLIC-SYNTHETIC-FLOOR-v1",
+                  "synthetic": True,
+                  "scope_sha256": hashlib.sha256(json.dumps(SCOPE, sort_keys=True,
+                      separators=(",", ":"), ensure_ascii=True).encode("ascii")).hexdigest(),
+                  "record_count": n,
+                  "floor_commitment_sha256": commitment(record),
+                  "historical_event_truth": "UNKNOWN",
+                  "independent_latest_floor": "NOT_ESTABLISHED",
+                  "trust_activation": "NO_GO",
+                  "production": "NO_GO",
+                  "authoritative": False,
+              }
+              (out / f"floor-{n}.PUBLIC_SYNTHETIC.json").write_bytes(
+                  (json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=True) + "\n").encode("ascii"))
+          PY
+          cat "$RUNNER_TEMP/r22-8-public/floor-4.PUBLIC_SYNTHETIC.json"
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+      - name: Install the prior R6 pinned Sigsum tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          go install sigsum.org/sigsum-go/cmd/sigsum-key@v0.14.1
+          go install sigsum.org/sigsum-go/cmd/sigsum-policy@v0.14.1
+          go install sigsum.org/sigsum-go/cmd/sigsum-submit@v0.14.1
+          go install sigsum.org/sigsum-go/cmd/sigsum-verify@v0.14.1
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - name: Publish only the count-four synthetic commitment to the TEST log
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          set -euo pipefail
+          P="$RUNNER_TEMP/r22-8-public"
+          PRIVATE=$(mktemp -d "$RUNNER_TEMP/r22-8-ephemeral.XXXXXX")
+          trap 'rm -rf "$PRIVATE"' EXIT
+          chmod 0700 "$PRIVATE"
+          cd "$PRIVATE"
+          sigsum-key generate -o synthetic-key
+          cp synthetic-key.pub "$P/synthetic-key.pub"
+          sigsum-policy show sigsum-test1-2025 > "$P/policy.txt"
+          sigsum-submit -P sigsum-test1-2025 -k "$PRIVATE/synthetic-key" "$P/floor-4.PUBLIC_SYNTHETIC.json"
+          test -s "$P/floor-4.PUBLIC_SYNTHETIC.json.proof"
+          echo 'R22_8_EXTERNAL_TEST_LOG_PROOF_RECEIVED'
+      - name: Verify inclusion offline and reject the older different commitment
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/r22-8-public"
+          sigsum-verify -k synthetic-key.pub -P sigsum-test1-2025 floor-4.PUBLIC_SYNTHETIC.json.proof < floor-4.PUBLIC_SYNTHETIC.json
+          echo 'R22_8_OFFLINE_INCLUSION_PASS'
+          if sigsum-verify -k synthetic-key.pub -P sigsum-test1-2025 floor-4.PUBLIC_SYNTHETIC.json.proof < floor-2.PUBLIC_SYNTHETIC.json; then
+            echo 'ERROR: proof accepted different older floor bytes' >&2
+            exit 1
+          fi
+          echo 'R22_8_OLD_FLOOR_BYTE_BINDING_NEGATIVE_PASS'
+          sha256sum floor-2.PUBLIC_SYNTHETIC.json floor-4.PUBLIC_SYNTHETIC.json floor-4.PUBLIC_SYNTHETIC.json.proof synthetic-key.pub policy.txt | tee public-manifest.sha256
+          echo 'R22_8_INDEPENDENT_LATEST_FLOOR_NOT_ESTABLISHED'
+      - name: Preserve public evidence only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r22-8-public-synthetic-floor-proof
+          path: |
+            ${{ runner.temp }}/r22-8-public/floor-2.PUBLIC_SYNTHETIC.json
+            ${{ runner.temp }}/r22-8-public/floor-4.PUBLIC_SYNTHETIC.json
+            ${{ runner.temp }}/r22-8-public/floor-4.PUBLIC_SYNTHETIC.json.proof
+            ${{ runner.temp }}/r22-8-public/synthetic-key.pub
+            ${{ runner.temp }}/r22-8-public/policy.txt
+            ${{ runner.temp }}/r22-8-public/public-manifest.sha256
+          if-no-files-found: warn
+          retention-days: 30
