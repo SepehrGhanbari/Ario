@@ -46,7 +46,7 @@ def fetch_with_links(*values):
     '<https://api.github.com/runs>; rel="next-foo"',
     '<https://api.github.com/runs>; rel="not-next"',
     '<https://api.github.com/runs?a=1,2;b=3>; title="one, two; rel=next"; rel=last',
-    '<https://api.github.com/runs>; title="escaped \"rel=next\""; rel="first"',
+    '<https://api.github.com/runs>; title="escaped \\"rel=next\\""; rel="first"',
     '<https://api.github.com/runs>; rel="prev", <https://api.github.com/runs?page=7>; rel="last"',
 ])
 def test_valid_non_next_link_is_not_mistaken_for_next(header):
