@@ -1,0 +1,33 @@
+test_changed_dependency_stops_before_acquisition (test_ario_integrity_gate.GateTests.test_changed_dependency_stops_before_acquisition) ... ok
+test_checkout_incomplete_reports_not_success (test_ario_integrity_gate.GateTests.test_checkout_incomplete_reports_not_success) ... ok
+test_clone_failure_no_handoff (test_ario_integrity_gate.GateTests.test_clone_failure_no_handoff) ... ok
+test_doi_extra_file_rejected (test_ario_integrity_gate.GateTests.test_doi_extra_file_rejected) ... ok
+test_download_restore_automatically_verifies_before_materializing (test_ario_integrity_gate.GateTests.test_download_restore_automatically_verifies_before_materializing) ... ok
+test_download_restore_bad_bytes_never_materialize (test_ario_integrity_gate.GateTests.test_download_restore_bad_bytes_never_materialize) ... ok
+test_exact_dep_pins (test_ario_integrity_gate.GateTests.test_exact_dep_pins) ... ok
+test_git_uses_no_hooks_no_submodules_no_global_config (test_ario_integrity_gate.GateTests.test_git_uses_no_hooks_no_submodules_no_global_config) ... ok
+test_import_consumes_original_verified_bytes_not_reopened_input (test_ario_integrity_gate.GateTests.test_import_consumes_original_verified_bytes_not_reopened_input) ... ok
+test_manifest_path_alias_rejected_even_if_pin_adjusted_in_fixture (test_ario_integrity_gate.GateTests.test_manifest_path_alias_rejected_even_if_pin_adjusted_in_fixture) ... ok
+test_manifest_pin_mismatch (test_ario_integrity_gate.GateTests.test_manifest_pin_mismatch) ... ok
+test_network_unknown_blocks_restore (test_ario_integrity_gate.GateTests.test_network_unknown_blocks_restore) ... ok
+test_read_regular_symlink_or_special_file (test_ario_integrity_gate.GateTests.test_read_regular_symlink_or_special_file) ... ok
+test_restore_postcheck_failure_removes_only_fresh_stage (test_ario_integrity_gate.GateTests.test_restore_postcheck_failure_removes_only_fresh_stage) ... ok
+test_restore_txt_requires_manifest_and_postcheck (test_ario_integrity_gate.GateTests.test_restore_txt_requires_manifest_and_postcheck) ... ok
+test_restore_zip_full_orchestration (test_ario_integrity_gate.GateTests.test_restore_zip_full_orchestration) ... ok
+test_same_size_archive_rejected_before_network (test_ario_integrity_gate.GateTests.test_same_size_archive_rejected_before_network) ... ok
+test_startup_not_called_on_unknown_or_rejection (test_ario_integrity_gate.GateTests.test_startup_not_called_on_unknown_or_rejection) ... ok
+test_startup_order_and_explicit_pin (test_ario_integrity_gate.GateTests.test_startup_order_and_explicit_pin) ... ok
+test_startup_result_is_not_epistemic_pass (test_ario_integrity_gate.GateTests.test_startup_result_is_not_epistemic_pass) ... ok
+test_txt_duplicate_record_rejected (test_ario_integrity_gate.GateTests.test_txt_duplicate_record_rejected) ... ok
+test_txt_footer_prefix_and_trailing_data_rejected (test_ario_integrity_gate.GateTests.test_txt_footer_prefix_and_trailing_data_rejected) ... ok
+test_txt_short_historical_footer_and_embedded_delimiter (test_ario_integrity_gate.GateTests.test_txt_short_historical_footer_and_embedded_delimiter) ... ok
+test_unexpected_verifier_exception_fails_closed (test_ario_integrity_gate.GateTests.test_unexpected_verifier_exception_fails_closed) ... ok
+test_zip_duplicate_rejected (test_ario_integrity_gate.GateTests.test_zip_duplicate_rejected) ... ok
+test_zip_extra_path_rejected (test_ario_integrity_gate.GateTests.test_zip_extra_path_rejected) ... ok
+test_zip_member_hash_rejected (test_ario_integrity_gate.GateTests.test_zip_member_hash_rejected) ... ok
+test_zip_restores_exact_members_without_meta_execution (test_ario_integrity_gate.GateTests.test_zip_restores_exact_members_without_meta_execution) ... ok
+
+----------------------------------------------------------------------
+Ran 28 tests in 0.256s
+
+OK
