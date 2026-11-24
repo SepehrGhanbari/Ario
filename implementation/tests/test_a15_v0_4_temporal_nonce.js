@@ -46,8 +46,20 @@ function deliver(lab,response){
 }
 function assertHold(fn,code){assert.throws(fn,e=>e?.code===code,code);}
 function rowOf(signed){return JSON.stringify({v:1,kind:'ADVANCE',seq:signed.payload.seq,head:signed.payload.head,signed})+'\n';}
-function snapshot(d,to){fs.cpSync(d,to,{recursive:true});}
-function restore(d,from){fs.rmSync(d,{recursive:true,force:true});fs.cpSync(from,d,{recursive:true});}
+// Synthetic same-admin restore includes POSIX directory permissions, not only file bytes.
+// Node/runner copy semantics may otherwise produce an insecure 0755 directory and
+// fail the test before it reaches the intended common-admin rollback counterexample.
+function snapshot(d,to){
+  const sourceMode=fs.statSync(d).mode&0o777;
+  fs.cpSync(d,to,{recursive:true});
+  fs.chmodSync(to,sourceMode);
+}
+function restore(d,from){
+  const retainedMode=fs.statSync(from).mode&0o777;
+  fs.rmSync(d,{recursive:true,force:true});
+  fs.cpSync(from,d,{recursive:true});
+  fs.chmodSync(d,retainedMode);
+}
 function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
 
 test.after(()=>{for(const l of labs.reverse())fs.rmSync(l.root,{recursive:true,force:true});});
