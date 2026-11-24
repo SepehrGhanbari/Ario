@@ -135,6 +135,8 @@ LIMITATIONS = [
     "The repository author may also control tests and workflow definitions",
     "Two PR GET samples and repeated metadata reads do not form an atomic or permanent snapshot",
     "A PR revision or workflow rerun after its last relevant sample remains unobservable",
+    "Coherent stale replay and changes that revert between samples can be indistinguishable from stable evidence",
+    "HTTP cache metadata and representation agreement do not establish source freshness or history continuity",
     "This probe does not validate job logs, code quality, truth or merge eligibility",
     "No memory update, M0 evidence admission, real signer, Genesis or trust permission",
 ]
@@ -235,6 +237,8 @@ def _unknown(reason: str, **extra) -> dict:
     return {
         "schema": SCHEMA, "status": "UNKNOWN", "reason": reason,
         "source_delivery": "GITHUB_API_RESPONSE_UNATTESTED",
+        "source_freshness": "NOT_ESTABLISHED",
+        "history_continuity": "NOT_ESTABLISHED",
         "execution_attestation": "NOT_ESTABLISHED",
         "evidence_admission": "NOT_EVALUATED",
         "merge_authorized": False, "memory_updated": False, "trust_activated": False,
