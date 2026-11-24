@@ -1,0 +1,44 @@
+=== RUN   TestArchivedResponseReplay
+    replay_test.go:41: Both exact archived signed heads authenticated over HTTP
+=== RUN   TestArchivedResponseReplay/old_vs_old_floor
+    replay_test.go:61: MATCH_FLOOR_FRESHNESS_UNKNOWN
+=== RUN   TestArchivedResponseReplay/old_vs_new_floor
+    replay_test.go:61: HOLD_HEAD_ROLLBACK
+=== RUN   TestArchivedResponseReplay/new_vs_new_floor
+    replay_test.go:61: MATCH_FLOOR_FRESHNESS_UNKNOWN
+=== RUN   TestArchivedResponseReplay/new_vs_old_floor
+    replay_test.go:61: HOLD_ADVANCE_REQUIRES_CONSISTENCY
+=== RUN   TestArchivedResponseReplay/old_without_floor
+    replay_test.go:61: HOLD_FRESHNESS_UNKNOWN
+=== RUN   TestArchivedResponseReplay/new_without_floor
+    replay_test.go:61: HOLD_FRESHNESS_UNKNOWN
+=== RUN   TestArchivedResponseReplay/joint_floor_rollback_RED
+    replay_test.go:61: MATCH_FLOOR_FRESHNESS_UNKNOWN
+=== RUN   TestArchivedResponseReplay/tampered_root
+    replay_test.go:61: HOLD_UNAUTHENTICATED_HEAD
+=== RUN   TestArchivedResponseReplay/tampered_witness_timestamp
+    replay_test.go:61: HOLD_UNAUTHENTICATED_HEAD
+=== RUN   TestArchivedResponseReplay/missing_quorum
+    replay_test.go:61: HOLD_UNAUTHENTICATED_HEAD
+=== RUN   TestArchivedResponseReplay/malformed_response
+    replay_test.go:61: HOLD_RESPONSE_UNAVAILABLE_OR_INVALID
+=== RUN   TestArchivedResponseReplay/http_unavailable
+    replay_test.go:61: HOLD_RESPONSE_UNAVAILABLE_OR_INVALID
+=== RUN   TestArchivedResponseReplay/same_size_conflict_model_only
+    replay_test.go:63: HOLD_SAME_SIZE_CONFLICT; hypothetical authenticated input, no forged signatures
+--- PASS: TestArchivedResponseReplay (0.01s)
+    --- PASS: TestArchivedResponseReplay/old_vs_old_floor (0.00s)
+    --- PASS: TestArchivedResponseReplay/old_vs_new_floor (0.00s)
+    --- PASS: TestArchivedResponseReplay/new_vs_new_floor (0.00s)
+    --- PASS: TestArchivedResponseReplay/new_vs_old_floor (0.00s)
+    --- PASS: TestArchivedResponseReplay/old_without_floor (0.00s)
+    --- PASS: TestArchivedResponseReplay/new_without_floor (0.00s)
+    --- PASS: TestArchivedResponseReplay/joint_floor_rollback_RED (0.00s)
+    --- PASS: TestArchivedResponseReplay/tampered_root (0.00s)
+    --- PASS: TestArchivedResponseReplay/tampered_witness_timestamp (0.00s)
+    --- PASS: TestArchivedResponseReplay/missing_quorum (0.00s)
+    --- PASS: TestArchivedResponseReplay/malformed_response (0.00s)
+    --- PASS: TestArchivedResponseReplay/http_unavailable (0.00s)
+    --- PASS: TestArchivedResponseReplay/same_size_conflict_model_only (0.00s)
+PASS
+ok  	ario-r22-15-signed-head-replay	0.016s
