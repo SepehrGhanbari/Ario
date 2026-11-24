@@ -1,0 +1,174 @@
+name: R22.14 retained signed tree floor cold restart (advisory)
+on:
+  push:
+    branches:
+      - research/r22-14-retained-cosigned-floor-20261124
+    paths:
+      - .github/workflows/r22-14-retained-floor.yml
+permissions:
+  contents: read
+  actions: read
+jobs:
+  retain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - name: Download pinned old, later and delayed recovery artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          L="$RUNNER_TEMP/lab"
+          mkdir -p "$L"
+          gh api repos/SepehrGhanbari/Ario/actions/artifacts/14951747944/zip > "$L/first.zip"
+          gh api repos/SepehrGhanbari/Ario/actions/artifacts/14952710960/zip > "$L/second.zip"
+          gh api repos/SepehrGhanbari/Ario/actions/artifacts/14951259501/zip > "$L/recovered.zip"
+          cd "$L"
+          printf '%s\n' '22f79e186ff93a3fe2b00e58af5ff3870baf0aad954cac1de883dbfb91cf5422  first.zip' '5ad28bffae50600ddba9363a82a75f1a4d3b1ef748ea1f1ddee5cf3b24f62549  second.zip' '0c627d33ffa8fea08d64a5406f733002224879b863cf080d6950fdfdf890579f  recovered.zip' | sha256sum -c -
+          python - <<'PY'
+          import zipfile, pathlib
+          for name in ("first","second","recovered"):
+              with zipfile.ZipFile(name+".zip") as z:
+                  assert z.testzip() is None
+                  for n in z.namelist():
+                      p=pathlib.PurePosixPath(n)
+                      assert not p.is_absolute() and ".." not in p.parts
+                      assert z.getinfo(n).file_size<=65536
+                  z.extractall(name)
+          PY
+      - name: Verify both real signed receipts and recovered floor before proposing retained pin
+        working-directory: implementation
+        run: |
+          set -euo pipefail
+          go install sigsum.org/sigsum-go/cmd/sigsum-verify@v0.14.1
+          export PATH="$(go env GOPATH)/bin:$PATH"
+          python -m pip install -r requirements-research.txt
+          L="$RUNNER_TEMP/lab"
+          PYTHONPATH=.:tests python research/r22_14_retained_floor/retained.py provision "$L/first" "$L/second" "$L/recovered/recovered" "$L/pin"
+      - name: Verify live consistency from both signed heads to the same sampled tree before retaining
+        run: |
+          set -euo pipefail
+          L="$RUNNER_TEMP/lab"
+          D=$(mktemp -d "$RUNNER_TEMP/scan.XXXXXX")
+          cp implementation/research/r22_10_blind_discovery/{main.go,main_test.go,go.mod} "$D/"
+          cp "$L/first/bootstrap.json" "$D/"
+          cd "$D"
+          go mod tidy
+          go test -v ./...
+          go run . | tee "$L/pin/from-first.jsonl"
+          python - "$L" <<'PY'
+          import json,pathlib,sys
+          l=pathlib.Path(sys.argv[1])
+          b=json.loads((l/"first/bootstrap.json").read_bytes())
+          p=json.loads((l/"pin/floor-pin.json").read_bytes())
+          b.update(size=p["size"],root=p["root"])
+          pathlib.Path("bootstrap.json").write_text(json.dumps(b))
+          PY
+          go run . | tee "$L/pin/from-retained.jsonl"
+          python - "$L" <<'PY'
+          import json,pathlib,sys
+          l=pathlib.Path(sys.argv[1])
+          p=json.loads((l/"pin/floor-pin.json").read_bytes())
+          a,b=[json.loads((l/"pin"/n).read_text().splitlines()[-1]) for n in ("from-first.jsonl","from-retained.jsonl")]
+          assert a["sampled_tree_size"]==b["sampled_tree_size"] and a["sampled_tree_root"]==b["sampled_tree_root"]
+          assert a["complete_sampled_suffix"] is True and b["complete_sampled_suffix"] is True
+          assert a["matching_signed_leaves"]==b["matching_signed_leaves"]
+          assert b["matching_signed_leaves"][-1]=={"index":p["index"],"checksum":p["checksum"]}
+          print("R22_14_BOTH_SIGNED_HEADS_CONSISTENT_WITH_SAME_LIVE_TREE")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r22-14-RETAINED-PIN
+          path: ${{ runner.temp }}/lab/pin/
+          if-no-files-found: error
+          retention-days: 30
+  cold:
+    needs: retain
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: r22-14-RETAINED-PIN
+          path: ${{ runner.temp }}/lab/pin
+      - name: Restore only old local files and read historical signed proof separately
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          L="$RUNNER_TEMP/lab"
+          gh api repos/SepehrGhanbari/Ario/actions/artifacts/14951747944/zip > "$L/first.zip"
+          gh api repos/SepehrGhanbari/Ario/actions/artifacts/14952710960/zip > "$L/second.zip"
+          cd "$L"
+          printf '%s\n' '22f79e186ff93a3fe2b00e58af5ff3870baf0aad954cac1de883dbfb91cf5422  first.zip' '5ad28bffae50600ddba9363a82a75f1a4d3b1ef748ea1f1ddee5cf3b24f62549  second.zip' | sha256sum -c -
+          python - <<'PY'
+          import zipfile,pathlib
+          for name in ("first","second"):
+              with zipfile.ZipFile(name+".zip") as z:
+                  assert z.testzip() is None
+                  selected=z.namelist() if name=="first" else ["envelope.json","envelope.json.proof"]
+                  for n in selected:
+                      assert pathlib.PurePosixPath(n).name==n
+                      assert z.getinfo(n).file_size<=65536
+                      z.extract(n,name)
+          assert not pathlib.Path("second/ledger.jsonl").exists()
+          assert not pathlib.Path("second/floor.json").exists()
+          PY
+      - name: Verify authentic stale proof and fail closed after cold restart
+        working-directory: implementation
+        run: |
+          set -euo pipefail
+          L="$RUNNER_TEMP/lab"
+          go install sigsum.org/sigsum-go/cmd/sigsum-verify@v0.14.1
+          export PATH="$(go env GOPATH)/bin:$PATH"
+          python -m pip install -r requirements-research.txt
+          sha256sum "$L/first/"* "$L/pin/"* > "$L/before.sha256"
+          PYTHONPATH=.:tests python research/r22_14_retained_floor/retained.py cold "$L/first" "$L/second" "$L/pin" "$L/output"
+          sha256sum -c "$L/before.sha256"
+      - name: Resample live cosigned tree with retained root and verify exact retained leaf
+        run: |
+          set -euo pipefail
+          L="$RUNNER_TEMP/lab"
+          D=$(mktemp -d "$RUNNER_TEMP/cold.XXXXXX")
+          cp implementation/research/r22_10_blind_discovery/{main.go,main_test.go,go.mod} "$D/"
+          cp "$L/output/bootstrap.json" "$D/"
+          cd "$D"
+          go mod tidy
+          go run . | tee "$L/output/live.jsonl"
+          python - "$L" <<'PY'
+          import json,pathlib,sys
+          l=pathlib.Path(sys.argv[1])
+          p=json.loads((l/"pin/floor-pin.json").read_bytes())
+          r=json.loads((l/"output/live.jsonl").read_text().splitlines()[-1])
+          assert r["sampled_tree_size"]>=p["size"] and r["complete_sampled_suffix"] is True
+          assert r["matching_signed_leaves"][-1]=={"index":p["index"],"checksum":p["checksum"]}
+          print("R22_14_COLD_LIVE_RETAINED_FLOOR_MATCH_NOT_FRESHNESS")
+          PY
+          sha256sum -c "$L/before.sha256"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r22-14-COLD-OBSERVATION
+          path: ${{ runner.temp }}/lab/output/
+          if-no-files-found: warn
+          retention-days: 30
