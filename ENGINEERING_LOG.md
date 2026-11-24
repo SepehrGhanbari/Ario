@@ -982,3 +982,8 @@ Parent #365 final checks subsequently 3/3 SUCCESS. [Initial live run 45460575782
 ## 2026-11-24 — R22.19 atomic session rotation (research only)
 
 - Parent #371 ffa458c796be75876fc028c0a1361aa2143c9e89 all three final PR checks SUCCESS. Exact archived RFC3161 capture, unchanged R22.18 verifier. Local 27/27 PASS after fixing test row order; actual pre/post-commit process exits, terminal abandonment, stale epoch, concurrent rotation/consume, publisher epoch-file rollback, missing ledger/reconnect. Common-root restore RED. Historical enrollment only, no live issuance, independently administered custody or trust. Dedicated CI pending. See implementation/research/r22_19_challenge_lifecycle/RESEARCH_RECORD.md.
+
+
+## Verified execution addendum — 2026-11-24
+
+[Run 45465487588](https://github.com/SepehrGhanbari/Ario/actions/runs/45465487588) SUCCESS on exact source 819a5458b705155d1e2fcc21ba9cc73df4d9cfd5. Downloaded artifact 14954932907 ZIP SHA256 75f82b8db6b41b32729896cc7c8f26aeff859fb0e2f44611e79c17a6e5ecb27b matched API digest; ZIP CRC clean. Extracted results log SHA256 9a807404bff7055f850040e80da28fd6d4d6e3d47f1fec0eb384ac3cb3f1413a byte-identical to committed LOCAL_RESULTS.log, 27/27 expected controls. Root-supervised shared-admin rollback remains RED. No new external calls, keys, independent custody, live issuance, admission or merge. Artifact expires 2026-12-24; final documentation checks separate.

@@ -11,3 +11,8 @@ Initial run reached check 26 but failed a test assertion because rows sorted by 
 Local source SHA256 0d1a162eb421689b699a59b917a71859700e0f1ebcb25b69a4258a5ec4c6f79a, test 86b8d08736b1b0cf469d479186b452b157de7bbf4c227bd9b12c56f0cc092856, log 9a807404bff7055f850040e80da28fd6d4d6e3d47f1fec0eb384ac3cb3f1413a. Dedicated CI supplied; result pending at authoring. Original capture expires 2026-12-24.
 
 Next: challenge-bound external evidence for the session epoch and terminal transitions; recover using a fresh verifier, with publisher and local ledger rollback. Independent retention of the epoch cannot be inferred from local SQLite or another same-admin store.
+
+
+## Verified execution addendum — 2026-11-24
+
+[Run 45465487588](https://github.com/SepehrGhanbari/Ario/actions/runs/45465487588) SUCCESS on exact source 819a5458b705155d1e2fcc21ba9cc73df4d9cfd5. Downloaded artifact 14954932907 ZIP SHA256 75f82b8db6b41b32729896cc7c8f26aeff859fb0e2f44611e79c17a6e5ecb27b matched API digest; ZIP CRC clean. Extracted results log SHA256 9a807404bff7055f850040e80da28fd6d4d6e3d47f1fec0eb384ac3cb3f1413a byte-identical to committed LOCAL_RESULTS.log, 27/27 expected controls. Root-supervised shared-admin rollback remains RED. No new external calls, keys, independent custody, live issuance, admission or merge. Artifact expires 2026-12-24; final documentation checks separate.
