@@ -1,0 +1,13 @@
+# R22.13 — delayed clean-runner recovery and relay loss/replay controls
+
+RESEARCH_ONLY / DRAFT / HOLD / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTION / NO_AUTOMATIC_MERGE.
+
+Parent #364 at 30714f282b63caf88cbfe1f76856ecfb89aa755f. No new publication. Reuse actual R22.12 TEST log and public synthetic relay objects from run 45459689925, prior publisher job 138678543752.
+
+Stage job fetches only pinned FIRST-ONLY ZIP (14951747944), checks SHA256 and ZIP CRC, strips Git metadata and reports, and stages old bytes and Python/Go source only. It verifies that the known later envelope checksum, floor commitment and ledger digest do not appear in staged files. No later artifact is downloaded by stage or recovery. At least 120 seconds must have elapsed since publisher job completion. A separate hosted runner with empty declared repository-token permissions and no checkout receives only the first/source artifact; it verifies actual elapsed time and uses the unchanged bounded R22.10 live scanner. A separate reveal runner alone downloads the pinned original second ZIP (14952710960) after recovery and compares exact bytes.
+
+Recovery makes two separate live retrieval attempts: one using only nos.lol, one using only relay.primal.net. Each must independently return the exact valid envelope and floor+ledger bundle. This is client-side source exclusion, not an outage at the relay itself. Recovery then uses deterministic injected WebSocket responses to test freshly signed/retagged old envelope and floor, missing new envelope and missing new floor. Direct old substitution also must fail. Old bytes verify as a historical prefix but never as the latest observed object. Old state files remain unchanged; recovered outputs stay separate. No actual deletion, network interference, or new public events.
+
+Limits: same repository administration, hosted runner and workflow are trusted for experimental separation; no OS sandbox or adversarial operator isolation. Public repo could be independently queried by a malicious runner; this source-only staging establishes supplied-input separation, not an information-theoretic proof. Delay is wall-clock measured using hosted runner and GitHub job metadata; no independent clock proof. The scanner has a 64-leaf bounded suffix and fails closed on incomplete scan or other live failure. Injected loss/replay is not live external deletion. No proof of permanent retention, administrative independence, globally latest state, actual event truth or physical device restore. No evidence admission, keys, merge or activation.
+
+Execution pending at authoring; record actual results separately.
