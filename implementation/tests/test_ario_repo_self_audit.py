@@ -26,9 +26,14 @@ class Fake:
              "status": "in_progress", "conclusion": None, "app": {"id": 15368}},
         ]}
         self.runs = {"total_count": 1, "workflow_runs": [{
-            "id": 100, "run_attempt": 1, "head_sha": HEAD,
+            "id": 100, "workflow_id": 379498305, "path": ".github/workflows/implementation-regression.yml", "run_number": 10,
+            "run_attempt": 1, "head_sha": HEAD,
             "event": "pull_request", "status": "completed", "conclusion": "success",
             "pull_requests": [{"id": 987, "number": PR, "head": {"sha": HEAD}}],
+        }]}
+        self.jobs = {"total_count": 1, "jobs": [{
+            "id": 1, "run_id": 100, "run_attempt": 1, "head_sha": HEAD,
+            "name": "m0-regression", "status": "completed", "conclusion": "success",
         }]}
         self.calls = []
         self.next_pr = None
@@ -46,6 +51,8 @@ class Fake:
             return copy.deepcopy(self.checks)
         if "/actions/runs?" in url:
             return copy.deepcopy(self.runs)
+        if "/attempts/" in url and "/jobs?" in url:
+            return copy.deepcopy(self.jobs)
         raise AssertionError("unexpected URL " + url)
 
 
@@ -56,7 +63,7 @@ def call(fake=None):
 def test_bound_pr_and_checks_remain_non_authoritative():
     f = Fake()
     result = call(f)
-    assert len(f.calls) == 4
+    assert len(f.calls) == 7
     assert result["pr_sample_consistency"] == "SAME_AT_TWO_SAMPLED_READS"
     assert result["required_check_observation"] == "REPORTED_SUCCESS_BY_LINKED_PR_RUN"
     assert result["linked_run_count"] == 1
@@ -129,7 +136,9 @@ def test_incomplete_pages_are_unknown(which):
 def test_wrong_pr_binding_is_not_a_linked_run():
     f = Fake()
     f.runs["workflow_runs"][0]["pull_requests"][0]["id"] = 2000
-    assert call(f)["linked_run_count"] == 0
+    result = call(f)
+    assert result["reason"] == "RUN_PR_ASSOCIATION_MISMATCH"
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
 
 
 def test_http_403_is_unknown():
@@ -279,3 +288,545 @@ def test_incoherent_pr_run_state_is_unknown(status, conclusion):
     f = Fake()
     f.runs["workflow_runs"][0].update(status=status, conclusion=conclusion)
     assert call(f)["reason"] == "INVALID_RUN"
+
+
+# R22: a prior green run must not qualify when the same workflow has a newer run.
+@pytest.mark.parametrize(("status", "conclusion"), [
+    ("queued", None),
+    ("in_progress", None),
+    ("completed", "failure"),
+])
+def test_older_green_run_does_not_mask_newer_same_workflow_run(status, conclusion):
+    f = Fake()
+    newer = copy.deepcopy(f.runs["workflow_runs"][0])
+    newer.update(id=101, run_number=11, status=status, conclusion=conclusion)
+    f.runs["workflow_runs"].append(newer)
+    f.runs["total_count"] = 2
+
+    result = call(f)
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+    assert result["linked_run_count"] == 2
+
+
+def test_latest_successful_same_workflow_run_can_be_confirmed():
+    f = Fake()
+    newer = copy.deepcopy(f.runs["workflow_runs"][0])
+    newer.update(id=101, run_number=11)
+    f.runs["workflow_runs"].append(newer)
+    f.runs["total_count"] = 2
+
+    latest_check = copy.deepcopy(f.checks["check_runs"][0])
+    latest_check.update(
+        id=3,
+        details_url="https://github.com/SepehrGhanbari/Ario/actions/runs/101/job/3",
+    )
+    f.checks["check_runs"] = [latest_check]
+    f.checks["total_count"] = 1
+    f.jobs = {"total_count": 1, "jobs": [{
+        "id": 3, "run_id": 101, "run_attempt": 1, "head_sha": HEAD,
+        "name": "m0-regression", "status": "completed", "conclusion": "success",
+    }]}
+
+    assert call(f)["required_check_observation"] == "REPORTED_SUCCESS_BY_LINKED_PR_RUN"
+
+
+def test_newer_run_from_another_workflow_does_not_shadow_target_workflow():
+    f = Fake()
+    other = copy.deepcopy(f.runs["workflow_runs"][0])
+    other.update(id=101, workflow_id=9999, run_number=1,
+                 status="queued", conclusion=None)
+    f.runs["workflow_runs"].append(other)
+    f.runs["total_count"] = 2
+
+    assert call(f)["required_check_observation"] == "REPORTED_SUCCESS_BY_LINKED_PR_RUN"
+
+
+@pytest.mark.parametrize("field", ["workflow_id", "run_number"])
+def test_workflow_run_requires_positive_workflow_and_run_numbers(field):
+    f = Fake()
+    f.runs["workflow_runs"][0].pop(field)
+    result = call(f)
+    assert result["reason"] == "INVALID_RUN"
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+
+
+
+@pytest.mark.parametrize("links", [None, []])
+def test_missing_or_empty_run_pr_association_cannot_leave_old_green_eligible(links):
+    f = Fake()
+    newer = copy.deepcopy(f.runs["workflow_runs"][0])
+    newer.update(id=101, run_number=11, status="queued", conclusion=None,
+                 pull_requests=links)
+    f.runs["workflow_runs"].append(newer)
+    f.runs["total_count"] = 2
+
+    result = call(f)
+    assert result["reason"] == "RUN_PR_ASSOCIATION_INCOMPLETE"
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+
+
+
+def test_newer_run_with_mismatched_target_pr_link_fails_closed():
+    f = Fake()
+    newer = copy.deepcopy(f.runs["workflow_runs"][0])
+    newer.update(id=101, run_number=11, status="queued", conclusion=None)
+    newer["pull_requests"][0]["head"]["sha"] = "d" * 40
+    f.runs["workflow_runs"].append(newer)
+    f.runs["total_count"] = 2
+
+    result = call(f)
+    assert result["reason"] == "RUN_PR_ASSOCIATION_MISMATCH"
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+
+
+# R22.1 RED controls: same-named checks from noncanonical workflows must not qualify.
+def test_same_named_green_job_from_different_workflow_is_not_confirmed():
+    f = Fake()
+    f.runs["workflow_runs"][0].update(
+        workflow_id=4242, path=".github/workflows/other.yml"
+    )
+    result = call(f)
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+
+
+def test_canonical_workflow_id_with_wrong_path_is_not_confirmed():
+    f = Fake()
+    f.runs["workflow_runs"][0]["path"] = ".github/workflows/renamed-or-other.yml"
+    result = call(f)
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+
+
+# The latest run record says attempt 2. The check still points to the old
+# attempt-1 job ID; attempt 2 owns a different job ID and is green.
+def test_prior_attempt_check_cannot_stand_in_for_latest_attempt_job():
+    f = Fake()
+    f.runs["workflow_runs"][0]["run_attempt"] = 2
+    f.checks["check_runs"][0].update(
+        id=3,
+        details_url="https://github.com/SepehrGhanbari/Ario/actions/runs/100/job/3",
+    )
+    f.jobs = {"total_count": 1, "jobs": [{
+        "id": 3, "run_id": 100, "run_attempt": 1, "head_sha": HEAD,
+        "name": "m0-regression", "status": "completed", "conclusion": "success",
+    }]}
+    result = call(f)
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+
+
+def test_workflow_id_is_pinned_even_when_path_matches():
+    f = Fake()
+    f.runs["workflow_runs"][0]["workflow_id"] = 4242
+    result = call(f)
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+    assert result["canonical_workflow_observation"] == "NOT_CONFIRMED"
+
+
+def test_exact_attempt_jobs_endpoint_is_read_and_bound():
+    f = Fake()
+    result = call(f)
+    assert f.calls[3] == (
+        mod.API + "/actions/runs/100/attempts/1/jobs?per_page=100"
+    )
+    assert f.calls[4] == mod.API + "/pulls/" + str(PR)
+    assert f.calls[5] == mod.API + "/commits/" + HEAD + "/check-runs?per_page=100"
+    assert f.calls[6] == (
+        mod.API + "/actions/runs?head_sha=" + HEAD
+        + "&event=pull_request&per_page=100"
+    )
+    assert result["canonical_workflow_observation"] == "MATCH"
+    assert result["attempt_binding_observation"] == "MATCH"
+
+
+def test_attempt_jobs_incomplete_collection_is_unknown():
+    f = Fake()
+    f.jobs["total_count"] = 2
+    result = call(f)
+    assert result["status"] == "UNKNOWN"
+    assert result["reason"] == "JOBS_INCOMPLETE"
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+
+
+@pytest.mark.parametrize(("field", "value"), [
+    ("id", 3),
+    ("run_id", 101),
+    ("run_attempt", 2),
+    ("head_sha", "f" * 40),
+    ("status", "in_progress"),
+    ("conclusion", "failure"),
+    ("name", "different-job"),
+])
+def test_canonical_job_must_bind_to_exact_check_run_and_attempt(field, value):
+    f = Fake()
+    f.jobs["jobs"][0][field] = value
+    result = call(f)
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+    assert result["attempt_binding_observation"] == "NOT_CONFIRMED"
+
+
+def test_ambiguous_canonical_attempt_jobs_are_not_confirmed():
+    f = Fake()
+    duplicate = copy.deepcopy(f.jobs["jobs"][0])
+    duplicate["id"] = 2
+    f.jobs["jobs"].append(duplicate)
+    f.jobs["total_count"] = 2
+    result = call(f)
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+
+
+def test_missing_workflow_path_is_unknown():
+    f = Fake()
+    f.runs["workflow_runs"][0].pop("path")
+    result = call(f)
+    assert result["reason"] == "INVALID_RUN"
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+
+
+# Independent R22.1 adversarial review: rerun race and malformed evidence controls.
+class RerunDuringAttemptRead(Fake):
+    """A rerun starts after the initial metadata read, during the job response."""
+    def __init__(self, changed):
+        super().__init__()
+        self.changed = changed
+
+    def get_json(self, url):
+        if "/attempts/" in url and "/jobs?" in url:
+            self.calls.append(url)
+            old_attempt_jobs = copy.deepcopy(self.jobs)
+            if self.changed in ("runs", "both"):
+                self.runs = {"total_count": 1, "workflow_runs": [{
+                    "id": 100, "workflow_id": 379498305,
+                    "path": ".github/workflows/implementation-regression.yml",
+                    "run_number": 10, "run_attempt": 2, "head_sha": HEAD,
+                    "event": "pull_request", "status": "in_progress", "conclusion": None,
+                    "pull_requests": [{"id": 987, "number": PR, "head": {"sha": HEAD}}],
+                }]}
+            if self.changed in ("checks", "both"):
+                self.checks = {"total_count": 1, "check_runs": [{
+                    "id": 3, "name": "m0-regression", "head_sha": HEAD,
+                    "status": "in_progress", "conclusion": None, "app": {"id": 15368},
+                    "details_url": "https://github.com/SepehrGhanbari/Ario/actions/runs/100/job/3",
+                }]}
+            return old_attempt_jobs
+        return super().get_json(url)
+
+
+@pytest.mark.parametrize(("changed", "reason"), [
+    ("checks", "CHECKS_CHANGED_DURING_OBSERVATION"),
+    ("runs", "RUNS_CHANGED_DURING_OBSERVATION"),
+    ("both", "CHECKS_CHANGED_DURING_OBSERVATION"),
+])
+def test_rerun_started_during_attempt_read_cannot_leave_attempt_one_green(changed, reason):
+    f = RerunDuringAttemptRead(changed)
+    result = call(f)
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+    assert result["status"] == "UNKNOWN"
+    assert result["reason"] == reason
+    assert f.calls[3] == (
+        mod.API + "/actions/runs/100/attempts/1/jobs?per_page=100"
+    )
+    assert f.calls[4] == mod.API + "/pulls/" + str(PR)
+    assert f.calls[5] == mod.API + "/commits/" + HEAD + "/check-runs?per_page=100"
+    if changed == "runs":
+        assert f.calls[6] == (
+            mod.API + "/actions/runs?head_sha=" + HEAD
+            + "&event=pull_request&per_page=100"
+        )
+
+
+@pytest.mark.parametrize("field", ["run_id", "run_attempt", "head_sha", "status", "conclusion"])
+def test_missing_required_attempt_job_field_never_confirms(field):
+    f = Fake()
+    del f.jobs["jobs"][0][field]
+    result = call(f)
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+    assert result["attempt_binding_observation"] == "NOT_CONFIRMED"
+
+
+def test_duplicate_workflow_run_sequence_is_unknown():
+    f = Fake()
+    duplicate = copy.deepcopy(f.runs["workflow_runs"][0])
+    duplicate["id"] = 101
+    duplicate["run_attempt"] = 2
+    f.runs["workflow_runs"].append(duplicate)
+    f.runs["total_count"] = 2
+    result = call(f)
+    assert result["status"] == "UNKNOWN"
+    assert result["reason"] == "DUPLICATE_WORKFLOW_RUN_NUMBER"
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+
+
+def test_more_than_one_hundred_attempt_jobs_is_unknown_not_partial_green():
+    f = Fake()
+    f.jobs["total_count"] = 101
+    result = call(f)
+    assert result["status"] == "UNKNOWN"
+    assert result["reason"] == "JOBS_INCOMPLETE"
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+
+
+def test_duplicate_attempt_job_id_is_unknown():
+    f = Fake()
+    f.jobs["jobs"].append(copy.deepcopy(f.jobs["jobs"][0]))
+    f.jobs["total_count"] = 2
+    result = call(f)
+    assert result["status"] == "UNKNOWN"
+    assert result["reason"] == "INVALID_OR_DUPLICATE_JOB"
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+
+
+# Second independent pass against #337: the final PR GET currently occurs
+# after the final run sample. A rerun can begin during that PR GET and escape.
+class RerunDuringFinalPrRead(Fake):
+    def __init__(self, changed):
+        super().__init__()
+        self.changed = changed
+
+    def get_json(self, url):
+        is_second_pr_read = (
+            url.endswith("/pulls/295")
+            and sum(x.endswith("/pulls/295") for x in self.calls) == 1
+        )
+        if is_second_pr_read:
+            if self.changed in ("checks", "both"):
+                self.checks = {"total_count": 1, "check_runs": [{
+                    "id": 3, "name": "m0-regression", "head_sha": HEAD,
+                    "status": "in_progress", "conclusion": None,
+                    "app": {"id": 15368},
+                    "details_url": "https://github.com/SepehrGhanbari/Ario/actions/runs/100/job/3",
+                }]}
+            if self.changed in ("runs", "both"):
+                self.runs = {"total_count": 1, "workflow_runs": [{
+                    "id": 100, "workflow_id": 379498305,
+                    "path": ".github/workflows/implementation-regression.yml",
+                    "run_number": 10, "run_attempt": 2, "head_sha": HEAD,
+                    "event": "pull_request", "status": "in_progress", "conclusion": None,
+                    "pull_requests": [{"id": 987, "number": PR, "head": {"sha": HEAD}}],
+                }]}
+        return super().get_json(url)
+
+
+@pytest.mark.parametrize(("changed", "reason"), [
+    ("checks", "CHECKS_CHANGED_DURING_OBSERVATION"),
+    ("runs", "RUNS_CHANGED_DURING_OBSERVATION"),
+    ("both", "CHECKS_CHANGED_DURING_OBSERVATION"),
+])
+def test_rerun_during_final_pr_identity_read_is_caught_by_final_metadata_samples(changed, reason):
+    f = RerunDuringFinalPrRead(changed)
+    result = call(f)
+    assert result["status"] == "UNKNOWN"
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+    assert result["reason"] == reason
+
+
+class BenignMetadataNoiseBetweenSamples(Fake):
+    """Same relevant evidence, but API ordering and presentation fields differ."""
+    def __init__(self):
+        super().__init__()
+        self.check_reads = 0
+        self.run_reads = 0
+
+    def get_json(self, url):
+        if "/check-runs?" in url:
+            self.check_reads += 1
+            if self.check_reads == 2:
+                changed = copy.deepcopy(self.checks)
+                changed["check_runs"].reverse()
+                for item in changed["check_runs"]:
+                    item["output"] = {"title": "Harmless presentation update"}
+                # A stale canonical check for an older run is not the selected
+                # latest-attempt check and must not create false UNKNOWN.
+                changed["check_runs"].append({
+                    "id": 9, "name": "m0-regression", "head_sha": HEAD,
+                    "status": "completed", "conclusion": "success",
+                    "app": {"id": 15368},
+                    "details_url": "https://github.com/SepehrGhanbari/Ario/actions/runs/99/job/9",
+                })
+                changed["total_count"] += 1
+                return changed
+        if "/actions/runs?" in url:
+            self.run_reads += 1
+            if self.run_reads == 2:
+                changed = copy.deepcopy(self.runs)
+                changed["workflow_runs"].reverse()
+                for item in changed["workflow_runs"]:
+                    item["updated_at"] = "2026-11-23T00:00:00Z"
+                    item["display_title"] = "Harmless presentation update"
+                # A complete run for another PR/workflow is irrelevant to the
+                # selected canonical run and must not create false UNKNOWN.
+                changed["workflow_runs"].append({
+                    "id": 101, "workflow_id": 4242,
+                    "path": ".github/workflows/other.yml", "run_number": 1,
+                    "run_attempt": 1, "head_sha": HEAD, "event": "pull_request",
+                    "status": "completed", "conclusion": "success",
+                    "pull_requests": [{"id": 2000, "number": 500,
+                                       "head": {"sha": HEAD}}],
+                })
+                changed["total_count"] += 1
+                return changed
+        return super().get_json(url)
+
+
+def test_reordered_records_and_unrelated_presentation_metadata_do_not_create_false_unknown():
+    f = BenignMetadataNoiseBetweenSamples()
+    result = call(f)
+    assert result["required_check_observation"] == "REPORTED_SUCCESS_BY_LINKED_PR_RUN"
+    assert result["attempt_binding_observation"] == "MATCH"
+    assert result["workflow_freshness"] == "SAMPLED_NOT_ATOMIC"
+
+
+class RerunImmediatelyAfterFinalWorkflowSample(Fake):
+    """Model a rerun beginning after the last GET has returned its old sample."""
+    def __init__(self):
+        super().__init__()
+        self.run_reads = 0
+
+    def get_json(self, url):
+        result = super().get_json(url)
+        if "/actions/runs?" in url:
+            self.run_reads += 1
+            if self.run_reads == 2:
+                self.runs = {"total_count": 1, "workflow_runs": [{
+                    "id": 100, "workflow_id": 379498305,
+                    "path": ".github/workflows/implementation-regression.yml",
+                    "run_number": 10, "run_attempt": 2, "head_sha": HEAD,
+                    "event": "pull_request", "status": "in_progress", "conclusion": None,
+                    "pull_requests": [{"id": 987, "number": PR, "head": {"sha": HEAD}}],
+                }]}
+                self.checks = {"total_count": 1, "check_runs": [{
+                    "id": 3, "name": "m0-regression", "head_sha": HEAD,
+                    "status": "in_progress", "conclusion": None,
+                    "app": {"id": 15368},
+                    "details_url": "https://github.com/SepehrGhanbari/Ario/actions/runs/100/job/3",
+                }]}
+        return result
+
+
+def test_rerun_after_final_workflow_sample_is_explicitly_non_atomic_residual():
+    f = RerunImmediatelyAfterFinalWorkflowSample()
+    result = call(f)
+    # The last GET returned a valid old sample before the synthetic rerun began.
+    # No sequential reader can observe a change that occurs after its final read.
+    assert result["required_check_observation"] == "REPORTED_SUCCESS_BY_LINKED_PR_RUN"
+    assert result["workflow_freshness"] == "SAMPLED_NOT_ATOMIC"
+    assert result["status"] == "UNKNOWN"
+    assert result["merge_authorized"] is False
+    assert result["execution_attestation"] == "NOT_ESTABLISHED"
+
+
+class MalformedFinalMetadataRecheck(Fake):
+    def __init__(self, which, mutation):
+        super().__init__()
+        self.which = which
+        self.mutation = mutation
+        self.check_reads = 0
+        self.run_reads = 0
+
+    def get_json(self, url):
+        result = super().get_json(url)
+        if "/check-runs?" in url:
+            self.check_reads += 1
+            if self.which == "checks" and self.check_reads == 2:
+                if self.mutation == "incomplete":
+                    result["total_count"] += 1
+                elif self.mutation == "duplicate":
+                    result["check_runs"].append(copy.deepcopy(result["check_runs"][0]))
+                    result["total_count"] += 1
+        if "/actions/runs?" in url:
+            self.run_reads += 1
+            if self.which == "runs" and self.run_reads == 2:
+                if self.mutation == "incomplete":
+                    result["total_count"] += 1
+                elif self.mutation == "duplicate_sequence":
+                    duplicate = copy.deepcopy(result["workflow_runs"][0])
+                    duplicate["id"] = 101
+                    duplicate["run_attempt"] = 2
+                    result["workflow_runs"].append(duplicate)
+                    result["total_count"] += 1
+        return result
+
+
+@pytest.mark.parametrize(("which", "mutation", "reason"), [
+    ("checks", "incomplete", "CHECKS_RECHECK_INCOMPLETE"),
+    ("checks", "duplicate", "INVALID_OR_DUPLICATE_CHECK"),
+    ("runs", "incomplete", "RUNS_RECHECK_INCOMPLETE"),
+    ("runs", "duplicate_sequence", "DUPLICATE_WORKFLOW_RUN_NUMBER"),
+])
+def test_malformed_final_metadata_recheck_never_confirms_success(which, mutation, reason):
+    f = MalformedFinalMetadataRecheck(which, mutation)
+    result = call(f)
+    assert result["status"] == "UNKNOWN"
+    assert result["required_check_observation"] == "NOT_CONFIRMED"
+    assert result["reason"] == reason
+
+
+class PrRevisionAfterFinalIdentitySample(Fake):
+    """Model the PR head changing immediately after the second PR GET returns."""
+    def get_json(self, url):
+        result = super().get_json(url)
+        if (url.endswith("/pulls/295")
+                and sum(x.endswith("/pulls/295") for x in self.calls) == 2):
+            self.pr["head"]["sha"] = "f" * 40
+        return result
+
+
+def test_pr_revision_after_final_identity_sample_is_explicitly_non_atomic_residual():
+    f = PrRevisionAfterFinalIdentitySample()
+    result = call(f)
+    assert result["required_check_observation"] == "REPORTED_SUCCESS_BY_LINKED_PR_RUN"
+    assert result["workflow_freshness"] == "SAMPLED_NOT_ATOMIC"
+    assert result["status"] == "UNKNOWN"
+    assert result["merge_authorized"] is False
+    assert result["execution_attestation"] == "NOT_ESTABLISHED"
+
+
+
+def _next_link_transport(link):
+    raw = b'{"total_count":0,"check_runs":[]}'
+    headers = Message()
+    headers.add_header("Content-Length", str(len(raw)))
+    if link is not None:
+        headers.add_header("Link", link)
+
+    class Response:
+        status = 200
+
+        def __init__(self):
+            self.headers = headers
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return None
+
+        def read(self, maximum):
+            return raw
+
+    reader = mod.GitHubReadOnly()
+    reader.opener = Mock()
+    reader.opener.open.return_value = Response()
+    return reader
+
+
+@pytest.mark.parametrize("link", [
+    '<https://api.github.com/x?page=2>; rel="next"',
+    '<https://api.github.com/x?page=2>; rel=next',
+    '<https://api.github.com/x?page=2>; REL="NEXT"',
+    '<https://api.github.com/x?page=1>; rel="first", <https://api.github.com/x?page=2>; rel="next"',
+])
+def test_r22_2_next_page_link_must_fail_closed(link):
+    reader = _next_link_transport(link)
+    with pytest.raises(mod.ReadUnknown, match="PAGINATION_NEXT_LINK_PRESENT"):
+        reader.get_json(mod.API + "/commits/" + HEAD + "/check-runs?per_page=100")
+
+
+@pytest.mark.parametrize("link", [
+    None,
+    '<https://api.github.com/x>; rel="first"',
+    '<https://api.github.com/x>; rel="nextpage"',
+])
+def test_r22_2_non_next_link_remains_accepted(link):
+    reader = _next_link_transport(link)
+    assert reader.get_json(
+        mod.API + "/commits/" + HEAD + "/check-runs?per_page=100"
+    )["total_count"] == 0

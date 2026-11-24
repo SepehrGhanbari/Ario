@@ -92,6 +92,7 @@ REST_REASON_LITERALS = frozenset({
     "FORBIDDEN_HOST", "FORBIDDEN_PATH", "NON_200_RESPONSE",
     "INCOMPLETE_OR_OVERSIZED_RESPONSE", "GITHUB_READ_UNAVAILABLE",
     "INVALID_JSON", "INVALID_API_JSON",
+    "PAGINATION_NEXT_LINK_PRESENT", "PAGINATION_LINK_INVALID",
 })
 REST_HTTP_REASON = re.compile(r"GITHUB_HTTP_[0-9]{3}\Z")
 
@@ -222,7 +223,7 @@ def validate_file(path: Path, number: int, head: str, source: str,
     if reader_exit == 0:
         _assert(value["reason"] in SUCCESS_REASONS and
                 value.get("review_graph_sample") == "SAMPLED_STABLE_UNATTESTED" and
-                value.get("review_graph_reason", SUCCESS_GRAPH_REASON) == SUCCESS_GRAPH_REASON and
+                value.get("review_graph_reason") == SUCCESS_GRAPH_REASON and
                 value.get("review_freshness") == FRESHNESS and
                 "error_type" not in value and
                 value.get("source_commit_sha") == source,

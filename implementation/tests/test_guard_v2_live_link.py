@@ -29,11 +29,16 @@ class FakeReader:
              "details_url": "https://github.com/SepehrGhanbari/Ario/actions/runs/83/job/41"},
         ]}
         self.runs = {"total_count": 1, "workflow_runs": [
-            {"id": 83, "run_attempt": 1, "head_sha": HEAD, "event": "pull_request",
+            {"id": 83, "workflow_id": 379498305, "path": ".github/workflows/implementation-regression.yml", "run_number": 10,
+             "run_attempt": 1, "head_sha": HEAD, "event": "pull_request",
              "status": "completed", "conclusion": "success",
              "pull_requests": [{"id": pr_id, "number": pr_number,
                                 "head": {"sha": HEAD}}]},
         ]}
+        self.jobs = {"total_count": 1, "jobs": [{
+            "id": 41, "run_id": 83, "run_attempt": 1, "head_sha": HEAD,
+            "name": "m0-regression", "status": "completed", "conclusion": "success",
+        }]}
         self.pr_reads = 0
         self.log = []
         self.versions = {}
@@ -51,6 +56,8 @@ class FakeReader:
         if url == (selfaudit.API + f"/actions/runs?head_sha={HEAD}"
                    + "&event=pull_request&per_page=100"):
             return copy.deepcopy(self.runs)
+        if url == selfaudit.API + "/actions/runs/83/attempts/1/jobs?per_page=100":
+            return copy.deepcopy(self.jobs)
         raise AssertionError("unexpected URL " + url)
 
 
@@ -73,7 +80,7 @@ def test_live_pr_ci_and_synthetic_matching_guard_stays_reviewable_only():
     assert r["disposition"] == "REVIEWABLE_ONLY"
     assert r["ci_observation"] == "REPORTED_SUCCESS_BY_LINKED_PR_RUN"
     assert fake.pr_reads == 4
-    assert len(fake.log) == 6
+    assert len(fake.log) == 9
 
 
 def test_without_live_review_evidence_stays_hold():
