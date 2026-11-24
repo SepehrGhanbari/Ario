@@ -876,3 +876,10 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - Source/test HEAD 239bd20344fc20984fe556907ca3f710912ed8af: [CI 45440113189](https://github.com/SepehrGhanbari/Ario/actions/runs/45440113189) 3/3 success, Linux 2097 passed / 8 skipped each, Windows 2067 passed / 29 skipped (POSIX lab skipped), 273 subtests each. Ten new Linux cases cover real process deaths after commit, reconciliation without duplicate rows, outage, stale authentic proof, stale nonce response, same-count fork, publisher-only restore, and deliberate joint-reset residual.
 - External publication attempt workflow at 7ddbc9b823d4ebde90663fdd72e85634ba0cd268 uses prior Sigsum TEST protocol; only synthetic count-four floor commitment, never private Ario bytes or original keys. New external proof not claimed until checked. Inclusion does not establish a latest floor. No external independent administrative custody established.
 - Report: implementation/research/R22_8_WITNESS_RECEIPT_RECOVERY_2026-11-24.md. Draft/HOLD, no real keys, merge, production, M0 admission, signer or trust activation.
+
+
+## 2026-11-24 — R22.8 actual external proof preservation (#353)
+
+- Run 45440374685, job 138609511961, exact workflow HEAD 7ddbc9b823d4ebde90663fdd72e85634ba0cd268: external Sigsum TEST submission obtained a proof; offline inclusion succeeded; count-two envelope rejected against count-four proof. Verified actual log markers.
+- Artifact 14942783205 downloaded; 4195 bytes; ZIP SHA-256 daf75e7f65a8c40bdda9eda370b4895e1037493c45700579ea38f321fd5263a0 matched GitHub artifact digest, archive CRC and all five manifest hashes checked locally. Original bytes preserved in implementation/research/r22_8_public_evidence/R22_8_PUBLIC_SYNTHETIC_FLOOR_PROOF.zip, Git blob e2cf026ed895da07ed98e356cc424d3bb462fbe3. Public artifact only.
+- Count-four commitment 335b594a7d3db58beb4836749a935bd387b58eafbf771e9b14797c2e7a0408f7. Separate publication evidence, not independent latest-floor retention or real event authenticity. Joint-admin rollback residual remains. Draft/HOLD; no keys, merge, production, M0 admission or trust activation.
