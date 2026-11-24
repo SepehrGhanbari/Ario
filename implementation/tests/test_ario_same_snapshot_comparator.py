@@ -1,0 +1,206 @@
+"""Pure-stdlib tests for the research-only, non-integrated snapshot comparator.
+
+Run: python -m unittest -v test_ario_same_snapshot_comparator.py
+The test doubles do NOT replace later verification against pinned actual source.
+"""
+import hashlib
+import io
+import json
+import types
+import unittest
+from pathlib import Path
+from ario_same_snapshot_comparator import compare_snapshot
+
+
+def observed_fake(path):
+    import hashlib
+    target = Path(path)
+    with target.open("rb") as stream:
+        raw = stream.read()
+    if b"BROKEN" in raw:
+        return {"status": "UNKNOWN"}
+    return {"status": "OBSERVED", "sha256": hashlib.sha256(raw).hexdigest(),
+            "event_count": raw.count(b"\n"), "source": str(target.absolute()),
+            "observations": [{"goal": "PRIVATE"}]}
+
+
+def strict_fake(raw):
+    if b"BROKEN" in raw or b"STRICT_ONLY" in raw:
+        return {"status": "UNKNOWN", "reason_code": "SCHEMA_REJECTED",
+                "eligible_records": 0, "file_sha256": None}
+    return {"status": "OBSERVED", "eligible_records": raw.count(b"\n"),
+            "file_sha256": hashlib.sha256(raw).hexdigest()}
+
+
+class ComparatorTests(unittest.TestCase):
+    def setUp(self):
+        self.legacy = types.SimpleNamespace(observe_ledger=observed_fake)
+        self.strict = types.SimpleNamespace(inspect_jsonl_bytes=strict_fake)
+        self.raw = b'{"event":"TASK_STARTED"}\n'
+
+    def call(self, raw=None, **kw):
+        return compare_snapshot(self.raw if raw is None else raw,
+                                legacy_observer_module=self.legacy,
+                                strict_lab_module=self.strict, **kw)
+
+    def test_agree_observed_and_no_original_module_monkeypatch(self):
+        original = observed_fake.__globals__.get("Path")
+        a = self.call()
+        self.assertEqual(a["comparison"], "AGREE_OBSERVED")
+        self.assertIsNone(a["snapshot_sha256"])
+        self.assertEqual(a["legacy_record_count"], 1)
+        self.assertEqual(observed_fake.__globals__.get("Path"), original)
+
+    def test_optin_digest(self):
+        a = self.call(include_digest=True)
+        self.assertEqual(a["snapshot_sha256"], hashlib.sha256(self.raw).hexdigest())
+
+    def test_agree_unknown(self):
+        self.assertEqual(self.call(b"BROKEN\n")["comparison"], "AGREE_UNKNOWN")
+
+    def test_disagree_without_content_disclosure(self):
+        a = self.call(b"STRICT_ONLY\n")
+        self.assertEqual(a["comparison"], "DISAGREE")
+        self.assertEqual(a["candidate_reason_code"], "SCHEMA_REJECTED")
+        self.assertNotIn("PRIVATE", json.dumps(a))
+        self.assertNotIn("STRICT_ONLY", json.dumps(a))
+
+    def test_reject_oversize_before_running_any_parser(self):
+        a = self.call(b"x" * 16, max_snapshot_bytes=8)
+        self.assertEqual(a["comparison"], "UNKNOWN_COMPARISON")
+        self.assertEqual(a["reason_code"], "SNAPSHOT_SIZE_LIMIT")
+        self.assertIsNone(a["legacy_status"])
+
+    def test_reject_empty(self):
+        a = self.call(b"")
+        self.assertEqual(a["reason_code"], "EMPTY_SNAPSHOT")
+
+    def test_non_bytes(self):
+        with self.assertRaises(TypeError):
+            self.call(bytearray(b"x\n"))
+
+    def test_bad_limit_and_digest_flag(self):
+        with self.assertRaises(ValueError):
+            self.call(max_snapshot_bytes=0)
+        with self.assertRaises(TypeError):
+            self.call(include_digest=1)
+
+    def test_bad_parser_data_is_unknown(self):
+        self.strict.inspect_jsonl_bytes=lambda raw: {"status":"OBSERVED", "eligible_records":1,
+                                                      "file_sha256":"0"*64}
+        a = self.call()
+        self.assertEqual(a["comparison"], "UNKNOWN_COMPARISON")
+        self.assertEqual(a["reason_code"], "ACCEPTED_DIGEST_OR_COUNT_MISMATCH")
+
+    def test_exception_no_leak(self):
+        def failing(_raw):
+            raise RuntimeError("private goal content")
+        self.strict.inspect_jsonl_bytes=failing
+        a = self.call()
+        self.assertEqual(a["reason_code"], "COMPARATOR_EXECUTION_ERROR")
+        self.assertNotIn("private goal", json.dumps(a))
+
+
+    def test_untrusted_candidate_reason_never_echoes_source(self):
+        private = b'{"goal":"PRIVATE VALUE"}\n'
+        self.strict.inspect_jsonl_bytes = lambda raw: {
+            "status": "UNKNOWN", "reason_code": "untrusted debug: " + raw.decode()
+        }
+        report = self.call(private)
+        self.assertEqual(report["comparison"], "UNKNOWN_COMPARISON")
+        self.assertEqual(report["reason_code"], "UNRECOGNIZED_CANDIDATE_REASON")
+        self.assertNotIn("PRIVATE VALUE", json.dumps(report))
+
+    def test_known_structural_reason_remains_available(self):
+        report = self.call(b"STRICT_ONLY\n")
+        self.assertEqual(report["comparison"], "DISAGREE")
+        self.assertEqual(report["candidate_reason_code"], "SCHEMA_REJECTED")
+
+    def test_malformed_success_counts_cannot_echo_private_content(self):
+        def legacy_count(path):
+            import hashlib
+            with Path(path).open("rb") as stream:
+                raw = stream.read()
+            return {"status": "OBSERVED", "sha256": hashlib.sha256(raw).hexdigest(),
+                    "event_count": "PRIVATE COUNT"}
+        self.legacy.observe_ledger = legacy_count
+        self.strict.inspect_jsonl_bytes = lambda raw: {
+            "status": "OBSERVED", "file_sha256": hashlib.sha256(raw).hexdigest(),
+            "eligible_records": "PRIVATE COUNT"}
+        report = self.call()
+        self.assertEqual(report["comparison"], "UNKNOWN_COMPARISON")
+        self.assertEqual(report["reason_code"], "ACCEPTED_DIGEST_OR_COUNT_MISMATCH")
+        self.assertNotIn("PRIVATE COUNT", json.dumps(report))
+
+
+    def test_missing_negative_boolean_and_zero_counts_fail_closed(self):
+        # The pinned real observer/lab never issue OBSERVED for an empty ledger.
+        # In this research comparator, a zero OBSERVED count is contradictory.
+        for invalid_count in (None, -1, True, 0):
+            with self.subTest(count=invalid_count):
+                def fake_observer(path):
+                    with Path(path).open("rb") as stream:
+                        raw = stream.read()
+                    return {"status": "OBSERVED",
+                            "sha256": hashlib.sha256(raw).hexdigest(),
+                            "event_count": invalid_count}
+                self.legacy.observe_ledger = fake_observer
+                self.strict.inspect_jsonl_bytes = lambda raw: {
+                    "status": "OBSERVED",
+                    "file_sha256": hashlib.sha256(raw).hexdigest(),
+                    "eligible_records": invalid_count}
+                result = self.call()
+                self.assertEqual(result["comparison"], "UNKNOWN_COMPARISON")
+                self.assertEqual(result["reason_code"], "ACCEPTED_DIGEST_OR_COUNT_MISMATCH")
+                self.assertIsNone(result["legacy_record_count"])
+                self.assertIsNone(result["candidate_eligible_records"])
+
+
+    def test_status_string_subclass_cannot_smuggle_private_source(self):
+        class ForgedStatus(str):
+            def __eq__(self, other):
+                return other == "UNKNOWN"
+            __hash__ = str.__hash__
+        def old_unknown(path):
+            with Path(path).open("rb") as stream:
+                stream.read()
+            return {"status": "UNKNOWN"}
+        self.legacy.observe_ledger = old_unknown
+        self.strict.inspect_jsonl_bytes = lambda raw: {
+            "status": ForgedStatus("PRIVATE VALUE"), "reason_code": None}
+        report = self.call(b"PRIVATE VALUE\n")
+        self.assertEqual(report["comparison"], "UNKNOWN_COMPARISON")
+        self.assertEqual(report["reason_code"], "UNRECOGNIZED_PARSER_STATUS")
+        self.assertNotIn("PRIVATE VALUE", json.dumps(report))
+
+    def test_parser_dict_subclass_cannot_swap_checked_and_returned_counts(self):
+        class DeceptiveDict(dict):
+            def get(self, key, default=None):
+                if key == "eligible_records":
+                    return 1
+                return super().get(key, default)
+            def __getitem__(self, key):
+                if key == "eligible_records":
+                    return "PRIVATE VALUE"
+                return super().__getitem__(key)
+        self.strict.inspect_jsonl_bytes = lambda raw: DeceptiveDict(
+            status="OBSERVED", file_sha256=hashlib.sha256(raw).hexdigest(),
+            eligible_records=1, reason_code=None)
+        report = self.call()
+        self.assertEqual(report["comparison"], "UNKNOWN_COMPARISON")
+        self.assertEqual(report["reason_code"], "UNEXPECTED_PARSER_RESULT")
+        self.assertNotIn("PRIVATE VALUE", json.dumps(report))
+
+    def test_parser_metadata_exception_fails_closed_without_content(self):
+        class RaisingDict(dict):
+            def get(self, key, default=None):
+                raise ValueError("PRIVATE VALUE")
+        self.strict.inspect_jsonl_bytes = lambda raw: RaisingDict(status="UNKNOWN")
+        report = self.call()
+        self.assertEqual(report["comparison"], "UNKNOWN_COMPARISON")
+        self.assertEqual(report["reason_code"], "UNEXPECTED_PARSER_RESULT")
+        self.assertNotIn("PRIVATE VALUE", json.dumps(report))
+
+
+if __name__ == "__main__":
+    unittest.main()
