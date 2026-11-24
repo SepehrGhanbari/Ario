@@ -53,3 +53,31 @@ jobs:
             r63-g9-native-evidence-*.zip
           if-no-files-found: warn
           retention-days: 30
+
+  independent-public-evidence-audit:
+    name: Linux independent public ECDSA / custody marker audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    needs: native-custody-fence-and-negative-counterexample
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@v4
+        with:
+          name: r63-g9-native-${{ github.run_id }}
+          path: g9-public-artifact
+      - name: Recompute actor and two native P-256 signatures, confirm retained-floor HOLD and shared-admin RED
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check 'cryptography==46.0.4'
+          python -B research/r63_g9_custody_ci/audit_g9_public_evidence.py g9-public-artifact
+          python -B research/r63_g9_custody_ci/test_audit_g9_public_evidence.py g9-public-artifact
+          echo 'G9_INDEPENDENT_PUBLIC_CRYPTO_SIGNATURES=4_PASS'
+          echo 'G9_DISTINCT_SID_CUSTODY_HOLD=PASS'
+          echo 'G9_COMMON_ADMIN_CAN_RESIGN=RED_REPRODUCED'
+          echo 'G9_INDEPENDENT_CUSTODY=NOT_ESTABLISHED'
