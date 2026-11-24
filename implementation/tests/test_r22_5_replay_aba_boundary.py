@@ -155,3 +155,33 @@ def test_bridge_preserves_ci_freshness_boundary_on_reviewable_only():
     assert actual["ci_history_continuity"] == "NOT_ESTABLISHED"
     assert actual["merge_authorized"] is False
     assert actual["trust_activated"] is False
+
+
+def test_bridge_does_not_inherit_unattested_freshness_claims(monkeypatch):
+    real_observe = mod.observe
+
+    def overstated(*args, **kwargs):
+        result = real_observe(*args, **kwargs)
+        result.update(source_freshness="ESTABLISHED",
+                      history_continuity="ESTABLISHED",
+                      workflow_freshness="ATOMIC")
+        return result
+
+    monkeypatch.setattr(mod, "observe", overstated)
+    actual = evaluate()
+    assert actual["ci_sample_freshness"] == "NOT_CONFIRMED"
+    assert actual["ci_source_freshness"] == "NOT_ESTABLISHED"
+    assert actual["ci_history_continuity"] == "NOT_ESTABLISHED"
+    assert actual["merge_authorized"] is False
+    assert actual["trust_activated"] is False
+
+
+def test_bridge_pending_ci_does_not_report_confirmed_sample():
+    from test_guard_v2_live_link import FakeReader
+    fake = FakeReader()
+    fake.runs["workflow_runs"][0].update(status="in_progress", conclusion=None)
+    actual = evaluate(fake)
+    assert actual["disposition"] == "HOLD"
+    assert actual["ci_sample_freshness"] == "NOT_CONFIRMED"
+    assert actual["ci_source_freshness"] == "NOT_ESTABLISHED"
+    assert actual["ci_history_continuity"] == "NOT_ESTABLISHED"
