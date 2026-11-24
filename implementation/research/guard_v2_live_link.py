@@ -28,6 +28,9 @@ def _hold(reason: str, **details: Any) -> dict[str, Any]:
         "trust_activated": False,
         "execution_attestation": "NOT_ESTABLISHED",
         "review_freshness": "NOT_ATTESTED_BY_LIVE_GITHUB_READ",
+        "ci_sample_freshness": "NOT_CONFIRMED",
+        "ci_source_freshness": "NOT_ESTABLISHED",
+        "ci_history_continuity": "NOT_ESTABLISHED",
         "source": "LIVE_GITHUB_READ_PLUS_OPTIONAL_CALLER_SUPPLIED_LAB_FIXTURE",
         **details,
     }
@@ -80,6 +83,11 @@ def examine(pin: dict, *, reader: Any = None, first: dict | None = None,
         result["ci_observation"] = audit.get("required_check_observation", "NOT_CONFIRMED")
         result["self_audit_reason"] = audit.get("reason", "UNKNOWN")
         result["self_audit_pr_sample"] = audit.get("pr_sample_consistency", "UNKNOWN")
+        # Preserve the weaker sample-level statement, never infer source freshness
+        # or continuity from a successful linked check or caller-supplied data.
+        if (audit.get("workflow_freshness") == "SAMPLED_NOT_ATOMIC"
+                and audit.get("required_check_observation") == "REPORTED_SUCCESS_BY_LINKED_PR_RUN"):
+            result["ci_sample_freshness"] = "SAMPLED_NOT_ATOMIC"
         if review_graph_reader is not None:
             # Complete separately sampled GraphQL review graph. This check
             # detects edits/deletions between two reads even if PR.updated_at
