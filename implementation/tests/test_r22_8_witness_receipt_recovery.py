@@ -24,9 +24,8 @@ from test_r22_7_retained_witness_floor import (
 from test_r22_5_replay_aba_boundary import sample
 from test_r22_6_ci_witness_prefix_integration import observed_rows
 
-pytestmark = pytest.mark.skipif(
-    not sys.platform.startswith("linux"), reason="R9-C POSIX socket process lab; Linux only"
-)
+if not sys.platform.startswith("linux"):
+    pytest.skip("R9-C POSIX socket process lab; Linux only", allow_module_level=True)
 
 SOURCE = (Path(__file__).resolve().parents[2] / "experiments" /
           "r9c-conditional-destination-2026-11-15" / "r9c_conditional_destination.py")
