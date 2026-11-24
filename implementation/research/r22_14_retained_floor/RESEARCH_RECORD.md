@@ -1,0 +1,11 @@
+# R22.14 — retained signed tree floor and cold restart
+
+RESEARCH_ONLY / DRAFT / HOLD / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTION / NO_AUTOMATIC_MERGE.
+
+Parent #368 at abc5281b9235f94e850cfb93376836e575c8d9e0. No new publication. Reuse genuine earlier and later Sigsum TEST receipts from R22.12 and recovered bytes from R22.13. Official pinned sigsum-verify v0.14.1 verifies both exact receipts under the same supplied public key and pinned TEST policy. Verify floor and ledger preimage correspondence with existing R22.12 verifier. Before transferring a proposed retained pin, scan live from both roots and require the same sampled cosigned head and exact retained leaf.
+
+Separate runner restores old local files and receives retained pin through artifact transfer; independently verifies authentic old receipt and later control receipt (later history bytes not extracted). The post-authentication gate binds log, signer, scope, tree size/root, leaf index and envelope commitment. The retained record includes sequence, floor commitment and ledger digest. Gate rejects old signed head, same-size conflicting root, same-sequence conflict, wrong signer/scope, old scope in larger tree, newer tree without consistency, invalid floor. Missing/corrupt/replayed pin with original expected digest and tampered envelope are negative controls. Old local inputs and retained pin unchanged. Live scan from retained root checks cosigned tree and leaf inclusion; no advancement or adoption. A deliberately reset-both control must show that restoring old pin as well as local state defeats this comparison.
+
+Boundary: post-authentication hypothetical root/sequence conflicts are injected data, not actual signed log equivocation. Authentic old proof is real but presented offline, not a demonstrated live log attack. The pin and its digest travel together under common repo administration; no independent custody or external monotonic storage proven, no recovery if both reset. Newer heads require consistency and further scope/semantic checks; no general advancement contract here. Same-head match is not freshness. No physical restore or durable availability claim. No new keys, trust or merge.
+
+Execution pending; record observed result separately.
