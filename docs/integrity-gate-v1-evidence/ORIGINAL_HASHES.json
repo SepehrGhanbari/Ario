@@ -1,0 +1,18 @@
+{
+  "WINDOWS_RESTORE.public.json": {
+    "bytes": 2502,
+    "original_name": "INTEGRITY_GATE_RESULTS-oc4fthr9.json",
+    "sha256": "d736130d868601343cbfb6c130c8674561d4933c28cbbd417951e1f04f09927a",
+    "transformation": "directory replaced with <REDACTED_LOCAL_STAGE>; JSON reserialized"
+  },
+  "WINDOWS_STARTUP.public.json": {
+    "bytes": 1134,
+    "original_name": "INTEGRITY_GATE_RESULTS-lpifbt5_.json",
+    "sha256": "7fb2370d941319853d686b74e0781a6d2eb57f6505e1b7c7fcea7ea46eccf6ea",
+    "transformation": "directory replaced with <REDACTED_LOCAL_STAGE>; JSON reserialized"
+  },
+  "original_candidate_zip": {
+    "bytes": 37317,
+    "sha256": "9d9eb30302ba380d230ae36bf45aa22d2a617a72f72c9884c0af08c611e766a2"
+  }
+}

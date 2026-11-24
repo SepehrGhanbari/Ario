@@ -1,0 +1,49 @@
+{
+  "directory": "<REDACTED_LOCAL_STAGE>",
+  "evidence": {
+    "commit": "05ba5c960aaea96fc6bb80504b53b4d47e7d42f5",
+    "expected_bytes": 16183258,
+    "expected_files": 204,
+    "extra_paths": [],
+    "matched_files": 204,
+    "problems": [],
+    "scope": "WORKTREE_RAW_FILE_BYTES_ONLY; .git EXCLUDED; MODES NOT ATTESTED; GIT SHA1 OBJECT IDS; NO HISTORY OR IDENTITY CLAIM",
+    "status": "TRACKED_FILE_BYTES_MATCH_GITHUB_TREE",
+    "tree": "8a9429d396c09fe17682a61dd91cb43672d3cb79"
+  },
+  "exit_code": 0,
+  "mode": "download-restore",
+  "qualification": "RESEARCH_ONLY; verified preparation, not execution authorization, publisher identity, independent custody, atomic filesystem snapshot, freshness, or protection against hostile local OS/runtime. Checkout checks Git SHA-1 raw worktree bytes, excludes .git and does not attest modes/history. Explicit startup probe is synthetic M0 only; no general runtime enforcement or sandbox guarantee.",
+  "release_evidence": {
+    "asset": "ario-full.zip",
+    "checksums_sha256": "33df4395bffc0ab261af333d84e48b080fdff3d10852de2522bc61e19515ae6f",
+    "doi_reference_scope": "PROJECT_BIBLIOGRAPHY_ONLY_NOT_SAME_FILE_ATTESTATION",
+    "exit_code": 0,
+    "project_doi_reference_index": [
+      "https://doi.org/10.5281/zenodo.23259916",
+      "https://doi.org/10.5281/zenodo.23326995",
+      "https://doi.org/10.5281/zenodo.23375350",
+      "https://doi.org/10.5281/zenodo.23375401",
+      "https://doi.org/10.5281/zenodo.23376521",
+      "https://doi.org/10.5281/zenodo.23376577",
+      "https://doi.org/10.5281/zenodo.23441596",
+      "https://doi.org/10.5281/zenodo.23600820",
+      "https://doi.org/10.5281/zenodo.23651704",
+      "https://doi.org/10.5281/zenodo.23771218",
+      "https://doi.org/10.5281/zenodo.24041161",
+      "https://doi.org/10.5281/zenodo.24054535",
+      "https://doi.org/10.5281/zenodo.24136175",
+      "https://doi.org/10.5281/zenodo.24230572",
+      "https://doi.org/10.5281/zenodo.24343618"
+    ],
+    "publication_commit": "4731c912ba4b34b302843dd37067822ffb699ba7",
+    "qualification": "Exact local bytes match the verifier's pinned checksum registry. The registry was retrieved from fixed GitHub HTTPS. Publisher identity beyond trusted GitHub origin, source independence, and truth of content are NOT established.",
+    "reference_transport": "HTTPS_GITHUB",
+    "repository": "https://github.com/SepehrGhanbari/Ario",
+    "sha256": "d11269dc593f9cbb70e7d622a8acc31d0fe36d292a935225aca6b8f98d5c5d51",
+    "size_bytes": 6524694,
+    "source_commit": "05ba5c960aaea96fc6bb80504b53b4d47e7d42f5",
+    "status": "GITHUB_RELEASE_BYTES_MATCH"
+  },
+  "status": "MATCH_PREPARATION_ONLY"
+}

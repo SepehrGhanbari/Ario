@@ -1,0 +1,60 @@
+{
+  "scope": "RESEARCH_ONLY",
+  "files": [
+    {
+      "path": "PRIOR_REGRESSION.log",
+      "bytes": 4187,
+      "sha256": "005a3aaf9deafc4a54ac8166193fd7bb03b446ec0333c6f6b06f5424baa88f31"
+    },
+    {
+      "path": "README_EN.md",
+      "bytes": 4671,
+      "sha256": "c2a821a08278499087d5c70446c24e5d7fc1e667a7110849400a4af0e51810ef"
+    },
+    {
+      "path": "README_FA.md",
+      "bytes": 5986,
+      "sha256": "710239385ef44d51961c5796be37eb4a3188b8c9734fd35f992f322befa93458"
+    },
+    {
+      "path": "RUN_INTEGRITY_GATE.cmd",
+      "bytes": 146,
+      "sha256": "d1b4431e5950880dac72983aa80d1b14caea9150f366c53be446ef6f957597a2"
+    },
+    {
+      "path": "TEST_RESULTS.log",
+      "bytes": 3777,
+      "sha256": "e8bf55e3a9ff7660600e5cf52e07c27ad62d5ccd71616ada0e3dead163b76cb9"
+    },
+    {
+      "path": "experiments/github-release-crosscheck-r14/candidate/ario_github_crosscheck_v0_4.py",
+      "bytes": 19656,
+      "sha256": "fac354c46e8fc8ce68edf6202980aa974ab3f0319cfe0e8272b5c688330b432b"
+    },
+    {
+      "path": "live_probe.json",
+      "bytes": 421,
+      "sha256": "ada5cf3aa494cecbbbc686f0aa9dac77533769b9106e6de2b057743d449f9ed6"
+    },
+    {
+      "path": "scripts/ario_integrity_gate.py",
+      "bytes": 23502,
+      "sha256": "b89ccb4d715eb00a847a2d30a56c2ec285fedf9355d0cb8dc58b887c032d4c67"
+    },
+    {
+      "path": "scripts/ario_verified_release.py",
+      "bytes": 9359,
+      "sha256": "4ed09089c5f8cd3ad3999155bded21f7391921bff152f730a82fc692848fef46"
+    },
+    {
+      "path": "scripts/ario_verify_coverage.py",
+      "bytes": 15361,
+      "sha256": "40ceabfd72f4b9779e19b35cb1f599f83a6ea2c91901267fbc1ac30fbdc3bdba"
+    },
+    {
+      "path": "scripts/test_ario_integrity_gate.py",
+      "bytes": 14902,
+      "sha256": "e4f932b9bfbe1c097d75c725f4656a5a46ab4af47519249e972ffac83e48f03d"
+    }
+  ]
+}
