@@ -2,16 +2,18 @@
 from __future__ import annotations
 
 import contextlib
+from http.client import BadStatusLine
 from io import StringIO
 import json
 from pathlib import Path
 import sys
 import unittest
+from unittest.mock import patch
 
 # Import research module without installing it or running its CLI.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from research.historical_qa_ollama_probe_r0.ollama_synthetic_probe import (  # noqa: E402
-    ATTACK, ATTACKS, SAFE, URL, ProbeHold, _bounded_response,
+    ATTACK, ATTACKS, MAX_HTTP_BYTES, SAFE, URL, ProbeHold, _bounded_response,
     _classify, main, run_fixed_probes,
 )
 
@@ -133,6 +135,50 @@ class TestSyntheticNoToolsOllamaProbe(unittest.TestCase):
         self.assertEqual(code, 2)
         data = json.loads(out.getvalue())
         self.assertEqual(data["status"], "HOLD_EXPLICIT_LOCAL_OPT_IN_REQUIRED")
+
+    @patch("urllib.request.build_opener")
+    def test_cli_hides_invalid_http_status_line(self, build_opener):
+        sentinel = "SYNTHETIC_PRIVATE_STATUS_LINE"
+        build_opener.return_value.open.side_effect = BadStatusLine(sentinel)
+        out, err = StringIO(), StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = main(["--run-local-only"])
+
+        self.assertEqual(code, 2)
+        self.assertEqual(json.loads(out.getvalue())["status"], "HOLD_LOOPBACK_UNAVAILABLE")
+        self.assertNotIn(sentinel, out.getvalue())
+        self.assertNotIn(sentinel, err.getvalue())
+
+    @unittest.skipUnless(hasattr(sys, "set_int_max_str_digits"), "requires an integer digit limit")
+    @patch("urllib.request.build_opener")
+    def test_oversized_json_integer_returns_invalid_json_hold(self, build_opener):
+        self.addCleanup(sys.set_int_max_str_digits, sys.get_int_max_str_digits())
+        limit = sys.int_info.str_digits_check_threshold
+        sys.set_int_max_str_digits(limit)
+        body = b'{"message":{"content":"SAFE_ONLY"},"count":' + b"1" * (limit + 1) + b"}"
+        self.assertLess(len(body), MAX_HTTP_BYTES)
+        response = build_opener.return_value.open.return_value.__enter__.return_value
+        response.status = 200
+        response.headers = {}
+        response.read.return_value = body
+
+        with self.assertRaisesRegex(ProbeHold, "^HOLD_INVALID_LOOPBACK_JSON$"):
+            run_fixed_probes()
+
+    @patch("urllib.request.build_opener")
+    def test_valid_http_json_envelope_reaches_response_validation(self, build_opener):
+        response = build_opener.return_value.open.return_value.__enter__.return_value
+        response.status = 200
+        response.headers = {}
+        response.read.return_value = b'{"message":{"content":"SAFE_ONLY"},"count":1}'
+
+        self.assertEqual(
+            [case["outcome"] for case in run_fixed_probes()["cases"]],
+            ["SAFE_MARKER_ONLY"] * 4,
+        )
+        response.read.return_value = b'{"message":{}}'
+        with self.assertRaisesRegex(ProbeHold, "^HOLD_INVALID_MODEL_CONTENT$"):
+            run_fixed_probes()
 
     def test_no_real_archive_input_options_exist(self):
         # Structural guarantee: tests check exactly hardcoded fictional strings.

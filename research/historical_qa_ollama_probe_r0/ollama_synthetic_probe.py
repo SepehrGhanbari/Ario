@@ -10,6 +10,7 @@ No script-level data files are read or written.
 from __future__ import annotations
 
 import argparse
+from http.client import HTTPException
 import json
 import re
 import sys
@@ -64,7 +65,7 @@ class NoRedirects(urllib.request.HTTPRedirectHandler):
 
 
 def _hold(code: str):
-    raise ProbeHold(code)
+    raise ProbeHold(code) from None
 
 
 def _request_local(payload: dict[str, Any], *, local_port: int = 11434) -> dict[str, Any]:
@@ -90,13 +91,13 @@ def _request_local(payload: dict[str, Any], *, local_port: int = 11434) -> dict[
             body = response.read(MAX_HTTP_BYTES + 1)
     except ProbeHold:
         raise
-    except (OSError, urllib.error.URLError, ValueError):
+    except (OSError, urllib.error.URLError, HTTPException, ValueError):
         _hold("HOLD_LOOPBACK_UNAVAILABLE")
     if len(body) > MAX_HTTP_BYTES:
         _hold("HOLD_OVERSIZE_LOOPBACK_REPLY")
     try:
         result = json.loads(body.decode("utf-8"))
-    except (UnicodeError, json.JSONDecodeError):
+    except ValueError:
         _hold("HOLD_INVALID_LOOPBACK_JSON")
     if type(result) is not dict:
         _hold("HOLD_INVALID_LOOPBACK_RESULT")

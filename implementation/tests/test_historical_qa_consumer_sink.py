@@ -105,6 +105,7 @@ class HistoricalConsumerSinkTests(unittest.TestCase):
         self.assertEqual(mock.calls, [])
 
     def test_model_and_tool_and_memory_targets_fail_before_read(self):
+        sentinel_view, sentinel_question = object(), object()
         for target in (
             "MODEL", "MODEL_PROMPT", "SYSTEM_PROMPT", "TOOL",
             "TOOL_ARGUMENT", "WORKING_MEMORY", "EVIDENCE_ADMISSION",
@@ -112,7 +113,7 @@ class HistoricalConsumerSinkTests(unittest.TestCase):
         ):
             with self.subTest(target=target):
                 with self.assertRaisesRegex(HistoricalConsumerHold, "HOLD_HISTORY_TO_ACTIVE_SINK"):
-                    self.route(target=target)
+                    route_historical_consumer(sentinel_view, sentinel_question, target=target)
 
     def test_default_metadata_never_contains_historical_text(self):
         got = self.route()
