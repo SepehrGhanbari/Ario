@@ -118,7 +118,7 @@ func main() {
    if proof.LeafIndex != cursor { log.Fatal("HOLD: leaf index mismatch") }
    require(proof.Verify(&h, &cth.TreeHead))
    if leaf.KeyHash == hash(signerHash) {
-    require(leaf.Verify(map[crypto.Hash]crypto.PublicKey{hash(signerHash):pub}))
+    if !leaf.Verify(&pub) { log.Fatal("HOLD: invalid matching signer leaf signature") }
     matches=append(matches,match{Index:cursor,Checksum:hex.EncodeToString(leaf.Checksum[:])})
    }
    cursor++
