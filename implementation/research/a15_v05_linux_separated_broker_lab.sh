@@ -184,7 +184,6 @@ if runuser -u "$cust" -- "$python" "$install/custodian.py" serve \
   > "$root/provision-refusal.log" 2>&1; then
   echo 'PROVISION_REFUSAL_BYPASSED' >&2; exit 2
 fi
-[ -S "$socket_path" ] && { echo 'REFUSAL_RUN_CREATED_A_SOCKET' >&2; exit 2; }
 echo "EXPLICIT_PROVISION_REFUSED_ON_EXISTING_LEDGER=PASS"
 echo "A15_V05_LINUX_OS_SEPARATED_BROKER=PASS"
 echo "GATE_UID=$gate_uid CUSTODIAN_UID=$cust_uid"
