@@ -1,0 +1,66 @@
+{
+  "RUN_DOI_CATALOG.cmd": {
+    "sha256": "faf252cbdd29db99f2b6b0b1cbbd87c992cb0cc93181331a59e3e28bf3c8c38a",
+    "bytes": 264
+  },
+  "RUN_DOI_FULL_VALIDATION.cmd": {
+    "sha256": "fc007ae918b9f66c3f4ea338f204e562371cd14039012ce04c4833f8767c9724",
+    "bytes": 230
+  },
+  "RUN_VERIFIED_DOWNLOAD.cmd": {
+    "sha256": "138c4905d4082fe72ab235c37488ddff16dfdad3a47476939964bdf9d4bcd84e",
+    "bytes": 285
+  },
+  "docs/ARIO_EXPANDED_COVERAGE.md": {
+    "sha256": "2da7d56c178d70268a80b6f557c9fde47f629d8806b5193ed95005f14016f80c",
+    "bytes": 6271
+  },
+  "docs/ARIO_VERIFIED_RELEASE.md": {
+    "sha256": "1655d08e0f390cc44c5502e793ebce6342e4c0cc3de9c0c753688187f1ee4e14",
+    "bytes": 4459
+  },
+  "docs/verification-coverage-evidence/CLONE_RESULTS.json": {
+    "sha256": "4c4f7c82999cc71e49e422282d1d0b86f8bb47e9f6fe723618fb24f51ba2b37d",
+    "bytes": 630
+  },
+  "docs/verification-coverage-evidence/DOI_FULL_RESULTS.json": {
+    "sha256": "5c3eadfa847953c2ae74374ab60023e34bbf11b5dae4a2cbd73ffca2534dc88c",
+    "bytes": 42459
+  },
+  "docs/verification-coverage-evidence/OFFLINE_TESTS.log": {
+    "sha256": "0af7fba1a9aca370eee19f54353d1a1f0e7760f739587c1b91b01b8c747e3f72",
+    "bytes": 4187
+  },
+  "docs/verification-coverage-evidence/ORIGINAL_HASHES.json": {
+    "sha256": "3f15f17fa91485447062efca9345f2fc01808229f9fbfe50748af67e19fe79cd",
+    "bytes": 269
+  },
+  "docs/verification-coverage-evidence/README.md": {
+    "sha256": "25b5168e1a424a19706f0bd59f2268cc88808cb394f44ed2adb263436d6d9567",
+    "bytes": 1784
+  },
+  "scripts/ario_verified_release.py": {
+    "sha256": "4ed09089c5f8cd3ad3999155bded21f7391921bff152f730a82fc692848fef46",
+    "bytes": 9359
+  },
+  "scripts/ario_verify_coverage.py": {
+    "sha256": "40ceabfd72f4b9779e19b35cb1f599f83a6ea2c91901267fbc1ac30fbdc3bdba",
+    "bytes": 15361
+  },
+  "scripts/run_doi_bulk.py": {
+    "sha256": "f55e7cf974955479790d76589305b4eaebfe9f6d43d99f28963bc1bb97d991dd",
+    "bytes": 5629
+  },
+  "scripts/test_ario_verified_release.py": {
+    "sha256": "9bed52019f8d54926de8be669c528893747f0489ac239f8f615708918182f74c",
+    "bytes": 7154
+  },
+  "scripts/test_ario_verify_coverage.py": {
+    "sha256": "8baa16ea414a5acfc426ffece6a16992ce68423ff298649f835534b05cdc7217",
+    "bytes": 5948
+  },
+  "scripts/test_run_doi_bulk.py": {
+    "sha256": "90941d89a5288a6d8f40cdabe64edc4874f56ca3df2ab7f7e960819fd8f3fe2f",
+    "bytes": 1991
+  }
+}

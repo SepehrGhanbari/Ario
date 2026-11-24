@@ -33,3 +33,7 @@ Earlier historical exports remain untouched.
 Direct-download links after branch merge:
 https://raw.githubusercontent.com/SepehrGhanbari/Ario/main/releases/ai-readable-full-2026-11-11-05ba5c9/ario-full.zip
 https://raw.githubusercontent.com/SepehrGhanbari/Ario/main/releases/ai-readable-full-2026-11-11-05ba5c9/ario-full.txt
+
+## Later verification convenience (2026-11-24)
+
+Use the [read-only verified-release launcher](../../docs/ARIO_VERIFIED_RELEASE.md) from a separately trusted checkout to download and automatically cross-check these three exact assets against the fixed publication commit. `UNKNOWN` and rejection are not success. This documentation addendum does not replace or re-sign any original archive, manifest or restorer. See [bounded validation evidence](../../docs/verification-coverage-evidence/README.md).
