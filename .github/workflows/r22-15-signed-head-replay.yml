@@ -1,0 +1,64 @@
+name: R22.15 signed head HTTP replay (advisory)
+on:
+  push:
+    branches:
+      - research/r22-15-signed-head-replay-20261124
+    paths:
+      - .github/workflows/r22-15-signed-head-replay.yml
+      - implementation/research/r22_15_signed_head_replay/**
+permissions:
+  contents: read
+  actions: read
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - name: Extract exact historical cosigned response blocks
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          export LAB="$RUNNER_TEMP/r22-15"
+          mkdir -p "$LAB"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/14949671120/zip" > "$LAB/old.zip"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/14948912790/zip" > "$LAB/new.zip"
+          python - <<'PY'
+          import hashlib,os,zipfile
+          from pathlib import Path
+          p=Path(os.environ['LAB'])
+          for name,pin,headpin in [
+              ('old','337fc0e36441c0eb3d4ebeb1736cb83bbea8cb958dd8b5aba846a8c1230fc16d','4b03a31a01537968b0636ab18d21d982266cda2b9ce8d82b6e663fd79e8cbb4b'),
+              ('new','652ff3f19ce4470b82aaf70acf9c2f6e4b0f3aa00a7f7c17a0adc916ba0fd56e','c0c0f5b49ff20a77b36a206d52fc784ef4aa603d7543d4e43a5b345e4c7b3f6b')]:
+              f=p/(name+'.zip')
+              assert hashlib.sha256(f.read_bytes()).hexdigest()==pin
+              with zipfile.ZipFile(f) as z:
+                  assert z.testzip() is None
+                  blocks=z.read('envelope.json.proof').split(b'\n\n')
+                  assert len(blocks)==3
+                  raw=blocks[1]+b'\n'
+                  assert hashlib.sha256(raw).hexdigest()==headpin
+                  (p/(name+'.head')).write_bytes(raw)
+          PY
+      - name: Real HTTP loopback replay and official Sigsum policy verification
+        working-directory: implementation/research/r22_15_signed_head_replay
+        run: |
+          set -euo pipefail
+          export R22_15_OLD_HEAD="$RUNNER_TEMP/r22-15/old.head"
+          export R22_15_NEW_HEAD="$RUNNER_TEMP/r22-15/new.head"
+          go mod tidy
+          go test -count=1 -v ./... | tee "$RUNNER_TEMP/r22-15/results.log"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r22-15-http-replay-results
+          path: ${{ runner.temp }}/r22-15/results.log
+          if-no-files-found: warn
+          retention-days: 30
