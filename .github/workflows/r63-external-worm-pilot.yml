@@ -1,0 +1,19 @@
+name: R63 external WORM provider contract tests (no live cloud)
+on:
+  push:
+    branches: [research/r63-g9-external-worm-provider-pilot-20261124]
+    paths:
+      - 'research/r63_external_worm_pilot/*.py'
+      - '.github/workflows/r63-external-worm-pilot.yml'
+permissions:
+  contents: read
+jobs:
+  mocked-provider-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Python standard-library tests, no credentials or live provider calls
+        run: python -B research/r63_external_worm_pilot/test_gcs_pilot.py
