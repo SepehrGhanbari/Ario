@@ -1,0 +1,98 @@
+name: R22.14 external lower-bound rediscovery (advisory)
+on:
+  push:
+    branches:
+      - research/r22-14-external-lower-bound-20261124
+    paths:
+      - .github/workflows/r22-14-external-lower-bound.yml
+      - implementation/research/r22_14_external_lower_bound/**
+permissions:
+  contents: read
+  actions: read
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - name: Verify and retain first-only bootstrap, delete synthetic publisher workspace
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          export LAB="$RUNNER_TEMP/r22-14"
+          mkdir -p "$LAB/publisher" "$LAB/first" "$LAB/recovery"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/14949671120/zip" > "$LAB/first.zip"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/14948912790/zip" > "$LAB/publisher/new.zip"
+          printf '%s  %s\n' '337fc0e36441c0eb3d4ebeb1736cb83bbea8cb958dd8b5aba846a8c1230fc16d' "$LAB/first.zip" '652ff3f19ce4470b82aaf70acf9c2f6e4b0f3aa00a7f7c17a0adc916ba0fd56e' "$LAB/publisher/new.zip" | sha256sum -c -
+          unzip -q "$LAB/first.zip" -d "$LAB/first"
+          unzip -q "$LAB/publisher/new.zip" -d "$LAB/publisher"
+          go install sigsum.org/sigsum-go/cmd/sigsum-verify@v0.14.1
+          "$(go env GOPATH)/bin/sigsum-verify" -k "$LAB/first/synthetic-key.pub" -P sigsum-test1-2025 "$LAB/first/envelope.json.proof" < "$LAB/first/envelope.json"
+          python - <<'PY'
+          import base64, hashlib, json, os
+          from pathlib import Path
+          lab=Path(os.environ['LAB'])
+          first=lab/'first'
+          fields=dict(line.split('=',1) for line in (first/'envelope.json.proof').read_text().splitlines() if line.startswith(('size=','root_hash=','leaf_index=','log=','leaf=')))
+          key=base64.b64decode((first/'synthetic-key.pub').read_text().split()[1],validate=True)
+          assert key[:4]==b'\x00\x00\x00\x0b' and key[4:15]==b'ssh-ed25519' and key[15:19]==b'\x00\x00\x00\x20' and len(key)==51
+          public=key[19:]
+          assert hashlib.sha256(public).hexdigest()==fields['leaf'].split()[0]
+          assert fields['log']=='4e89cc51651f0d95f3c6127c15e1a42e3ddf7046c5b17b752689c402e773bb4d'
+          raw=(first/'envelope.json').read_bytes()
+          checksum=hashlib.sha256(hashlib.sha256(raw).digest()).hexdigest()
+          boot={'start':int(fields['leaf_index']),'size':int(fields['size']),'root':fields['root_hash'],'public':public.hex(),'first_checksum':checksum}
+          assert boot==json.loads((first/'bootstrap.json').read_bytes())
+          (lab/'recovery/bootstrap.json').write_text(json.dumps(boot,sort_keys=True)+'\n')
+          assert json.loads((lab/'publisher/envelope.json').read_bytes())['record_count']==4
+          PY
+          rm -rf "$LAB/publisher"
+          test ! -e "$LAB/publisher"
+          echo PUBLISHER_WORKSPACE_REMOVED
+          cp implementation/research/r22_14_external_lower_bound/{main.go,main_test.go,go.mod} "$LAB/recovery/"
+          test "$(find "$LAB/recovery" -maxdepth 1 -type f | wc -l)" = 4
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r22-14-first-only-recovery
+          path: ${{ runner.temp }}/r22-14/recovery/
+          if-no-files-found: error
+          retention-days: 30
+  discover:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: r22-14-first-only-recovery
+          path: ${{ runner.temp }}/r22-14-recovery
+      - name: Fresh recovery runner with no checkout and only first bootstrap
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/r22-14-recovery"
+          test "$(find . -maxdepth 1 -type f | wc -l)" = 4
+          test ! -e "$GITHUB_WORKSPACE/.git"
+          sha256sum bootstrap.json > before.sha
+          go mod tidy
+          go test -v ./...
+          go build -o discover .
+          env -i PATH=/usr/bin:/bin HOME="$RUNNER_TEMP" ./discover | tee "$RUNNER_TEMP/r22-14-discovery.jsonl"
+          sha256sum -c before.sha
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r22-14-live-discovery
+          path: ${{ runner.temp }}/r22-14-discovery.jsonl
+          if-no-files-found: warn
+          retention-days: 30
