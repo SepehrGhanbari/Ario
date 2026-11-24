@@ -29,9 +29,98 @@ CHECK_JOB = re.compile(
     r"https://github[.]com/SepehrGhanbari/Ario/actions/runs/"
     r"([1-9][0-9]*)/job/([1-9][0-9]*)\Z"
 )
-# An explicit next-page link overrides an apparently complete first page.
-# GitHub's REST API uses the Link header to advertise further pages.
-NEXT_LINK = re.compile(r'rel\s*=\s*"?[^",;]*\bnext\b', re.IGNORECASE)
+# GitHub's REST API advertises pagination with Web Linking (RFC 8288).
+# Do not look for rel=next in raw URL, title or unrelated relation names.
+LINK_TOKEN = re.compile(r"[!#$%&'*+.^_`|~0-9A-Za-z-]+")
+
+
+def _link_has_next(values: list[str]) -> bool:
+    """Parse bounded RFC 8288 Link fields without dereferencing their URLs.
+
+    Reject malformed/ambiguous headers rather than treating them as proof of a
+    complete response. This is a conservative subset of Web Linking syntax.
+    """
+    if len(values) > 8 or sum(len(s) for s in values if isinstance(s, str)) > 8192:
+        raise ValueError("oversized Link headers")
+    found_next = False
+    for value in values:
+        if not isinstance(value, str) or not value or any(
+            (ord(ch) < 32 and ch != "\t") or ord(ch) > 126 for ch in value
+        ):
+            raise ValueError("invalid Link header bytes")
+        if not value.strip():
+            raise ValueError("empty Link header")
+        pos, n = 0, len(value)
+        while pos < n:
+            while pos < n and value[pos] in " \t":
+                pos += 1
+            if pos == n:
+                break
+            if value[pos] != "<":
+                raise ValueError("missing Link target")
+            close = value.find(">", pos + 1)
+            if close < 0 or "<" in value[pos + 1:close]:
+                raise ValueError("invalid Link target")
+            pos = close + 1
+            rel = None
+            while True:
+                while pos < n and value[pos] in " \t":
+                    pos += 1
+                if pos == n or value[pos] == ",":
+                    break
+                if value[pos] != ";":
+                    raise ValueError("invalid Link parameter delimiter")
+                pos += 1
+                while pos < n and value[pos] in " \t":
+                    pos += 1
+                match = LINK_TOKEN.match(value, pos)
+                if match is None:
+                    raise ValueError("missing Link parameter name")
+                key = match.group().lower()
+                pos = match.end()
+                while pos < n and value[pos] in " \t":
+                    pos += 1
+                param = None
+                if pos < n and value[pos] == "=":
+                    pos += 1
+                    while pos < n and value[pos] in " \t":
+                        pos += 1
+                    if pos < n and value[pos] == '"':
+                        pos += 1
+                        chars = []
+                        while pos < n and value[pos] != '"':
+                            if value[pos] == "\\":
+                                pos += 1
+                                if pos == n:
+                                    raise ValueError("incomplete quoted Link escape")
+                            chars.append(value[pos])
+                            pos += 1
+                        if pos == n:
+                            raise ValueError("unclosed Link quoted-string")
+                        pos += 1
+                        param = "".join(chars)
+                    else:
+                        match = LINK_TOKEN.match(value, pos)
+                        if match is None:
+                            raise ValueError("invalid Link parameter value")
+                        param = match.group()
+                        pos = match.end()
+                if key == "rel":
+                    if rel is not None or not param:
+                        raise ValueError("missing or repeated Link rel")
+                    rel = param
+            if rel is None:
+                raise ValueError("Link without rel")
+            relations = rel.split()
+            if not relations or any("," in item or ";" in item for item in relations):
+                raise ValueError("invalid Link relation list")
+            if any(item.lower() == "next" for item in relations):
+                found_next = True
+            if pos < n:
+                pos += 1  # comma: next link-value
+                if not value[pos:].strip():
+                    raise ValueError("trailing Link delimiter")
+    return found_next
 
 ALLOWED = (
     re.compile(r"pulls/[1-9][0-9]*\Z"),
@@ -100,9 +189,12 @@ class GitHubReadOnly:
             with self.opener.open(request, timeout=12) as response:
                 if response.status != 200:
                     raise ReadUnknown("NON_200_RESPONSE")
-                for link in response.headers.get_all("Link", []):
-                    if NEXT_LINK.search(link):
-                        raise ReadUnknown("PAGINATION_NEXT_LINK_PRESENT")
+                try:
+                    has_next = _link_has_next(response.headers.get_all("Link", []))
+                except ValueError as exc:
+                    raise ReadUnknown("PAGINATION_LINK_INVALID") from exc
+                if has_next:
+                    raise ReadUnknown("PAGINATION_NEXT_LINK_PRESENT")
                 try:
                     data = read_bounded_body(response, 400_000)
                 except ValueError as exc:
