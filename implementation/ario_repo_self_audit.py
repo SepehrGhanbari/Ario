@@ -130,6 +130,8 @@ ALLOWED = (
 )
 LIMITATIONS = [
     "GitHub Actions success is not independently attested test execution",
+    "Check Runs use GitHub default latest filtering, not a historical inventory",
+    "Reported check and linked-run records are initial samples, not full attempt history",
     "The repository author may also control tests and workflow definitions",
     "Two PR GET samples and repeated metadata reads do not form an atomic or permanent snapshot",
     "A PR revision or workflow rerun after its last relevant sample remains unobservable",
@@ -286,7 +288,7 @@ def _check_snapshot(value: Any, expected_head: str, target_run_id: int,
 
 def _run_snapshot(value: Any, expected_head: str, pr_number: int,
                   pr_id: int, label: str) -> tuple:
-    """Project a complete workflow-run page onto PR-linked selection fields."""
+    """Project sampled canonical PR-linked runs onto their binding fields."""
     obj = _object(value, label)
     records = obj.get("workflow_runs")
     count = obj.get("total_count")
@@ -295,7 +297,7 @@ def _run_snapshot(value: Any, expected_head: str, pr_number: int,
         raise ReadUnknown(label + "_INCOMPLETE")
     run_ids = set()
     workflow_sequences = set()
-    latest_canonical = None
+    canonical_runs = []
     for record in records:
         run = _object(record, "RUN_RECHECK")
         if (not _positive(run.get("id")) or not _positive(run.get("run_attempt"))
@@ -342,12 +344,12 @@ def _run_snapshot(value: Any, expected_head: str, pr_number: int,
                 run["run_attempt"], run["head_sha"], run["event"],
                 run["status"], run.get("conclusion"), tuple(sorted(link_view)),
             )
-            sequence = (run["run_number"], run["run_attempt"])
-            if latest_canonical is None or sequence > latest_canonical[0]:
-                latest_canonical = (sequence, candidate)
-    # Only the latest PR-linked run of the pinned workflow can change the
-    # decision. Older runs and other workflows are validated but not compared.
-    return () if latest_canonical is None else (latest_canonical[1],)
+            canonical_runs.append(candidate)
+    # Keep current-run selection separate from sampled-set consistency.
+    # An observed change to an older canonical PR-linked run invalidates the
+    # observation too; stable historical failures do not override the current run.
+    # This is not a complete attempt history or an atomic snapshot.
+    return tuple(sorted(canonical_runs))
 
 def observe(pr_number: int, expected_head: str, *,
             repository: str = REPOSITORY, reader: Any = None) -> dict:
