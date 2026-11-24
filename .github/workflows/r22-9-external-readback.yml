@@ -1,0 +1,52 @@
+name: R22.9 external TEST-log readback (advisory)
+on:
+  push:
+    branches:
+      - research/r22-9-external-floor-readback-20261124
+    paths:
+      - implementation/research/r22_9_external_readback/**
+      - .github/workflows/r22-9-external-readback.yml
+permissions:
+  contents: read
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - name: Isolated fresh verifier, with only explicit public bootstrap code
+        shell: bash
+        run: |
+          set -euo pipefail
+          LAB=$(mktemp -d "$RUNNER_TEMP/r22-9.XXXXXX")
+          trap 'rm -rf "$LAB"' EXIT
+          cp implementation/research/r22_9_external_readback/{main.go,main_test.go,go.mod} "$LAB/"
+          cd "$LAB"
+          # Simulate local rollback; the old local state is not an input to the probe.
+          printf '{"count":4}\n' > local-state.json
+          printf '{"count":2}\n' > old-state.json
+          mv old-state.json local-state.json
+          test ! -e floor-4.PUBLIC_SYNTHETIC.json.proof
+          test ! -e R22_8_PUBLIC_SYNTHETIC_FLOOR_PROOF.zip
+          sha256sum local-state.json > before.sha256
+          go mod tidy
+          go test -v ./...
+          go run . | tee readback.jsonl
+          sha256sum -c before.sha256
+          echo 'R22_9_NO_LOCAL_STATE_PROMOTION'
+          install -d "$RUNNER_TEMP/r22-9-public"
+          cp readback.jsonl "$RUNNER_TEMP/r22-9-public/"
+      - name: Archive public readback report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r22-9-public-readback
+          path: ${{ runner.temp }}/r22-9-public/readback.jsonl
+          if-no-files-found: warn
+          retention-days: 30
