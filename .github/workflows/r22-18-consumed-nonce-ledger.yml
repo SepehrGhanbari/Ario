@@ -1,0 +1,37 @@
+name: R22.18 consumed nonce ledger UID test (advisory)
+on:
+  push:
+    branches:
+      - research/r22-18-consumed-nonce-ledger-20261124
+    paths:
+      - .github/workflows/r22-18-consumed-nonce-ledger.yml
+      - implementation/research/r22_18_consumed_nonce_ledger/*.py
+permissions:
+  contents: read
+  actions: read
+jobs:
+  ledger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Retrieve exact archived synthetic TSA responses
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/14950269714/zip" > "$RUNNER_TEMP/r22-17-capture.zip"
+          echo "b7f1702b88241f6062c6e9c3975e5969620e98b6fc47321ca7e91956c7500f8e  $RUNNER_TEMP/r22-17-capture.zip" | sha256sum -c -
+      - name: Actual process crashes, publisher restore and concurrent consumption
+        run: |
+          set -euo pipefail
+          sudo /usr/bin/python3 "implementation/research/r22_18_consumed_nonce_ledger/test_nonce_ledger.py" "$RUNNER_TEMP/r22-17-capture.zip" | tee "$RUNNER_TEMP/r22-18-results.log"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r22-18-consumed-nonce-results
+          path: ${{ runner.temp }}/r22-18-results.log
+          if-no-files-found: warn
+          retention-days: 30
