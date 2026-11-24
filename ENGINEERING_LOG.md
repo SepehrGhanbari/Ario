@@ -861,3 +861,10 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - New 15-case integration test file binds synthetic scope and actual observer transcript/result to bounded four-record journal; separately modelled events populate two slots. Retained two/four-record checkpoint controls exercise replay below floor, resealed deletion/replacement/reordering, same-count fork, conflicting/missing witness, missing floor, epoch replay, shared-admin rollback and missed-event residuals.
 - Prefix PASS is not a floor PASS. Retained anchors constrain the digest as well as count. Neither fixture control nor a conditional match establishes real custody, event truth or trust.
 - Report: implementation/research/R22_6_CI_WITNESS_PREFIX_INTEGRATION_2026-11-24.md. Tests-only code integration; no runtime adapter or actual independent custodian. Draft/HOLD; CI exact-head verification required. No keys, merge, main update, trust activation, evidence admission or production.
+
+
+## 2026-11-24 — R22.7 retained witness floor (#352)
+
+- Pinned #350 a07afd368a6f89f5962a7e9467b2bb8ea994471a; reused R10 #304 exact monitor.py blob 61e649ec0bb6adfa3c0dc2a95bbf8675edd69dec (canonical bytes and fsync/atomic-replace writer only), R22.6 comparator and synthetic observer, R6/A15 distinct Linux UID design. No modification of existing witness comparator or receipt semantics.
+- Added bounded test-only scope/count/head/prefix digest/two checkpoint retained record, exact parent/forward prefix checks, 12 cases including six malformed/missing floor mutations and a dedicated advisory Linux root-supervised two-unprivileged-UID filesystem test. Publisher-only rollback should be detected with retained count four; common-root joint reset remains residual. No deployed independent administrator, event feed or actual witness authenticity.
+- Report: implementation/research/R22_7_RETAINED_WITNESS_FLOOR_2026-11-24.md. Initial source/test/workflow head 53c1d04a2e38145dc84c2764d1734c451f83c2cb. Final CI to be checked on exact head; Draft/HOLD; no keys, merge, trust activation, memory admission or production.
