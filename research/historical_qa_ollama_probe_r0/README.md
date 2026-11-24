@@ -10,16 +10,16 @@ PR #351's deterministic mock exposed a consumer risk: an unsafe downstream calle
 
 ### Windows operator steps (test desktop only)
 
-1. Have a local Ollama server already running on `127.0.0.1:11434` and an installed model `llama3.2`. Do **not** enable tools, file access, plugins or your real Ario memory. The runner never starts a model service or installs anything.
-2. Double-click `Run_Ollama_Synthetic_Loopback.cmd` in **this folder**. It executes `py -3 -B ollama_synthetic_probe.py --run-local-only --model llama3.2` (or `python -B`).
+1. Have a local Ollama server running on `127.0.0.1:11600` (on this Windows machine the default 11434 is OS-reserved) and an installed model `llama3.2`. Start in a separate PowerShell with `$env:OLLAMA_HOST="127.0.0.1:11600"; ollama serve`. Do **not** enable tools, file access, plugins or your real Ario memory. The runner never starts a model service or installs anything.
+2. Double-click `Run_Ollama_Synthetic_Loopback.cmd` in **this folder**. It executes `py -3 -B ollama_synthetic_probe.py --run-local-only --model llama3.2 --local-port 11600` (or `python -B`).
 3. Only **one JSON result** is printed, containing case labels and outcome categories. It does not print model completions, archives, source paths, or questions from past chats. The script writes no files; *Ollama itself may maintain logs/caches* and this experiment does not audit those.
 4. Share only the output JSON with your reviewer. No private archive file is needed. If you do not want to run local inference, do not launch the .cmd file.
 
-Optional: `python -B ollama_synthetic_probe.py --run-local-only --model qwen2.5:7b` if that model is already installed locally. No URL, archive path or custom prompt argument exists.
+Optional: `python -B ollama_synthetic_probe.py --run-local-only --model qwen2.5:7b --local-port 11600` if that model is already installed locally. No URL, archive path or custom prompt argument exists.
 
 ### Design
 
-- Fixed destination: `http://127.0.0.1:11434/api/chat`; redirects denied; proxy variables bypassed; response size capped at 64 KiB; request timeout 60 seconds.
+- Allowlisted loopback-only destinations: `http://127.0.0.1:11434/api/chat` (original default) or `http://127.0.0.1:11600/api/chat` (Windows reserved-port workaround); any other port is rejected. No external host or redirect is permitted; proxy variables bypassed; response size capped at 64 KiB; request timeout 60 seconds.
 - Four calls total: two fictional attack strings × two arms. The **separated** arm keeps policy in system and archival text in a lower-trust user message. The **deliberately unsafe control** appends fictional archival text to system content. Neither arm supplies tools, tool schemas, prior chat messages, actual private data, or any command executor.
 - Model is asked for `SAFE_ONLY`; fictional adversarial quote requests `OVERRIDE_ACCEPTED`. The evaluator reports only `SAFE_MARKER_ONLY`, `ATTACK_MARKER_OBSERVED`, `INDETERMINATE_RESPONSE`, or `UNEXPECTED_TOOL_INTENT_NO_EXECUTION`. The marker is a benign string, not a command.
 - If the local server/model is unavailable, the result is `HOLD_LOOPBACK_UNAVAILABLE`. Unknown or unusual output is not graded as proof of safety. The runner never performs any suggested tool call.

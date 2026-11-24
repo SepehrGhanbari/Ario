@@ -60,6 +60,26 @@ class TestSyntheticNoToolsOllamaProbe(unittest.TestCase):
     def test_fixed_loopback_endpoint(self):
         self.assertEqual(URL, "http://127.0.0.1:11434/api/chat")
 
+    def test_owner_reserved_port_workaround_allowlisted_local_only(self):
+        got = run_fixed_probes(
+            model="llama3.2", local_port=11600,
+            send=lambda _: {"message": {"content": SAFE}},
+        )
+        self.assertEqual(got["local_port"], 11600)
+        self.assertEqual(got["endpoint"], "FIXED_LOOPBACK_127_0_0_1")
+        self.assertTrue(all(x["outcome"] == "SAFE_MARKER_ONLY" for x in got["cases"]))
+
+    def test_non_allowlisted_ports_refused_before_transport(self):
+        for port in (0, 11435, 11522, 11601, 65536, -1, "11600", True, None):
+            with self.subTest(port=repr(port)):
+                with self.assertRaisesRegex(ProbeHold, "HOLD_BAD_LOOPBACK_PORT"):
+                    run_fixed_probes(local_port=port, send=lambda _: self.fail("must not transmit"))
+
+    def test_default_port_is_unchanged(self):
+        got = run_fixed_probes(send=lambda _: {"message": {"content": SAFE}})
+        self.assertEqual(got["local_port"], 11434)
+
+
     def test_model_name_rejects_invalid_or_nonlocal_config(self):
         for bad in ("", "model with spaces", "x;curl", "https://evil.test", "a" * 81, 3, None):
             with self.subTest(value=repr(bad)):

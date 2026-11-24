@@ -795,3 +795,11 @@ RESEARCH_ONLY / DRAFT / HOLD / NO_AUTOMATIC_MERGE / NO_REAL_KEYS / NO_TRUST_ACTI
 - Added `research/historical_qa_ollama_probe_r0/Run_Ollama_Synthetic_Loopback.cmd` for explicit owner-run on their test desktop; added scoped readme and **15 synthetic fake-transport tests** at `implementation/tests/test_historical_qa_ollama_synthetic_probe.py`. CI tests never send a network request.
 - Prepared source blob identifiers: `b0d6ac2a3d674a8f59cf024a32474762c6359222` (probe), `feb334bc96fa137f698e26ab0c2a511d59817a54` (mock transport tests), `d799a7a18bed58083e0f1cad4f51ea916242bb10` (Windows launcher), `de959304f6bc0874eb2801b3e513cdb921f0ad56` (README). **Exact-head GitHub CI for these additions pending**.
 - The experiment cannot prove prompt-injection resistance, source truth, independent witness/custody, safe real-memory admission, or live agent integration. RESEARCH_ONLY / DRAFT / HOLD / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTION / NO_AUTOMATIC_MERGE.
+
+
+## 2026-11-24 — R0 owner Windows reserved Ollama port workaround (#351)
+
+- Owner-reported `ollama serve` failed binding 127.0.0.1:11434 with Windows `WSAEACCES`. Read-only `netsh interface ipv4 show excludedportrange protocol=tcp` lists 11423–11522 as excluded, which contains 11434, and `netstat` reported no listener on that port. This is a port-exclusion explanation for the earlier `HOLD_LOOPBACK_UNAVAILABLE`; no proof of model robustness or model result.
+- Bounded follow-up on #351: synthetic Ollama probe accepts only allowlisted loopback port 11434 or 11600. Neither arbitrary ports nor external/remote URLs are accepted; redirects and proxies remain refused. A Windows launcher selects 11600. The installed local Ollama server must be separately configured with `OLLAMA_HOST=127.0.0.1:11600`; this script never starts a server, creates accounts, installs software or modifies OS port reservations.
+- Three synthetic transport regression methods added to assert 11600 acceptance, original default preservation and refusal of non-allowlisted ports *before* a fake transport is invoked. No model, archive, QwenMemory, private data, signer or tool is accessed by GitHub CI.
+- GitHub exact-head CI and owner's real localhost test remain pending at time of this append. NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTION / DRAFT / HOLD / NO_AUTOMATIC_MERGE.
