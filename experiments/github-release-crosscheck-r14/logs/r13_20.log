@@ -1,0 +1,25 @@
+test_bad_explicit_pins_are_rejected_not_type_error (__main__.R13Independent.test_bad_explicit_pins_are_rejected_not_type_error) ... ok
+test_caller_supplied_fixture_does_not_claim_network_happened_or_did_not_happen (__main__.R13Independent.test_caller_supplied_fixture_does_not_claim_network_happened_or_did_not_happen) ... ok
+test_conflicting_cl_rejected (__main__.R13Independent.test_conflicting_cl_rejected) ... ok
+test_default_live_path_requires_validated_observation_before_live_label (__main__.R13Independent.test_default_live_path_requires_validated_observation_before_live_label) ... ok
+test_default_verify_does_not_trust_unvalidated_fetch (__main__.R13Independent.test_default_verify_does_not_trust_unvalidated_fetch) ... ok
+test_explicit_own_helper_may_have_queried_live_but_verifier_only_knows_callback (__main__.R13Independent.test_explicit_own_helper_may_have_queried_live_but_verifier_only_knows_callback) ... ok
+test_explicit_provider_error_maps_to_unknown (__main__.R13Independent.test_explicit_provider_error_maps_to_unknown) ... ok
+test_explicit_provider_reference_unknown_retains_classification (__main__.R13Independent.test_explicit_provider_reference_unknown_retains_classification) ... ok
+test_fifo_swap_after_lstat_returns_immediately (__main__.R13Independent.test_fifo_swap_after_lstat_returns_immediately) ... ok
+test_header_and_decoder_disagreement_is_unknown_even_if_parser_bytes_look_good (__main__.R13Independent.test_header_and_decoder_disagreement_is_unknown_even_if_parser_bytes_look_good) ... ok
+test_helper_with_validated_tls_observation_passes_bytes (__main__.R13Independent.test_helper_with_validated_tls_observation_passes_bytes) ... ok
+test_helper_without_validated_tls_observation_returns_unknown (__main__.R13Independent.test_helper_without_validated_tls_observation_returns_unknown) ... ok
+test_live_branch_is_explicit_and_cannot_be_reached_with_custom_release (__main__.R13Independent.test_live_branch_is_explicit_and_cannot_be_reached_with_custom_release) ... ok
+test_official_fixture_bytes_match_pinned_registry_with_origin_unverified (__main__.R13Independent.test_official_fixture_bytes_match_pinned_registry_with_origin_unverified) ... ok
+test_offline_chunked_wire_canonical_decodes (__main__.R13Independent.test_offline_chunked_wire_canonical_decodes) ... ok
+test_regular_file_still_hashes_using_posix_descriptor_path (__main__.R13Independent.test_regular_file_still_hashes_using_posix_descriptor_path) ... ok
+test_same_size_local_edit_rejected (__main__.R13Independent.test_same_size_local_edit_rejected) ... ok
+test_strict_valid_reference_and_local_bytes (__main__.R13Independent.test_strict_valid_reference_and_local_bytes) ... ok
+test_trailing_ows_te_is_unknown_before_pin_not_false_mismatch (__main__.R13Independent.test_trailing_ows_te_is_unknown_before_pin_not_false_mismatch) ... ok
+test_valid_repeated_equal_cl (__main__.R13Independent.test_valid_repeated_equal_cl) ... ok
+
+----------------------------------------------------------------------
+Ran 20 tests in 0.045s
+
+OK

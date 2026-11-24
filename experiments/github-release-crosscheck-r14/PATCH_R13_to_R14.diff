@@ -1,0 +1,35 @@
+--- a/ario_github_crosscheck_v0_3.py
++++ b/ario_github_crosscheck_v0_4.py
+@@ -173,10 +173,17 @@
+             https,
+             NoRedirect(),
+         )
+-        request = urllib.request.Request(url, headers={"User-Agent": "ario-byte-crosscheck/0.1"})
++        # The registry pin covers the identity representation. Do not hash
++        # compressed wire bytes as though they were the registry itself.
++        request = urllib.request.Request(url, headers={
++            "User-Agent": "ario-byte-crosscheck/0.1", "Accept-Encoding": "identity",
++        })
+         with opener.open(request, timeout=15) as response:
+             if response.status != 200 or response.geturl() != url:
+                 raise ReferenceUnknown("unexpected GitHub response or redirect")
++            codings = response.headers.get_all("Content-Encoding", [])
++            if codings and [value.strip(" \t").lower() for value in codings] != ["identity"]:
++                raise ReferenceUnknown("unsupported HTTP Content-Encoding; identity required")
+             declared, chunked = reference_framing(response.headers)
+             decoder_chunked, decoder_length = _decoder_framing_state(response)
+             # The HTTP library may parse optional trailing whitespace differently
+@@ -188,7 +195,12 @@
+                 raise ReferenceUnknown("HTTP decoder/header framing disagreement")
+             if declared is not None and decoder_length is not None and decoder_length != declared:
+                 raise ReferenceUnknown("HTTP Content-Length decoder/header disagreement")
+-            data = response.read(MAX_REFERENCE_BYTES + 1)
++            # A validated fixed-length message ends at its declared boundary,
++            # not at connection EOF. CPython may leave .length unset for a
++            # comma-list of identical lengths; reading past that boundary can
++            # otherwise block on a persistent connection. Keep the bounded
++            # max+1 probe only for chunked or close-delimited bodies.
++            data = response.read(declared if declared is not None else MAX_REFERENCE_BYTES + 1)
+             if len(data) > MAX_REFERENCE_BYTES:
+                 raise ReferenceUnknown("oversized official checksum response")
+             # CPython HTTPResponse.read(n) may return normally after premature
