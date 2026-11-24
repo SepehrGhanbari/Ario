@@ -906,3 +906,9 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - Content-addressed application lookup, not a durable CAS. Full floor preimage, global latest, durable availability, independently administered latest floor and physical rollback remain NOT_ESTABLISHED. RESEARCH_ONLY/DRAFT/HOLD; no merge, trust activation, production or admission.
 
 - R22.11 live result follow-up: run 45458340278 all three jobs SUCCESS on 200a40e33de27771a2f8606d6c9559f1304d73cd. 16/16 Python controls, 2/2 external proofs, both relays acknowledged and independently read back exact envelope, verified sampled suffix 281588–281589, later checksum 42b102e20ba38983f6fa42e35f71de45f3cc6b7029279625baa4d21c61f0249f. Separate reveal matched withheld bytes and proof index; local state unchanged. Four artifact IDs and API/log digests recorded in RESEARCH_RECORD.md, ZIPs not independently rehashed. Narrow envelope recovery PASS; floor preimage, durability, global latest and independent latest-floor custody remain unproved. HOLD, no merge/trust/production.
+
+## 2026-11-24 — R22.12 blind external synthetic floor and ledger preimages (#364)
+
+- Parent #362 at bc9b34f4662975422e753d27e9aacec821d67293. Reuse exact R22.7 retained floor and R22.8 commitment; fresh random public synthetic events prevent deriving later history from fixture source. Separate external bundle keyed by committed floor digest; recover old-to-new exact prefix and both checkpoint predecessor links; no actual history or keys.
+- [Run 45459689925](https://github.com/SepehrGhanbari/Ario/actions/runs/45459689925) on source/workflow 5e861f6c465d626740cd919f0de512bf6813e80a started; final outcome not yet verified. Sixteen authored floor controls plus inherited envelope/scan controls. Report: implementation/research/r22_12_external_floor/RESEARCH_RECORD.md.
+- No merge, trust activation, evidence admission, production or claim of independent custody/latest/event truth. RESEARCH_ONLY/HOLD.
