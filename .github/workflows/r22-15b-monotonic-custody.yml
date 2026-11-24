@@ -1,0 +1,108 @@
+name: R22.15B monotonic custody and signed advancement (advisory)
+on:
+  push:
+    branches:
+      - research/r22-15b-monotonic-custody-20261124
+    paths:
+      - .github/workflows/r22-15b-monotonic-custody.yml
+permissions:
+  contents: read
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - name: Fetch pinned historical floor and exact recovered ledger
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          L="$RUNNER_TEMP/lab"; mkdir -p "$L"; cd "$L"
+          gh api repos/SepehrGhanbari/Ario/actions/artifacts/14952419565/zip > pin.zip
+          gh api repos/SepehrGhanbari/Ario/actions/artifacts/14951259501/zip > recovered.zip
+          printf '%s\n' 'c964ff95237783a251d9d95a8e15512d151f6f18e25325bf1b4fec3354cfa793  pin.zip' '0c627d33ffa8fea08d64a5406f733002224879b863cf080d6950fdfdf890579f  recovered.zip' | sha256sum -c -
+          python - <<'PY'
+          import pathlib,zipfile
+          for z,n,dest in (("pin.zip","floor-pin.json","floor-pin.json"),("recovered.zip","recovered/ledger.jsonl","old/ledger.jsonl")):
+              with zipfile.ZipFile(z) as f:
+                  assert f.testzip() is None
+                  assert f.getinfo(n).file_size<=65536
+                  p=pathlib.Path(dest);p.parent.mkdir(exist_ok=True);p.write_bytes(f.read(n))
+          PY
+          printf '%s\n' '185a154389c15704a5a462aa3ff0c08a0c6f102163e36c31af55054a1c5da99e  floor-pin.json' 'e78f44fb5fd8dca2b8a3c0066cb1eceecbddae256e4b1d3666c00a2d02222085  old/ledger.jsonl' | sha256sum -c -
+      - name: Create fresh synthetic signing session anchored to prior exact four bytes
+        run: |
+          set -euo pipefail
+          L="$RUNNER_TEMP/lab"
+          python implementation/research/r22_15b_monotonic_custody/custody.py generate "$L/old" "$L/floor-pin.json" "$L/public"
+          for tool in sigsum-key sigsum-submit sigsum-verify; do go install "sigsum.org/sigsum-go/cmd/$tool@v0.14.1"; done
+          export PATH="$(go env GOPATH)/bin:$PATH"
+          K=$(mktemp -d "$RUNNER_TEMP/r22-15b-key.XXXXXX")
+          trap 'rm -rf "$K"' EXIT
+          chmod 0700 "$K"
+          cd "$K"
+          sigsum-key generate -o ephemeral
+          cp ephemeral.pub "$L/public/key.pub"
+          for name in four six; do
+            sigsum-submit -P sigsum-test1-2025 -k "$K/ephemeral" "$L/public/$name/envelope.json"
+            sigsum-verify -P sigsum-test1-2025 -k "$L/public/key.pub" "$L/public/$name/envelope.json.proof" < "$L/public/$name/envelope.json"
+            echo "R22_15B_OFFICIAL_TEST_PROOF_VERIFIED $name"
+          done
+          cp "$L/floor-pin.json" "$L/public/historical-pin.json"
+          test "$(find "$L/public" -type f | wc -l)" -eq 8
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r22-15b-PUBLIC-SYNTHETIC
+          path: ${{ runner.temp }}/lab/public/
+          if-no-files-found: error
+          retention-days: 30
+  custody:
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: r22-15b-PUBLIC-SYNTHETIC
+          path: ${{ runner.temp }}/public
+      - name: Build unchanged bounded live Sigsum scanner and pinned verifier
+        run: |
+          set -euo pipefail
+          go install sigsum.org/sigsum-go/cmd/sigsum-verify@v0.14.1
+          D=$(mktemp -d "$RUNNER_TEMP/scan.XXXXXX")
+          cp implementation/research/r22_10_blind_discovery/{main.go,main_test.go,go.mod} "$D/"
+          cd "$D"; go mod tidy; go test -v ./...; go build -o "$RUNNER_TEMP/scanner" .
+      - name: Run real two-UID custody probe under disposable root supervisor
+        run: |
+          set -euo pipefail
+          P="$RUNNER_TEMP/public"
+          echo '185a154389c15704a5a462aa3ff0c08a0c6f102163e36c31af55054a1c5da99e  '"$P/historical-pin.json" | sha256sum -c -
+          sudo "$(command -v python)" implementation/research/r22_15b_monotonic_custody/probe.py "$P" "$P/historical-pin.json" "$(go env GOPATH)/bin/sigsum-verify" "$RUNNER_TEMP/scanner" | tee "$RUNNER_TEMP/r22-15b-report.jsonl"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r22-15b-CUSTODY-REPORT
+          path: ${{ runner.temp }}/r22-15b-report.jsonl
+          if-no-files-found: warn
+          retention-days: 30
