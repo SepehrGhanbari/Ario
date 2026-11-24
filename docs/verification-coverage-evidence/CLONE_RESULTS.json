@@ -1,0 +1,13 @@
+{
+  "commit": "d12d511e0ae1a19560a13dadaafb77a700fd20ef",
+  "exit_code": 0,
+  "expected_bytes": 96284142,
+  "expected_files": 456,
+  "extra_paths": [],
+  "matched_files": 456,
+  "problems": [],
+  "qualification": "RESEARCH_ONLY; observed bytes, not independent publisher identity, custody, DOI-to-GitHub equivalence, or permission to execute. No hostile-runtime or atomic-snapshot guarantee.",
+  "scope": "WORKTREE_RAW_FILE_BYTES_ONLY; .git EXCLUDED; MODES NOT ATTESTED; GIT SHA1 OBJECT IDS; NO HISTORY OR IDENTITY CLAIM",
+  "status": "TRACKED_FILE_BYTES_MATCH_GITHUB_TREE",
+  "tree": "d101d77191f4df34538c8385538655fc053e4616"
+}
