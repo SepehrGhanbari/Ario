@@ -1,0 +1,27 @@
+name: R22.17 external RFC3161 nonce replay (advisory)
+on:
+  push:
+    branches:
+      - research/r22-17-external-nonce-time-20261124
+    paths:
+      - .github/workflows/r22-17-external-nonce-time.yml
+      - implementation/research/r22_17_external_nonce_time/probe.sh
+permissions:
+  contents: read
+jobs:
+  nonce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Two live synthetic timestamp requests and replay controls
+        run: bash implementation/research/r22_17_external_nonce_time/probe.sh "$RUNNER_TEMP/r22-17"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r22-17-public-synthetic-timestamp-evidence
+          path: ${{ runner.temp }}/r22-17/
+          if-no-files-found: warn
+          retention-days: 30

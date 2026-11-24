@@ -957,3 +957,8 @@ Using the discovered second checksum as the exact filename, the existing private
 ## 2026-11-24 — R22.16 witness-time replay bounds (research only)
 
 - Parent #363 df5cadaf4c436f2c3c54cab8166b3f6563431a7a final checks 3/3 SUCCESS. Original historical signed head pins verified. Local independent Python Ed25519 re-verification: both log signatures, all six pinned witness signatures valid; times differ by ten seconds. 18/18 policy cases PASS. Assumed narrow time interval can reject older response; wide window, rolled-back assumed clock and identical source responses remain RED for freshness discrimination. Clock/source inputs modeled, no live external time query or OS clock change. No independence, authority, latest guarantee or merge. See implementation/research/r22_16_witness_time_replay/RESEARCH_RECORD.md.
+
+
+## 2026-11-24 — R22.17 RFC3161 nonce-bound external time (research only)
+
+- Parent #365 394bd612548d8523caa16d8df6819b2c64aca51e. FreeTSA published CA/TSA certificate pins captured; local DNS unavailable, advisory CI supplied for two live synthetic same-imprint distinct-nonce requests and 11 expected controls. Replay of old response against fresh request expected to reject; restored request and digest-only verification residuals. No independent clock enrollment, revocation check, real OS clock change, global log freshness, real keys, authority, or merge. Execution pending at authoring. See implementation/research/r22_17_external_nonce_time/RESEARCH_RECORD.md.
