@@ -1,0 +1,196 @@
+test_canonical_chunked_accepted (__main__.Controls.test_canonical_chunked_accepted) ... ok
+test_chunked_ows_remains_unknown (__main__.Controls.test_chunked_ows_remains_unknown) ... ok
+test_combined_content_length_with_real_held_open_socket (__main__.Controls.test_combined_content_length_with_real_held_open_socket) ... ERROR
+test_combined_equal_content_length_held_open (__main__.Controls.test_combined_equal_content_length_held_open) ... ERROR
+test_combined_equal_content_length_leading_zeros (__main__.Controls.test_combined_equal_content_length_leading_zeros) ... ERROR
+test_combined_length_reads_only_declared_message (__main__.Controls.test_combined_length_reads_only_declared_message) ... ERROR
+test_combined_length_truncated (__main__.Controls.test_combined_length_truncated) ... ok
+test_conflicting_combined_content_length (__main__.Controls.test_conflicting_combined_content_length) ... ok
+test_explicit_identity_request (__main__.Controls.test_explicit_identity_request) ... FAIL
+test_fixed_length_held_open (__main__.Controls.test_fixed_length_held_open) ... ok
+test_gzip_correct_registry_is_unknown_before_pin (__main__.Controls.test_gzip_correct_registry_is_unknown_before_pin) ... ERROR
+test_identity_encoding_accepted (__main__.Controls.test_identity_encoding_accepted) ... ok
+test_pin_mismatch_still_rejected_for_identity (__main__.Controls.test_pin_mismatch_still_rejected_for_identity) ... ok
+test_repeated_content_encoding_unknown (__main__.Controls.test_repeated_content_encoding_unknown) ... FAIL
+test_repeated_equal_content_length_held_open (__main__.Controls.test_repeated_equal_content_length_held_open) ... ok
+test_unsupported_encoding_even_with_matching_raw_bytes (__main__.Controls.test_unsupported_encoding_even_with_matching_raw_bytes) ... 
+  test_unsupported_encoding_even_with_matching_raw_bytes (__main__.Controls.test_unsupported_encoding_even_with_matching_raw_bytes) (enc=b'br') ... FAIL
+  test_unsupported_encoding_even_with_matching_raw_bytes (__main__.Controls.test_unsupported_encoding_even_with_matching_raw_bytes) (enc=b'deflate') ... FAIL
+  test_unsupported_encoding_even_with_matching_raw_bytes (__main__.Controls.test_unsupported_encoding_even_with_matching_raw_bytes) (enc=b'gzip') ... FAIL
+  test_unsupported_encoding_even_with_matching_raw_bytes (__main__.Controls.test_unsupported_encoding_even_with_matching_raw_bytes) (enc=b'identity, gzip') ... FAIL
+  test_unsupported_encoding_even_with_matching_raw_bytes (__main__.Controls.test_unsupported_encoding_even_with_matching_raw_bytes) (enc=b'') ... FAIL
+
+======================================================================
+ERROR: test_combined_content_length_with_real_held_open_socket (__main__.Controls.test_combined_content_length_with_real_held_open_socket)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/ario-r14-work/r13/candidate/ario_github_crosscheck_v0_3.py", line 191, in _retrieve_reference
+    data = response.read(MAX_REFERENCE_BYTES + 1)
+  File "/usr/lib/python3.13/http/client.py", line 479, in read
+    s = self.fp.read(amt)
+  File "/usr/lib/python3.13/socket.py", line 719, in readinto
+    return self._sock.recv_into(b)
+           ~~~~~~~~~~~~~~~~~~~~^^^
+TimeoutError: timed out
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/mnt/data/ario-r14-work/r14/tests/test_r14_http.py", line 61, in test_combined_content_length_with_real_held_open_socket
+    raw, validated = v._retrieve_reference(v.RELEASE)
+                     ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/mnt/data/ario-r14-work/r13/candidate/ario_github_crosscheck_v0_3.py", line 207, in _retrieve_reference
+    raise ReferenceUnknown("GitHub reference unavailable over validated HTTPS") from exc
+target.ReferenceUnknown: GitHub reference unavailable over validated HTTPS
+
+======================================================================
+ERROR: test_combined_equal_content_length_held_open (__main__.Controls.test_combined_equal_content_length_held_open)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/ario-r14-work/r13/candidate/ario_github_crosscheck_v0_3.py", line 191, in _retrieve_reference
+    data = response.read(MAX_REFERENCE_BYTES + 1)
+  File "/usr/lib/python3.13/http/client.py", line 479, in read
+    s = self.fp.read(amt)
+  File "/mnt/data/ario-r14-work/r14/tests/test_r14_http.py", line 24, in read
+    raise TimeoutError('simulated wait beyond HTTP body; peer stays open')
+TimeoutError: simulated wait beyond HTTP body; peer stays open
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/mnt/data/ario-r14-work/r14/tests/test_r14_http.py", line 47, in test_combined_equal_content_length_held_open
+    self.assert_registry([b'Content-Length: 962, 962'],held=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/data/ario-r14-work/r14/tests/test_r14_http.py", line 43, in assert_registry
+    raw,_=self.decode(headers,body,held)
+          ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/mnt/data/ario-r14-work/r14/tests/test_r14_http.py", line 39, in decode
+    raw,validated=v._retrieve_reference(v.RELEASE)
+                  ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/mnt/data/ario-r14-work/r13/candidate/ario_github_crosscheck_v0_3.py", line 207, in _retrieve_reference
+    raise ReferenceUnknown("GitHub reference unavailable over validated HTTPS") from exc
+target.ReferenceUnknown: GitHub reference unavailable over validated HTTPS
+
+======================================================================
+ERROR: test_combined_equal_content_length_leading_zeros (__main__.Controls.test_combined_equal_content_length_leading_zeros)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/ario-r14-work/r13/candidate/ario_github_crosscheck_v0_3.py", line 191, in _retrieve_reference
+    data = response.read(MAX_REFERENCE_BYTES + 1)
+  File "/usr/lib/python3.13/http/client.py", line 479, in read
+    s = self.fp.read(amt)
+  File "/mnt/data/ario-r14-work/r14/tests/test_r14_http.py", line 24, in read
+    raise TimeoutError('simulated wait beyond HTTP body; peer stays open')
+TimeoutError: simulated wait beyond HTTP body; peer stays open
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/mnt/data/ario-r14-work/r14/tests/test_r14_http.py", line 65, in test_combined_equal_content_length_leading_zeros
+    self.assert_registry([b'Content-Length: 0962, 962'],held=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/data/ario-r14-work/r14/tests/test_r14_http.py", line 43, in assert_registry
+    raw,_=self.decode(headers,body,held)
+          ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/mnt/data/ario-r14-work/r14/tests/test_r14_http.py", line 39, in decode
+    raw,validated=v._retrieve_reference(v.RELEASE)
+                  ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/mnt/data/ario-r14-work/r13/candidate/ario_github_crosscheck_v0_3.py", line 207, in _retrieve_reference
+    raise ReferenceUnknown("GitHub reference unavailable over validated HTTPS") from exc
+target.ReferenceUnknown: GitHub reference unavailable over validated HTTPS
+
+======================================================================
+ERROR: test_combined_length_reads_only_declared_message (__main__.Controls.test_combined_length_reads_only_declared_message)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/ario-r14-work/r14/tests/test_r14_http.py", line 75, in test_combined_length_reads_only_declared_message
+    self.assert_registry([b'Content-Length: 962, 962'],REG+b'EXTRA NEXT MESSAGE')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/data/ario-r14-work/r14/tests/test_r14_http.py", line 43, in assert_registry
+    raw,_=self.decode(headers,body,held)
+          ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/mnt/data/ario-r14-work/r14/tests/test_r14_http.py", line 39, in decode
+    raw,validated=v._retrieve_reference(v.RELEASE)
+                  ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/mnt/data/ario-r14-work/r13/candidate/ario_github_crosscheck_v0_3.py", line 202, in _retrieve_reference
+    raise ReferenceUnknown("truncated GitHub reference HTTP body")
+target.ReferenceUnknown: truncated GitHub reference HTTP body
+
+======================================================================
+ERROR: test_gzip_correct_registry_is_unknown_before_pin (__main__.Controls.test_gzip_correct_registry_is_unknown_before_pin)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/ario-r14-work/r14/tests/test_r14_http.py", line 80, in test_gzip_correct_registry_is_unknown_before_pin
+    v.parse_reference(raw,v.RELEASE,'ario-manifest.json')
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/data/ario-r14-work/r13/candidate/ario_github_crosscheck_v0_3.py", line 239, in parse_reference
+    raise VerificationRejected("OFFICIAL_REFERENCE_PIN_MISMATCH")
+target.VerificationRejected: OFFICIAL_REFERENCE_PIN_MISMATCH
+
+======================================================================
+FAIL: test_explicit_identity_request (__main__.Controls.test_explicit_identity_request)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/ario-r14-work/r14/tests/test_r14_http.py", line 92, in test_explicit_identity_request
+    self.assertEqual(req.get_header('Accept-encoding'),'identity')
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: None != 'identity'
+
+======================================================================
+FAIL: test_repeated_content_encoding_unknown (__main__.Controls.test_repeated_content_encoding_unknown)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/ario-r14-work/r14/tests/test_r14_http.py", line 86, in test_repeated_content_encoding_unknown
+    with self.assertRaisesRegex(v.ReferenceUnknown,'Content-Encoding'):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ReferenceUnknown not raised
+
+======================================================================
+FAIL: test_unsupported_encoding_even_with_matching_raw_bytes (__main__.Controls.test_unsupported_encoding_even_with_matching_raw_bytes) (enc=b'br')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/ario-r14-work/r14/tests/test_r14_http.py", line 83, in test_unsupported_encoding_even_with_matching_raw_bytes
+    with self.subTest(enc=enc),self.assertRaisesRegex(v.ReferenceUnknown,'Content-Encoding'):
+                               ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ReferenceUnknown not raised
+
+======================================================================
+FAIL: test_unsupported_encoding_even_with_matching_raw_bytes (__main__.Controls.test_unsupported_encoding_even_with_matching_raw_bytes) (enc=b'deflate')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/ario-r14-work/r14/tests/test_r14_http.py", line 83, in test_unsupported_encoding_even_with_matching_raw_bytes
+    with self.subTest(enc=enc),self.assertRaisesRegex(v.ReferenceUnknown,'Content-Encoding'):
+                               ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ReferenceUnknown not raised
+
+======================================================================
+FAIL: test_unsupported_encoding_even_with_matching_raw_bytes (__main__.Controls.test_unsupported_encoding_even_with_matching_raw_bytes) (enc=b'gzip')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/ario-r14-work/r14/tests/test_r14_http.py", line 83, in test_unsupported_encoding_even_with_matching_raw_bytes
+    with self.subTest(enc=enc),self.assertRaisesRegex(v.ReferenceUnknown,'Content-Encoding'):
+                               ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ReferenceUnknown not raised
+
+======================================================================
+FAIL: test_unsupported_encoding_even_with_matching_raw_bytes (__main__.Controls.test_unsupported_encoding_even_with_matching_raw_bytes) (enc=b'identity, gzip')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/ario-r14-work/r14/tests/test_r14_http.py", line 83, in test_unsupported_encoding_even_with_matching_raw_bytes
+    with self.subTest(enc=enc),self.assertRaisesRegex(v.ReferenceUnknown,'Content-Encoding'):
+                               ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ReferenceUnknown not raised
+
+======================================================================
+FAIL: test_unsupported_encoding_even_with_matching_raw_bytes (__main__.Controls.test_unsupported_encoding_even_with_matching_raw_bytes) (enc=b'')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/ario-r14-work/r14/tests/test_r14_http.py", line 83, in test_unsupported_encoding_even_with_matching_raw_bytes
+    with self.subTest(enc=enc),self.assertRaisesRegex(v.ReferenceUnknown,'Content-Encoding'):
+                               ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ReferenceUnknown not raised
+
+----------------------------------------------------------------------
+Ran 16 tests in 0.511s
+
+FAILED (failures=7, errors=5)

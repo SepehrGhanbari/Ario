@@ -16,6 +16,18 @@ from core.schema import Timestamp
 
 def decode_value(annotation: Any, value: Any, path: str = "$") -> Any:
     """Decode JSON into the typed M0 input schema; reject unknown/malformed data."""
+    if isinstance(annotation, str):
+        # CPython 3.10 get_type_hints() leaves a nested quoted forward reference
+        # as a bare name (tuple['LineageCompatibilityAuthorization', ...]).
+        # Falling through used to return the raw dict, and AuditEngine then
+        # crashed with AttributeError instead of a typed verdict.
+        from core import schema as m0_schema
+
+        resolved = getattr(m0_schema, annotation, None)
+        if not isinstance(resolved, type):
+            raise ValueError(f"{path}: unresolved schema type")
+        annotation = resolved
+
     origin = get_origin(annotation)
     args = get_args(annotation)
 

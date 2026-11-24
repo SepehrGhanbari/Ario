@@ -1,0 +1,21 @@
+test_canonical_chunked_accepted (__main__.Controls.test_canonical_chunked_accepted) ... ok
+test_chunked_ows_remains_unknown (__main__.Controls.test_chunked_ows_remains_unknown) ... ok
+test_combined_content_length_with_real_held_open_socket (__main__.Controls.test_combined_content_length_with_real_held_open_socket) ... ok
+test_combined_equal_content_length_held_open (__main__.Controls.test_combined_equal_content_length_held_open) ... ok
+test_combined_equal_content_length_leading_zeros (__main__.Controls.test_combined_equal_content_length_leading_zeros) ... ok
+test_combined_length_reads_only_declared_message (__main__.Controls.test_combined_length_reads_only_declared_message) ... ok
+test_combined_length_truncated (__main__.Controls.test_combined_length_truncated) ... ok
+test_conflicting_combined_content_length (__main__.Controls.test_conflicting_combined_content_length) ... ok
+test_explicit_identity_request (__main__.Controls.test_explicit_identity_request) ... ok
+test_fixed_length_held_open (__main__.Controls.test_fixed_length_held_open) ... ok
+test_gzip_correct_registry_is_unknown_before_pin (__main__.Controls.test_gzip_correct_registry_is_unknown_before_pin) ... ok
+test_identity_encoding_accepted (__main__.Controls.test_identity_encoding_accepted) ... ok
+test_pin_mismatch_still_rejected_for_identity (__main__.Controls.test_pin_mismatch_still_rejected_for_identity) ... ok
+test_repeated_content_encoding_unknown (__main__.Controls.test_repeated_content_encoding_unknown) ... ok
+test_repeated_equal_content_length_held_open (__main__.Controls.test_repeated_equal_content_length_held_open) ... ok
+test_unsupported_encoding_even_with_matching_raw_bytes (__main__.Controls.test_unsupported_encoding_even_with_matching_raw_bytes) ... ok
+
+----------------------------------------------------------------------
+Ran 16 tests in 0.136s
+
+OK

@@ -8,11 +8,13 @@ CPython 3.14.8. These tests pin the structured, interpreter-independent
 outcome for those three entry points.
 """
 import contextlib
+import http.client
 import io
 import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import ario_agent
 import ario_planner
@@ -132,6 +134,59 @@ class PlannerTransportFailClosedTests(unittest.TestCase):
             ario_planner._open_local_ollama = original
         self.assertNotIsInstance(caught.exception, RecursionError)
         self.assertIn("valid JSON recommendation", str(caught.exception))
+
+
+class StructuredInputFailureTests(unittest.TestCase):
+    def setUp(self):
+        scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(scratch.cleanup)
+        self.root = Path(scratch.name)
+        self.ledger = self.root / "events.jsonl"
+
+    def assert_planner_unknown(self, responses, expected_error):
+        errors = io.StringIO()
+        with patch.object(ario_planner, "_open_local_ollama", side_effect=responses) as opener:
+            with contextlib.redirect_stderr(errors):
+                code = ario_planner.main([
+                    "--workspace", str(self.root), "--ledger", str(self.ledger),
+                    "--goal", "Review the current planner",
+                ])
+        self.assertEqual(opener.call_count, len(responses))
+        self.assertEqual(code, 2)
+        outcome = json.loads(errors.getvalue())
+        self.assertEqual(outcome["status"], "UNKNOWN")
+        self.assertIn(expected_error, outcome["error"])
+        self.assertFalse(self.ledger.exists())
+
+    def test_planner_maps_incomplete_transport_to_unknown(self):
+        response = MagicMock()
+        response.__enter__.return_value.read.side_effect = http.client.IncompleteRead(b"")
+        self.assert_planner_unknown([response], "could not obtain a response")
+
+    def test_planner_retries_non_text_recommendation_paths(self):
+        recommendation = {
+            "implementation_path": [], "test_path": "example.py",
+            "engineering_question": "Which case needs a test?",
+            "rationale": "Review the regression tests.",
+        }
+        envelope = json.dumps({"message": {"content": json.dumps(recommendation)}}).encode()
+        self.assert_planner_unknown([io.BytesIO(envelope), io.BytesIO(envelope)],
+                                    "recommendation paths must be strings")
+
+    def test_history_maps_non_text_terminal_status_to_unknown(self):
+        records = [{"event": "TASK_STARTED", "task_id": "test"},
+                   {"event": "TASK_FINISHED", "task_id": "test", "status": {}}]
+        original = "".join(json.dumps(row) + "\n" for row in records).encode()
+        self.ledger.write_bytes(original)
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            code = ario_agent.main(["--inspect-task-id", "test", "--ledger", str(self.ledger)])
+        self.assertEqual(code, 2)
+        outcome = json.loads(output.getvalue())
+        self.assertEqual(outcome["status"], "UNKNOWN")
+        self.assertFalse(outcome["automatic_resume"])
+        self.assertFalse(outcome["write_performed"])
+        self.assertEqual(self.ledger.read_bytes(), original)
 
 
 if __name__ == "__main__":
