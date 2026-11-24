@@ -845,3 +845,11 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - Tests-only head `2b32ce88cd2be8a2617531b2df4745f2425cbbf9`, [RED run 45413311421](https://github.com/SepehrGhanbari/Ario/actions/runs/45413311421), Linux 3.13: **5 failed / 2039 passed / 7 skipped**, 273 subtests. Older canonical run changes (rerun, failure, deletion, addition, path) escaped the latest-only recheck.
 - Bounded correction `b197c3300b838f4b2544898f538ecaa76921bed0`: compare all returned canonical PR-linked run binding tuples; preserve max(run_number,run_attempt) selection and existing failure reason. Stable historical failure and harmless presentation changes remain positive sampled observations only. No new request or policy granting authority. Full report: `implementation/research/R22_4_SAMPLED_CANONICAL_RUN_CONSISTENCY_2026-11-24.md`.
 - Draft/HOLD; exact-head CI must be checked. No keys, merge, main change, ruleset, memory admission, trust activation or production.
+
+
+## 2026-11-24 — R22.5 replay/ABA observation boundary (#349)
+
+- Baseline #348 at c7cc8ccdece383492312b23968abad119e5b5920. Tests-only e1ac3085f8c07f1c3507e94d067d395b3e9b8d61; [RED push CI 45417119878](https://github.com/SepehrGhanbari/Ario/actions/runs/45417119878): 8 failed (missing freshness fields), 2051 passed, 7 skipped, 273 subtests. Seven characterization/detection controls passed.
+- Actual REST decoder with synthetic opener: stable, ABA, final replay and full replay produce identical seven-response transcripts and output despite different hidden histories; explicit Age=120 is ignored. Visible changes and simulated 304 fail closed. No actual GitHub replay or TLS compromise demonstrated.
+- Additive diagnostic correction: explicit source_freshness/history_continuity NOT_ESTABLISHED, preserve sample qualifier in Guard bridge, reject promotion by overstated freshness claims. No change to selection, cache policy, endpoint, or authorization. See implementation/research/R22_5_REPLAY_ABA_OBSERVATION_BOUNDARY_2026-11-24.md.
+- Draft/HOLD, no merge, keys, trust, production or memory admission. Exact-head CI required.
