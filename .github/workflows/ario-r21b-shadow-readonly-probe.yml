@@ -1,0 +1,36 @@
+name: Ario R21B Shadow V1/V2 Read-Only Live Probe (Research)
+
+on:
+  push:
+    branches:
+      - research/r21b-shadow-reader-v1-v2-20261122
+    paths:
+      - .github/workflows/ario-r21b-shadow-readonly-probe.yml
+      - implementation/research/guard_v2_r21b_shadow_reader.py
+      - implementation/research/guard_v2_r21b_live_shadow_probe.py
+      - implementation/research/guard_v2_r21b_capture_v2.py
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  shadow:
+    if: github.repository == 'SepehrGhanbari/Ario' && github.ref == 'refs/heads/research/r21b-shadow-reader-v1-v2-20261122'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Check out exact branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Set up Python 3.13
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - name: Read pinned public PRs with one B-enriched sampling stream
+        env:
+          PYTHONPATH: implementation
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python -B implementation/research/guard_v2_r21b_live_shadow_probe.py
