@@ -1,0 +1,213 @@
+name: R22.10 blind synthetic external discovery (advisory)
+on:
+  push:
+    branches:
+      - research/r22-10-blind-external-discovery-20261124
+    paths:
+      - .github/workflows/r22-10-blind-discovery.yml
+permissions:
+  contents: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - name: Install prior pinned TEST-log clients
+        run: |
+          set -euo pipefail
+          for tool in sigsum-key sigsum-policy sigsum-submit sigsum-verify; do
+            go install "sigsum.org/sigsum-go/cmd/$tool@v0.14.1"
+          done
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - name: Generate first and second synthetic floor commitments
+        working-directory: implementation
+        run: |
+          set -euo pipefail
+          python -m pip install -r requirements-research.txt
+          mkdir -p "$RUNNER_TEMP/r22-10-first" "$RUNNER_TEMP/r22-10-reveal"
+          PYTHONPATH=.:tests python - <<'PY'
+          import hashlib, json, os, secrets
+          from pathlib import Path
+          from test_r22_7_retained_witness_floor import history, floor_record
+          from test_r22_8_witness_receipt_recovery import commitment
+          root = Path(os.environ["RUNNER_TEMP"])
+          rows = history()
+          scope = secrets.token_hex(24)
+          previous = "GENESIS"
+          for count, folder in ((2, "first"), (4, "reveal")):
+              body = {
+                  "profile": "ARIO-R22.10-PUBLIC-SYNTHETIC-FLOOR-v1",
+                  "scope": scope,
+                  "record_count": count,
+                  "previous_checksum": previous,
+                  "floor_commitment_sha256": commitment(floor_record(rows, count)),
+                  "synthetic_nonce": secrets.token_hex(32),
+                  "synthetic": True,
+                  "authoritative": False,
+                  "historical_event_truth": "UNKNOWN",
+                  "trust_activation": "NO_GO",
+                  "production": "NO_GO",
+              }
+              raw = (json.dumps(body, sort_keys=True, separators=(",", ":")) + "\n").encode("ascii")
+              (root / ("r22-10-" + folder) / "envelope.json").write_bytes(raw)
+              previous = hashlib.sha256(hashlib.sha256(raw).digest()).hexdigest()
+          PY
+      - name: Submit two sequential PUBLIC synthetic commitments with one ephemeral key
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          A="$RUNNER_TEMP/r22-10-first"
+          B="$RUNNER_TEMP/r22-10-reveal"
+          K=$(mktemp -d "$RUNNER_TEMP/r22-10-key.XXXXXX")
+          trap 'rm -rf "$K"' EXIT
+          chmod 0700 "$K"
+          cd "$K"
+          sigsum-key generate -o synthetic-key
+          cp synthetic-key.pub "$A/synthetic-key.pub"
+          cp synthetic-key.pub "$B/synthetic-key.pub"
+          sigsum-policy show sigsum-test1-2025 > "$A/policy.txt"
+          cp "$A/policy.txt" "$B/policy.txt"
+          sigsum-submit -P sigsum-test1-2025 -k "$K/synthetic-key" "$A/envelope.json"
+          sigsum-verify -k "$A/synthetic-key.pub" -P sigsum-test1-2025 "$A/envelope.json.proof" < "$A/envelope.json"
+          echo R22_10_FIRST_PROOF_VERIFIED
+          sigsum-submit -P sigsum-test1-2025 -k "$K/synthetic-key" "$B/envelope.json"
+          sigsum-verify -k "$B/synthetic-key.pub" -P sigsum-test1-2025 "$B/envelope.json.proof" < "$B/envelope.json"
+          echo R22_10_SECOND_PROOF_VERIFIED
+      - name: Export first-only bootstrap and verify sequential publication
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import base64, hashlib, json, os, struct
+          from pathlib import Path
+          root = Path(os.environ["RUNNER_TEMP"])
+          a, b = root/"r22-10-first", root/"r22-10-reveal"
+          def fields(p):
+              lines = [line.split("=",1) for line in p.read_text().splitlines() if "=" in line]
+              return {k:v for k,v in lines if k in ("size","root_hash","leaf_index","log","leaf")}
+          x, y = fields(a/"envelope.json.proof"), fields(b/"envelope.json.proof")
+          assert x["log"] == y["log"] == "4e89cc51651f0d95f3c6127c15e1a42e3ddf7046c5b17b752689c402e773bb4d"
+          assert int(y["leaf_index"]) > int(x["leaf_index"])
+          assert int(y["size"]) > int(x["size"])
+          assert x["leaf"].split()[0] == y["leaf"].split()[0]
+          blob = base64.b64decode((a/"synthetic-key.pub").read_text().split()[1], validate=True)
+          n = int.from_bytes(blob[:4],"big")
+          assert blob[4:4+n] == b"ssh-ed25519"
+          assert int.from_bytes(blob[4+n:8+n],"big") == 32 and len(blob)==8+n+32
+          public = blob[8+n:]
+          assert hashlib.sha256(public).hexdigest() == x["leaf"].split()[0]
+          first = hashlib.sha256(hashlib.sha256((a/"envelope.json").read_bytes()).digest()).hexdigest()
+          boot = {"start":int(x["leaf_index"]), "size":int(x["size"]), "root":x["root_hash"],
+                  "public":public.hex(), "first_checksum":first}
+          (a/"bootstrap.json").write_text(json.dumps(boot,sort_keys=True)+"\n")
+          (a/"local-state.json").write_text(json.dumps({"record_count":2,"checkpoint":first})+"\n")
+          assert set(p.name for p in a.iterdir()) == {"bootstrap.json","local-state.json","envelope.json","envelope.json.proof","synthetic-key.pub","policy.txt"}
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r22-10-FIRST-ONLY
+          path: ${{ runner.temp }}/r22-10-first/
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r22-10-SECOND-REVEAL
+          path: ${{ runner.temp }}/r22-10-reveal/
+          if-no-files-found: error
+          retention-days: 30
+  discover:
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: r22-10-FIRST-ONLY
+          path: ${{ runner.temp }}/r22-10-first
+      - name: Blind readback from separate runner with first-only recovery material
+        run: |
+          set -euo pipefail
+          LAB=$(mktemp -d "$RUNNER_TEMP/r22-10-recovery.XXXXXX")
+          trap 'rm -rf "$LAB"' EXIT
+          cp implementation/research/r22_10_blind_discovery/{main.go,main_test.go,go.mod} "$LAB/"
+          cp "$RUNNER_TEMP/r22-10-first/"{bootstrap.json,local-state.json} "$LAB/"
+          cd "$LAB"
+          test ! -e "$RUNNER_TEMP/r22-10-reveal"
+          test ! -e envelope.json.proof
+          test ! -e synthetic-key.pub
+          sha256sum local-state.json > before.sha256
+          go mod tidy
+          go test -v ./...
+          go run . | tee "$RUNNER_TEMP/r22-10-discovery.jsonl"
+          sha256sum -c before.sha256
+          echo R22_10_LOCAL_STATE_UNCHANGED
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r22-10-BLIND-DISCOVERY
+          path: ${{ runner.temp }}/r22-10-discovery.jsonl
+          if-no-files-found: error
+          retention-days: 30
+  reveal:
+    needs: discover
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: r22-10-FIRST-ONLY
+          path: first
+      - uses: actions/download-artifact@v4
+        with:
+          name: r22-10-SECOND-REVEAL
+          path: reveal
+      - uses: actions/download-artifact@v4
+        with:
+          name: r22-10-BLIND-DISCOVERY
+          path: discovery
+      - name: Check blind discovery against withheld second bytes
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          def checksum(raw): return hashlib.sha256(hashlib.sha256(raw).digest()).hexdigest()
+          a = Path("first/envelope.json").read_bytes()
+          b = Path("reveal/envelope.json").read_bytes()
+          x,y = json.loads(a),json.loads(b)
+          boot = json.loads(Path("first/bootstrap.json").read_bytes())
+          report = json.loads(Path("discovery/r22-10-discovery.jsonl").read_text().splitlines()[-1])
+          proof = dict(line.split("=",1) for line in Path("reveal/envelope.json.proof").read_text().splitlines()
+                       if line.startswith("leaf_index="))
+          assert report["disposition"] == "HOLD_OPAQUE_NEW_SIGNED_COMMITMENT"
+          assert report["recovered_content"] is False and report["verified_scope_sequence"] == "UNKNOWN"
+          assert report["complete_sampled_suffix"] is True
+          assert len(report["matching_signed_leaves"]) == 2
+          first, second = report["matching_signed_leaves"]
+          assert first["checksum"] == checksum(a) == boot["first_checksum"]
+          assert second["checksum"] == checksum(b) and second["index"] == int(proof["leaf_index"])
+          assert second["index"] > first["index"]
+          assert x["scope"] == y["scope"] and y["previous_checksum"] == checksum(a)
+          assert x["record_count"] == 2 and y["record_count"] == 4
+          assert x["synthetic"] is True and y["synthetic"] is True
+          assert x["authoritative"] is False and y["authoritative"] is False
+          print(json.dumps({"result":"WITHHELD_BYTES_MATCH_DISCOVERED_CHECKSUM",
+                            "first_index":first["index"],"second_index":second["index"],
+                            "second_checksum":second["checksum"],"record_count":y["record_count"],
+                            "global_latest":"NOT_ESTABLISHED","trust_activation":"NO_GO"},sort_keys=True))
+          PY
