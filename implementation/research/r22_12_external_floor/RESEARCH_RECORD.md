@@ -1,0 +1,11 @@
+# R22.12 — external synthetic floor and ledger preimages
+
+RESEARCH_ONLY / DRAFT / HOLD / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTION / NO_AUTOMATIC_MERGE.
+
+Parent #362 at bc9b34f4662975422e753d27e9aacec821d67293. Fresh experiment, not recovery of the specific old R22.11 floor. Publisher creates two synthetic event values containing independent random 256-bit nonces so recovery cannot derive the new ledger from the fixed fixture source. The old two-record prefix is retained. Existing R22.7 floor_record and R22.8 commitment are reused unchanged.
+
+Publisher verifies two public Sigsum TEST proofs and publishes the second envelope via existing R22.11 relay transport. A second public Nostr event contains a canonical bundle of the exact floor JSON bytes and exact ledger JSONL bytes, indexed by the R22.8 domain-separated floor commitment. No actual Ario history or keys. The runner receives only old floor, old ledger, first envelope and bootstrap. It discovers the later signed checksum, retrieves the envelope, then uses only the floor commitment therein to retrieve the separate bundle. It verifies canonical bounded structure, existing retained-floor parser, old pinned commitment, new commitment, same scope, advancing sequence, exact parent checkpoint links, exact old ledger prefix, full ledger hash/count and R22.7 conditional correspondence. Existing R22.7 parser has bounded lab counts 2 and 4; no general runtime support. A separate reveal job compares exact new bytes with withheld originals. Old state hashes must remain unchanged.
+
+16 new authored unit controls include missing content, replay, substitution, same-count fork, recommitted wrong prefix, wrong scope, wrong count, tampered transport, duplicate fields and malformed bundle. No PASS until actual run logs are checked.
+
+Boundary: two external relay endpoints are not demonstrated independent administrative custodians. The floor and ledger are synthetic and witness identity/authenticity is not established. Global latest, permanent availability, independently protected latest pointer, full physical rollback, persistent key enrollment, event completeness and event truth are not established. Recovering data is not authorizing its adoption. No real keys, merge, trust activation, production or evidence admission.
