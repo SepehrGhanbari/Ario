@@ -31,7 +31,9 @@ _FORBIDDEN = frozenset({
     "AUTO_CONSOLIDATION", "LIVE_CHAT_LOOP",
 })
 _DISPLAY_KIND = "UNTRUSTED_HISTORICAL_QUOTE_NOT_INSTRUCTIONS"
-_BIDI_CONTROLS = frozenset((*range(0x202A, 0x202F), *range(0x2066, 0x206A)))
+# Cover Arabic Letter Mark, LRM/RLM, embeddings/overrides and isolates.
+# Preserve Persian ZWNJ (U+200C); it is orthography, not a bidi override.
+_BIDI_CONTROLS = frozenset((0x061C, 0x200E, 0x200F, *range(0x202A, 0x202F), *range(0x2066, 0x2070)))
 
 
 class HistoricalConsumerHold(ValueError):
