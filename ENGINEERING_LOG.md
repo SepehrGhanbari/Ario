@@ -915,3 +915,8 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 ## Verified execution addendum — 2026-11-24
 
 [Run 45455849012](https://github.com/SepehrGhanbari/Ario/actions/runs/45455849012) on exact source HEAD 76ef709bffaa84e72d5546600bb9f6d5a4cba7f0 completed SUCCESS. Pinned official Sigsum v0.14.1 reverified old, new, and intact old replay (3/3 positive); wrong receipt and changed bytes rejected (2/2 negative); all 15 policy cases passed. Artifact 14949877736 ZIP SHA256 e485144d5689a5f4ccb5496f020f0c3467738adde46d283abee34282bf09377a verified against API digest and CRC; expires 2026-12-24. This is an offline replay of actual archived TEST proofs, not a fresh log query or independent floor custody. Rollback of floor itself remains RED. No keys, authority, merge, production or trust activation.
+
+
+## 2026-11-24 — R22.13 separated publisher restore with authentic archived receipts
+
+- Parent #359 19569cee5e30b194af2b0a8be5c26793c7e87daf; all three parent checks SUCCESS. Reused R22.12 pinned verifier and exact R22.10 archives. Recovered existing external R22.11 Drive object again by checksum, 515 bytes, matches new envelope. Local Linux separate publisher/custodian UIDs, actual publisher snapshot replacement and 6 actual permission denials; 16/16 expected policy/OS cases PASS (STRUCTURAL_ONLY, no local crypto verification). Shared-root joint rollback RED; no independent administration, no full host restore or live remote outage. Dedicated official verifier CI supplied; result not yet established at authoring. See implementation/research/r22_13_separated_replay/RESEARCH_RECORD.md. NO_GO.

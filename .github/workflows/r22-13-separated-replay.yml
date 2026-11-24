@@ -1,0 +1,52 @@
+name: R22.13 separated UID authentic replay (advisory)
+on:
+  push:
+    branches:
+      - research/r22-13-separated-replay-20261124
+    paths:
+      - .github/workflows/r22-13-separated-replay.yml
+      - implementation/research/r22_13_separated_replay/isolation.py
+permissions:
+  contents: read
+  actions: read
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - name: Install pinned official verifier for separated UIDs
+        run: |
+          set -euo pipefail
+          for tool in sigsum-policy sigsum-verify; do
+            go install "sigsum.org/sigsum-go/cmd/$tool@v0.14.1"
+            sudo install -m 0755 "$(go env GOPATH)/bin/$tool" "/usr/local/bin/$tool"
+          done
+      - name: Download exact original public synthetic artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/r22-13"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/14949671120/zip" > "$RUNNER_TEMP/r22-13/old.zip"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/14948912790/zip" > "$RUNNER_TEMP/r22-13/new.zip"
+          cd "$RUNNER_TEMP/r22-13"
+          printf '%s  %s\n' '337fc0e36441c0eb3d4ebeb1736cb83bbea8cb958dd8b5aba846a8c1230fc16d' old.zip '652ff3f19ce4470b82aaf70acf9c2f6e4b0f3aa00a7f7c17a0adc916ba0fd56e' new.zip | sha256sum -c -
+      - name: Actual file restore under separate UIDs with official proof checks
+        run: |
+          set -euo pipefail
+          # Archived exact bytes from R22.11, not a fresh Drive read in CI.
+          sudo "$(command -v python3)" implementation/research/r22_13_separated_replay/isolation.py "$RUNNER_TEMP/r22-13/old.zip" "$RUNNER_TEMP/r22-13/new.zip" implementation/research/r22_11_content_recovery/fixtures/recovered.json | tee "$RUNNER_TEMP/r22-13/results.log"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r22-13-separated-replay-results
+          path: ${{ runner.temp }}/r22-13/results.log
+          if-no-files-found: warn
+          retention-days: 30

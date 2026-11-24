@@ -1,0 +1,15 @@
+# R22.13 — separated publisher restore with authentic historical receipts
+
+RESEARCH_ONLY / DRAFT / HOLD / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTION / NO_AUTOMATIC_MERGE.
+
+Parent #359 at 19569cee5e30b194af2b0a8be5c26793c7e87daf; all three parent PR checks SUCCESS. R22.7 already demonstrated separate-UID floor isolation; R22.8 already exercised local IPC outages and receipt recovery. This experiment integrates those boundaries with exact R22.10 Sigsum TEST archives and R22.11 external content, reusing R22.12 replay.py unchanged (SHA256 25254e41feed8b58a5652073888318e899d9ba506912eef3af0fec249d55a32a). No new publication, keys or store.
+
+## Actual local run, 2026-11-24
+The existing R22.11 private Drive object was located by its discovered checksum filename and materialized again in a fresh recovery directory via the mounted Drive interface; 515 bytes, SHA256 501069de56a2f7296cdb61a0ea26845af4666f6bdd3b7e8f3c5a7d5b16e66a5e, double SHA256 a0ac8945297132b7c869c79b7d08f4b303ee49599112269428013fc83bde3905. No sharing changes, private Drive identifier not recorded publicly. Compared equal to exact second archive envelope. Both original archive pins checked.
+
+Actual Linux disposable lab, root supervisor; publisher UID/GID 65534 and custodian UID/GID 65533, no supplemental groups, minimal child environment. Root selects floor and copies external bytes. Publisher replaces its own snapshot archive via os.replace under its own UID. Custodian subprocess independently reads pinned floor and publisher candidate at fixed paths. Six real permission denials; actual file replacement, actual missing floor via rename, old-content mismatch and symlink rejection; floor byte hashes unchanged after publisher operations. 16/16 expected results in LOCAL_RESULTS.log, including common-root joint rollback deliberately reproduced (RED). Parent archive pins restrict experiment to the two known ZIPs; no general admission path.
+
+Local mode STRUCTURAL_ONLY: archives pinned and parsed; official crypto verifier not available locally. R22.12 already verified both archives; new advisory CI uses official v0.14.1 for every readable candidate and floor, with archived exact R22.11 external bytes (not fresh Drive retrieval in CI). CI result must be read separately. Source SHA256 08edcb647d733b181daa56de3f7e73b03ea288393a5bf4dc2eb2d5a39da96134; Git blob 884728ea9429657b2db85b813b168db0de585021.
+
+## Boundary
+A real publisher-file restore is not a host/VM/disk restore. Local ACLs are not independent administration. Root can replace the custodian floor and content; the experiment proves that residual remains. Outage is local floor unavailability, not a real network outage. The external content retrieval was separate from the publisher process but not proven under independent owner/admin; no external ACL attack was conducted. No freshness claim even for a floor match. No durable floor update, actual remote custody or authority established. Next step must target a real independently administered reference with preserved newer state, not another local store. No merge, trust, production or admission.
