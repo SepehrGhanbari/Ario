@@ -1,0 +1,37 @@
+name: R22.17 offline verification of actual timestamp replies (advisory)
+on:
+  push:
+    branches:
+      - research/r22-17-external-nonce-time-20261124
+    paths:
+      - .github/workflows/r22-17-offline-verify.yml
+      - implementation/research/r22_17_external_nonce_time/verify_archive.sh
+permissions:
+  contents: read
+  actions: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Retrieve exact capture from original failed live run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/r22-17-archive"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/14950269714/zip" > "$RUNNER_TEMP/capture.zip"
+          echo "b7f1702b88241f6062c6e9c3975e5969620e98b6fc47321ca7e91956c7500f8e  $RUNNER_TEMP/capture.zip" | sha256sum -c -
+          unzip -q "$RUNNER_TEMP/capture.zip" -d "$RUNNER_TEMP/r22-17-archive"
+          cd "$RUNNER_TEMP/r22-17-archive"
+          bash "$GITHUB_WORKSPACE/implementation/research/r22_17_external_nonce_time/verify_archive.sh" 2>&1 | tee OFFLINE_RESULTS.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r22-17-offline-verification-results
+          path: ${{ runner.temp }}/r22-17-archive/OFFLINE_RESULTS.log
+          if-no-files-found: warn
+          retention-days: 30

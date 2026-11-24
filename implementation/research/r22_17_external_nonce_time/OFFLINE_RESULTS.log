@@ -1,0 +1,33 @@
+ca.download: OK
+tsa.download: OK
+Using configuration from /usr/lib/ssl/openssl.cnf
+CMS Verification successful
+Using configuration from /usr/lib/ssl/openssl.cnf
+CMS Verification successful
+Verification: OK
+a_matches_a PASS
+Verification: OK
+b_matches_b PASS
+408728DF267F0000:error:17800068:time stamp routines:ts_check_nonces:nonce mismatch:../crypto/ts/ts_rsp_verify.c:523:
+a_replayed_to_b REJECTED PASS
+4087B6A7917F0000:error:17800068:time stamp routines:ts_check_nonces:nonce mismatch:../crypto/ts/ts_rsp_verify.c:523:
+b_replayed_to_a REJECTED PASS
+Verification: OK
+a_with_rolled_back_request_RED PASS
+Verification: OK
+data_only_RED PASS
+40D7E575FB7F0000:error:17800067:time stamp routines:ts_check_imprints:message imprint mismatch:../crypto/ts/ts_rsp_verify.c:508:
+wrong_imprint REJECTED PASS
+Verification: OK
+fixed_validation_epoch PASS
+40077A5D937F0000:error:17800068:time stamp routines:ts_check_nonces:nonce mismatch:../crypto/ts/ts_rsp_verify.c:523:
+replay_fixed_validation_epoch REJECTED PASS
+Warning: certificate from 'tsa.pem' with subject '/O=Free TSA/OU=TSA/description=This certificate digitally signs documents and time stamp requests made using the freetsa.org online services/CN=www.freetsa.org/emailAddress=busilezas@mailbox.org/L=Wuerzburg/C=DE/ST=Bayern' not yet valid
+40B77B37157F0000:error:17800064:time stamp routines:ts_verify_cert:certificate verify error:../crypto/ts/ts_rsp_verify.c:190:Verify error:certificate is not yet valid
+pre_validity_epoch REJECTED PASS
+4017E31E467F0000:error:030000EA:digital envelope routines:EVP_PKEY_verify:provider signature failure:../crypto/evp/signature.c:1174:ECDSA verify:
+4017E31E467F0000:error:10800069:PKCS7 routines:PKCS7_signatureVerify:signature failure:../crypto/pkcs7/pk7_doit.c:1176:
+4017E31E467F0000:error:1780006D:time stamp routines:TS_RESP_verify_signature:signature failure:../crypto/ts/ts_rsp_verify.c:146:
+Verification: FAILED
+tampered_response REJECTED PASS
+11/11 EXPECTED CASES PASS; RESPONSE_BINDING_ONLY; REQUEST_ROLLBACK=RED; CLOCK_PROVENANCE=UNKNOWN; REVOCATION=NOT_CHECKED; GLOBAL_LATEST=UNKNOWN; TRUST=NO_GO; PRODUCTION=NO_GO
