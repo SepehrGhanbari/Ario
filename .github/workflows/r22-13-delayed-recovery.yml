@@ -1,0 +1,159 @@
+name: R22.13 delayed clean-runner recovery (advisory)
+on:
+  push:
+    branches:
+      - research/r22-13-delayed-recovery-20261124
+    paths:
+      - .github/workflows/r22-13-delayed-recovery.yml
+permissions: {}
+jobs:
+  stage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Fetch only the pinned old artifact and prior publisher completion time
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/stage/first" "$RUNNER_TEMP/stage/source"
+          gh api repos/SepehrGhanbari/Ario/actions/jobs/138678543752 > "$RUNNER_TEMP/publisher.json"
+          gh api repos/SepehrGhanbari/Ario/actions/artifacts/14951747944/zip > "$RUNNER_TEMP/first.zip"
+          echo '22f79e186ff93a3fe2b00e58af5ff3870baf0aad954cac1de883dbfb91cf5422  '"$RUNNER_TEMP/first.zip" | sha256sum -c -
+          python - <<'PY'
+          import json, os, pathlib, zipfile, datetime, time
+          t=pathlib.Path(os.environ["RUNNER_TEMP"])
+          p=json.loads((t/"publisher.json").read_bytes())
+          assert p["id"]==138678543752 and p["run_id"]==45459689925 and p["conclusion"]=="success"
+          end=datetime.datetime.fromisoformat(p["completed_at"].replace("Z","+00:00")).timestamp()
+          wait=max(0,120-(time.time()-end))
+          if wait: time.sleep(wait+1)
+          assert time.time()-end>=120
+          expected={"bootstrap.json","local-state.json","envelope.json","envelope.json.proof","synthetic-key.pub","policy.txt","floor.json","ledger.jsonl"}
+          with zipfile.ZipFile(t/"first.zip") as z:
+              assert set(z.namelist())==expected and len(z.namelist())==len(expected)
+              assert z.testzip() is None
+              for n in expected:
+                  assert z.getinfo(n).file_size<=32768
+                  (t/"stage/first"/n).write_bytes(z.read(n))
+          (t/"stage/elapsed.json").write_text(json.dumps({"publisher_job":p["id"],"completed_at":p["completed_at"],"minimum_delay_seconds":120,"stage_epoch":time.time()})+"\n")
+          PY
+      - name: Stage source only without previous reports, Git metadata, or later artifacts
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import pathlib, os, subprocess
+          root=pathlib.Path(os.environ["RUNNER_TEMP"])/"stage/source"
+          names=subprocess.check_output(["git","ls-files","-z","implementation","experiments/r9c-conditional-destination-2026-11-15"]).decode().split("\0")
+          for n in names:
+              if not n: continue
+              p=pathlib.Path(n)
+              if p.suffix not in (".py",".go") and p.name not in ("go.mod","go.sum","requirements-research.txt"): continue
+              if p.is_symlink(): raise ValueError("symlink source")
+              dest=root/p
+              dest.parent.mkdir(parents=True,exist_ok=True)
+              dest.write_bytes(p.read_bytes())
+          assert (root/"implementation/research/r22_13_delayed_recovery/delayed.py").is_file()
+          forbidden=[b"f65228cb44ea900d6d78e6465967b5ec0b4d3894946c801acb678053200c908f",b"e8877d476cd1fbaf4165636b865a225704994f401cdccf1cbafd1cc909acaedc",b"e78f44fb5fd8dca2b8a3c0066cb1eceecbddae256e4b1d3666c00a2d02222085"]
+          for p in (root.parent).rglob("*"):
+              if p.is_file():
+                  assert all(x not in p.read_bytes() for x in forbidden),str(p)
+          print("FIRST_ONLY_SOURCE_BUNDLE_NO_KNOWN_LATER_DIGESTS")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r22-13-FIRST-ONLY-SOURCE
+          path: ${{ runner.temp }}/stage/
+          if-no-files-found: error
+          retention-days: 30
+  recover:
+    needs: stage
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions: {}
+    steps:
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: r22-13-FIRST-ONLY-SOURCE
+          path: ${{ runner.temp }}/lab
+      - name: Verify delayed fresh runner and discover later signed commitment
+        run: |
+          set -euo pipefail
+          L="$RUNNER_TEMP/lab"
+          test ! -e "$L/source/.git"
+          test ! -e "$L/reveal"
+          python - <<'PY'
+          import json, os, pathlib, datetime, time
+          p=json.loads((pathlib.Path(os.environ["RUNNER_TEMP"])/"lab/elapsed.json").read_bytes())
+          end=datetime.datetime.fromisoformat(p["completed_at"].replace("Z","+00:00")).timestamp()
+          elapsed=time.time()-end
+          assert elapsed>=p["minimum_delay_seconds"]==120
+          print(json.dumps({"elapsed_since_publisher_completion_seconds":round(elapsed,3),"prior_publisher_job":p["publisher_job"]}))
+          PY
+          D=$(mktemp -d "$RUNNER_TEMP/scan.XXXXXX")
+          cp "$L/source/implementation/research/r22_10_blind_discovery/"{main.go,main_test.go,go.mod} "$D/"
+          cp "$L/first/bootstrap.json" "$D/"
+          cd "$D"
+          go mod tidy
+          go test -v ./...
+          go run . | tee "$L/discovery.jsonl"
+      - name: Read-only external recovery with live single-source and injected loss/replay controls
+        run: |
+          set -euo pipefail
+          L="$RUNNER_TEMP/lab"
+          cd "$L/source/implementation"
+          python -m pip install -r requirements-research.txt coincurve==21.0.0 websockets==15.0.1
+          PYTHONPATH=.:tests python research/r22_13_delayed_recovery/delayed.py "$L/first" "$L/discovery.jsonl" "$L/recovered"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r22-13-RECOVERED
+          path: |
+            ${{ runner.temp }}/lab/recovered/
+            ${{ runner.temp }}/lab/discovery.jsonl
+            ${{ runner.temp }}/lab/elapsed.json
+          if-no-files-found: warn
+          retention-days: 30
+  reveal:
+    needs: recover
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: r22-13-RECOVERED
+          path: observed
+      - name: Fetch pinned second original only after recovery job has ended
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api repos/SepehrGhanbari/Ario/actions/artifacts/14952710960/zip > original.zip
+          echo '5ad28bffae50600ddba9363a82a75f1a4d3b1ef748ea1f1ddee5cf3b24f62549  original.zip' | sha256sum -c -
+          python - <<'PY'
+          import json, pathlib, zipfile
+          with zipfile.ZipFile("original.zip") as z:
+              assert z.testzip() is None
+              for n in ("envelope.json","floor.json","ledger.jsonl"):
+                  assert (pathlib.Path("observed/recovered")/n).read_bytes()==z.read(n)
+          r=json.loads(pathlib.Path("observed/recovered/report.json").read_bytes())
+          assert r["disposition"]=="DELAYED_RECOVERY_AND_FAULT_CONTROLS_PASS"
+          assert r["old_state_unchanged"] is True and r["old_as_latest"] is False
+          assert r["trust_activation"]=="NO_GO" and r["verified_record_count"]==4
+          print("R22_13_DELAYED_RECOVERY_EXACT_ORIGINAL_MATCH")
+          PY
