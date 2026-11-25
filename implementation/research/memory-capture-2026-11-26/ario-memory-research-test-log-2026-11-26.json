@@ -1,0 +1,29 @@
+[
+  {
+    "label": "phase2",
+    "filename": "ario-anti-rollback-phase2.zip",
+    "sha256": "9c1133b7e4a2105f77efb5cf559179bc4aad6cf9ca2a0c5468280f35e0f96cc3",
+    "python": "3.13.5",
+    "command": "/opt/pyvenv/bin/python -B -m unittest -q test_protocol.py test_phase2.py",
+    "exit_code": 0,
+    "output": "----------------------------------------------------------------------\nRan 42 tests in 0.219s\n\nOK\n"
+  },
+  {
+    "label": "phase3-A",
+    "filename": "ario-anti-rollback-phase3.zip",
+    "sha256": "86453b9d30c29ee2d2b6da720c02bf66110f4e79cf211ca1d5346accece9cfe4",
+    "python": "3.13.5",
+    "command": "/opt/pyvenv/bin/python -B -m unittest -q test_protocol.py test_phase2.py test_phase3.py",
+    "exit_code": 0,
+    "output": "----------------------------------------------------------------------\nRan 60 tests in 0.328s\n\nOK\n"
+  },
+  {
+    "label": "phase3-B",
+    "filename": "ario-anti-rollback-phase3(1).zip",
+    "sha256": "d0520351365d1dc6ef693d00d290de4f8f6b296d37feb3c129b1ced1ff4ebd98",
+    "python": "3.13.5",
+    "command": "/opt/pyvenv/bin/python -B -m unittest -q test_protocol.py test_phase2.py test_phase3.py",
+    "exit_code": 0,
+    "output": "----------------------------------------------------------------------\nRan 59 tests in 0.481s\n\nOK\n"
+  }
+]
