@@ -347,6 +347,13 @@ def prepare(prior_dir, out_dir):
     first, second = out / "first", out / "second"
     first.mkdir(parents=True)
     second.mkdir(parents=True)
+    prior_anchor = first / "prior-anchor"
+    prior_anchor.mkdir()
+    for source, name in ((prior / "six" / "envelope.json", "envelope.json"),
+                         (prior / "six" / "envelope.json.proof", "envelope.json.proof"),
+                         (prior / "six" / "ledger.jsonl", "ledger.jsonl"),
+                         (prior / "key.pub", "key.pub")):
+        (prior_anchor / name).write_bytes(source.read_bytes())
     for folder, raw, ledger_raw, event in ((first, raw6, old_ledger, event6), (second, raw8, new_ledger, event8)):
         (folder / "envelope.json").write_bytes(raw)
         (folder / "ledger.jsonl").write_bytes(ledger_raw)
@@ -433,6 +440,17 @@ def recover(first_dir, discovery_path, output_dir):
     first_payload = verify_event(first_event, pubkey)
     if first_payload[0] != first_env_raw or first_payload[2] != first_ledger:
         raise ValueError("first event package mismatch")
+    prior_dir = first_dir / "prior-anchor"
+    prior_raw = (prior_dir / "envelope.json").read_bytes()
+    prior_ledger = (prior_dir / "ledger.jsonl").read_bytes()
+    prior_env = json.loads(prior_raw.decode("ascii"), object_pairs_hook=unique_pairs)
+    first_env = parse_envelope(first_env_raw)
+    if (sha(prior_raw) != first_env["prior_checkpoint_sha256"]
+            or sha(prior_ledger) != first_env["prior_ledger_sha256"]
+            or prior_env.get("record", {}).get("ledger_sha256") != sha(prior_ledger)
+            or prior_env.get("scope") != first_env["scope"]):
+        raise ValueError("prior R22.15B signed anchor mismatch")
+    parse_ledger(prior_ledger, 6)
     report = json.loads(Path(discovery_path).read_text("ascii").splitlines()[-1])
     matches = report.get("matching_signed_leaves")
     if (report.get("disposition") != "HOLD_OPAQUE_NEW_SIGNED_COMMITMENT"
