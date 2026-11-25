@@ -2,6 +2,7 @@ import copy
 import hashlib
 import json
 import unittest
+from unittest.mock import patch
 
 from coincurve import PrivateKey
 import external_floor as f
@@ -49,7 +50,6 @@ class ExternalFloorTests(unittest.TestCase):
         event,payload=f.extract_target([],target,key.public_key_xonly.format().hex())
         self.assertIsNone(event)
         self.assertIsNone(payload)
-        self.assertEqual("HOLD_CONTENT_UNAVAILABLE","HOLD_CONTENT_UNAVAILABLE")
 
     def test_tampered_event_id_rejected(self):
         key,prior,l6,e6,v6,l8,e8,v8=pair()
@@ -136,8 +136,8 @@ class ExternalFloorTests(unittest.TestCase):
         target=f.target_for_event(v8)
         other=copy.deepcopy(v8);other["created_at"]+=1
         other["id"]=f.nostr_event_id(other);other["sig"]=key.sign_schnorr(bytes.fromhex(other["id"])).hex()
-        other["id"]=v8["id"]
-        with self.assertRaises(ValueError): f.extract_target([v8,other],target,key.public_key_xonly.format().hex())
+        with patch("external_floor.target_for_event", return_value=target):
+            with self.assertRaises(ValueError): f.extract_target([v8,other],target,key.public_key_xonly.format().hex())
 
 if __name__=="__main__":
     unittest.main(verbosity=2)
