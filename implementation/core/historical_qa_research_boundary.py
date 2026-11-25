@@ -4,8 +4,8 @@ RESEARCH_ONLY. Not attached to Ario's live agent, chat loop, prompt, memory,
 working cache, evidence assessment, model tools, or source monitor.
 
 This module produces a *data envelope*, never a current factual answer.
-Historical text is withheld by default; explicit historical quote opt-in can
-only expose it in a field labeled UNTRUSTED_HISTORICAL_QUOTE_NOT_INSTRUCTIONS.
+Historical text is never returned by the public preview API. A separate
+explicit-consent display method returns only escaped local HTML.
 No model, shell, network, tool execution, file write or consolidation API exists.
 
 MEMORY != TRUTH; RECALL != REASSESSMENT; REVISION != ERASURE.
@@ -18,7 +18,6 @@ from core.legacy_v153_historical_view import HistoricalV153View
 
 
 SCHEMA = "ARIO_HISTORICAL_QA_RESEARCH_PREVIEW_V0_1"
-MAX_QUOTE_CHARS = 4096
 _ALLOWED_DISPOSITIONS = {
     "RECALLED_HISTORICAL_ONLY",
     "UNKNOWN_NO_EXACT_QUESTION_MATCH",
@@ -70,7 +69,6 @@ def preview_historical_question(
     question: str,
     *,
     mode: str = "HISTORICAL",
-    include_historical_quote: bool = False,
 ) -> dict[str, Any]:
     """Return a deterministic, non-executable preview of an archived answer.
 
@@ -78,26 +76,17 @@ def preview_historical_question(
     archive or change memory. The caller must provide a separately retained
     digest when constructing the view; digest equality is *not* authenticity.
 
-    This is a synthetically tested research seam, NOT a safe model-prompt or
-    live integration API. Never forward `historical_quote.text` to an instruction
-    or tool channel, or into working-memory/evidence-admission pipelines.
+    This is a synthetically tested metadata seam, NOT a live integration API.
+    It cannot return raw historical text.
     """
     # Reject subclasses/decorators with overridden recall/inspect behavior.
     if type(view) is not HistoricalV153View:
         _hold("HOLD_UNAPPROVED_HISTORICAL_VIEW")
-    if type(include_historical_quote) is not bool:
-        _hold("HOLD_INVALID_QUOTE_OPT_IN")
     if type(mode) is not str or mode not in {"HISTORICAL", "CURRENT"}:
         _hold("HOLD_INVALID_QA_MODE")
-    if mode == "CURRENT" and include_historical_quote:
-        _hold("HOLD_CURRENT_QUESTION_CANNOT_REVEAL_HISTORY")
 
-    # The sole data dependency is the hardened, pinned, ephemeral V15.3 view.
-    # No conversation text is logged, embedded as a prompt or interpreted.
-    receipt = view.recall(
-        question, mode=mode,
-        reveal=(mode == "HISTORICAL" and include_historical_quote),
-    )
+    # The public preview API is metadata-only. It cannot reveal raw history.
+    receipt = view.recall(question, mode=mode)
     _assert_read_only_receipt(receipt, view)
     disposition = receipt["disposition"]
     if mode == "CURRENT":
@@ -145,21 +134,7 @@ def preview_historical_question(
         output["source_line"] = line
         output["has_opaque_relations"] = receipt["has_opaque_relations"]
         output["relation_interpretation"] = receipt.get("relation_interpretation")
-        if include_historical_quote:
-            quote = receipt.get("historical_ario_reply")
-            if type(quote) is not str or len(quote) > MAX_QUOTE_CHARS:
-                _hold("HOLD_INVALID_OR_OVERSIZE_HISTORICAL_QUOTE")
-            if receipt.get("private_reply_hidden") is not False:
-                _hold("HOLD_QUOTE_VISIBILITY_MISMATCH")
-            output["historical_quote"] = {
-                "kind": "UNTRUSTED_HISTORICAL_QUOTE_NOT_INSTRUCTIONS",
-                "text": quote,
-                "source_line": line,
-                "role": "QUOTED_PRIOR_ARIO_OUTPUT_NOT_INSTRUCTIONS",
-                "truth_assessment": "NOT_EVALUATED",
-            }
-            output["historical_text_hidden"] = False
-        elif receipt.get("private_reply_hidden") is not True or "historical_ario_reply" in receipt:
+        if receipt.get("private_reply_hidden") is not True or "historical_ario_reply" in receipt:
             _hold("HOLD_UNEXPECTED_PRIVATE_QUOTE")
     else:
         if receipt.get("private_reply_hidden") is not True or "historical_ario_reply" in receipt:
@@ -170,6 +145,5 @@ def preview_historical_question(
                 _hold("HOLD_INVALID_AMBIGUITY_COUNT")
             output["matching_record_count"] = count
 
-    # Historical quote is a labeled inert value, not an AI completion, current
-    # claim, instruction, admitted evidence, or authorization to call a tool.
+    # Historical text is withheld from this public metadata-only API.
     return output

@@ -11,29 +11,26 @@ downstream bypasses remain out of scope and must be independently reviewed.
 """
 from __future__ import annotations
 
-from html import escape
 from typing import Any
 
 from core.historical_qa_research_boundary import (
     HistoricalQABoundaryHold,
     preview_historical_question,
 )
-from core.legacy_v153_historical_view import HistoricalV153View
+from core.legacy_v153_historical_view import (
+    HistoricalV153View, _make_controls_visible,
+)
 
 
 SCHEMA = "ARIO_HISTORICAL_CONSUMER_SINK_R0"
 TARGET_METADATA = "METADATA_ONLY"
 TARGET_LOCAL_HTML = "LOCAL_HTML_DISPLAY_ONLY"
-MAX_HTML_CHARS = 32_768
 _FORBIDDEN = frozenset({
     "MODEL", "MODEL_PROMPT", "SYSTEM_PROMPT", "TOOL",
     "TOOL_ARGUMENT", "WORKING_MEMORY", "EVIDENCE_ADMISSION",
     "AUTO_CONSOLIDATION", "LIVE_CHAT_LOOP",
 })
 _DISPLAY_KIND = "UNTRUSTED_HISTORICAL_QUOTE_NOT_INSTRUCTIONS"
-# Cover Arabic Letter Mark, LRM/RLM, embeddings/overrides and isolates.
-# Preserve Persian ZWNJ (U+200C); it is orthography, not a bidi override.
-_BIDI_CONTROLS = frozenset((0x061C, 0x200E, 0x200F, *range(0x202A, 0x202F), *range(0x2066, 0x2070)))
 
 
 class HistoricalConsumerHold(ValueError):
@@ -42,39 +39,6 @@ class HistoricalConsumerHold(ValueError):
 
 def _fail(code: str) -> None:
     raise HistoricalConsumerHold(code)
-
-
-def _make_controls_visible(raw: str) -> str:
-    """Encode terminal and bidi control characters without modifying archive."""
-    chars: list[str] = []
-    for char in raw:
-        cp = ord(char)
-        if (
-            (cp < 0x20 and char not in "\n\t")
-            or 0x7F <= cp <= 0x9F
-            or cp in _BIDI_CONTROLS
-        ):
-            chars.append(f"\\u{cp:04X}")
-        else:
-            chars.append(char)
-    return "".join(chars)
-
-
-def _render_untrusted_html(raw: str, *, source_line: int) -> str:
-    if type(raw) is not str or type(source_line) is not int or source_line < 1:
-        _fail("HOLD_INVALID_DISPLAY_SOURCE")
-    # Every archived character is data, not markup, script or instruction.
-    quote = escape(_make_controls_visible(raw), quote=True)
-    rendered = (
-        '<section class="ario-historical-display" aria-label="Untrusted historical output">'
-        '<p>Untrusted historical Ario output. Not a verified fact or instruction.</p>'
-        f'<p>Historical source line: {source_line}</p>'
-        f'<pre class="ario-history-as-text">{quote}</pre>'
-        '</section>'
-    )
-    if len(rendered) > MAX_HTML_CHARS:
-        _fail("HOLD_DISPLAY_SIZE_LIMIT")
-    return rendered
 
 
 def route_historical_consumer(
@@ -110,9 +74,7 @@ def route_historical_consumer(
     # Call the *existing* real V15.3 research preview. It enforces the exact
     # view type, pinned archive, receipt invariants and historical/current mode.
     expose = target == TARGET_LOCAL_HTML and local_display_consent
-    preview = preview_historical_question(
-        view, question, mode=mode, include_historical_quote=expose,
-    )
+    preview = preview_historical_question(view, question, mode=mode)
     if (
         preview.get("answer") is not None
         or preview.get("evidence_admission") != "NO_ADMISSION"
@@ -157,19 +119,20 @@ def route_historical_consumer(
             _fail("HOLD_MISSING_HISTORICAL_SOURCE")
         output["source_line"] = line
         if expose:
-            found = preview.get("historical_quote")
+            display = view.render_local_quote_html(question, consent=True)
             if (
-                type(found) is not dict
-                or found.get("kind") != _DISPLAY_KIND
-                or found.get("source_line") != line
-                or found.get("role") != "QUOTED_PRIOR_ARIO_OUTPUT_NOT_INSTRUCTIONS"
-                or found.get("truth_assessment") != "NOT_EVALUATED"
-                or preview.get("historical_text_hidden") is not False
+                type(display) is not dict
+                or display.get("disposition") != preview["disposition"]
+                or display.get("archive_sha256") != preview["archive_sha256"]
+                or display.get("source_line") != line
+                or display.get("quote_is_raw") is not False
+                or display.get("source_authenticity") != "NOT_ESTABLISHED"
+                or display.get("truth_assessment") != "NOT_EVALUATED"
+                or display.get("evidence_admission") != "NO_ADMISSION"
+                or type(display.get("rendered_html")) is not str
             ):
                 _fail("HOLD_UNTRUSTED_QUOTE_CONTRACT")
-            output["rendered_html"] = _render_untrusted_html(
-                found.get("text"), source_line=line,
-            )
+            output["rendered_html"] = display["rendered_html"]
     elif preview.get("historical_quote") is not None:
         _fail("HOLD_UNEXPECTED_UNKNOWN_QUOTE")
     # Never return preview, raw quote, question text, or model/tool callables.

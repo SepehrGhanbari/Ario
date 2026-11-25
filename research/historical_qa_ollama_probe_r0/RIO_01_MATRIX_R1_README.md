@@ -33,3 +33,8 @@ The script accepts **only** explicit opt-in and loopback ports 11434/11600, disa
 20 tests use an in-memory fake transport; **no real Ollama HTTP requests in CI**. The read-only consumer bypass and Unicode-display regression tests live in two further \`implementation/tests/\` files. Source files and the research report are public in the same Draft/HOLD PR.
 
 No source admission, trust activation, production change, independent reviewer approval, or merge is authorized.
+
+ 
+## R2 consumer API and row immutability update (2026-11-25)
+
+The public preview and reader recall APIs are now metadata-only: no raw quote opt-in or reveal argument. Explicit local display returns bounded escaped HTML only. Parsed rows are recursively immutable mappings/tuples and the reader seals ordinary attribute assignment. These are API and ordinary-mutation protections, **not a sandbox**: arbitrary same-process Python code can inspect private object state or bypass Python-level seals. Live integration remains HOLD pending an OS-process boundary and independent downstream no-reentry review. See `CONSUMER_SECURITY_REVIEW_R1.md` addendum for exact residual limitations.

@@ -1,8 +1,7 @@
-"""RIO-01 adversarial consumer-bypass demonstrations, synthetic only.
+"""RIO-01 follow-up: public raw-quote removal and ordinary object immutability.
 
-These tests deliberately reproduce *remaining weaknesses* and therefore PASS
-when the weakness is observed. They are NOT green security certifications.
-No active Ario memory, model or real archive is used.
+Synthetic fixtures only. Same-process arbitrary Python introspection remains
+outside the security boundary; this is not an OS sandbox or trust activation.
 """
 from __future__ import annotations
 
@@ -18,12 +17,12 @@ from core.historical_qa_consumer_sink import (  # noqa: E402
     TARGET_LOCAL_HTML, TARGET_METADATA, route_historical_consumer,
 )
 from core.historical_qa_research_boundary import preview_historical_question  # noqa: E402
-from core.legacy_v153_historical_view import HistoricalV153View  # noqa: E402
+from core.legacy_v153_historical_view import HistoricalV153View, HistoricalViewHold  # noqa: E402
 
 
-class TestAdversarialConsumerBypassR1(unittest.TestCase):
+class TestHistoricalConsumerBypassR2(unittest.TestCase):
     def setUp(self):
-        temp = tempfile.TemporaryDirectory(prefix="RIO01-fake-archive-")
+        temp = tempfile.TemporaryDirectory(prefix="RIO01-fake-archive-R2-")
         self.addCleanup(temp.cleanup)
         self.path = Path(temp.name) / "FICTIONAL_V153.jsonl"
         self.question = "Did the old fictional model say this?"
@@ -34,69 +33,73 @@ class TestAdversarialConsumerBypassR1(unittest.TestCase):
             "user": self.question, "ario": self.reply,
             "user_sha256": hashlib.sha256(self.question.encode()).hexdigest(),
             "ario_sha256": hashlib.sha256(self.reply.encode()).hexdigest(),
-            "event_sha256": "a" * 64,
-            "relations": [],
+            "event_sha256": "a" * 64, "relations": [],
+            "concepts": [{"label": "fictional"}],
         }
         data = (json.dumps(row, ensure_ascii=False) + "\n").encode()
         self.path.write_bytes(data)
+        self.raw = data
         self.pin = hashlib.sha256(data).hexdigest()
         self.view = HistoricalV153View(self.path, expected_sha256=self.pin)
 
-    def test_expected_red_raw_quote_api_can_bypass_protected_sink(self):
-        """Direct, explicitly opted-in preview still exposes a raw text string."""
-        guarded = route_historical_consumer(self.view, self.question, target=TARGET_METADATA)
-        self.assertIsNone(guarded["rendered_html"])
-        direct = preview_historical_question(
-            self.view, self.question, include_historical_quote=True,
-        )
-        self.assertEqual(direct["historical_quote"]["text"], self.reply)
-        self.assertEqual(direct["historical_quote"]["kind"],
-                         "UNTRUSTED_HISTORICAL_QUOTE_NOT_INSTRUCTIONS")
-        self.assertIsNone(direct["answer"])
-        # This is a design gap at the *caller boundary*, not unauthorized file read.
-        self.assertFalse(direct["context_injection_allowed"])
+    def test_public_preview_has_no_raw_quote_parameter_or_field(self):
+        with self.assertRaises(TypeError):
+            preview_historical_question(
+                self.view, self.question, include_historical_quote=True,
+            )
+        got = preview_historical_question(self.view, self.question)
+        self.assertIsNone(got["historical_quote"])
+        self.assertTrue(got["historical_text_hidden"])
+        self.assertNotIn(self.reply, json.dumps(got))
 
-    def test_expected_red_post_init_same_process_row_mutation_possible(self):
-        """A same-process Python caller can change an in-memory row after pinning."""
-        raw_before = self.path.read_bytes()
-        original_digest = self.view.inspect()["archive_sha256"]
-        self.view._rows[0]["ario"] = "FICTIONAL MUTATED RESPONSE"
-        direct = preview_historical_question(
-            self.view, self.question, include_historical_quote=True,
-        )
-        self.assertEqual(direct["historical_quote"]["text"], "FICTIONAL MUTATED RESPONSE")
-        self.assertEqual(direct["archive_sha256"], original_digest)
-        self.assertEqual(self.path.read_bytes(), raw_before)
-        # A source *file* digest is not a post-construction immutable row seal.
-        self.assertEqual(self.pin, original_digest)
+    def test_public_recall_has_no_reveal_parameter_or_raw_field(self):
+        with self.assertRaises(TypeError):
+            self.view.recall(self.question, reveal=True)
+        got = self.view.recall(self.question)
+        self.assertTrue(got["private_reply_hidden"])
+        self.assertNotIn("historical_ario_reply", got)
+        self.assertNotIn(self.reply, json.dumps(got))
 
-    def test_safe_sink_does_not_bypass_current_question_recheck(self):
-        current = route_historical_consumer(
-            self.view, self.question, target=TARGET_METADATA, mode="CURRENT",
+    def test_only_explicit_local_display_returns_escaped_html(self):
+        metadata = route_historical_consumer(
+            self.view, self.question, target=TARGET_METADATA,
         )
-        self.assertEqual(current["disposition"], "RECHECK_REQUIRED_CURRENT_QUESTION")
-        self.assertIsNone(current["answer"])
-        self.assertIsNone(current["rendered_html"])
-
-    def test_local_quote_requires_consent_and_is_escaped(self):
-        private = route_historical_consumer(
-            self.view, self.question, target=TARGET_LOCAL_HTML,
-        )
-        self.assertIsNone(private["rendered_html"])
-        displayed = route_historical_consumer(
+        self.assertIsNone(metadata["rendered_html"])
+        shown = route_historical_consumer(
             self.view, self.question, target=TARGET_LOCAL_HTML,
             local_display_consent=True,
         )
-        self.assertIn(self.reply, displayed["rendered_html"])
-        self.assertIsNone(displayed["model_prompt"])
-        self.assertIsNone(displayed["tool_request"])
+        self.assertIn(self.reply, shown["rendered_html"])
+        self.assertIsNone(shown["model_prompt"])
+        self.assertIsNone(shown["tool_request"])
+        self.assertNotIn("historical_quote", shown)
+        self.assertNotIn("text", shown)
 
-    def test_source_is_still_unverified_by_independent_custodian(self):
-        view_receipt = self.view.inspect()
-        self.assertEqual(view_receipt["independent_source_authenticity"], "NOT_ESTABLISHED")
-        self.assertFalse(view_receipt["source_attribution_v1_constructed"])
-        self.assertFalse(view_receipt["live_ario_recall_established"])
+    def test_rows_are_deeply_immutable_under_normal_python_operations(self):
+        before = self.path.read_bytes()
+        with self.assertRaises(TypeError):
+            self.view._rows[0]["ario"] = "FICTIONAL MUTATED RESPONSE"
+        with self.assertRaises(TypeError):
+            self.view._rows[0]["concepts"][0]["label"] = "changed"
+        with self.assertRaises(TypeError):
+            self.view._rows[0]["relations"] += ("mutated",)
+        self.assertEqual(self.path.read_bytes(), before)
+        self.assertEqual(self.view.inspect()["archive_sha256"], self.pin)
+
+    def test_view_slots_and_seal_block_normal_reassignment(self):
+        with self.assertRaisesRegex(HistoricalViewHold, "HOLD_VIEW_IMMUTABLE"):
+            self.view._rows = ()
+        with self.assertRaisesRegex(HistoricalViewHold, "HOLD_VIEW_IMMUTABLE"):
+            self.view._digest = "0" * 64
+        with self.assertRaisesRegex(HistoricalViewHold, "HOLD_VIEW_IMMUTABLE"):
+            del self.view._rows
+
+    def test_private_python_introspection_remains_out_of_scope(self):
+        # Python's same-process caller can still read private internals.
+        # This demonstrates why immutable containers are not a sandbox.
+        self.assertEqual(self.view._rows[0]["ario"], self.reply)
+        self.assertEqual(self.view.inspect()["archive_sha256"], self.pin)
 
 
 if __name__ == "__main__":
-    unittest.main()
+    unittest.main(verbosity=2)
