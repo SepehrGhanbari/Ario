@@ -1,4 +1,4 @@
-name: R22.22B independent paste custody and repo-rollback readback (advisory)
+name: R22.22B external paste custody and repo-rollback readback (advisory)
 on:
   push:
     branches: [research/r22-22-independent-recovery-root-20261125]
@@ -17,8 +17,7 @@ jobs:
       contents: read
       actions: read
     outputs:
-      centos_raw_url: ${{ steps.pin.outputs.centos_raw_url }}
-      paste_rs_url: ${{ steps.pin.outputs.paste_rs_url }}
+      paste_rs_url: \${{ steps.pin.outputs.paste_rs_url }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -26,9 +25,9 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: '3.13'
-      - name: Retrieve and verify the exact portable kit artifact
+      - name: Retrieve and verify exact portable kit artifact
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: \${{ github.token }}
         run: |
           set -euo pipefail
           gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15047820982/zip" > "$RUNNER_TEMP/artifact.zip"
@@ -46,46 +45,30 @@ jobs:
           pathlib.Path(sys.argv[2]).write_text(json.dumps(obj,sort_keys=True,separators=(",",":"))+"\n",encoding="ascii")
           print("PIN_PAYLOAD_SHA256",hashlib.sha256(pathlib.Path(sys.argv[2]).read_bytes()).hexdigest())
           PY
-      - name: Publish to two separate public storage services and verify exact readback
+      - name: Publish to paste.rs and verify exact readback
         id: pin
         run: |
           set -euo pipefail
           P="$RUNNER_TEMP/pin.json"
-          # CentOS paste API: separate public endpoint; request a one-year expiry.
-          cs=$(curl --silent --show-error --output "$RUNNER_TEMP/centos.response" --write-out '%{http_code}' \
-            --data-urlencode "text@$P" -d "title=ARIO-R22.22B-portable-kit" -d "lang=text" -d "expire=525600" \
-            https://paste.centos.org/api/create)
-          test "$cs" = "200" -o "$cs" = "201"
-          cresp=$(tr -d '\r\n ' < "$RUNNER_TEMP/centos.response")
-          case "$cresp" in https://paste.centos.org/view/*) ;; *) echo "unexpected CentOS paste URL" >&2; exit 1;; esac
-          cid=$(basename "$cresp")
-          centos_raw_url="https://paste.centos.org/view/raw/$cid"
-          curl --fail --silent --show-error "$centos_raw_url" -o "$RUNNER_TEMP/centos.readback.json"
-          cmp "$P" "$RUNNER_TEMP/centos.readback.json"
-          # paste.rs: separate operator/service; retention is not promised.
-          ps=$(curl --silent --show-error --output "$RUNNER_TEMP/paste-rs.response" --write-out '%{http_code}' \
+          status=$(curl --silent --show-error --output "$RUNNER_TEMP/paste-rs.response" --write-out '%{http_code}' \
             -H 'Content-Type: application/json' -H 'User-Agent: Ario-R22.22B-Research/1.0' \
             --data-binary "@$P" https://paste.rs/)
-          test "$ps" = "201"
+          test "$status" = "201"
           paste_rs_url=$(tr -d '\r\n ' < "$RUNNER_TEMP/paste-rs.response")
           case "$paste_rs_url" in https://paste.rs/*) ;; *) echo "unexpected paste.rs URL" >&2; exit 1;; esac
           curl --fail --silent --show-error "$paste_rs_url" -o "$RUNNER_TEMP/paste-rs.readback.json"
           cmp "$P" "$RUNNER_TEMP/paste-rs.readback.json"
-          echo "CENTOS_RAW_URL=$centos_raw_url"
           echo "PASTE_RS_URL=$paste_rs_url"
-          echo "centos_raw_url=$centos_raw_url" >> "$GITHUB_OUTPUT"
           echo "paste_rs_url=$paste_rs_url" >> "$GITHUB_OUTPUT"
           mkdir "$RUNNER_TEMP/evidence"
           cp "$P" "$RUNNER_TEMP/evidence/pin.json"
-          cp "$RUNNER_TEMP/centos.readback.json" "$RUNNER_TEMP/evidence/centos.readback.json"
           cp "$RUNNER_TEMP/paste-rs.readback.json" "$RUNNER_TEMP/evidence/paste-rs.readback.json"
-          printf '%s\n' "$centos_raw_url" > "$RUNNER_TEMP/evidence/centos.raw.url"
           printf '%s\n' "$paste_rs_url" > "$RUNNER_TEMP/evidence/paste-rs.url"
           sha256sum "$P" "$RUNNER_TEMP/artifact/kit.zip" > "$RUNNER_TEMP/evidence/hashes.txt"
       - uses: actions/upload-artifact@v4
         with:
           name: r22-22b-external-pin-evidence
-          path: ${{ runner.temp }}/evidence/
+          path: \${{ runner.temp }}/evidence/
           if-no-files-found: error
           retention-days: 30
   cold:
@@ -106,39 +89,31 @@ jobs:
         with:
           go-version: '1.25'
           cache: false
-      - name: Recover the portable kit from external stores after repository checkout rollback
+      - name: Recover portable kit from paste.rs after repository checkout rollback
         env:
-          CENTOS_RAW_URL: ${{ needs.publish.outputs.centos_raw_url }}
-          PASTE_RS_URL: ${{ needs.publish.outputs.paste_rs_url }}
+          PASTE_RS_URL: \${{ needs.publish.outputs.paste_rs_url }}
         run: |
           set -euo pipefail
-          test -n "$CENTOS_RAW_URL" && test -n "$PASTE_RS_URL"
-          mkdir "$RUNNER_TEMP/external"
-          curl --fail --silent --show-error "$CENTOS_RAW_URL" -o "$RUNNER_TEMP/external/centos.json"
-          curl --fail --silent --show-error "$PASTE_RS_URL" -o "$RUNNER_TEMP/external/paste-rs.json"
-          python - "$RUNNER_TEMP/external" <<'PY'
+          test -n "$PASTE_RS_URL"
+          curl --fail --silent --show-error "$PASTE_RS_URL" -o "$RUNNER_TEMP/pin.json"
+          python - "$RUNNER_TEMP/pin.json" "$RUNNER_TEMP/kit.zip" <<'PY'
           import base64,hashlib,json,pathlib,sys
-          p=pathlib.Path(sys.argv[1]); expected="304765d8d7f0da2d5e62443b7d1f48c00c8ff9bd324b8f8ed9c88c0ab7fffe24"
-          blobs=[]
-          for name in ("centos.json","paste-rs.json"):
-              o=json.loads((p/name).read_bytes())
-              assert o["profile"]=="ARIO-R22.22B-EXTERNAL-KIT-COPY"
-              raw=base64.b64decode(o["kit_base64"],validate=True)
-              assert len(raw)==o["kit_bytes"] and hashlib.sha256(raw).hexdigest()==expected==o["kit_sha256"]
-              blobs.append(raw)
-          assert blobs[0]==blobs[1]
-          (p/"kit.zip").write_bytes(blobs[0])
-          print("BOTH_EXTERNAL_STORES_EXACT_MATCH",expected,len(blobs[0]))
+          expected="304765d8d7f0da2d5e62443b7d1f48c00c8ff9bd324b8f8ed9c88c0ab7fffe24"
+          o=json.loads(pathlib.Path(sys.argv[1]).read_bytes())
+          assert o["profile"]=="ARIO-R22.22B-EXTERNAL-KIT-COPY"
+          raw=base64.b64decode(o["kit_base64"],validate=True)
+          assert len(raw)==o["kit_bytes"] and hashlib.sha256(raw).hexdigest()==expected==o["kit_sha256"]
+          pathlib.Path(sys.argv[2]).write_bytes(raw)
+          print("PASTE_RS_EXTERNAL_STORE_EXACT_MATCH",expected,len(raw))
           PY
           mkdir "$RUNNER_TEMP/kit"
-          unzip -q "$RUNNER_TEMP/external/kit.zip" -d "$RUNNER_TEMP/kit"
-          # The repository itself is checked out at the older R22.21 parent.
+          unzip -q "$RUNNER_TEMP/kit.zip" -d "$RUNNER_TEMP/kit"
           test ! -e implementation/research/r22_22_recovery_root/RECOVERY_PIN.json
           bash "$RUNNER_TEMP/kit/read_only.sh" "$RUNNER_TEMP/readback"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: r22-22b-cold-readback
-          path: ${{ runner.temp }}/readback/
+          path: \${{ runner.temp }}/readback/
           if-no-files-found: warn
           retention-days: 30
