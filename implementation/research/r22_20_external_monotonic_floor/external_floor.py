@@ -319,8 +319,8 @@ def fetch_many(urls, pubkey, target):
     if len(unique) > 1:
         raise ValueError("conflicting event IDs for one logged checksum")
     if not unique:
-        return None, None, observations
-    return next(iter(unique.values()))[:2] + (next(iter(unique.values()))[2],), observations
+        return None, observations
+    return next(iter(unique.values())), observations
 
 def prepare(prior_dir, out_dir):
     from coincurve import PrivateKey
@@ -358,9 +358,9 @@ def prepare(prior_dir, out_dir):
     if not accept6 or not accept8:
         raise RuntimeError("HOLD_EXTERNAL_RELAY_PUBLISH_UNAVAILABLE")
     time.sleep(2)
-    rb6, _, obs6 = fetch_many(accept6, event6["pubkey"], target_for_event(event6))
-    rb8, _, obs8 = fetch_many(accept8, event8["pubkey"], target_for_event(event8))
-    if rb6 is None or rb8 is None:
+    got6, obs6 = fetch_many(accept6, event6["pubkey"], target_for_event(event6))
+    got8, obs8 = fetch_many(accept8, event8["pubkey"], target_for_event(event8))
+    if got6 is None or got8 is None:
         raise RuntimeError("HOLD_EXTERNAL_RELAY_READBACK_UNAVAILABLE")
     plan = {
         "topic": TOPIC,
