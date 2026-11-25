@@ -1,0 +1,70 @@
+name: R22.22 read-only persistence and portable verifier (advisory)
+on:
+  push:
+    branches: [research/r22-22-independent-recovery-root-20261125]
+    paths:
+      - .github/workflows/r22-22-read-only-recovery.yml
+      - implementation/research/r22_22_recovery_root/READBACK_REQUEST.txt
+      - implementation/research/r22_22_recovery_root/read_only.sh
+permissions:
+  contents: read
+concurrency:
+  group: r22-22-read-only
+  cancel-in-progress: false
+jobs:
+  readback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - name: Package exact pinned verifier sources and pointer only
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import pathlib,json,hashlib,zipfile,os
+          p=pathlib.Path('implementation/research/r22_22_recovery_root/')
+          pin=json.loads((p/'RECOVERY_PIN.json').read_bytes())
+          out=pathlib.Path(os.environ['RUNNER_TEMP'])/'kit.zip'
+          files={name:(p/name).read_bytes() for name in ('RECOVERY_PIN.json','read_only.sh','README.txt')}
+          for name,want in pin['source_git_blobs'].items():
+              b=(p.parent/name).read_bytes()
+              assert hashlib.sha1(b'blob '+str(len(b)).encode()+b'\0'+b).hexdigest()==want
+              files[name]=b
+          with zipfile.ZipFile(out,'w',compression=zipfile.ZIP_DEFLATED) as z:
+              for name,b in sorted(files.items()):
+                  i=zipfile.ZipInfo(name,(2026,11,25,0,0,0)); i.compress_type=zipfile.ZIP_DEFLATED
+                  z.writestr(i,b)
+          print('PORTABLE_KIT_SHA256',hashlib.sha256(out.read_bytes()).hexdigest())
+          (out.parent/'kit.sha256').write_text(hashlib.sha256(out.read_bytes()).hexdigest()+'  kit.zip\n')
+          with zipfile.ZipFile(out) as z: z.extractall(out.parent/'kit')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r22-22-portable-kit
+          path: |
+            ${{ runner.temp }}/kit.zip
+            ${{ runner.temp }}/kit.sha256
+          if-no-files-found: error
+          retention-days: 30
+      - name: Run portable kit with no GitHub artifact input and no new publication
+        run: bash "$RUNNER_TEMP/kit/read_only.sh" "$RUNNER_TEMP/readback"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r22-22-readback
+          path: |
+            ${{ runner.temp }}/readback/bootstrap.jsonl
+            ${{ runner.temp }}/readback/discovery.jsonl
+            ${{ runner.temp }}/readback/decision.jsonl
+            ${{ runner.temp }}/readback/recovered/
+          if-no-files-found: warn
+          retention-days: 30

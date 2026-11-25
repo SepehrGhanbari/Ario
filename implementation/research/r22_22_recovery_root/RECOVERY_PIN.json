@@ -1,0 +1,29 @@
+{
+  "profile": "ARIO-R22.22-RESEARCH_ONLY",
+  "source_commit": "e32a29470fdac4638e842052ce0caf2491fa93b1",
+  "relay": "wss://relay.nostr.net",
+  "capsule_id": "5f678677cf26986b76c552a8bb0ecc97db74d12ae3b7212697eee34db5fe32d5",
+  "archive_sha256": "2bedc6d0cc85857cfaed3ceafeb5d7700d78923057e661d9c5675d6925e6262b",
+  "policy": "sigsum-test1-2025",
+  "sigsum_version": "v0.14.1",
+  "first_index": 281668,
+  "first_checksum": "46aae12df174dd36537e66612a9c51cd9c8c114569ed89d2093c7da47597c3b4",
+  "retained_observation": {
+    "tree_size": 281670,
+    "tree_root": "dafc6911b16d150b1628937dd5030ba1b188b6ffe916837d41db37e4b867cefc",
+    "later_index": 281669,
+    "later_checksum": "e0f0e3c939401d4f39498a82613f5073f66fe829ef89a1441af03520e9938ab7",
+    "ledger_sha256": "2f4dc31993e113e884ebdc0befd6b7e7a21b28282093b32e35f68531bcf0faa0",
+    "observed_utc": "2026-11-25T17:29:54Z"
+  },
+  "source_git_blobs": {
+    "r22_21_bootstrap_capsule/capsule.py": "2cc9f8e71ab5aa0fbdba2c38e41bb9e8312e76ac",
+    "r22_21_external_deletion/experiment.py": "6d48054a13d31b26118c49e867db28f2ad55f3b0",
+    "r22_20_external_monotonic_floor/external_floor.py": "fbb47a4f63c889170bdfabdadbe28dafd9812603",
+    "r22_10_blind_discovery/main.go": "2276889ea769dd7377c26fb5f5bf2d55963e0b44",
+    "r22_10_blind_discovery/main_test.go": "eba63aba23ac48d38a66b652d7dcf3c387088256",
+    "r22_10_blind_discovery/go.mod": "b49eeea0e7a303278b2316c68641ad505dfcd5c9"
+  },
+  "trust_activation": "NO_GO",
+  "production": "NO_GO"
+}
