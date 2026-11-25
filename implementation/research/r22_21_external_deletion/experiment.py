@@ -91,6 +91,23 @@ def prepare(old_first,old_second,out):
     if any(set(observations[n]["ack"])!=set(ALL) or any(o["status"]!="MATCH" for o in observations[n]["readback"]) for n in observations):
         print(json.dumps(observations),flush=True)
         raise RuntimeError("HOLD_PREDELETE_THREE_SOURCE_READBACK")
+    # Both event IDs are witnessed before issuing any deletion request.
+    with tempfile.TemporaryDirectory(prefix="r22-21-test-key-") as tmp:
+        k=Path(tmp)/"log-key"
+        subprocess.run(["sigsum-key","generate","-o",str(k)],check=True,cwd=tmp)
+        pubkey=Path(str(k)+".pub")
+        for name in ("first","second"):
+            msg=out/name/"event-id.txt"
+            proof=Path(str(msg)+".proof")
+            subprocess.run(["sigsum-submit","-P","sigsum-test1-2025","-k",str(k),str(msg)],check=True)
+            with msg.open("rb") as stream:
+                subprocess.run(["sigsum-verify","-k",str(pubkey),"-P","sigsum-test1-2025",str(proof)],stdin=stream,check=True)
+            if name=="first": f.create_bootstrap(out/name,pubkey)
+        def leaf(path):
+            return {k:v for k,sep,v in (line.partition("=") for line in path.read_text().splitlines()) if sep and k in ("leaf_index","size","log","leaf")}
+        l1=leaf(out/"first"/"event-id.txt.proof");l2=leaf(out/"second"/"event-id.txt.proof")
+        assert int(l2["leaf_index"])>int(l1["leaf_index"]) and int(l2["size"])>int(l1["size"])
+        assert l1["log"]==l2["log"]==f.LOG_ID and l1["leaf"].split()[0]==l2["leaf"].split()[0]
     d=deletion(v8,key)
     ok,err=f.publish_event(d,AB) # only own freshly generated event; never third
     write(out/"second"/"deletion.json",d)
