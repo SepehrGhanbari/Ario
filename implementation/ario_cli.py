@@ -211,7 +211,7 @@ def main(argv=None) -> int:
     parser.add_argument(
         "--bridge-agent-ledger",
         action="store_true",
-        help="Bridge an agent execution JSONL ledger into cognitive memory and evaluate prospective cues",
+        help="Audit untrusted agent JSONL into recorded-only cognitive memory; do not activate intentions",
     )
     args = parser.parse_args(argv)
 
@@ -297,6 +297,7 @@ def main(argv=None) -> int:
                     f"- **Steps Observed:** {res_dict['steps_observed']}\n"
                     f"- **Nodes Consolidated:** {res_dict['nodes_consolidated']}\n"
                     f"- **Contested Nodes:** {res_dict['contested_nodes_count']}\n"
+                    f"- **Reported Task Finishes (Unverified):** {res_dict['reported_task_finishes_count']}\n"
                     f"- **Triggered Intentions:** {res_dict['triggered_intentions_count']}\n"
                 )
             if args.output:
