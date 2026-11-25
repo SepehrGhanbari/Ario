@@ -75,9 +75,12 @@ def _sha256(data):
 
 
 def git_blob_sha1(data):
-    """Return Git's object ID for exact file bytes; this is source pinning only."""
-    header = b"blob " + str(len(data)).encode("ascii") + b"\0"
-    return hashlib.sha1(header + data).hexdigest()
+    """Return the Git blob ID, normalizing Windows CRLF checkout bytes to LF."""
+    normalized = data.replace(b"\r\n", b"\n")
+    if b"\r" in normalized:
+        raise AdapterHold("Broker source contains an unsupported standalone CR byte")
+    header = b"blob " + str(len(normalized)).encode("ascii") + b"\0"
+    return hashlib.sha1(header + normalized).hexdigest()
 
 
 def _no_duplicates(pairs):
