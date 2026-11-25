@@ -57,7 +57,11 @@ jobs:
             https://dpaste.com/api/v2/)
           test "$ds" = "200" -o "$ds" = "201"
           dresp=$(tr -d '\r\n ' < "$RUNNER_TEMP/dpaste.response")
-          if [[ "$dresp" == http* ]]; then dpaste_url="$dresp"; else dpaste_url="https://dpaste.com/${dresp}.txt"; fi
+          if [[ "$dresp" == http* ]]; then
+            dpaste_url="${dresp%.txt}.txt"
+          else
+            dpaste_url="https://dpaste.com/${dresp}.txt"
+          fi
           curl --fail --silent --show-error "$dpaste_url" -o "$RUNNER_TEMP/dpaste.readback.json"
           cmp "$P" "$RUNNER_TEMP/dpaste.readback.json"
           # paste.rs: separate operator/service; retention is not promised.
