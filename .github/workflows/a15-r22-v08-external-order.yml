@@ -1,0 +1,159 @@
+name: A15 v0.8 R22 real TEST external ordering and blind readback (HOLD)
+on:
+  push:
+    branches: [research/a15-r22-v08-external-order-20261124]
+    paths: ['.github/workflows/a15-r22-v08-external-order.yml']
+permissions:
+  contents: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - name: Check pinned R22 and A15 dependencies; run offline controls
+        run: |
+          set -euo pipefail
+          test "$(git hash-object implementation/research/r22_11_external_content/recovery.py)" = 560391d6a1e99726b945503505b423d998604257
+          test "$(git hash-object implementation/research/r22_10_blind_discovery/main.go)" = 2276889ea769dd7377c26fb5f5bf2d55963e0b44
+          test "$(git hash-object implementation/research/a15_external_floor_simulator_v0_4.js)" = 7565b16f851e8b55b0317bd5d9910b46c09ef779
+          test "$(git hash-object implementation/research/a15_temporal_evidence_verifier_v0_5.js)" = 732fd4a9385b2c2437d1158bc06388d94f34594b
+          test "$(git hash-object implementation/research/a15_integrated_temporal_ledger_v0_7.js)" = d53ee94d1b6fd15a2387643f88986fd61d1eba81
+          test "$(git hash-object implementation/tests/fixtures/a15_v07_fixture.js)" = 49d88be1a4255570156b9b4f0fb59e16aad4d599
+          node --test implementation/research/a15_r22_external_order/test_bridge.js
+          python -m pip install coincurve==21.0.0 websockets==15.0.1
+          python -m unittest discover -s implementation/research/a15_r22_external_order -p 'test_transport.py' -v
+          for t in sigsum-key sigsum-submit sigsum-verify; do go install "sigsum.org/sigsum-go/cmd/$t@v0.14.1"; done
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - name: Live synthetic v0.7 production with three external commitments
+        run: |
+          set -euo pipefail
+          ROOT=$(mktemp -d "$RUNNER_TEMP/a15-publish.XXXXXX")
+          K=$(mktemp -d "$RUNNER_TEMP/a15-key.XXXXXX")
+          trap 'rm -rf "$ROOT" "$K"' EXIT
+          chmod 0700 "$ROOT" "$K"
+          (cd "$K"; sigsum-key generate -o ephemeral)
+          export A15_EPHEMERAL_SIGSUM_KEY="$K/ephemeral"
+          python -c 'import secrets; print(secrets.token_hex(24))' > "$ROOT/scope.txt"
+          node implementation/research/a15_r22_external_order/bridge.js produce "$ROOT"
+          python implementation/research/a15_r22_external_order/transport.py export "$ROOT" "$RUNNER_TEMP/a15-first" "$RUNNER_TEMP/a15-reveal"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: A15-FIRST-ONLY
+          path: ${{ runner.temp }}/a15-first/
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        with:
+          name: A15-WITHHELD-REVEAL
+          path: ${{ runner.temp }}/a15-reveal/
+          if-no-files-found: error
+          retention-days: 30
+  discover:
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: A15-FIRST-ONLY
+          path: ${{ runner.temp }}/a15-first
+      - name: Blind discover two later checksums using original R22 scanner
+        run: |
+          set -euo pipefail
+          test ! -e "$RUNNER_TEMP/a15-reveal"
+          test ! -e "$RUNNER_TEMP/a15-recovered"
+          test "$(git hash-object implementation/research/r22_10_blind_discovery/main.go)" = 2276889ea769dd7377c26fb5f5bf2d55963e0b44
+          test "$(git hash-object implementation/research/r22_11_external_content/recovery.py)" = 560391d6a1e99726b945503505b423d998604257
+          LAB=$(mktemp -d "$RUNNER_TEMP/a15-scan.XXXXXX")
+          trap 'rm -rf "$LAB"' EXIT
+          cp implementation/research/r22_10_blind_discovery/{main.go,main_test.go,go.mod} "$LAB/"
+          cp "$RUNNER_TEMP/a15-first/"{bootstrap.json,local-state.json} "$LAB/"
+          cd "$LAB"
+          # Only the experiment's expected match count changes; all existing proof checks stay intact.
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('main.go');s=p.read_text();old='if discovered!=1 || disposition!='
+          assert s.count(old)==1
+          p.write_text(s.replace(old,'if discovered!=2 || disposition!='))
+          PY
+          sha256sum local-state.json > before.sha256
+          go mod tidy
+          go test -v ./...
+          go run . | tee "$RUNNER_TEMP/a15-discovery.jsonl"
+          sha256sum -c before.sha256
+      - name: Recover three preimages from the same real R22 relays and verify evidence
+        run: |
+          set -euo pipefail
+          go install sigsum.org/sigsum-go/cmd/sigsum-verify@v0.14.1
+          export PATH="$(go env GOPATH)/bin:$PATH"
+          python -m pip install coincurve==21.0.0 websockets==15.0.1
+          A="$RUNNER_TEMP/a15-first"
+          sha256sum "$A/"* > "$RUNNER_TEMP/a15-before.sha256"
+          python implementation/research/a15_r22_external_order/transport.py recover "$A" "$RUNNER_TEMP/a15-discovery.jsonl" "$RUNNER_TEMP/a15-recovered"
+          sha256sum -c "$RUNNER_TEMP/a15-before.sha256"
+          cp "$RUNNER_TEMP/a15-discovery.jsonl" "$RUNNER_TEMP/a15-recovered/discovery.jsonl"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: A15-BLIND-RECOVERED
+          path: ${{ runner.temp }}/a15-recovered/
+          if-no-files-found: error
+          retention-days: 30
+  reveal:
+    needs: discover
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: A15-FIRST-ONLY
+          path: ${{ runner.temp }}/a15-first
+      - uses: actions/download-artifact@v4
+        with:
+          name: A15-WITHHELD-REVEAL
+          path: ${{ runner.temp }}/a15-reveal
+      - uses: actions/download-artifact@v4
+        with:
+          name: A15-BLIND-RECOVERED
+          path: ${{ runner.temp }}/a15-recovered
+      - name: Compare actual recovered bytes with withheld originals and verify all proofs
+        run: |
+          set -euo pipefail
+          go install sigsum.org/sigsum-go/cmd/sigsum-verify@v0.14.1
+          export PATH="$(go env GOPATH)/bin:$PATH"
+          python implementation/research/a15_r22_external_order/transport.py reveal "$RUNNER_TEMP/a15-first" "$RUNNER_TEMP/a15-reveal" "$RUNNER_TEMP/a15-recovered"
