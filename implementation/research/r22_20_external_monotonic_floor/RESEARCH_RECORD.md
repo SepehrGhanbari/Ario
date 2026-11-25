@@ -38,3 +38,18 @@ This is still a public TEST log, public relays, synthetic content and ephemeral 
 - No authority or production transition is possible.
 
 Execution pending. Record actual run, per-relay acknowledgements/readbacks, Sigsum leaf indices and artifact hashes in a separate addendum.
+
+## Verified execution — 2026-11-25
+
+[Final fully audited run 45656119263](https://github.com/SepehrGhanbari/Ario/actions/runs/45656119263), exact source HEAD 1735ee01a631d558826a8f59b57e08992cd6d510: publish, discover and audit jobs all SUCCESS. The cold runner verified both the prior R22.15B signed checkpoint and the first new event proof, received no second event or second checksum, scanned the live cosigned tree, discovered exactly two matching leaves from the new ephemeral Sigsum signer, and recovered seq=8 from Nostr.
+
+- Prior R22.15B artifact 14954102679 ZIP SHA256 d3b860cc3c0167e8d709a5336a26be231e8143e188b2094250e3fbb1f71ea3db; prior envelope SHA256 331b2888e2a6910b2c731e48ddad5d9f950e5d2f66e4bc7bc378eac55c3db8d8.
+- Both relays accepted and returned both events after the publisher job ended: nos.lol and relay.primal.net. The cold readback also succeeded independently from both.
+- Sigsum live scan: complete suffix PASS; first leaf index 281660, checksum 21c7cfeb32d57f4904219a58083f8146f5ad029b4a4d627cf5cc46d510a39b3d; second leaf index 281661, checksum be30269b059f132780856dbec15b66e14b1faa811e99a977c7ecdb377511cd8d; sampled tree size 281662, root d90587b3caa90db6a6936507ad2dfdbd870f4c22fc08c0c623baba78e9335ac5.
+- Recovered Nostr event ID 58e59d92ffe699b870574e8604450a3785d089dd5c89154df867ea2e4e3a4a77; recovered seq=8; ledger SHA256 2d6f47d5d81cef5d7a8ba295f87da1ccfca69b66e6d2afcfd2c17fb80f398fed. The reveal-stage audit compared recovered envelope, ledger and event byte-for-byte with the withheld publisher copy.
+- Fault controls: forced local endpoint outage + surviving real relay => PASS; old seq=6 event replayed against seq=8 leaf => HOLD_STALE_EVENT_REPLAY; both content endpoints deliberately unavailable while Sigsum still exposed the newer leaf => HOLD_CONTENT_UNAVAILABLE / HOLD_OPAQUE_NEW_SIGNED_COMMITMENT.
+- Final artifacts: FIRST-ONLY 15043430796 SHA256 6b9620ab9ecfd2c53167751d33390398696ca170f8323b659779184ab30e65ad (11365 bytes); SECOND-REVEAL 15043196552 SHA256 da9be84a51aae427c6d88b24edc4b948756258b464faa62cf2d446542c466a1e (7093 bytes); BLIND-RECOVERY 15042358395 SHA256 025778503d12accea55aac121e0290c26a48953db60a9ba0fb7ed24a7d115ca9 (6881 bytes); AUDIT-REPORT 15042936651 SHA256 c071da63fc5178e525b7da40c8bdf32e403cb3615a5e3653b0ebe07d04bf2afb (671 bytes). Artifact downloads were checksum-verified by Actions; expiry 2026-12-25.
+
+Earlier harness attempts had implementation/orchestration failures (escaped token expression, CLI arity, directory hashing, and audit-report selection). They are not counted as evidence. Some failed attempts left synthetic public TEST events and an orphan first-leaf commitment on public test infrastructure; no private key or real user data was published. The final run above is the one used for the PASS claim.
+
+**Disposition:** bounded external blind-recovery experiment PASS. Not proof of permanent relay availability, relay-operator administrative independence, global latest/freshness beyond the sampled witnessed head, historical truth, persistent signer continuity, production readiness, or trust activation. If both relays delete/withhold the content, only the opaque Sigsum commitment remains. R22.20 remains RESEARCH_ONLY / HOLD.
