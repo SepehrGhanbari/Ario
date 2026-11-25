@@ -24,18 +24,20 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: '3.13'
-      - name: Rebuild exact portable kit from six pinned source blobs
+      - name: Rebuild exact portable kit from pinned historical source commit
         run: |
           set -euo pipefail
+          git fetch --no-tags origin e32a29470fdac4638e842052ce0caf2491fa93b1
           python - <<'PY'
-          import pathlib,json,hashlib,zipfile,os
+          import pathlib,json,hashlib,zipfile,os,subprocess
           p=pathlib.Path('implementation/research/r22_22_recovery_root/')
           pin=json.loads((p/'RECOVERY_PIN.json').read_bytes())
           out=pathlib.Path(os.environ['RUNNER_TEMP'])/'kit.zip'
           files={name:(p/name).read_bytes() for name in ('RECOVERY_PIN.json','read_only.sh','README.txt')}
           for name,want in pin['source_git_blobs'].items():
-              b=(p.parent/name).read_bytes()
-              assert hashlib.sha1(b'blob '+str(len(b)).encode()+b'\\0'+b).hexdigest()==want
+              b=subprocess.check_output(["git","show",f"{pin['source_commit']}:{p.parent/name}"])
+              got=hashlib.sha1(b'blob '+str(len(b)).encode()+b'\\0'+b).hexdigest()
+              assert got==want,(name,got,want)
               files[name]=b
           with zipfile.ZipFile(out,'w',compression=zipfile.ZIP_DEFLATED) as z:
               for name,b in sorted(files.items()):
