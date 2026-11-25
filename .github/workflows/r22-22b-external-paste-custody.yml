@@ -36,7 +36,7 @@ jobs:
           files={name:(p/name).read_bytes() for name in ('RECOVERY_PIN.json','read_only.sh','README.txt')}
           for name,want in pin['source_git_blobs'].items():
               b=subprocess.check_output(["git","show",f"{pin['source_commit']}:{p.parent/name}"])
-              got=hashlib.sha1(b'blob '+str(len(b)).encode()+b'\\0'+b).hexdigest()
+              got=hashlib.sha1(b'blob '+str(len(b)).encode()+b'\0'+b).hexdigest()
               assert got==want,(name,got,want)
               files[name]=b
           with zipfile.ZipFile(out,'w',compression=zipfile.ZIP_DEFLATED) as z:
