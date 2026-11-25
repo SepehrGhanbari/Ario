@@ -5,8 +5,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"r22_20_external_monot
 import external_floor as f
 from coincurve import PrivateKey
 AB=f.RELAYS
-C="wss://relay.damus.io"
-ALL=(*AB,C)
+THIRD=("wss://relay.nostr.net","wss://nostr-01.yakihonne.com")
 GOOD="RECOVERED_EXACT_SYNTHETIC_CONTENT_ONLY"
 
 def read(p):
@@ -83,12 +82,28 @@ def prepare(old_first,old_second,out):
     (out/"first"/"historical-first-id.txt").write_bytes(f.event_leaf_message(old))
     (out/"second"/"historical-second.proof").write_bytes((b/"event-id.txt.proof").read_bytes())
     (out/"second"/"historical-second-id.txt").write_bytes(f.event_leaf_message(later))
-    observations={}
+    # Confirm a third endpoint first. Never send deletion if preconditions fail.
+    third_attempts=[]
+    chosen=None
+    for url in THIRD:
+        trial={}
+        for name,event in (("first",v6),("second",v8)):
+            ok,err=f.publish_event(event,(url,))
+            trial[name]={"ack":ok,"errors":err,"readback":[query(url,event["pubkey"],f.target_for_event(event),event["id"])[1]]}
+        third_attempts.append({"relay":url,"observations":trial})
+        if all(trial[n]["ack"]==[url] and trial[n]["readback"][0]["status"]=="MATCH" for n in trial):
+            chosen=url;observations=trial;break
+    if chosen is None:
+        print(json.dumps({"third_attempts":third_attempts}),flush=True)
+        raise RuntimeError("HOLD_NO_THIRD_SOURCE")
+    write(out/"first"/"third.json",{"relay":chosen})
     for name,event in (("first",v6),("second",v8)):
-        ok,err=f.publish_event(event,ALL)
-        observations[name]={"ack":ok,"errors":err,"readback":[query(url,event["pubkey"],f.target_for_event(event),event["id"])[1] for url in ALL]}
-    # Require positive pre-deletion observation from each primary and third.
-    if any(set(observations[n]["ack"])!=set(ALL) or any(o["status"]!="MATCH" for o in observations[n]["readback"]) for n in observations):
+        ok,err=f.publish_event(event,AB)
+        observations[name]["ack"].extend(ok)
+        observations[name]["errors"].extend(err)
+        observations[name]["readback"].extend(query(url,event["pubkey"],f.target_for_event(event),event["id"])[1] for url in AB)
+    all_urls=(*AB,chosen)
+    if any(set(observations[n]["ack"])!=set(all_urls) or any(o["status"]!="MATCH" for o in observations[n]["readback"]) for n in observations):
         print(json.dumps(observations),flush=True)
         raise RuntimeError("HOLD_PREDELETE_THREE_SOURCE_READBACK")
     # Both event IDs are witnessed before issuing any deletion request.
@@ -113,8 +128,8 @@ def prepare(old_first,old_second,out):
     write(out/"second"/"deletion.json",d)
     # Do not republish after deletion; capture exact observations without hiding negative results.
     time.sleep(4)
-    post=[query(url,v8["pubkey"],f.target_for_event(v8),v8["id"])[1] for url in ALL]
-    report={"before":observations,"delete_ack":ok,"delete_errors":err,"after":post,
+    post=[query(url,v8["pubkey"],f.target_for_event(v8),v8["id"])[1] for url in all_urls]
+    report={"before":observations,"third_attempts":third_attempts,"chosen_third":chosen,"delete_ack":ok,"delete_errors":err,"after":post,
             "physical_erasure":"NOT_ESTABLISHED","private_key_exported":False}
     write(out/"second"/"publisher-report.json",report)
     print(json.dumps(report,sort_keys=True),flush=True)
@@ -131,7 +146,10 @@ def recover(first,scan,out):
         raise ValueError("HOLD_DISCOVERY")
     target=m[1]["checksum"];pub=anchor["pubkey"]
     # Third-only recovery: A/B are observed separately, never used for output.
-    later,third=query(C,pub,target)
+    chosen=read(first/"third.json")["relay"]
+    if chosen not in THIRD: raise ValueError("HOLD_UNKNOWN_THIRD")
+    if (first/"historical-first-id.txt").read_bytes()!=f.event_leaf_message(old): raise ValueError("HOLD_HISTORICAL_FIRST_BINDING")
+    later,third=query(chosen,pub,target)
     primary=[query(url,pub,target)[1] for url in AB]
     report={"third":third,"primary":primary,"target":target,
             "primary_both_eose_no_match":all(x["status"]=="EOSE_NO_MATCH" for x in primary),
