@@ -11,7 +11,6 @@ import hashlib
 import json
 import re
 import sqlite3
-import stat
 import sys
 from pathlib import Path
 
@@ -323,8 +322,6 @@ def _read_broker_snapshot(state_dir, previous_head):
                 raise AdapterHold("SQLite sidecar appeared during snapshot")
         return head_seq, head_hash
     except (sqlite3.Error, OSError) as exc:
-        if isinstance(exc, AdapterHold):
-            raise
         raise AdapterHold("read-only SQLite snapshot failed") from exc
     finally:
         if conn is not None:
