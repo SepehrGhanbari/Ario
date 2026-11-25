@@ -153,7 +153,7 @@ def test_direct_empirical_guard_api_remains_distinct_from_ledger_replay():
     from core.source_monitoring import SourceMonitoringGuard
     guard = SourceMonitoringGuard()
     attr = guard.record_empirical_observation(
-        assertion="SYNTHETIC direct test call, not external custody",
+        assertion="tool_exit:run_tests:synthetic/test.py:0",
         tool="run_tests", target="synthetic/test.py",
         exit_code=0, stdout="test result", execution_lock="test-local-lock",
     )
