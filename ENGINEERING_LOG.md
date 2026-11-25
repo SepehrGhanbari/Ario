@@ -728,3 +728,12 @@ Base 7365e7a9ac7febb78b34039c7b36469b3344cfff. Windows CPython 3.13, stdlib unit
 - **Important unresolved boundary:** the direct `record_empirical_observation` API still does not authenticate its caller. The new bridge path no longer invokes it from replayed JSONL; this does not prove independent execution custody or secure the API for arbitrary callers.
 - **Validation:** pending PR CI on the integrated exact head. Do not claim PASS or merge until the exact head is tested and required independent review is available for this high-impact memory boundary.
 - No historical ledger bytes, old RED evidence, real keys, signer, TPM, trust, Genesis, production, or main branch were changed.
+
+
+## 2026-11-25 — Ledger-boundary integration first exact-head RED and test corrections
+
+- First integration PR CI on head `2eac4f68681c2c66291424ca1e034824e3e015b6` exposed six test failures; the historical result is retained as RED, not relabelled.
+- Findings: one new unittest fixture wrote literal backslash-n separators instead of JSONL line breaks; two regression assertions expected shared object identity despite #381's defensive-copy registry; three direct empirical positive controls used arbitrary prose rather than #381's narrow canonical `tool_exit:{tool}:{target}:{exit_code}` assertion and therefore correctly returned `UNSUPPORTED`.
+- Corrections: write real newline-delimited JSON; compare defensive-copy values and assert the revision history remains one entry; use the canonical narrow empirical assertion for direct API positive controls. No production or authority boundary was weakened to satisfy tests.
+- Corrected test blobs/commits: `test_ledger_memory_bridge.py` commit `4ff5d0291e50b34cf76d4cf25c9848e770c85eeb`; `test_ledger_report_source_integrity_regression.py` commit `ad5647f6c060465f59ca6a006c4a1b6358ea7924`; `test_source_guard_allowlist_and_exit_code_red.py` commit `402f09d02d444319b9936d72671e15ca2993d21b`; `test_ledger_bridge_untrusted_step_red.py` commit `1fe951fa1abbfaea52ffb686de181161e48c7834`.
+- Current integrated branch head at time of this entry: `1fe951fa1abbfaea52ffb686de181161e48c7834`. Exact-head revalidation is required; no PASS is claimed yet.
