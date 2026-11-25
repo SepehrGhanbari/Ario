@@ -83,7 +83,7 @@ class LedgerMemoryBridgeTests(unittest.TestCase):
                 {"event": "TASK_STARTED", "task_id": "build-prod", "goal": "Compile release"},
                 {"event": "TASK_FINISHED", "task_id": "build-prod", "status": "COMPLETED", "exit_code": 0},
             ]
-            ledger_path.write_text("\\n".join(json.dumps(ev) for ev in events) + "\\n", encoding="utf-8")
+            ledger_path.write_text("\n".join(json.dumps(ev) for ev in events) + "\n", encoding="utf-8")
 
             registry = ProspectiveMemoryRegistry()
             registry.register_intention(
