@@ -5,7 +5,7 @@ on:
       - research/r22-20-external-monotonic-floor-20261125
     paths:
       - .github/workflows/r22-20-external-monotonic-floor.yml
-      - implementation/research/r22_20_external_monotonic_floor/**
+      - implementation/research/r22_20_external_monotonic_floor/*.py
 permissions:
   contents: read
   actions: read
