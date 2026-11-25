@@ -67,7 +67,7 @@ class ExternalFloorTests(unittest.TestCase):
 
     def test_wrong_target_rejected(self):
         key,prior,l6,e6,v6,l8,e8,v8=pair()
-        with self.assertRaises(ValueError): f.extract_target([v8], "0"*64,key.public_key_xonly.format().hex())
+        self.assertIsNone(f.extract_target([v8], "0"*64,key.public_key_xonly.format().hex())[0])
 
     def test_wrong_predecessor_rejected(self):
         key,prior,l6,e6,v6,l8,e8,v8=pair()
