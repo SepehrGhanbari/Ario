@@ -982,3 +982,7 @@ Portable kit artifact 15047820982 SHA256 63572c0451b5d3aa0bd24040054c0e42db330cb
 ## 2026-11-25 — R22.22 initial portable recovery readback
 
 - [Read-only run 45665975570](https://github.com/SepehrGhanbari/Ario/actions/runs/45665975570): SUCCESS. Portable kit SHA256 304765d8d7f0da2d5e62443b7d1f48c00c8ff9bd324b8f8ed9c88c0ab7fffe24; six source blob pins matched; no GitHub artifact input; exact bootstrap capsule and seq8 content recovered from relay.nostr.net, old replay HOLD, no publication. Outer pin still needs storage outside GitHub. 24h/7d delayed reads pending. Full evidence in implementation/research/r22_22_recovery_root/RESEARCH_RECORD.md. No independent custody or admin-resistance claim.
+## 2026-11-25 — R22.22B external-copy attempt and offline pin handoff
+
+- Verified portable kit 21,447 bytes, SHA256 304765d8d7f0da2d5e62443b7d1f48c00c8ff9bd324b8f8ed9c88c0ab7fffe24. dpaste.com failed strict TLS validation (no bypass); paste.centos.org returned an unexpected API response; paste.rs immediate upload/readback matched, but a later fresh-job readback failed JSON parsing and was not accepted as reliable persistence. No cold recovery or repository-rollback claim for R22.22B.
+- Separate user-facing offline kit and OUTER-PIN file generated outside GitHub. The user still needs to store them separately on a device/custodian; independent custody NOT_ESTABLISHED until that occurs. See implementation/research/r22_22_recovery_root/RESEARCH_RECORD.md. No trust activation or production.
