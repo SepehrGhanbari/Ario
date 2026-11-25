@@ -130,8 +130,12 @@ jobs:
         with:
           go-version: '1.25'
           cache: false
-      - name: Install untrusted relay parser dependencies
-        run: python -m pip install coincurve==21.0.0 websockets==15.0.1
+      - name: Install official Sigsum verifier and untrusted relay parser dependencies
+        run: |
+          set -euo pipefail
+          go install sigsum.org/sigsum-go/cmd/sigsum-verify@v0.14.1
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+          python -m pip install coincurve==21.0.0 websockets==15.0.1
       - uses: actions/download-artifact@v4
         with:
           name: r22-20-FIRST-ONLY
@@ -142,6 +146,12 @@ jobs:
           F="$RUNNER_TEMP/first-only"
           test -f "$F/bootstrap.json"
           test -f "$F/event.json"
+          test -f "$F/prior-anchor/envelope.json"
+          test -f "$F/prior-anchor/envelope.json.proof"
+          test -f "$F/prior-anchor/ledger.jsonl"
+          test -f "$F/prior-anchor/key.pub"
+          sigsum-verify -k "$F/prior-anchor/key.pub" -P sigsum-test1-2025 "$F/prior-anchor/envelope.json.proof" < "$F/prior-anchor/envelope.json"
+          sigsum-verify -k "$F/log-key.pub" -P sigsum-test1-2025 "$F/event-id.txt.proof" < "$F/event-id.txt"
           test ! -e "$F/second"
           test ! -e "$RUNNER_TEMP/r22-20/publisher/second"
           find "$F" -maxdepth 1 -type f -printf '%f\n' | sort
