@@ -10,9 +10,9 @@ concurrency:
   group: r22-22b-external-paste-custody
   cancel-in-progress: false
 jobs:
-  publish:
+  pin-check:
     runs-on: ubuntu-latest
-    timeout-minutes: 6
+    timeout-minutes: 5
     permissions:
       contents: read
     outputs:
@@ -24,56 +24,26 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: '3.13'
-      - name: Rebuild exact portable kit from pinned historical source commit
-        run: |
-          set -euo pipefail
-          git fetch --no-tags origin e32a29470fdac4638e842052ce0caf2491fa93b1
-          python - <<'PY'
-          import pathlib,json,hashlib,zipfile,os,subprocess
-          p=pathlib.Path('implementation/research/r22_22_recovery_root/')
-          pin=json.loads((p/'RECOVERY_PIN.json').read_bytes())
-          out=pathlib.Path(os.environ['RUNNER_TEMP'])/'kit.zip'
-          files={name:(p/name).read_bytes() for name in ('RECOVERY_PIN.json','read_only.sh','README.txt')}
-          for name,want in pin['source_git_blobs'].items():
-              b=subprocess.check_output(["git","show",f"{pin['source_commit']}:{p.parent/name}"])
-              got=hashlib.sha1(b'blob '+str(len(b)).encode()+b'\0'+b).hexdigest()
-              assert got==want,(name,got,want)
-              files[name]=b
-          with zipfile.ZipFile(out,'w',compression=zipfile.ZIP_DEFLATED) as z:
-              for name,b in sorted(files.items()):
-                  i=zipfile.ZipInfo(name,(2026,11,25,0,0,0)); i.compress_type=zipfile.ZIP_DEFLATED
-                  z.writestr(i,b)
-          digest=hashlib.sha256(out.read_bytes()).hexdigest()
-          assert digest=="304765d8d7f0da2d5e62443b7d1f48c00c8ff9bd324b8f8ed9c88c0ab7fffe24",digest
-          raw=out.read_bytes()
-          obj={"profile":"ARIO-R22.22B-EXTERNAL-KIT-COPY","kit_sha256":digest,
-               "kit_bytes":len(raw),"capsule_id":"5f678677cf26986b76c552a8bb0ecc97db74d12ae3b7212697eee34db5fe32d5",
-               "sigsum_tree_size":281670,"sigsum_tree_root":"dafc6911b16d150b1628937dd5030ba1b188b6ffe916837d41db37e4b867cefc",
-               "kit_base64":__import__('base64').b64encode(raw).decode('ascii')}
-          payload=pathlib.Path(os.environ['RUNNER_TEMP'])/'pin.json'
-          payload.write_text(json.dumps(obj,sort_keys=True,separators=(",",":"))+"\\n",encoding="ascii")
-          print("KIT_SHA256",digest,"PIN_PAYLOAD_SHA256",hashlib.sha256(payload.read_bytes()).hexdigest())
-          PY
-      - name: Publish to paste.rs and verify exact readback
+      - name: Read back the already-published external copy; do not republish
         id: pin
         run: |
           set -euo pipefail
-          P="$RUNNER_TEMP/pin.json"
-          status=$(curl --silent --show-error --output "$RUNNER_TEMP/paste-rs.response" --write-out '%{http_code}' \
-            -H 'Content-Type: application/json' -H 'User-Agent: Ario-R22.22B-Research/1.0' \
-            --data-binary "@$P" https://paste.rs/)
-          test "$status" = "201"
-          paste_rs_url=$(tr -d '\r\n ' < "$RUNNER_TEMP/paste-rs.response")
-          case "$paste_rs_url" in https://paste.rs/*) ;; *) echo "unexpected paste.rs URL" >&2; exit 1;; esac
-          curl --fail --silent --show-error "$paste_rs_url" -o "$RUNNER_TEMP/paste-rs.readback.json"
-          cmp "$P" "$RUNNER_TEMP/paste-rs.readback.json"
-          echo "PASTE_RS_URL=$paste_rs_url"
-          echo "paste_rs_url=$paste_rs_url" >> "$GITHUB_OUTPUT"
+          url="https://paste.rs/m18dx"
+          curl --fail --silent --show-error "$url" -o "$RUNNER_TEMP/pin.json"
+          python - "$RUNNER_TEMP/pin.json" <<'PY'
+          import base64,hashlib,json,pathlib,sys
+          o=json.loads(pathlib.Path(sys.argv[1]).read_bytes())
+          expected="304765d8d7f0da2d5e62443b7d1f48c00c8ff9bd324b8f8ed9c88c0ab7fffe24"
+          assert o["profile"]=="ARIO-R22.22B-EXTERNAL-KIT-COPY"
+          raw=base64.b64decode(o["kit_base64"],validate=True)
+          assert len(raw)==o["kit_bytes"] and hashlib.sha256(raw).hexdigest()==expected==o["kit_sha256"]
+          print("EXTERNAL_PASTE_EXACT_PIN_READBACK",expected,len(raw))
+          PY
+          echo "paste_rs_url=$url" >> "$GITHUB_OUTPUT"
           mkdir "$RUNNER_TEMP/evidence"
-          cp "$P" "$RUNNER_TEMP/evidence/pin.json"
-          cp "$RUNNER_TEMP/paste-rs.readback.json" "$RUNNER_TEMP/evidence/paste-rs.readback.json"
-          printf '%s\n' "$paste_rs_url" > "$RUNNER_TEMP/evidence/paste-rs.url"
-          sha256sum "$P" "$RUNNER_TEMP/artifact/kit.zip" > "$RUNNER_TEMP/evidence/hashes.txt"
+          cp "$RUNNER_TEMP/pin.json" "$RUNNER_TEMP/evidence/pin.json"
+          printf '%s\n' "$url" > "$RUNNER_TEMP/evidence/paste-rs.url"
+          sha256sum "$RUNNER_TEMP/pin.json" > "$RUNNER_TEMP/evidence/pin.sha256"
       - uses: actions/upload-artifact@v4
         with:
           name: r22-22b-external-pin-evidence
@@ -81,7 +51,7 @@ jobs:
           if-no-files-found: error
           retention-days: 30
   cold:
-    needs: publish
+    needs: pin-check
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -98,9 +68,9 @@ jobs:
         with:
           go-version: '1.25'
           cache: false
-      - name: Recover portable kit from paste.rs after repository checkout rollback
+      - name: Recover portable kit from external paste after repository checkout rollback
         env:
-          PASTE_RS_URL: \${{ needs.publish.outputs.paste_rs_url }}
+          PASTE_RS_URL: \${{ needs.pin-check.outputs.paste_rs_url }}
         run: |
           set -euo pipefail
           test -n "$PASTE_RS_URL"
