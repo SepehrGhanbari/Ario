@@ -737,3 +737,18 @@ Base 7365e7a9ac7febb78b34039c7b36469b3344cfff. Windows CPython 3.13, stdlib unit
 - Corrections: write real newline-delimited JSON; compare defensive-copy values and assert the revision history remains one entry; use the canonical narrow empirical assertion for direct API positive controls. No production or authority boundary was weakened to satisfy tests.
 - Corrected test blobs/commits: `test_ledger_memory_bridge.py` commit `4ff5d0291e50b34cf76d4cf25c9848e770c85eeb`; `test_ledger_report_source_integrity_regression.py` commit `ad5647f6c060465f59ca6a006c4a1b6358ea7924`; `test_source_guard_allowlist_and_exit_code_red.py` commit `402f09d02d444319b9936d72671e15ca2993d21b`; `test_ledger_bridge_untrusted_step_red.py` commit `1fe951fa1abbfaea52ffb686de181161e48c7834`.
 - Current integrated branch head at time of this entry: `1fe951fa1abbfaea52ffb686de181161e48c7834`. Exact-head revalidation is required; no PASS is claimed yet.
+
+
+## 2026-11-25 — Untrusted ledger / prospective-intention boundary exact-head CI
+
+- **Tested integration head:** `c654d62013d4fd3f704cafc6b9f4d3fc8a5e28aa` on stacked Draft PR #384, based on #381.
+- The first integration RED (six failures on earlier head `2eac4f6`) was preserved. Corrected fixtures now write actual JSONL newlines; regression tests honor the target's defensive-copy/revision-history semantics; direct empirical positive controls use the target's narrow canonical `tool_exit:{tool}:{target}:{exit_code}` assertion. No guard was weakened to make tests pass.
+- [Implementation Regression run 45669049221](https://github.com/SepehrGhanbari/Ario/actions/runs/45669049221) completed SUCCESS:
+  - Linux CPython 3.13: **1,989 passed, 7 skipped, 2 xfailed, 2 warnings, 279 subtests passed**.
+  - Windows CPython 3.13: **1,987 passed, 9 skipped, 2 xfailed, 2 warnings, 279 subtests passed**.
+  - CPython 3.14 advisory: **1,989 passed, 7 skipped, 2 xfailed, 2 warnings, 279 subtests passed**.
+  - Dedicated cognitive-memory invariants: **114 passed**; seeded fuzz rerun: **3 passed**.
+- [Published TXT Restore Security run 45669048526](https://github.com/SepehrGhanbari/Ario/actions/runs/45669048526): all **10 jobs SUCCESS**, including Linux and Windows generator/manifest/restore jobs.
+- The Windows and CPython 3.14 logs include `ARIO_HTTP403_DIAGNOSTIC`: run metadata was observed as HTTP 200, while the job-log redirect endpoint returned HTTP 403 with `ADMIN_RIGHTS_WORDING`; diagnostic execution attestation remains `NOT_ESTABLISHED`. This is recorded as an infrastructure/attestation limitation, not as a test failure or evidence that the code failed.
+- Exact tested source/test head is `c654d620`. The following log-only commit changes no code or tests. All skips, xfails, and warnings remain visible.
+- **Review/merge status:** no independent review of this exact integrated memory boundary has yet been obtained. Keep the stacked PR DRAFT/HOLD until such review is available; do not ask the owner for another routine permission. No merge, policy adoption, trust activation, signer/key/TPM, Genesis, production, or main-branch change is claimed.
