@@ -28,8 +28,12 @@ jobs:
           set -euo pipefail
           gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/14950269714/zip" > "$RUNNER_TEMP/capture.zip"
           echo "b7f1702b88241f6062c6e9c3975e5969620e98b6fc47321ca7e91956c7500f8e  $RUNNER_TEMP/capture.zip" | sha256sum -c -
-          sudo /usr/bin/python3 implementation/research/r22_20_external_lifecycle_checkpoint/checkpoint.py prepare "$RUNNER_TEMP/r22-20" "$RUNNER_TEMP/capture.zip"
-          sudo chown "$(id -u):$(id -g)" "$RUNNER_TEMP/r22-20/first" "$RUNNER_TEMP/r22-20/second"
+          TMP_LAB="$(mktemp -d /tmp/r22-20.XXXXXX)"
+          chmod 0755 "$TMP_LAB"
+          LAB="$TMP_LAB/lab"
+          echo "LAB=$LAB" >> "$GITHUB_ENV"
+          sudo /usr/bin/python3 implementation/research/r22_20_external_lifecycle_checkpoint/checkpoint.py prepare "$LAB" "$RUNNER_TEMP/capture.zip"
+          sudo chown "$(id -u):$(id -g)" "$LAB/first" "$LAB/second"
       - name: Publish exactly two PUBLIC synthetic checkpoints on existing TEST log
         timeout-minutes: 10
         run: |
@@ -38,7 +42,7 @@ jobs:
             go install "sigsum.org/sigsum-go/cmd/$tool@v0.14.1"
           done
           export PATH="$(go env GOPATH)/bin:$PATH"
-          A="$RUNNER_TEMP/r22-20/first"; B="$RUNNER_TEMP/r22-20/second"
+          A="$LAB/first"; B="$LAB/second"
           K="$(mktemp -d "$RUNNER_TEMP/r22-20-key.XXXXXX")"
           trap 'rm -rf "$K"' EXIT
           chmod 0700 "$K"
@@ -53,8 +57,7 @@ jobs:
       - name: Actual joint restore AFTER external publication
         run: |
           set -euo pipefail
-          sudo /usr/bin/python3 implementation/research/r22_20_external_lifecycle_checkpoint/checkpoint.py restore "$RUNNER_TEMP/r22-20"
-          export LAB="$RUNNER_TEMP/r22-20"
+          sudo /usr/bin/python3 implementation/research/r22_20_external_lifecycle_checkpoint/checkpoint.py restore "$LAB"
           python - <<'PY'
           import base64,hashlib,json,os
           from pathlib import Path
@@ -79,13 +82,13 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: r22-20-first-restored
-          path: ${{ runner.temp }}/r22-20/first/
+          path: ${{ env.LAB }}/first/
           if-no-files-found: error
           retention-days: 30
       - uses: actions/upload-artifact@v4
         with:
           name: r22-20-withheld-second
-          path: ${{ runner.temp }}/r22-20/second/
+          path: ${{ env.LAB }}/second/
           if-no-files-found: error
           retention-days: 30
       - uses: actions/upload-artifact@v4

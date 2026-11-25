@@ -992,3 +992,8 @@ Parent #365 final checks subsequently 3/3 SUCCESS. [Initial live run 45460575782
 ## 2026-11-25 — R22.20 external lifecycle checkpoint (research only)
 
 - Parent #373 c0b38a738d7d200a10d028acdfaeb01c55279701 final checks SUCCESS. Actual local lifecycle and joint file rollback using unchanged R22.19 code, original R22.17 capture, 10/10 comparator tests with locally computed checksum. Dedicated real Sigsum TEST publication, blind scanner and reveal workflow supplied; live result pending. Ephemeral synthetic key only, no real keys or new TSA calls. No independent bootstrap/content custody, global freshness, trust or merge. See implementation/research/r22_20_external_lifecycle_checkpoint/RESEARCH_RECORD.md.
+
+
+## CI failure and correction — 2026-11-25
+
+Initial [run 45652466329](https://github.com/SepehrGhanbari/Ario/actions/runs/45652466329) failed before publication: distinct UID could not traverse private /home/runner/work/_temp (Permission denied opening lifecycle.py). All publication/discovery/reveal steps skipped; no external commitment published. Corrected only workflow lab location: random dedicated /tmp parent (0755), root creates lab child, unchanged lifecycle/verifier code and publisher/custodian 0700 directories. No permission change to runner home or private workspace. Corrected execution pending.
