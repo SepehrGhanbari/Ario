@@ -846,3 +846,8 @@ RESEARCH_ONLY / DRAFT / HOLD / NO_AUTOMATIC_MERGE / NO_REAL_KEYS / NO_TRUST_ACTI
 - First exact-head CI attempt after R2 reported a Python syntax error in `test_historical_qa_research_boundary.py`: a stale fragment remained after replacing the old quote-opt-in test. The failing jobs were collection failures, not test assertions or runtime behavior.
 - Removed the orphan fragment and removed obsolete `include_historical_quote=True` arguments from metadata-only tests; retained only explicit TypeError assertions proving the removed parameter is rejected.
 - No production/core code changed in this correction. Re-run exact-head CI before any disposition change. RIO-F1 public API path remains mitigated only; same-process boundary remains HOLD. RIO-F2 ordinary mutation blocked only; hostile same-process tampering remains HOLD.
+
+## 2026-11-25 — RIO-01 R2 regression assertion correction
+
+- Follow-up CI isolated one remaining assertion issue: the syntax cleanup also removed the legacy `include_historical_quote=True` argument from the specific test whose purpose is to assert that this obsolete parameter raises `TypeError`. Restored that argument in that test only. The dedicated removed-parameter type test already covers the string-valued case.
+- The previous test run otherwise reported 1825 passed / 7 skipped / 429 subtests and only this one assertion failure; rerun exact-head CI is required.

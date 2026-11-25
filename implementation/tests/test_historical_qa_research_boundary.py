@@ -69,7 +69,7 @@ class HistoricalQuestionAnswerResearchTests(unittest.TestCase):
         self.assertNotIn("Old synthetic model response.", str(got))
         with self.assertRaises(TypeError):
             preview_historical_question(
-                self.view(), "What was the prior answer?",
+                self.view(), "What was the prior answer?", include_historical_quote=True,
             )
 
     def test_current_question_requires_reassessment(self):
