@@ -5,10 +5,10 @@ to Cognitive Memory (ConsolidationEngine, SourceMonitoringGuard, ProspectiveMemo
 
 Epistemic Invariant Guarantees:
 1. Read-Only Ingestion: Does not write, mutate, truncate, or overwrite agent execution ledgers.
-2. Grounded Provenance: Tools observed in STEP_OBSERVED generate EMPIRICAL_OBSERVATION with locked SHA-256 digests.
-3. Anti-Self-Citation: Rejects synthetic agent claims masquerading as empirical facts.
-4. Contradiction Preservation: Contradictory step results are marked CONTESTED without historical erasure.
-5. Prospective Intention Evaluation: Task completion events trigger queued conditional actions.
+2. Reported Provenance: replayed STEP_OBSERVED bytes are LEDGER_REPORT / REPORTED_UNVERIFIED, not independent execution evidence.
+3. Anti-Self-Citation: replayed JSONL cannot masquerade as authenticated tool execution.
+4. Contradiction Preservation: contradictory observations remain CONTESTED without historical erasure.
+5. Prospective Cue Boundary: untrusted task-finish reports are counted, never used to trigger queued actions.
 6. No-History-Promotion: Repeated unverified steps retain RECORDED status without upgrading to SUPPORTED.
 """
 
@@ -26,14 +26,7 @@ from core.memory_consolidation import (
     NodeEpistemicStatus,
     SemanticNode,
 )
-from core.source_monitoring import (
-    EmpiricalProvenance,
-    SourceAttribution,
-    SourceMonitoringError,
-    SourceMonitoringGuard,
-    SourceType,
-    VeracityState,
-)
+from core.source_monitoring import SourceMonitoringGuard
 from core.prospective_memory import (
     DelayedIntention,
     ProspectiveMemoryRegistry,
@@ -60,6 +53,7 @@ class BridgeAuditSummary:
     contested_nodes_count: int
     triggered_intentions_count: int
     triggered_intentions: Tuple[Dict[str, Any], ...] = ()
+    reported_task_finishes_count: int = 0
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -71,6 +65,7 @@ class BridgeAuditSummary:
             "contested_nodes_count": self.contested_nodes_count,
             "triggered_intentions_count": self.triggered_intentions_count,
             "triggered_intentions": list(self.triggered_intentions),
+            "reported_task_finishes_count": self.reported_task_finishes_count,
         }
 
 
@@ -117,6 +112,7 @@ class EpistemicLedgerBridge:
         file_hasher = hashlib.sha256()
         total_events = 0
         steps_observed = 0
+        reported_task_finishes_count = 0
         triggered_intentions: List[Dict[str, Any]] = []
 
         with target.open("rb") as stream:
@@ -176,18 +172,13 @@ class EpistemicLedgerBridge:
 
                     path_val = str(result.get("path", event.get("path", "")))
                     target_name = path_val or str(result.get("target", tool))
-                    lock_payload = json.dumps({"action": event, "result": result}, sort_keys=True, separators=(",", ":"))
                     stdout_str = json.dumps(result, sort_keys=True)
 
-                    # Source monitoring guard attribution
-                    attribution = self.guard.record_empirical_observation(
-                        assertion=f"tool_exit:{tool}:{target_name}:{0 if status == 'COMPLETED' else 1}",
-                        tool=tool,
-                        target=target_name,
-                        exit_code=0 if status == "COMPLETED" else 1,
-                        stdout=stdout_str,
-                        execution_lock=lock_payload,
-                        attribution_id=f"ATTR-STEP-{line_hash[:24]}",
+                    # A JSONL status and self-hashed result are reports, not
+                    # independent evidence that the tool actually executed.
+                    self.guard.record_unverified_ledger_report(
+                        assertion=f"reported_step_execution:{tool}:{target_name}:{status}",
+                        record_sha256=line_hash,
                     )
 
                     # Determine semantic concept and assertion
@@ -198,7 +189,9 @@ class EpistemicLedgerBridge:
                     claim_data: Dict[str, Any] = {
                         "concept": concept,
                         "assertion": assertion,
-                        "status": NodeEpistemicStatus.RECORDED.value if status == "COMPLETED" else NodeEpistemicStatus.CONTESTED.value,
+                        # Successful and failed self-reports have equal epistemic
+                        # standing unless an explicit contradictory observation exists.
+                        "status": NodeEpistemicStatus.RECORDED.value,
                     }
 
                     # If previous observation on same target exists with different assertion, mark conflict
@@ -210,16 +203,11 @@ class EpistemicLedgerBridge:
 
                     self.engine.ingest_event_stream([(line_hash, claim_data)])
 
-                # 3. TASK_FINISHED: Evaluate prospective intention cues
+                # 3. TASK_FINISHED: count the untrusted report without
+                # evaluating a registry cue that could mutate a pending intention
+                # and expose its action_payload.
                 elif event_type == "TASK_FINISHED":
-                    cue_context: Dict[str, Any] = {
-                        "task_id": event.get("task_id"),
-                        "status": event.get("status"),
-                        "exit_code": event.get("exit_code", 0 if event.get("status") == "COMPLETED" else 1),
-                    }
-                    triggered = self.registry.evaluate_cues(cue_context, current_epoch=current_epoch)
-                    for intent in triggered:
-                        triggered_intentions.append(intent.to_dict())
+                    reported_task_finishes_count += 1
 
         contested_count = sum(1 for n in self.engine.nodes.values() if n.status == NodeEpistemicStatus.CONTESTED)
 
@@ -232,4 +220,5 @@ class EpistemicLedgerBridge:
             contested_nodes_count=contested_count,
             triggered_intentions_count=len(triggered_intentions),
             triggered_intentions=tuple(triggered_intentions),
+            reported_task_finishes_count=reported_task_finishes_count,
         )
