@@ -1,0 +1,72 @@
+diff -ur '--exclude=__pycache__' a/capture_gateway.py b/capture_gateway.py
+--- a/capture_gateway.py	2026-11-26 00:00:00.000000000 +0000
++++ b/capture_gateway.py	2026-11-25 23:33:03.020357009 +0000
+@@ -163,7 +163,7 @@
+         reason = "no_external_witness"
+     elif transcript != "MATCH":
+         completeness, reason = "UNKNOWN", "valid_chain_does_not_establish_completeness"
+-    elif witness_independent is True and measurer_independent is True and binary == "MATCH":
++    elif witness_independent is True and measurer_independent is True and binary == "MATCH" and pin == "MATCH":
+         completeness, reason = "VERIFIED_RELATIVE", "transcript_included_and_witness_matches"
+     else:
+         completeness, reason = "UNKNOWN", "independence_not_established"
+@@ -567,10 +567,12 @@
+                 raise GatewayError("output is already recorded; refusing a second model execution")
+             if row[2] in {"FAILED", "CANCELLED", "INTERRUPTED"}:
+                 raise GatewayError(f"request is already terminal ({row[2]})")
+-            self.begin_processing(
++            start_status = self.begin_processing(
+                 request_id, prompt, mode="unary",
+                 crash_at="before_commit" if crash_at == "before_processing_commit" else None,
+             )
++            if start_status != "started":
++                raise GatewayError("prior processing outcome unknown; refusing another invocation; explicit recovery required")
+             if crash_at == "before_model":
+                 raise InjectedCrash("before_model", durable=True)
+             if self.model is None:
+diff -ur '--exclude=__pycache__' a/capture_model.py b/capture_model.py
+--- a/capture_model.py	2026-11-26 00:00:00.000000000 +0000
++++ b/capture_model.py	2026-11-25 23:33:03.020509835 +0000
+@@ -146,7 +146,7 @@
+         allowed = (
+             chain_ok and witness == "QUORUM_MATCH" and transcript == "MATCH" and not gaps
+             and witness_independent is True and measurer_independent is True
+-            and binary == "MATCH" and pin != "MISMATCH"
++            and binary == "MATCH" and pin == "MATCH"
+         )
+         problems = []
+         if result["truth_claim"] != "not-established":
+diff -ur '--exclude=__pycache__' a/message_journal.py b/message_journal.py
+--- a/message_journal.py	2026-11-26 00:00:00.000000000 +0000
++++ b/message_journal.py	2026-11-25 23:33:03.019124189 +0000
+@@ -161,6 +161,9 @@
+         stored_count = self.message_count
+         if actual[0] != stored_count:
+             return False, "stored counter does not match record count (possible truncation)"
++        metadata = dict(self.connection.execute("SELECT key, value FROM journal_meta"))
++        if metadata.get("history_commitment") != previous_history or metadata.get("last_record_hash") != previous_record_hash:
++            return False, "stored head metadata does not match reconstructed chain"
+         if expected_checkpoint is not None and actual != expected_checkpoint:
+             return False, "journal does not match externally retained checkpoint"
+         return True, "verified"
+diff -ur '--exclude=__pycache__' a/test_phase3.py b/test_phase3.py
+--- a/test_phase3.py	2026-11-26 00:00:00.000000000 +0000
++++ b/test_phase3.py	2026-11-25 23:33:28.714680262 +0000
+@@ -130,10 +130,13 @@
+                 self.assertEqual(stages["output_creation"], "UNKNOWN")
+                 self.assertEqual(stages["output_recording"], "ABSENT")
+                 self.assertTrue(gateway.raw_text_absent([b"kept", b"reply:kept"]))
+-                output = gateway.generate("r", b"kept")
+-                self.assertEqual(output, b"reply:kept")
+-                self.assertEqual(model.calls, [b"kept"])
+-                self.assertEqual(gateway.journal.message_count, 2)
++                # The durable STARTED state cannot distinguish a crash before invocation
++                # from a crash after invocation. Never automatically repeat it.
++                with self.assertRaises(GatewayError):
++                    gateway.generate("r", b"kept")
++                self.assertEqual(model.calls, [])
++                self.assertEqual(gateway.recover(), ["interrupted:r"])
++                self.assertEqual(gateway.journal.message_count, 1)
+ 
+     def test_crash_after_generation_before_output_record_does_not_release(self):
+         with tempfile.TemporaryDirectory() as directory:
