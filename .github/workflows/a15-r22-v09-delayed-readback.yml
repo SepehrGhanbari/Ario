@@ -1,0 +1,124 @@
+name: A15 v0.9 retained-range delayed readback (HOLD)
+on:
+  push:
+    branches: [research/a15-r22-v09-delayed-readback-20261125]
+    paths: ['.github/workflows/a15-r22-v09-delayed-readback.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        relay: [only-nos, only-primal]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - name: Check exact historical dependencies and run local policy controls
+        run: |
+          set -euo pipefail
+          test "$(git hash-object implementation/research/r22_10_blind_discovery/main.go)" = 2276889ea769dd7377c26fb5f5bf2d55963e0b44
+          test "$(git hash-object implementation/research/r22_11_external_content/recovery.py)" = 560391d6a1e99726b945503505b423d998604257
+          test "$(git hash-object implementation/research/a15_r22_external_order/bridge.js)" = 5c29c399dacf2174dcbb5fe6d05185d9fdd723ff
+          test "$(git hash-object implementation/research/a15_r22_external_order/transport.py)" = 6191660f2e7d16f7abcc5ccebd11aa5ee7be4045
+          test "$(git hash-object implementation/research/a15_external_floor_simulator_v0_4.js)" = 7565b16f851e8b55b0317bd5d9910b46c09ef779
+          test "$(git hash-object implementation/research/a15_temporal_evidence_verifier_v0_5.js)" = 732fd4a9385b2c2437d1158bc06388d94f34594b
+          test "$(git hash-object implementation/research/a15_integrated_temporal_ledger_v0_7.js)" = d53ee94d1b6fd15a2387643f88986fd61d1eba81
+          test "$(git hash-object implementation/tests/fixtures/a15_v07_fixture.js)" = 49d88be1a4255570156b9b4f0fb59e16aad4d599
+          python -m unittest discover -s implementation/research/a15_r22_delayed_readback -v
+          python -m pip install coincurve==21.0.0 websockets==15.0.1
+          go install sigsum.org/sigsum-go/cmd/sigsum-verify@v0.14.1
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - name: Restore only the original FIRST-ONLY bootstrap archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          A="$RUNNER_TEMP/a15-original-first.zip"
+          curl --fail --silent --show-error --location --max-time 60 -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' 'https://api.github.com/repos/SepehrGhanbari/Ario/actions/artifacts/15042195200/zip' > "$A"
+          echo "0c440d4c2871f49656b8d9d3b7502b79e071dc78d79588cd5da7309855df9d31  $A" | sha256sum -c -
+          python - <<'PY'
+          import os,zipfile
+          from pathlib import Path
+          r=Path(os.environ['RUNNER_TEMP']); out=r/'a15-first';out.mkdir()
+          with zipfile.ZipFile(r/'a15-original-first.zip') as z:
+              expected={'bootstrap.json','local-state.json','envelope.json','envelope.json.proof','synthetic-key.pub'}
+              assert len(z.namelist())==5 and set(z.namelist())==expected and z.testzip() is None
+              for name in expected:(out/name).write_bytes(z.read(name))
+          assert not (r/'a15-reveal').exists()
+          assert not (r/'a15-recovered').exists()
+          PY
+          sha256sum "$RUNNER_TEMP/a15-first/"* > "$RUNNER_TEMP/a15-first-before.sha256"
+      - name: Verify current cosigned head against both retained checkpoints and scan old three-leaf range
+        run: |
+          set -euo pipefail
+          LAB=$(mktemp -d "$RUNNER_TEMP/a15-scan.XXXXXX")
+          trap 'rm -rf "$LAB"' EXIT
+          P=implementation/research/r22_10_blind_discovery
+          cp "$P/"{go.mod,main_test.go} "$LAB/"
+          python implementation/research/a15_r22_delayed_readback/readback.py prepare "$P/main.go" "$LAB/main.go"
+          cp "$RUNNER_TEMP/a15-first/"{bootstrap.json,local-state.json} "$LAB/"
+          cd "$LAB"
+          go mod tidy
+          go test -v ./...
+          go run . | tee "$RUNNER_TEMP/a15-scan.jsonl"
+      - name: Read original evidence using exactly one permitted relay
+        env:
+          MODE: ${{ matrix.relay }}
+        run: |
+          set -euo pipefail
+          python implementation/research/a15_r22_delayed_readback/readback.py recover "$RUNNER_TEMP/a15-first" "$RUNNER_TEMP/a15-scan.jsonl" "$RUNNER_TEMP/a15-recovered" "$MODE"
+          sha256sum -c "$RUNNER_TEMP/a15-first-before.sha256"
+          cp "$RUNNER_TEMP/a15-scan.jsonl" "$RUNNER_TEMP/a15-recovered/discovery.jsonl"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: A15-V09-${{ matrix.relay }}
+          path: ${{ runner.temp }}/a15-recovered/
+          if-no-files-found: error
+          retention-days: 30
+  compare:
+    needs: recover
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: A15-V09-only-nos
+          path: nos
+      - uses: actions/download-artifact@v4
+        with:
+          name: A15-V09-only-primal
+          path: primal
+      - name: Compare both readbacks against original withheld bytes, only after both readers exit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --max-time 60 -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' 'https://api.github.com/repos/SepehrGhanbari/Ario/actions/artifacts/15039963640/zip' > original.zip
+          echo '0033843b69bde759b6737c11abe3d3e6a2146409dc38a24516e7c29b0bce31c0  original.zip' | sha256sum -c -
+          python - <<'PY'
+          from pathlib import Path
+          import zipfile
+          with zipfile.ZipFile('original.zip') as z:
+              assert z.testzip() is None
+              for i in (1,2,3):
+                  for n in ('envelope.json','payload.json','envelope.json.proof'):
+                      if i==3 and n.endswith('.proof'):continue
+                      f=f'r{i}/{n}'
+                      assert (Path('nos')/f).read_bytes()==z.read(f)==(Path('primal')/f).read_bytes(),f
+          print('A15_V09_BOTH_SINGLE_RELAY_READBACKS_MATCH_ORIGINAL; RESEARCH_ONLY; NO_GO')
+          PY
