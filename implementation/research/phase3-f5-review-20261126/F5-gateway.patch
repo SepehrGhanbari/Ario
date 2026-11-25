@@ -1,0 +1,193 @@
+--- a/capture_gateway.py
++++ b/capture_gateway.py
+@@ -1061,16 +1061,34 @@
+     """
+ 
+     def __init__(self, directory: str | Path, roster: Sequence[str] = ROSTER):
++        self.roster = tuple(roster)
++        n = len(self.roster)
++        if n < 4 or (n - 1) % 3 or len(set(self.roster)) != n or any(not isinstance(i, str) or not i for i in self.roster):
++            raise ValueError("unique fixed roster of 3f+1 (f>=1) required")
++        self.faults = (n - 1) // 3
++        self.quorum = 2 * self.faults + 1
+         self.directory = Path(directory)
+         self.directory.mkdir(parents=True, exist_ok=True)
+-        self.roster = tuple(roster)
++        # Keep the existing storage naming convention and reject ambiguous paths.
++        names = {identity: identity.replace('@', '_') for identity in self.roster}
++        if len({name.casefold() for name in names.values()}) != n or any(
++            not name.isascii() or not all(c.isalnum() or c in '_-' for c in name) for name in names.values()
++        ):
++            raise ValueError("unsafe or ambiguous witness storage names")
+         self.available = set(self.roster)
+         self.witnesses = {
+-            identity: PortableWitness(self.directory / f"{identity.replace('@', '_')}.sqlite", identity, self.roster)
++            identity: PortableWitness(self.directory / (names[identity] + ".sqlite"), identity, self.roster, self.faults)
+             for identity in self.roster
+         }
+         self.sequence = 0
+         self.head = ZERO_HASH
++        # Volatile modeled certificates, not real signatures or a durable external log.
++        self._certs = {}
++        self._seen = {i: 0 for i in self.roster}
++        # Existing stores cannot establish a trusted session floor by themselves.
++        self._session_valid = all(w.status()["sequence"] == 0 and not w.status()["unresolved_locks"]
++                                  for w in self.witnesses.values())
++        self._mutex = threading.RLock()
+ 
+     def close(self) -> None:
+         for witness in self.witnesses.values():
+@@ -1083,58 +1101,105 @@
+         self.close()
+ 
+     def set_available(self, identities: Iterable[str]) -> None:
+-        unknown = set(identities) - set(self.roster)
+-        if unknown:
+-            raise GatewayError(f"unknown witness identities: {sorted(unknown)}")
+-        self.available = set(identities)
++        available = set(identities)
++        if not available <= set(self.roster):
++            raise GatewayError("unknown witness identities")
++        with self._mutex:
++            self.available = available
++
++    def _read(self):
++        if not self._session_valid:
++            return "UNAVAILABLE", []
++        current = []
++        for identity in self.roster:
++            if identity not in self.available:
++                continue
++            state = self.witnesses[identity].status()
++            if state["retired"]:
++                continue
++            seq = state["sequence"]
++            # A reset or unresolved vote cannot silently regain authority.
++            if seq < self._seen[identity] or seq < 0 or seq > self.sequence or state["unresolved_locks"] or state["admin_epoch"] != 0:
++                return "QUORUM_MISMATCH", []
++            if seq == 0:
++                expected = (ZERO_HASH, 0, ZERO_HASH)
++            else:
++                cert = self._certs.get(seq)
++                if cert is None:
++                    return "UNAVAILABLE", []
++                expected = (cert["proposal_digest"], cert["cumulative_message_count"], cert["cumulative_history_commitment"])
++            if (state["head_digest"], state["cumulative_message_count"], state["history_commitment"]) != expected:
++                return "QUORUM_MISMATCH", []
++            self._seen[identity] = seq
++            if seq == self.sequence:
++                current.append(identity)
++        if len(current) < self.quorum:
++            return "UNAVAILABLE", []
++        return "QUORUM_MATCH", current
++
++    def catch_up(self) -> int:
++        """Replay only modeled certified consecutive checkpoints after a current quorum read."""
++        with self._mutex:
++            state, _ = self._read()
++            if state != "QUORUM_MATCH":
++                return 0
++            count = 0
++            for identity in self.roster:
++                if identity not in self.available:
++                    continue
++                witness = self.witnesses[identity]
++                status = witness.status()
++                if status["retired"] or status["sequence"] == self.sequence:
++                    continue
++                for seq in range(status["sequence"] + 1, self.sequence + 1):
++                    # PortableWitness also checks predecessor and local vote locks.
++                    witness.record_finalization(**self._certs[seq])
++                    self._seen[identity] = seq
++                count += 1
++            return count
+ 
+     def commit_bundle(self, bundle: dict[str, int | str]) -> dict:
+-        digest = _hash(_canonical(bundle))
+-        online = [identity for identity in self.roster if identity in self.available]
+-        if len(online) < 3:
+-            return {"status": "UNAVAILABLE", "online": online, "head": self.head, "sequence": self.sequence,
+-                    "signature": None, "warning": "model quorum only; unavailability is not negative proof"}
+-        next_sequence = self.sequence + 1
+-        message_count = int(bundle["message_count"])
+-        history = str(bundle["history_commitment"])
+-        for identity in online:
+-            self.witnesses[identity].record_vote_lock(
+-                sequence=next_sequence, proposal_digest=digest, previous_digest=self.head, admin_epoch=0,
+-                cumulative_message_count=message_count, cumulative_history_commitment=history,
+-            )
+-        certificate_digest = _hash(_canonical({"proposal": digest, "signers": online}))
+-        for identity in online:
+-            ack = self.witnesses[identity].record_finalization(
+-                sequence=next_sequence, proposal_digest=digest, previous_digest=self.head,
+-                certificate_digest=certificate_digest, signer_ids=tuple(online),
+-                cumulative_message_count=message_count, cumulative_history_commitment=history,
+-            )
+-            if ack.get("signature") is not None:
+-                raise GatewayError("model witness unexpectedly produced a signature field that is not null")
+-        self.sequence = next_sequence
+-        self.head = digest
+-        return {"status": "QUORUM_FINALIZED", "head": digest, "sequence": next_sequence, "signers": online,
+-                "signature": None, "warning": "model acknowledgments are not authenticated attestations"}
++        with self._mutex:
++            state, online = self._read()
++            if state != "QUORUM_MATCH":
++                return {"status": state, "online": online, "head": self.head, "sequence": self.sequence,
++                        "signature": None, "warning": "model quorum only; no freshness attestation"}
++            self.catch_up()
++            state, online = self._read()
++            if state != "QUORUM_MATCH":
++                return {"status": state, "signature": None}
++            digest = _hash(_canonical(bundle))
++            next_sequence = self.sequence + 1
++            message_count = int(bundle["message_count"])
++            history = str(bundle["history_commitment"])
++            for identity in online:
++                self.witnesses[identity].record_vote_lock(
++                    sequence=next_sequence, proposal_digest=digest, previous_digest=self.head, admin_epoch=0,
++                    cumulative_message_count=message_count, cumulative_history_commitment=history,
++                )
++            cert = dict(sequence=next_sequence, proposal_digest=digest, previous_digest=self.head,
++                        certificate_digest=_hash(_canonical({"proposal": digest, "signers": online})),
++                        signer_ids=tuple(online), cumulative_message_count=message_count,
++                        cumulative_history_commitment=history)
++            for identity in online:
++                ack = self.witnesses[identity].record_finalization(**cert)
++                if ack.get("signature") is not None:
++                    raise GatewayError("model witness unexpectedly produced a signature")
++                self._seen[identity] = next_sequence
++            self._certs[next_sequence] = cert
++            self.sequence = next_sequence
++            self.head = digest
++            return {"status": "QUORUM_FINALIZED", "head": digest, "sequence": next_sequence, "signers": online,
++                    "signature": None, "warning": "model acknowledgments are not authenticated attestations"}
+ 
+     def read_status(self, expected_head: str) -> str:
+-        online = [identity for identity in self.roster if identity in self.available]
+-        if len(online) < 3:
+-            return "UNAVAILABLE"
+-        heads = []
+-        sequences = []
+-        for identity in online:
+-            status = self.witnesses[identity].status()
+-            if status["retired"]:
+-                continue
+-            heads.append(status["head_digest"])
+-            sequences.append(status["sequence"])
+-        if len(heads) < 3 or len(set(heads)) != 1 or len(set(sequences)) != 1:
+-            return "QUORUM_MISMATCH" if len(heads) >= 3 else "UNAVAILABLE"
+-        if sequences[0] == 0:
+-            return "NOT_SUBMITTED"
+-        if heads[0] == expected_head:
+-            return "QUORUM_MATCH"
+-        return "QUORUM_MISMATCH"
++        with self._mutex:
++            state, _ = self._read()
++            if state != "QUORUM_MATCH":
++                return state
++            if self.sequence == 0:
++                return "NOT_SUBMITTED"
++            return "QUORUM_MATCH" if expected_head == self.head else "QUORUM_MISMATCH"
+ 
+ 
+ def alternative_execution_paths() -> list[dict[str, str]]:
