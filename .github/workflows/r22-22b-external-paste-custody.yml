@@ -16,7 +16,7 @@ jobs:
     permissions:
       contents: read
     outputs:
-      paste_rs_url: \${{ steps.pin.outputs.paste_rs_url }}
+      paste_rs_url: ${{ steps.pin.outputs.paste_rs_url }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -32,7 +32,10 @@ jobs:
           curl --fail --silent --show-error "$url" -o "$RUNNER_TEMP/pin.json"
           python - "$RUNNER_TEMP/pin.json" <<'PY'
           import base64,hashlib,json,pathlib,sys
-          o=json.loads(pathlib.Path(sys.argv[1]).read_bytes())
+          payload=pathlib.Path(sys.argv[1]).read_bytes()
+          assert hashlib.sha256(payload).hexdigest()=="c122dc2fcdbfc304ffe6db809dec2e7e14d3feced480918b7cbc2d6a3edd0f69"
+          assert payload.endswith(bytes([92,110]))
+          o=json.loads(payload[:-2])
           expected="304765d8d7f0da2d5e62443b7d1f48c00c8ff9bd324b8f8ed9c88c0ab7fffe24"
           assert o["profile"]=="ARIO-R22.22B-EXTERNAL-KIT-COPY"
           raw=base64.b64decode(o["kit_base64"],validate=True)
@@ -47,7 +50,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: r22-22b-external-pin-evidence
-          path: \${{ runner.temp }}/evidence/
+          path: ${{ runner.temp }}/evidence/
           if-no-files-found: error
           retention-days: 30
   cold:
@@ -70,7 +73,7 @@ jobs:
           cache: false
       - name: Recover portable kit from external paste after repository checkout rollback
         env:
-          PASTE_RS_URL: \${{ needs.pin-check.outputs.paste_rs_url }}
+          PASTE_RS_URL: ${{ needs.pin-check.outputs.paste_rs_url }}
         run: |
           set -euo pipefail
           test -n "$PASTE_RS_URL"
@@ -78,7 +81,10 @@ jobs:
           python - "$RUNNER_TEMP/pin.json" "$RUNNER_TEMP/kit.zip" <<'PY'
           import base64,hashlib,json,pathlib,sys
           expected="304765d8d7f0da2d5e62443b7d1f48c00c8ff9bd324b8f8ed9c88c0ab7fffe24"
-          o=json.loads(pathlib.Path(sys.argv[1]).read_bytes())
+          payload=pathlib.Path(sys.argv[1]).read_bytes()
+          assert hashlib.sha256(payload).hexdigest()=="c122dc2fcdbfc304ffe6db809dec2e7e14d3feced480918b7cbc2d6a3edd0f69"
+          assert payload.endswith(bytes([92,110]))
+          o=json.loads(payload[:-2])
           assert o["profile"]=="ARIO-R22.22B-EXTERNAL-KIT-COPY"
           raw=base64.b64decode(o["kit_base64"],validate=True)
           assert len(raw)==o["kit_bytes"] and hashlib.sha256(raw).hexdigest()==expected==o["kit_sha256"]
@@ -93,6 +99,6 @@ jobs:
         if: always()
         with:
           name: r22-22b-cold-readback
-          path: \${{ runner.temp }}/readback/
+          path: ${{ runner.temp }}/readback/
           if-no-files-found: warn
           retention-days: 30
