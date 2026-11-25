@@ -15,7 +15,6 @@ jobs:
     timeout-minutes: 6
     permissions:
       contents: read
-      actions: read
     outputs:
       paste_rs_url: \${{ steps.pin.outputs.paste_rs_url }}
     steps:
@@ -25,25 +24,33 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: '3.13'
-      - name: Retrieve and verify exact portable kit artifact
-        env:
-          GH_TOKEN: \${{ github.token }}
+      - name: Rebuild exact portable kit from six pinned source blobs
         run: |
           set -euo pipefail
-          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15047820982/zip" > "$RUNNER_TEMP/artifact.zip"
-          mkdir "$RUNNER_TEMP/artifact"
-          unzip -q "$RUNNER_TEMP/artifact.zip" -d "$RUNNER_TEMP/artifact"
-          test -f "$RUNNER_TEMP/artifact/kit.zip"
-          echo "304765d8d7f0da2d5e62443b7d1f48c00c8ff9bd324b8f8ed9c88c0ab7fffe24  $RUNNER_TEMP/artifact/kit.zip" | sha256sum -c -
-          python - "$RUNNER_TEMP/artifact/kit.zip" "$RUNNER_TEMP/pin.json" <<'PY'
-          import base64,hashlib,json,sys,pathlib
-          p=pathlib.Path(sys.argv[1]); raw=p.read_bytes()
-          obj={"profile":"ARIO-R22.22B-EXTERNAL-KIT-COPY","kit_sha256":hashlib.sha256(raw).hexdigest(),
+          python - <<'PY'
+          import pathlib,json,hashlib,zipfile,os
+          p=pathlib.Path('implementation/research/r22_22_recovery_root/')
+          pin=json.loads((p/'RECOVERY_PIN.json').read_bytes())
+          out=pathlib.Path(os.environ['RUNNER_TEMP'])/'kit.zip'
+          files={name:(p/name).read_bytes() for name in ('RECOVERY_PIN.json','read_only.sh','README.txt')}
+          for name,want in pin['source_git_blobs'].items():
+              b=(p.parent/name).read_bytes()
+              assert hashlib.sha1(b'blob '+str(len(b)).encode()+b'\\0'+b).hexdigest()==want
+              files[name]=b
+          with zipfile.ZipFile(out,'w',compression=zipfile.ZIP_DEFLATED) as z:
+              for name,b in sorted(files.items()):
+                  i=zipfile.ZipInfo(name,(2026,11,25,0,0,0)); i.compress_type=zipfile.ZIP_DEFLATED
+                  z.writestr(i,b)
+          digest=hashlib.sha256(out.read_bytes()).hexdigest()
+          assert digest=="304765d8d7f0da2d5e62443b7d1f48c00c8ff9bd324b8f8ed9c88c0ab7fffe24",digest
+          raw=out.read_bytes()
+          obj={"profile":"ARIO-R22.22B-EXTERNAL-KIT-COPY","kit_sha256":digest,
                "kit_bytes":len(raw),"capsule_id":"5f678677cf26986b76c552a8bb0ecc97db74d12ae3b7212697eee34db5fe32d5",
                "sigsum_tree_size":281670,"sigsum_tree_root":"dafc6911b16d150b1628937dd5030ba1b188b6ffe916837d41db37e4b867cefc",
-               "kit_base64":base64.b64encode(raw).decode("ascii")}
-          pathlib.Path(sys.argv[2]).write_text(json.dumps(obj,sort_keys=True,separators=(",",":"))+"\n",encoding="ascii")
-          print("PIN_PAYLOAD_SHA256",hashlib.sha256(pathlib.Path(sys.argv[2]).read_bytes()).hexdigest())
+               "kit_base64":__import__('base64').b64encode(raw).decode('ascii')}
+          payload=pathlib.Path(os.environ['RUNNER_TEMP'])/'pin.json'
+          payload.write_text(json.dumps(obj,sort_keys=True,separators=(",",":"))+"\\n",encoding="ascii")
+          print("KIT_SHA256",digest,"PIN_PAYLOAD_SHA256",hashlib.sha256(payload.read_bytes()).hexdigest())
           PY
       - name: Publish to paste.rs and verify exact readback
         id: pin
