@@ -671,6 +671,16 @@ class ConsolidationEngine:
                 or any(not isinstance(link, CausalLink) or not hashes.issuperset(link.evidence_hashes)
                        for link in links)):
             raise ConsolidationError("HOLD_INVALID_SNAPSHOT_REPLAY_INDEX")
+        # A structurally valid snapshot does not prove that historical
+        # ACCEPTED/SUPPORTED labels were independently authorized. Preserve
+        # the archive bytes, but refuse to install these labels into an active
+        # engine until a separate admission record can be verified.
+        for node in nodes.values():
+            if type(node.status) is not NodeEpistemicStatus:
+                raise ConsolidationError("HOLD_INVALID_SNAPSHOT_STATUS")
+            if node.status in (NodeEpistemicStatus.ACCEPTED, NodeEpistemicStatus.SUPPORTED):
+                raise ConsolidationError("HOLD_UNVERIFIED_SNAPSHOT_ADMISSION")
+
         # Old v2 snapshots retained just the last target of each legacy ID.
         # Derive this read index from the nodes before installing any state.
         version = state.get("node_id_version", "v1")
