@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 RESEARCH = Path(__file__).resolve().parents[1] / "research"
 sys.path.insert(0, str(RESEARCH))
@@ -318,6 +319,77 @@ class ReadOnlyAdapterTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout)["payload"]["broker_head"]["seq"], 1)
         self.assertEqual(sorted(p.name for p in self.state.iterdir()), before)
+
+
+    def test_sqlite_connection_is_uri_read_only_and_query_only(self):
+        self.seed(1)
+        original = adapter.sqlite3.connect
+        calls = []
+        statements = []
+
+        def traced_connect(database, *args, **kwargs):
+            calls.append((database, kwargs.get("uri")))
+            connection = original(database, *args, **kwargs)
+            connection.set_trace_callback(statements.append)
+            return connection
+
+        with patch.object(adapter.sqlite3, "connect", side_effect=traced_connect):
+            self.build_initial()
+
+        self.assertEqual(len(calls), 1)
+        self.assertTrue(calls[0][1])
+        self.assertIn("mode=ro", calls[0][0])
+        self.assertIn("PRAGMA query_only=ON", statements)
+        forbidden = ("INSERT ", "UPDATE ", "DELETE ", "CREATE ", "DROP ", "ALTER ", "REPLACE ")
+        self.assertFalse(any(s.lstrip().upper().startswith(forbidden) for s in statements))
+
+    def test_floor_change_during_snapshot_holds_without_repair(self):
+        self.seed(1)
+        original = adapter._read_regular_file
+        floor_reads = 0
+
+        def changing_floor(path, max_bytes, label):
+            nonlocal floor_reads
+            data = original(path, max_bytes, label)
+            if Path(path).name == broker.FLOOR_NAME:
+                floor_reads += 1
+                if floor_reads == 2:
+                    return data + b" "
+            return data
+
+        with patch.object(adapter, "_read_regular_file", side_effect=changing_floor):
+            with self.assertRaises(adapter.AdapterHold):
+                self.build_initial()
+
+    def test_database_symlink_is_refused(self):
+        self.seed(1)
+        db = self.state / broker.LEDGER_FILENAME
+        target = self.state / "ledger-target.sqlite3"
+        db.rename(target)
+        try:
+            db.symlink_to(target.name)
+        except (OSError, NotImplementedError):
+            target.rename(db)
+            self.skipTest("symlink creation is unavailable on this runner")
+        with self.assertRaises(adapter.AdapterHold):
+            self.build_initial()
+
+    def test_previous_checkpoint_digest_tampering_holds(self):
+        self.seed(1)
+        first = self.build_initial()
+        previous = self.state.parent / "tampered-previous.json"
+        tampered = dict(first)
+        tampered["payload_sha256"] = "0" * 64
+        previous.write_text(adapter.canonical(tampered) + "\n", encoding="utf-8")
+        journal = broker.Journal(self.state)
+        journal.consume(request("ATT_SYNTH_02"))
+        journal.conn.close()
+        with self.assertRaises(adapter.AdapterHold):
+            adapter.build_checkpoint(
+                self.state,
+                "A15_SYNTHETIC_SCOPE",
+                previous_checkpoint_path=previous,
+            )
 
 
 if __name__ == "__main__":
