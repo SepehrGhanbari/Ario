@@ -1,0 +1,10 @@
+--- a/message_journal.py
++++ b/message_journal.py
+@@ -169,5 +169,5 @@
+         return True, "verified"
+ 
+     def export_commitment_metadata(self) -> dict[str, int | str]:
+-        count, commitment = self.checkpoint
+-        return {"cumulative_message_count": count, "cumulative_history_commitment": commitment}
++        from review_guard import verified_export
++        return verified_export(self)
