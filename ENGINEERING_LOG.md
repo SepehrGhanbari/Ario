@@ -712,3 +712,19 @@ Base 7365e7a9ac7febb78b34039c7b36469b3344cfff. Windows CPython 3.13, stdlib unit
 - The 3.14 diagnostic emitted `ARIO_HTTP403_DIAGNOSTIC`: run metadata request observed HTTP 200; a job-log redirect download timed out; diagnostic execution attestation remained `NOT_ESTABLISHED`. Retain as a warning, not as an HTTP 403 finding or a test failure.
 - These are results for tested code head `86a326c`; subsequent changes to this branch are documentation-only. The two snapshot-admission tests are in the full `pytest -q tests` suite, whose logs are quiet and do not print per-test names.
 - All skips, xfails and warnings remain recorded. No merge, policy adoption, external snapshot authentication, hostile-pickle safety, trust activation, signer/key/TPM, Genesis or production authority is established.
+
+
+## 2026-11-25 — Standing owner delegation and bounded #273 ledger-boundary port
+
+- **Owner instruction:** Sepehr explicitly directed that Ario agents stop asking for per-task, per-path, or per-action permission, including before Merge.
+- Updated `AGENTS.md` to grant standing operational authority for repository research and engineering, source/test/docs changes, branch and PR management, commits/pushes, hosted validation, independent-review requests, and Merge of eligible PRs without another owner prompt. The preservation section was reconciled so ordinary source edits do not reintroduce a per-write approval requirement.
+- Added bilingual `GOVERNANCE/OWNER_DELEGATION_2026-11-25.md`. Merge remains gated by exact-head CI, scoped diffs, resolution of blockers, independent review for high-impact changes, and branch protection. No blind merge is authorized.
+- Hard boundaries remain: no real private keys or signer use; no trust activation, Genesis, or production; no bypass of tool/repository protection; no force-push/history rewrite; no destructive mutation of historical evidence or retained backups. Existing NO_GO constraints remain.
+- **Integration source:** PR #273 head `1063bdabcd41b4d1562984c736000cb8689cf41b`, whose base differs from this branch. Only its 10 ledger-boundary dependency paths were selected; unrelated R6, OS-custody, Sigsum, Windows portable, and other authority-history material was excluded.
+- **Target base:** #381 code head before this integration `38204d103525fe6bf257c778dde78d08e5706496`, itself based on #321 exact commit `7365e7a9ac7febb78b34039c7b36469b3344cfff`.
+- Ported the report-only source type and status, collision-safe report registration, promotion refusal before lineage mutation, empty-allowlist deny-all semantics, and strict bridge behavior: replayed `STEP_OBSERVED` remains `RECORDED`; `TASK_FINISHED` is counted but does not mutate prospective intentions or return action payloads.
+- Updated the CLI help and report field. Updated the existing bridge test without importing unrelated #273 changes to the target branch's memory reinforcement expectations.
+- Added the two draft research contracts and four regression test files. Adapted the report replay test to preserve the target branch's defensive-copy and in-memory revision-history semantics; did not transplant #273's unrelated removal of those protections, its empirical-assertion broadening, or its recursive DFS replacement.
+- **Important unresolved boundary:** the direct `record_empirical_observation` API still does not authenticate its caller. The new bridge path no longer invokes it from replayed JSONL; this does not prove independent execution custody or secure the API for arbitrary callers.
+- **Validation:** pending PR CI on the integrated exact head. Do not claim PASS or merge until the exact head is tested and required independent review is available for this high-impact memory boundary.
+- No historical ledger bytes, old RED evidence, real keys, signer, TPM, trust, Genesis, production, or main branch were changed.
