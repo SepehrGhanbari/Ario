@@ -40,6 +40,9 @@ def main(first,second,recovered,discovery):
     assert x[0]==env_a and x[2]==led_a and y[0]==env_b and y[2]==led_b
     assert (a/"event-id.txt").read_bytes()==f.event_leaf_message(ev_a)
     assert (b/"event-id.txt").read_bytes()==f.event_leaf_message(ev_b)
+    assert int(fields_a["leaf_index"])==boot["start"]
+    assert int(fields_a["size"])==boot["size"]
+    assert fields_a["root_hash"]==boot["root"]
     assert f.target_for_event(ev_a)==boot["first_checksum"]
     assert f.target_for_event(ev_b)==rep["matching_signed_leaves"][1]["checksum"]
     assert len(fields_a["leaf"].split())==2 and len(fields_a["leaf"].split()[1])==128
