@@ -1,0 +1,74 @@
+--- a/test_phase3.py
++++ b/test_phase3.py
+@@ -332,7 +332,7 @@
+                 before_witness = _verified(gateway, witness, transcript)
+                 self.assertEqual(before_witness["witness_status"], "NOT_SUBMITTED")
+                 self.assertNotEqual(before_witness["completeness"], "VERIFIED_RELATIVE")
+-                committed = witness.commit_bundle(gateway.bundle())
++                committed = witness.commit_bundle(gateway.bundle(), records=gateway.journal.records())
+                 self.assertEqual(committed["status"], "QUORUM_FINALIZED")
+                 self.assertIsNone(committed["signature"])
+                 report = _verified(gateway, witness, transcript)
+@@ -352,7 +352,7 @@
+                 gateway.receive("r", b"hello")
+                 output = gateway.generate("r", b"hello")
+                 gateway.release("r", output)
+-                self.assertEqual(witness.commit_bundle(gateway.bundle())["status"], "QUORUM_FINALIZED")
++                self.assertEqual(witness.commit_bundle(gateway.bundle(), records=gateway.journal.records())["status"], "QUORUM_FINALIZED")
+                 witness.set_available(("w0@g1",))
+                 report = gateway.assess(witness=witness, witness_independent=True, measurer_independent=True,
+                                         external_binary_measurement=gateway.running_measurement)
+@@ -372,23 +372,25 @@
+                 gateway.receive("r", b"hello")
+                 output = gateway.generate("r", b"hello")
+                 gateway.release("r", output)
+-                witness.commit_bundle(gateway.bundle())
++                witness.commit_bundle(gateway.bundle(), records=gateway.journal.records())
+                 pinned = gateway.running_measurement
+                 transcript = [
+                     {"request_id": "r", "direction": "incoming", "content": b"hello"},
+                     {"request_id": "r", "direction": "outgoing", "content": output},
+                 ]
+             replaced_model = _model()
+-            with CaptureGateway(path, policy=b"administrator-replaced-gateway", model=replaced_model) as replaced:
++            with CaptureGateway(path, policy=b"administrator-replaced-gateway", model=replaced_model) as replaced, LocalWitnessQuorum(root / "witnesses") as reopened:
+                 report = replaced.assess(
+-                    transcript=transcript, witness=LocalWitnessQuorum(root / "witnesses"),
++                    transcript=transcript, witness=reopened,
+                     pinned_measurement=pinned, external_binary_measurement=replaced.running_measurement,
+                     witness_independent=True, measurer_independent=True,
+                 )
+                 self.assertFalse(replaced.measurement_matches_store)
+                 self.assertEqual(report["pin"], "MISMATCH")
+                 self.assertEqual(report["completeness"], "UNKNOWN")
+-                self.assertEqual(report["recorded_prefix"], "VERIFIED_AGAINST_WITNESS")
++                # F5 model certificates are session-local: restart must fail closed.
++                self.assertEqual(report["recorded_prefix"], "LOCAL_ONLY_WITNESS_UNAVAILABLE")
++                self.assertEqual(report["witness_status"], "UNAVAILABLE")
+                 self.assertNotEqual(report["running_measurement"], pinned)
+ 
+     def test_administrator_can_forge_the_policy_label_and_lie_in_self_report(self):
+@@ -439,12 +441,12 @@
+                 output = gateway.generate("r", b"hello")
+                 gateway.release("r", output)
+                 gateway.acknowledge("r", b"ack")
+-                self.assertEqual(witness.commit_bundle(gateway.bundle())["status"], "QUORUM_FINALIZED")
++                self.assertEqual(witness.commit_bundle(gateway.bundle(), records=gateway.journal.records())["status"], "QUORUM_FINALIZED")
+                 snapshot = gateway.snapshot()
+                 gateway.receive("later", b"later-message")
+                 side = model.invoke_direct(b"bypass-text")
+                 self.assertEqual(side, b"reply:bypass-text")
+-                witnessed_later = witness.commit_bundle(gateway.bundle())
++                witnessed_later = witness.commit_bundle(gateway.bundle(), records=gateway.journal.records())
+                 self.assertEqual(witnessed_later["status"], "QUORUM_FINALIZED")
+                 gateway.restore(snapshot)
+                 diverged = gateway.assess(witness=witness, witness_independent=True, measurer_independent=True,
+@@ -454,7 +456,7 @@
+                 self.assertEqual(diverged["chain_integrity"], "VERIFIED")
+             with CaptureGateway(root / "cap.sqlite", model=_model()) as gateway, LocalWitnessQuorum(root / "witness-old") as old:
+                 # Re-establish only the restored prefix on a fresh witness quorum.
+-                self.assertEqual(old.commit_bundle(gateway.bundle())["status"], "QUORUM_FINALIZED")
++                self.assertEqual(old.commit_bundle(gateway.bundle(), records=gateway.journal.records())["status"], "QUORUM_FINALIZED")
+                 hidden = gateway.assess(
+                     witness=old,
+                     external_binary_measurement=gateway.running_measurement,
