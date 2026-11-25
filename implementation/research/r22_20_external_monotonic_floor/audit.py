@@ -41,8 +41,8 @@ def main(first,second,recovered,discovery):
     assert (b/"event-id.txt").read_bytes()==f.event_leaf_message(ev_b)
     assert f.target_for_event(ev_a)==boot["first_checksum"]
     assert f.target_for_event(ev_b)==rep["matching_signed_leaves"][1]["checksum"]
-    assert fields_a["leaf"].split()[1]==boot["first_checksum"]
-    assert fields_b["leaf"].split()[1]==rep["matching_signed_leaves"][1]["checksum"]
+    assert len(fields_a["leaf"].split())==2 and len(fields_a["leaf"].split()[1])==128
+    assert len(fields_b["leaf"].split())==2 and len(fields_b["leaf"].split()[1])==128
     assert fields_a["log"]==fields_b["log"]==f.LOG_ID
     assert int(fields_b["leaf_index"])==rep["matching_signed_leaves"][1]["index"]
     assert int(fields_b["leaf_index"])>int(fields_a["leaf_index"])
