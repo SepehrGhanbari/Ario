@@ -1,0 +1,182 @@
+name: R22.20 external lifecycle checkpoint (advisory)
+on:
+  push:
+    branches:
+      - research/r22-20-external-lifecycle-checkpoint-20261125
+    paths:
+      - .github/workflows/r22-20-external-lifecycle.yml
+      - implementation/research/r22_20_external_lifecycle_checkpoint/checkpoint.py
+permissions:
+  contents: read
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - name: Actual historical lifecycle in disposable separate UID lab
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/14950269714/zip" > "$RUNNER_TEMP/capture.zip"
+          echo "b7f1702b88241f6062c6e9c3975e5969620e98b6fc47321ca7e91956c7500f8e  $RUNNER_TEMP/capture.zip" | sha256sum -c -
+          sudo /usr/bin/python3 implementation/research/r22_20_external_lifecycle_checkpoint/checkpoint.py prepare "$RUNNER_TEMP/r22-20" "$RUNNER_TEMP/capture.zip"
+          sudo chown "$(id -u):$(id -g)" "$RUNNER_TEMP/r22-20/first" "$RUNNER_TEMP/r22-20/second"
+      - name: Publish exactly two PUBLIC synthetic checkpoints on existing TEST log
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          for tool in sigsum-key sigsum-policy sigsum-submit sigsum-verify; do
+            go install "sigsum.org/sigsum-go/cmd/$tool@v0.14.1"
+          done
+          export PATH="$(go env GOPATH)/bin:$PATH"
+          A="$RUNNER_TEMP/r22-20/first"; B="$RUNNER_TEMP/r22-20/second"
+          K="$(mktemp -d "$RUNNER_TEMP/r22-20-key.XXXXXX")"
+          trap 'rm -rf "$K"' EXIT
+          chmod 0700 "$K"
+          sigsum-key generate -o "$K/synthetic-key"
+          for D in "$A" "$B"; do
+            cp "$K/synthetic-key.pub" "$D/synthetic-key.pub"
+            sigsum-policy show sigsum-test1-2025 > "$D/policy.txt"
+            sigsum-submit -P sigsum-test1-2025 -k "$K/synthetic-key" "$D/envelope.json"
+            sigsum-verify -k "$D/synthetic-key.pub" -P sigsum-test1-2025 "$D/envelope.json.proof" < "$D/envelope.json"
+          done
+          echo BOTH_CHECKPOINTS_EXTERNALLY_VERIFIED
+      - name: Actual joint restore AFTER external publication
+        run: |
+          set -euo pipefail
+          sudo /usr/bin/python3 implementation/research/r22_20_external_lifecycle_checkpoint/checkpoint.py restore "$RUNNER_TEMP/r22-20"
+          export LAB="$RUNNER_TEMP/r22-20"
+          python - <<'PY'
+          import base64,hashlib,json,os
+          from pathlib import Path
+          root=Path(os.environ['LAB']); a=root/'first'; b=root/'second'
+          def fields(p):
+              return dict(line.split('=',1) for line in p.read_text().splitlines() if line.startswith(('size=','root_hash=','leaf_index=','log=','leaf=')))
+          x,y=fields(a/'envelope.json.proof'),fields(b/'envelope.json.proof')
+          assert x['log']==y['log']=='4e89cc51651f0d95f3c6127c15e1a42e3ddf7046c5b17b752689c402e773bb4d'
+          assert int(y['leaf_index'])>int(x['leaf_index']) and int(y['size'])>int(x['size'])
+          assert x['leaf'].split()[0]==y['leaf'].split()[0]
+          key=base64.b64decode((a/'synthetic-key.pub').read_text().split()[1],validate=True)
+          assert key[:19]==b'\x00\x00\x00\x0bssh-ed25519\x00\x00\x00\x20' and len(key)==51
+          pub=key[19:]
+          assert hashlib.sha256(pub).hexdigest()==x['leaf'].split()[0]
+          first=hashlib.sha256(hashlib.sha256((a/'envelope.json').read_bytes()).digest()).hexdigest()
+          (a/'bootstrap.json').write_text(json.dumps({'start':int(x['leaf_index']),'size':int(x['size']),'root':x['root_hash'],'public':pub.hex(),'first_checksum':first},sort_keys=True)+'\n')
+          PY
+          mkdir "$RUNNER_TEMP/r22-20-scanner"
+          cp implementation/research/r22_14_external_lower_bound/{main.go,main_test.go,go.mod} "$RUNNER_TEMP/r22-20-scanner/"
+          cp "$LAB/first/bootstrap.json" "$RUNNER_TEMP/r22-20-scanner/"
+          test "$(find "$RUNNER_TEMP/r22-20-scanner" -maxdepth 1 -type f | wc -l)" = 4
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r22-20-first-restored
+          path: ${{ runner.temp }}/r22-20/first/
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r22-20-withheld-second
+          path: ${{ runner.temp }}/r22-20/second/
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r22-20-scanner-first-only
+          path: ${{ runner.temp }}/r22-20-scanner/
+          if-no-files-found: error
+          retention-days: 30
+  discover:
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: r22-20-scanner-first-only
+          path: ${{ runner.temp }}/scanner
+      - name: Blind live readback without second checksum or bytes
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/scanner"
+          test "$(find . -maxdepth 1 -type f | wc -l)" = 4
+          test ! -e "$GITHUB_WORKSPACE/.git"
+          go mod tidy
+          go test -v ./...
+          go build -o discover .
+          env -i PATH=/usr/bin:/bin HOME="$RUNNER_TEMP" ./discover | tee "$RUNNER_TEMP/discovery.jsonl"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r22-20-live-discovery
+          path: ${{ runner.temp }}/discovery.jsonl
+          if-no-files-found: error
+          retention-days: 30
+  reveal:
+    needs: discover
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: r22-20-first-restored
+          path: ${{ runner.temp }}/first
+      - uses: actions/download-artifact@v4
+        with:
+          name: r22-20-withheld-second
+          path: ${{ runner.temp }}/second
+      - uses: actions/download-artifact@v4
+        with:
+          name: r22-20-live-discovery
+          path: ${{ runner.temp }}/discovery
+      - name: Official proof validation and joint rollback detection
+        run: |
+          set -euo pipefail
+          go install sigsum.org/sigsum-go/cmd/sigsum-verify@v0.14.1
+          A="$RUNNER_TEMP/first"; B="$RUNNER_TEMP/second"
+          cmp "$A/synthetic-key.pub" "$B/synthetic-key.pub"
+          for D in "$A" "$B"; do
+            "$(go env GOPATH)/bin/sigsum-verify" -k "$A/synthetic-key.pub" -P sigsum-test1-2025 "$D/envelope.json.proof" < "$D/envelope.json"
+          done
+          export LAB="$RUNNER_TEMP"
+          H="$(python - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          p=Path(os.environ['LAB'])
+          d=json.loads((p/'discovery/discovery.jsonl').read_text().splitlines()[-1])
+          b=json.loads((p/'first/bootstrap.json').read_bytes())
+          assert d['disposition']=='HOLD_LATER_SIGNED_COMMITMENT' and d['old_state_admissible'] is False
+          x,y=d['matching_signed_leaves']
+          assert x['checksum']==b['first_checksum'] and x['index']==b['start'] and y['index']>x['index']
+          f=dict(line.split('=',1) for line in (p/'second/envelope.json.proof').read_text().splitlines() if line.startswith('leaf_index='))
+          assert int(f['leaf_index'])==y['index']
+          assert hashlib.sha256(hashlib.sha256((p/'second/envelope.json').read_bytes()).digest()).hexdigest()==y['checksum']
+          print(y['checksum'])
+          PY
+          )"
+          python implementation/research/r22_20_external_lifecycle_checkpoint/checkpoint.py check "$A" "$B" "$H" | tee "$RUNNER_TEMP/results.log"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r22-20-rollback-results
+          path: ${{ runner.temp }}/results.log
+          if-no-files-found: warn
+          retention-days: 30
