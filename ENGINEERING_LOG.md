@@ -712,3 +712,7 @@ Base 7365e7a9ac7febb78b34039c7b36469b3344cfff. Windows CPython 3.13, stdlib unit
 - The 3.14 diagnostic emitted `ARIO_HTTP403_DIAGNOSTIC`: run metadata request observed HTTP 200; a job-log redirect download timed out; diagnostic execution attestation remained `NOT_ESTABLISHED`. Retain as a warning, not as an HTTP 403 finding or a test failure.
 - These are results for tested code head `86a326c`; subsequent changes to this branch are documentation-only. The two snapshot-admission tests are in the full `pytest -q tests` suite, whose logs are quiet and do not print per-test names.
 - All skips, xfails and warnings remain recorded. No merge, policy adoption, external snapshot authentication, hostile-pickle safety, trust activation, signer/key/TPM, Genesis or production authority is established.
+
+## 2026-11-26 — #216 unverified imported ledger reports on #381
+
+Implementation and test source 9f0f4929828cf188904e3edf4c78f652a4c1667e follows published parent 38204d103525fe6bf257c778dde78d08e5706496. The bridge uses the existing external-testimony registration and preserves the existing goal and step IDs. The historical alias and snapshot fixes were retested on an independent checkout of the same GitHub source. See implementation/research/FOUNDATION_RECOVERY.md section 8 for the before/after observations, local symlink limitation, source-pinned CI, exact commands, #385 compatibility issue and open custody and admission questions. Local pre-edit copies and the original Git blobs were retained. RESEARCH_ONLY / HOLD. GENESIS = NO_GO.
