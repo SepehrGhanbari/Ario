@@ -44,10 +44,10 @@ This delegation is an operational authorization from the project owner. It does 
 
 ## Preservation and failure handling
 
-- Do not overwrite, delete, rename, or repurpose a healthy or historical artifact without explicit authorization and a verified, recoverable backup.
-- Before an authorized write that risks existing content, record its current state and create a uniquely named backup. Verify the backup against the original before proceeding.
-- Keep each change as narrow as possible. If a change fails, do not leave the active project partially modified: restore from a verified backup when restoration is safe, then verify the restored state. If safe restoration cannot be confirmed, stop and report the condition without further writes.
-- Do not touch unrelated user changes, untracked files, backups, runtime data, caches, or generated artifacts unless they are explicitly in scope.
+- Ordinary source, test, and documentation edits within the standing delegation do not require separate authorization. Do not destructively overwrite, delete, rename, or repurpose historical evidence, immutable records, archives, or retained backups; these remain protected by the hard boundaries above.
+- Before a write that risks existing content, record its current state and create a uniquely named, recoverable backup where appropriate. Verify the backup against the original before proceeding.
+- Keep each change as narrow as possible. If a change fails, do not leave the active project partially modified: restore from a verified backup when restoration is safe, then verify the restored state. If safe restoration cannot be confirmed, place the affected work on HOLD and continue only independent safe work.
+- Preserve unrelated user changes, untracked files, backups, runtime data, caches, and generated artifacts. Modify them only when directly required by the engineering objective and within the standing delegation; never sweep them into a commit.
 
 ## Evidence and reporting
 
