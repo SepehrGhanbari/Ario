@@ -17,7 +17,7 @@ jobs:
       contents: read
       actions: read
     outputs:
-      dpaste_url: ${{ steps.pin.outputs.dpaste_url }}
+      centos_raw_url: ${{ steps.pin.outputs.centos_raw_url }}
       paste_rs_url: ${{ steps.pin.outputs.paste_rs_url }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -51,19 +51,17 @@ jobs:
         run: |
           set -euo pipefail
           P="$RUNNER_TEMP/pin.json"
-          # dpaste: explicit 365-day expiry; anonymous public copy.
-          ds=$(curl --silent --show-error --output "$RUNNER_TEMP/dpaste.response" --write-out '%{http_code}' \
-            -F "content=<$P" -F "syntax=json" -F "title=ARIO-R22.22B-portable-kit" -F "expiry_days=365" \
-            https://dpaste.com/api/v2/)
-          test "$ds" = "200" -o "$ds" = "201"
-          dresp=$(tr -d '\r\n ' < "$RUNNER_TEMP/dpaste.response")
-          if [[ "$dresp" == http* ]]; then
-            dpaste_url="${dresp%.txt}.txt"
-          else
-            dpaste_url="https://dpaste.com/${dresp}.txt"
-          fi
-          curl --fail --silent --show-error "$dpaste_url" -o "$RUNNER_TEMP/dpaste.readback.json"
-          cmp "$P" "$RUNNER_TEMP/dpaste.readback.json"
+          # CentOS paste API: separate public endpoint; request a one-year expiry.
+          cs=$(curl --silent --show-error --output "$RUNNER_TEMP/centos.response" --write-out '%{http_code}' \
+            --data-urlencode "text@$P" -d "title=ARIO-R22.22B-portable-kit" -d "lang=text" -d "expire=525600" \
+            https://paste.centos.org/api/create)
+          test "$cs" = "200" -o "$cs" = "201"
+          cresp=$(tr -d '\r\n ' < "$RUNNER_TEMP/centos.response")
+          case "$cresp" in https://paste.centos.org/view/*) ;; *) echo "unexpected CentOS paste URL" >&2; exit 1;; esac
+          cid=$(basename "$cresp")
+          centos_raw_url="https://paste.centos.org/view/raw/$cid"
+          curl --fail --silent --show-error "$centos_raw_url" -o "$RUNNER_TEMP/centos.readback.json"
+          cmp "$P" "$RUNNER_TEMP/centos.readback.json"
           # paste.rs: separate operator/service; retention is not promised.
           ps=$(curl --silent --show-error --output "$RUNNER_TEMP/paste-rs.response" --write-out '%{http_code}' \
             -H 'Content-Type: application/json' -H 'User-Agent: Ario-R22.22B-Research/1.0' \
@@ -73,15 +71,15 @@ jobs:
           case "$paste_rs_url" in https://paste.rs/*) ;; *) echo "unexpected paste.rs URL" >&2; exit 1;; esac
           curl --fail --silent --show-error "$paste_rs_url" -o "$RUNNER_TEMP/paste-rs.readback.json"
           cmp "$P" "$RUNNER_TEMP/paste-rs.readback.json"
-          echo "DPASTE_URL=$dpaste_url"
+          echo "CENTOS_RAW_URL=$centos_raw_url"
           echo "PASTE_RS_URL=$paste_rs_url"
-          echo "dpaste_url=$dpaste_url" >> "$GITHUB_OUTPUT"
+          echo "centos_raw_url=$centos_raw_url" >> "$GITHUB_OUTPUT"
           echo "paste_rs_url=$paste_rs_url" >> "$GITHUB_OUTPUT"
           mkdir "$RUNNER_TEMP/evidence"
           cp "$P" "$RUNNER_TEMP/evidence/pin.json"
-          cp "$RUNNER_TEMP/dpaste.readback.json" "$RUNNER_TEMP/evidence/dpaste.readback.json"
+          cp "$RUNNER_TEMP/centos.readback.json" "$RUNNER_TEMP/evidence/centos.readback.json"
           cp "$RUNNER_TEMP/paste-rs.readback.json" "$RUNNER_TEMP/evidence/paste-rs.readback.json"
-          printf '%s\n' "$dpaste_url" > "$RUNNER_TEMP/evidence/dpaste.url"
+          printf '%s\n' "$centos_raw_url" > "$RUNNER_TEMP/evidence/centos.raw.url"
           printf '%s\n' "$paste_rs_url" > "$RUNNER_TEMP/evidence/paste-rs.url"
           sha256sum "$P" "$RUNNER_TEMP/artifact/kit.zip" > "$RUNNER_TEMP/evidence/hashes.txt"
       - uses: actions/upload-artifact@v4
@@ -110,19 +108,19 @@ jobs:
           cache: false
       - name: Recover the portable kit from external stores after repository checkout rollback
         env:
-          DPASTE_URL: ${{ needs.publish.outputs.dpaste_url }}
+          CENTOS_RAW_URL: ${{ needs.publish.outputs.centos_raw_url }}
           PASTE_RS_URL: ${{ needs.publish.outputs.paste_rs_url }}
         run: |
           set -euo pipefail
-          test -n "$DPASTE_URL" && test -n "$PASTE_RS_URL"
+          test -n "$CENTOS_RAW_URL" && test -n "$PASTE_RS_URL"
           mkdir "$RUNNER_TEMP/external"
-          curl --fail --silent --show-error "$DPASTE_URL" -o "$RUNNER_TEMP/external/dpaste.json"
+          curl --fail --silent --show-error "$CENTOS_RAW_URL" -o "$RUNNER_TEMP/external/centos.json"
           curl --fail --silent --show-error "$PASTE_RS_URL" -o "$RUNNER_TEMP/external/paste-rs.json"
           python - "$RUNNER_TEMP/external" <<'PY'
           import base64,hashlib,json,pathlib,sys
           p=pathlib.Path(sys.argv[1]); expected="304765d8d7f0da2d5e62443b7d1f48c00c8ff9bd324b8f8ed9c88c0ab7fffe24"
           blobs=[]
-          for name in ("dpaste.json","paste-rs.json"):
+          for name in ("centos.json","paste-rs.json"):
               o=json.loads((p/name).read_bytes())
               assert o["profile"]=="ARIO-R22.22B-EXTERNAL-KIT-COPY"
               raw=base64.b64decode(o["kit_base64"],validate=True)
