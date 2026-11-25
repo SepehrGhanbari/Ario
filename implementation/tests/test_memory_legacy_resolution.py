@@ -1,4 +1,5 @@
 """Regression checks for the v2 read-side projection of historical v1 IDs."""
+import dataclasses
 import hashlib
 import json
 import pickle
@@ -6,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from core.memory_consolidation import ConsolidationEngine, ConsolidationError
+from core.memory_consolidation import ConsolidationEngine, ConsolidationError, NodeEpistemicStatus
 
 
 PAIRS = (("a:b", "c"), ("a", "b:c"))
@@ -94,6 +95,37 @@ class LegacyResolutionTests(unittest.TestCase):
         with self.assertRaisesRegex(ConsolidationError, "HOLD_INVALID_SNAPSHOT_NODE_ID"):
             engine.__setstate__(state)
         self.assertEqual(engine.nodes, before)
+
+    def test_snapshot_restore_holds_legacy_admission_labels(self):
+        engine = engine_with(PAIRS[0])
+        before = engine.nodes
+        for status in (NodeEpistemicStatus.ACCEPTED, NodeEpistemicStatus.SUPPORTED):
+            with self.subTest(status=status.value):
+                state = engine.__getstate__()
+                node_id, node = next(iter(state["_nodes"].items()))
+                state["_nodes"][node_id] = dataclasses.replace(node, status=status)
+                archived_state = pickle.dumps(state)
+                with self.assertRaisesRegex(
+                    ConsolidationError, "HOLD_UNVERIFIED_SNAPSHOT_ADMISSION"
+                ):
+                    engine.__setstate__(state)
+                self.assertEqual(pickle.dumps(state), archived_state)
+                self.assertEqual(engine.nodes, before)
+
+    def test_snapshot_restore_rejects_non_enum_status(self):
+        engine = engine_with(PAIRS[0])
+        before = engine.nodes
+        for status in ("SUPPORTED", "UNRECOGNIZED"):
+            with self.subTest(status=status):
+                state = engine.__getstate__()
+                node_id, node = next(iter(state["_nodes"].items()))
+                state["_nodes"][node_id] = dataclasses.replace(node, status=status)
+                with self.assertRaisesRegex(
+                    ConsolidationError, "HOLD_INVALID_SNAPSHOT_STATUS"
+                ):
+                    engine.__setstate__(state)
+                self.assertEqual(engine.nodes, before)
+
 
     def test_import_replay_and_raw_status(self):
         with tempfile.TemporaryDirectory() as scratch:
