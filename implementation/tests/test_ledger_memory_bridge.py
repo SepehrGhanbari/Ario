@@ -75,19 +75,19 @@ class LedgerMemoryBridgeTests(unittest.TestCase):
             contested_nodes = [n for n in bridge.engine.nodes.values() if n.status == NodeEpistemicStatus.CONTESTED]
             self.assertGreaterEqual(len(contested_nodes), 1)
 
-    def test_bridge_triggers_prospective_intentions_on_task_finish(self):
-        """TASK_FINISHED cue context must evaluate and trigger prospective intentions."""
+    def test_bridge_does_not_trigger_intentions_on_untrusted_task_finish(self):
+        """A reported TASK_FINISHED event is not an authorized action trigger."""
         with tempfile.TemporaryDirectory() as temp_dir:
             ledger_path = Path(temp_dir) / "task_finish.jsonl"
             events = [
                 {"event": "TASK_STARTED", "task_id": "build-prod", "goal": "Compile release"},
                 {"event": "TASK_FINISHED", "task_id": "build-prod", "status": "COMPLETED", "exit_code": 0},
             ]
-            ledger_path.write_text("\n".join(json.dumps(ev) for ev in events) + "\n", encoding="utf-8")
+            ledger_path.write_text("\\n".join(json.dumps(ev) for ev in events) + "\\n", encoding="utf-8")
 
             registry = ProspectiveMemoryRegistry()
             registry.register_intention(
-                description="Trigger deployment pipeline when build finishes",
+                description="Synthetic action must not fire from an unauthenticated ledger report",
                 predicate_expr="task_id == 'build-prod' and status == 'COMPLETED'",
                 action_payload={"deploy": True},
                 created_at_epoch=1000.0,
@@ -97,8 +97,10 @@ class LedgerMemoryBridgeTests(unittest.TestCase):
             bridge = EpistemicLedgerBridge(prospective_registry=registry)
             summary = bridge.ingest_agent_ledger(ledger_path, current_epoch=1000.0)
 
-            self.assertEqual(summary.triggered_intentions_count, 1)
-            self.assertEqual(summary.triggered_intentions[0]["action_payload"], {"deploy": True})
+            self.assertEqual(summary.reported_task_finishes_count, 1)
+            self.assertEqual(summary.triggered_intentions_count, 0)
+            self.assertEqual(summary.triggered_intentions, ())
+            self.assertEqual(len(registry.get_pending_intentions()), 1)
 
     def test_v2_canonical_node_id_eliminates_delimiter_collision(self):
         """Invariant (Issue #216): ('a:b', 'c') and ('a', 'b:c') must have distinct v2 IDs."""
