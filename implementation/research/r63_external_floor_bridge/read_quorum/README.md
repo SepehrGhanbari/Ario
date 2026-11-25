@@ -1,0 +1,11 @@
+# R63 fixed read quorum — 2026-11-25
+
+RESEARCH_ONLY / HOLD / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTION / NO_AUTOMATIC_MERGE / GENESIS NO_GO.
+
+Local run with exact historical signed notes and consistency path from previous direct-witness research: 19/19 expected fixture controls, including one reproduced RED. 80/80 exhaustive read/write quorum intersection combinations (4x4x5); one extra model RED. No live network query or outage. Two fixed pinned identities; require both signed notes, bounded signed-age window (3600 seconds, 60 seconds future tolerance), verified consistency if heights differ and exact candidate match to highest observed head. Missing or invalid reply fails closed. Historical test clock is derived from fixture timestamps, not a trusted live clock. Positive output REVIEW_ONLY, never freshness or signing authority. Candidate is proposed head, not a separately verified Sigsum receipt. No nonce-bound responses. Valid replay of both notes inside age window still REVIEW_ONLY (RED). If later used in a live experiment, trusted clock, independent transport, deadlines and separate original Sigsum proof policy are required.
+
+3-of-4 read and write quorums intersect in at least two members. With at most one faulty operator and honest members durably retaining and returning at least the acknowledged head, an honest intersection member exists. A higher reference held by only one omitted witness is not guaranteed visible (RED). The model does not establish deployment, independence or durable retention. Two direct witnesses are not four enrolled authorities. Original 2-of-3 TEST signature policy unchanged.
+
+Exact tested gate SHA256 9f3ad2d12e1eee2b8c089efdfd7a61cab73cf5699f2426569e0bd1922b81e853; Git blob 32311cb6861c4f610bc99fb2abe128df1505be5c. Owner package Ario_R63_Read_Quorum.zip SHA256 0eca4497499a9867e729a5c0939d3e5d720c1ca07ef38de5c8331a0c6fca3586, CRC and manifest verified; contains complete original helpers, fixture files and run log. Repo copies contain extracted identical relevant helper functions, not entire original helper scripts; separate repository rerun pending. Run python -B read_quorum.py in this directory with cryptography installed.
+
+Next: actual durable write quorum and authenticated direct read freshness protocol, not merely increasing the witness count. NO_GO.
