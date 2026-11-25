@@ -223,7 +223,9 @@ def extract_target(events, target, pubkey):
         except (ValueError, TypeError, KeyError, UnicodeError, RecursionError):
             continue
     unique = {item[0]["id"]: item for item in matches}
-    if len(unique) != 1:
+    if len(unique) > 1:
+        raise ValueError("conflicting event IDs for one logged checksum")
+    if not unique:
         return None, None
     return next(iter(unique.values()))
 
