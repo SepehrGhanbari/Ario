@@ -62,7 +62,8 @@ jobs:
       - name: Offline adversarial envelope and replay controls
         run: |
           set -euo pipefail
-          python -m unittest -v implementation/research/r22_20_external_monotonic_floor/test_external_floor.py
+          cd implementation/research/r22_20_external_monotonic_floor
+          python -m unittest -v test_external_floor
       - name: Publish seq 6 and seq 8 content to external Nostr relays
         run: |
           set -euo pipefail
