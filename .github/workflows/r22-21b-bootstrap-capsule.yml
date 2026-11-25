@@ -1,0 +1,105 @@
+name: R22.21B external bootstrap capsule (advisory)
+on:
+  push:
+    branches: [research/r22-21-external-deletion-recovery-20261125]
+    paths:
+      - .github/workflows/r22-21b-bootstrap-capsule.yml
+      - implementation/research/r22_21_bootstrap_capsule/capsule.py
+permissions:
+  contents: read
+concurrency:
+  group: r22-21b-public-synthetic-bootstrap
+  cancel-in-progress: false
+jobs:
+  publish:
+    permissions:
+      contents: read
+      actions: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    outputs:
+      capsule_id: ${{ steps.capsule.outputs.capsule_id }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - run: |
+          set -euo pipefail
+          go install sigsum.org/sigsum-go/cmd/sigsum-verify@v0.14.1
+          python -m pip install coincurve==21.0.0 websockets==15.0.1
+      - name: Validate exact first-only input and publish one synthetic capsule
+        id: capsule
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15047051021/zip" > "$RUNNER_TEMP/first.zip"
+          echo "2bedc6d0cc85857cfaed3ceafeb5d7700d78923057e661d9c5675d6925e6262b  $RUNNER_TEMP/first.zip" | sha256sum -c -
+          python - <<'PY'
+          import os,sys
+          from pathlib import Path
+          sys.path.insert(0,'implementation/research/r22_21_bootstrap_capsule/')
+          import capsule
+          p=Path(os.environ['RUNNER_TEMP']); capsule.unpack((p/'first.zip').read_bytes(),p/'precheck')
+          PY
+          F="$RUNNER_TEMP/precheck"
+          "$(go env GOPATH)/bin/sigsum-verify" -k "$F/historical-log.pub" -P sigsum-test1-2025 "$F/historical-first.proof" < "$F/historical-first-id.txt"
+          "$(go env GOPATH)/bin/sigsum-verify" -k "$F/sigsum.pub" -P sigsum-test1-2025 "$F/event-id.txt.proof" < "$F/event-id.txt"
+          python implementation/research/r22_21_bootstrap_capsule/capsule.py publish "$RUNNER_TEMP/first.zip" "$RUNNER_TEMP/capsule-id.txt"
+          echo "capsule_id=$(cat "$RUNNER_TEMP/capsule-id.txt")" >> "$GITHUB_OUTPUT"
+  cold:
+    needs: publish
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - run: |
+          set -euo pipefail
+          go install sigsum.org/sigsum-go/cmd/sigsum-verify@v0.14.1
+          python -m pip install coincurve==21.0.0 websockets==15.0.1
+      - name: Recover first-only bootstrap from external relay, no artifact read
+        env:
+          CAPSULE_ID: ${{ needs.publish.outputs.capsule_id }}
+        run: |
+          set -euo pipefail
+          F="$RUNNER_TEMP/first"
+          test ! -e "$F"
+          python implementation/research/r22_21_bootstrap_capsule/capsule.py recover "$CAPSULE_ID" "$F" | tee "$RUNNER_TEMP/bootstrap.jsonl"
+          "$(go env GOPATH)/bin/sigsum-verify" -k "$F/historical-log.pub" -P sigsum-test1-2025 "$F/historical-first.proof" < "$F/historical-first-id.txt"
+          "$(go env GOPATH)/bin/sigsum-verify" -k "$F/sigsum.pub" -P sigsum-test1-2025 "$F/event-id.txt.proof" < "$F/event-id.txt"
+          test ! -e "$F/historical-second.json"
+          mkdir "$RUNNER_TEMP/scanner"
+          cp implementation/research/r22_10_blind_discovery/{main.go,main_test.go,go.mod} "$RUNNER_TEMP/scanner/"
+          cp "$F/bootstrap.json" "$RUNNER_TEMP/scanner/"
+          (cd "$RUNNER_TEMP/scanner"; go mod tidy; go test ./...; go build -o scan .; ./scan) | tee "$RUNNER_TEMP/discovery.jsonl"
+          python implementation/research/r22_21_external_deletion/experiment.py recover "$F" "$RUNNER_TEMP/discovery.jsonl" "$RUNNER_TEMP/recovered"
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          p=Path(os.environ['RUNNER_TEMP'])/'recovered/report.json'
+          r=json.loads(p.read_bytes())
+          assert r['disposition']=='RECOVERED_EXACT_SYNTHETIC_CONTENT_ONLY' and r['seq']==8 and r['stale_replay']=='HOLD'
+          print('EXTERNAL_BOOTSTRAP_AND_LATER_CONTENT_RECOVERED; NO_ARTIFACT_INPUT_IN_COLD_JOB; NO_GO')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r22-21b-external-bootstrap-results
+          path: |
+            ${{ runner.temp }}/bootstrap.jsonl
+            ${{ runner.temp }}/discovery.jsonl
+            ${{ runner.temp }}/recovered/
+          if-no-files-found: warn
+          retention-days: 30
