@@ -53,3 +53,14 @@ Execution pending. Record actual run, per-relay acknowledgements/readbacks, Sigs
 Earlier harness attempts had implementation/orchestration failures (escaped token expression, CLI arity, directory hashing, and audit-report selection). They are not counted as evidence. Some failed attempts left synthetic public TEST events and an orphan first-leaf commitment on public test infrastructure; no private key or real user data was published. The final run above is the one used for the PASS claim.
 
 **Disposition:** bounded external blind-recovery experiment PASS. Not proof of permanent relay availability, relay-operator administrative independence, global latest/freshness beyond the sampled witnessed head, historical truth, persistent signer continuity, production readiness, or trust activation. If both relays delete/withhold the content, only the opaque Sigsum commitment remains. R22.20 remains RESEARCH_ONLY / HOLD.
+
+## Repeat confirmation after workflow path hardening
+
+[Run 45656683810](https://github.com/SepehrGhanbari/Ario/actions/runs/45656683810), source HEAD ef7af73a6b02abe43f725d1d6c556520d8bfb5aa: publish, discover and audit all SUCCESS. This repeated the full blind workflow after narrowing workflow path filters to executable Python sources and the workflow file, so documentation-only changes no longer republish public test events.
+
+- Sigsum live scan: first/second leaf indices 281662/281663, checksums accc839bc70d2c1ef672b44d532546b2ae680c4bcbd46ebe48188cbfd7e02adb and c256633ce89c63c7fc507a0e46dd9d67ed7f8224bc93cde80ae002acd6c8b679; sampled tree size 281664, root 390cb805b80935f2961f7f44aa7419e6071dfe06b97921b578673e498c0908ee.
+- Both nos.lol and relay.primal.net accepted and returned the later event. Cold recovery returned seq=8; event ID adf82208b79d9bf43cd89dcdd5d898ac2be6ed48d6e6b644126ad2526cd51b1c; ledger SHA256 2f4dc31993e113e884ebdc0befd6b7e7a21b28282093b32e35f68531bcf0faa0.
+- Forced one-endpoint outage fallback PASS; old event replay HOLD; both content endpoints unavailable => HOLD_OPAQUE_NEW_SIGNED_COMMITMENT. Reveal audit passed.
+- Repeat artifacts: FIRST-ONLY 15043316960 SHA256 91f96a3bcb004e8d7fbd6e6b00810a9fe63f6a65d3d1ff2defcf3824ec53a83f (11400 bytes); SECOND-REVEAL 15043212139 SHA256 33e4d317a158f7c1b7b172dad5c487f2835069d339bc21d5b42820a35d8b0bbd (7127 bytes); BLIND-RECOVERY 15043806153 SHA256 a397fbf574a9244697044c34bf469124fb2e45ebcf522048f293ee5386780075 (6870 bytes); AUDIT-REPORT 15043551374 SHA256 24e2f8374dd4f7d43e4c6b45c758db7cd0ff87d6375731bc670b3e65f92eaace (671 bytes). Expires 2026-12-25.
+
+The same boundaries remain: public TEST only, synthetic records and ephemeral keys; relay operator independence, durable availability, global latest, event truth, old signer continuity and production trust NOT_ESTABLISHED.
