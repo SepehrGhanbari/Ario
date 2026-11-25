@@ -115,7 +115,7 @@ class ReadOnlyAdapterTests(unittest.TestCase):
         first_receipt = self.seed(1)[0]
         first = self.build_initial()
         previous = self.state.parent / "first-checkpoint.json"
-        previous.write_text(adapter.canonical(first) + "\\n", encoding="utf-8")
+        previous.write_text(adapter.canonical(first) + "\n", encoding="utf-8")
 
         journal = broker.Journal(self.state)
         second_receipt = journal.consume(request("ATT_SYNTH_02"))
@@ -149,7 +149,7 @@ class ReadOnlyAdapterTests(unittest.TestCase):
         first_floor = (self.state / broker.FLOOR_NAME).read_bytes()
         first = self.build_initial()
         previous = self.state.parent / "external-retained-checkpoint.json"
-        previous.write_text(adapter.canonical(first) + "\\n", encoding="utf-8")
+        previous.write_text(adapter.canonical(first) + "\n", encoding="utf-8")
 
         journal = broker.Journal(self.state)
         journal.consume(request("ATT_SYNTH_02"))
@@ -160,20 +160,18 @@ class ReadOnlyAdapterTests(unittest.TestCase):
             previous_checkpoint_path=previous,
         )
         self.assertEqual(second["payload"]["broker_head"]["seq"], 2)
+        second_checkpoint = self.state.parent / "second-checkpoint.json"
+        second_checkpoint.write_text(adapter.canonical(second) + "\n", encoding="utf-8")
 
-        # Simulate same-admin rollback of BOTH local files. The independently
-        # retained seq=2 checkpoint remains outside the rolled-back state dir.
+        # Simulate same-admin rollback of BOTH local files. The retained seq=2
+        # checkpoint is kept outside the rolled-back local state directory.
         (self.state / broker.LEDGER_FILENAME).write_bytes(first_db)
         (self.state / broker.FLOOR_NAME).write_bytes(first_floor)
         with self.assertRaises(adapter.AdapterHold):
             adapter.build_checkpoint(
                 self.state,
                 "A15_SYNTHETIC_SCOPE",
-                previous_checkpoint_path=self.state.parent / "second-checkpoint.json",
-            ) if False else adapter.build_checkpoint(
-                self.state,
-                "A15_SYNTHETIC_SCOPE",
-                previous_checkpoint_path=previous,
+                previous_checkpoint_path=second_checkpoint,
             )
 
     def test_same_sequence_fork_is_detected(self):
@@ -181,7 +179,7 @@ class ReadOnlyAdapterTests(unittest.TestCase):
         self.seed(1)
         first = self.build_initial()
         previous = self.state.parent / "first.json"
-        previous.write_text(adapter.canonical(first) + "\\n", encoding="utf-8")
+        previous.write_text(adapter.canonical(first) + "\n", encoding="utf-8")
 
         fork_state = Path(self.temp.name) / "fork"
         fork_state.mkdir()
@@ -269,7 +267,7 @@ class ReadOnlyAdapterTests(unittest.TestCase):
     def test_source_blob_mismatch_holds(self):
         self.seed(1)
         altered = Path(self.temp.name) / "altered_broker.py"
-        altered.write_bytes(BROKER_SOURCE.read_bytes() + b"\\n# altered")
+        altered.write_bytes(BROKER_SOURCE.read_bytes() + b"\n# altered")
         with self.assertRaises(adapter.AdapterHold):
             adapter.build_checkpoint(
                 self.state,
@@ -292,7 +290,7 @@ class ReadOnlyAdapterTests(unittest.TestCase):
                 adapter.canonical(payload).encode("ascii")
             ).hexdigest(),
         }
-        other_scope.write_text(adapter.canonical(other) + "\\n", encoding="utf-8")
+        other_scope.write_text(adapter.canonical(other) + "\n", encoding="utf-8")
         journal = broker.Journal(self.state)
         journal.consume(request("ATT_SYNTH_02"))
         journal.conn.close()
