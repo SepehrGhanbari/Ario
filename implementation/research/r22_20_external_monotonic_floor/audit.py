@@ -28,7 +28,14 @@ def main(first,second,recovered,discovery):
     recovered_event=json.loads((r/"event.json").read_text("ascii"))
     fields_a=proof_fields(a/"event-id.txt.proof")
     fields_b=proof_fields(b/"event-id.txt.proof")
+    prior_raw=(a/"prior-anchor"/"envelope.json").read_bytes()
+    prior_ledger=(a/"prior-anchor"/"ledger.jsonl").read_bytes()
+    prior_env=json.loads(prior_raw.decode("ascii"))
     x=f.verify_event(ev_a,pub);y=f.verify_event(ev_b,pub)
+    assert f.sha(prior_raw)==f.parse_envelope(env_a)["prior_checkpoint_sha256"]
+    assert f.sha(prior_ledger)==f.parse_envelope(env_a)["prior_ledger_sha256"]
+    assert prior_env["record"]["ledger_sha256"]==f.sha(prior_ledger)
+    assert prior_env["scope"]==f.parse_envelope(env_a)["scope"]
     assert x[0]==env_a and x[2]==led_a and y[0]==env_b and y[2]==led_b
     assert f.target_for_event(ev_a)==boot["first_checksum"]
     assert f.target_for_event(ev_b)==rep["matching_signed_leaves"][1]["checksum"]
