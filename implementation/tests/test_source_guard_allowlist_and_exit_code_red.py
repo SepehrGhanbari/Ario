@@ -18,7 +18,7 @@ from core.source_monitoring import (
 
 def _record(guard, *, tool="run_tests", exit_code=0):
     return guard.record_empirical_observation(
-        assertion="synthetic tool outcome, NOT an authenticated receipt",
+        assertion=f"tool_exit:{tool}:synthetic/do-not-execute:{exit_code}",
         tool=tool, target="synthetic/do-not-execute",
         exit_code=exit_code, stdout="synthetic", execution_lock="synthetic",
     )
