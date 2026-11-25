@@ -1,0 +1,39 @@
+# R63 witness continuity guard — research lab
+
+**Status:** `RESEARCH_ONLY / HOLD / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTION / NO_AUTOMATIC_MERGE / GENESIS NO_GO`.
+
+## Problem
+
+A witness signing key can survive while its durable checkpoint database is lost or rolled back. A key signature alone therefore cannot establish that the witness still remembers the history it previously certified.
+
+## Protocol model
+
+- Four separately identified anchor roles are configured; three matching authenticated reads and three durable writes are required.
+- Each anchor has its own SQLite file and ephemeral Ed25519 key in this laboratory model. The anchor persists its checkpoint before returning its signed commit receipt.
+- The witness's genesis initialization is consumed by a 3-of-4 marker **before** the local witness database is created. A crash after marker quorum but before local database creation retires/quarantines that identity rather than permitting same-key reinitialization.
+- Startup uses a fresh nonce and requires at least three authenticated anchor replies for the same checkpoint. A higher unquorummed head, same-sequence fork, insufficient read quorum, or missing initialization marker produces `HOLD`.
+- Local missing, corrupt, or older-than-anchor state produces `QUARANTINED`; the same identity/key cannot initialize again after the external initialization marker has been consumed.
+- Each transition is first written as a local pending intent, then accepted by at least three anchors with a witness signature. Only after the anchor write quorum does the local checkpoint advance. Recovery is idempotent.
+- Identity continuity proofs carry the witness signature and the raw nonce-bound signed anchor read responses so a verifier can inspect the evidence.
+- Replacement after loss requires a new witness identity and a new key. The old identity remains quarantined.
+
+## Results
+
+`python -B -m py_compile continuity_guard.py test_continuity_guard.py` — PASS.
+
+`python -B -m unittest -v test_continuity_guard.py` — **30/30 tests PASS**, including three real child-process exits at pending, after anchor quorum, and after local commit. The process tests emit a Python `fork()` warning because the runner is multithreaded; the child-exit/recovery assertions passed.
+
+Two deliberate RED controls reproduced the limit of the model:
+
+1. Joint rollback of all four anchor stores and the local witness database to the same old snapshot is undetectable.
+2. Rollback of three anchor stores plus loss of the fourth, together with local rollback, can also make the old state appear current.
+
+These REDs exceed the stated one-fault anchor assumption, but they matter because all four anchor SQLite files in this test run are on one machine and under one administrator. **They are not independent external custody.** This code proves a protocol shape and fail-closed behavior in a local simulation; it does not establish independent administration, hardware monotonicity, resistance to provider-level rollback, or production readiness.
+
+## Operational precedent and standards boundary
+
+C2SP `tlog-witness` requires the witness to persist the new checkpoint before responding and to make the consistency check plus state update atomic: <https://github.com/C2SP/C2SP/blob/main/tlog-witness.md>.
+
+The `aics-witness` operational guidance says a witness whose database is lost or rolled back must be retired rather than continued with the same identity; its `serve` command refuses to create a missing database: <https://pypi.org/project/aics-witness/>.
+
+This R63 lab is not an implementation of the C2SP HTTP protocol and does not enroll the four local anchors as real operators. The next meaningful test is deployment of the anchor interface across genuinely separate administrative domains, with an out-of-band pinned roster and independently protected monotonic state. Until then, no authority is activated.
