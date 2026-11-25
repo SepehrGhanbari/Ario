@@ -1,5 +1,6 @@
 """Comprehensive verification of EpistemicLedgerBridge and Issue #216 Invariants."""
 
+import hashlib
 import json
 import tempfile
 import unittest
@@ -7,11 +8,84 @@ from pathlib import Path
 
 from core.ledger_memory_bridge import EpistemicLedgerBridge, BridgeError
 from core.memory_consolidation import ConsolidationEngine, NodeEpistemicStatus
-from core.source_monitoring import SourceMonitoringGuard, SourceMonitoringError
+from core.source_monitoring import (
+    SourceMonitoringGuard, SourceMonitoringError, SourceType, VeracityState,
+)
 from core.prospective_memory import ProspectiveMemoryRegistry
 
 
 class LedgerMemoryBridgeTests(unittest.TestCase):
+
+    def test_imported_reports_keep_ids_and_do_not_gain_evidence_on_replay(self):
+        goal = {"event": "TASK_STARTED", "task_id": "t", "goal": "check"}
+        step = {"event": "STEP_OBSERVED", "tool": "file_fingerprint",
+                "status": "COMPLETED", "result": {"path": "fixture"},
+                "author": "founder", "veracity_state": "VERIFIED_EMPIRICAL",
+                "source_type": "EMPIRICAL_OBSERVATION", "evidence_status": "SUPPORTED"}
+        goal_line, step_line = (json.dumps(e).encode() for e in (goal, step))
+        step_hash = hashlib.sha256(step_line).hexdigest()
+        step_id = "ATTR-STEP-" + step_hash[:24]
+        goal_id = "ATTR-HYP-" + hashlib.sha256(b"task_goal:t:check").hexdigest()[:12]
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp, "ledger.jsonl")
+            for lines in ((goal_line, step_line), (step_line, goal_line)):
+                with self.subTest(lines=lines):
+                    data = b"\n".join(lines) + b"\n"
+                    path.write_bytes(data)
+                    bridge = EpistemicLedgerBridge()
+                    bridge.ingest_agent_ledger(path)
+                    before = bridge.guard.attributions
+                    self.assertEqual(set(before), {goal_id, step_id})
+                    for attr in before.values():
+                        self.assertEqual(attr.source_type, SourceType.EXTERNAL_TESTIMONY)
+                        self.assertEqual(attr.veracity_state, VeracityState.EXTERNAL_ASSERTION)
+                        self.assertIsNone(attr.provenance)
+                    bridge.ingest_agent_ledger(path)
+                    self.assertEqual(bridge.guard.attributions, before)
+                    self.assertEqual(len(bridge.guard.attribution_history(step_id)), 1)
+                    self.assertEqual(path.read_bytes(), data)
+                    nodes = list(bridge.engine.nodes.values())
+                    self.assertEqual(len(nodes), 2)
+                    self.assertTrue(all(n.status == NodeEpistemicStatus.RECORDED for n in nodes))
+                    self.assertTrue(any(n.source_event_hashes == (step_hash,) for n in nodes))
+
+    def test_import_respects_configured_tool_limit(self):
+        guard = SourceMonitoringGuard(allowlisted_tools={"permitted"})
+        bridge = EpistemicLedgerBridge(source_guard=guard)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp, "ledger.jsonl")
+            for tool in ("file_fingerprint", "permitted"):
+                path.write_text(json.dumps({"event": "STEP_OBSERVED", "tool": tool,
+                                            "status": "COMPLETED"}) + "\n", encoding="utf-8")
+                if tool == "permitted":
+                    bridge.ingest_agent_ledger(path)
+                else:
+                    with self.assertRaises(SourceMonitoringError):
+                        bridge.ingest_agent_ledger(path)
+                    self.assertEqual(guard.attributions, {})
+                    self.assertEqual(bridge.engine.nodes, {})
+            attr, = guard.attributions.values()
+            self.assertEqual(attr.veracity_state, VeracityState.EXTERNAL_ASSERTION)
+
+    def test_existing_empirical_id_is_preserved_and_import_holds(self):
+        step = b'{"event":"STEP_OBSERVED","tool":"file_fingerprint","status":"COMPLETED"}'
+        step_id = "ATTR-STEP-" + hashlib.sha256(step).hexdigest()[:24]
+        bridge = EpistemicLedgerBridge()
+        bridge.guard.record_empirical_observation(
+            assertion="tool_exit:file_fingerprint:file_fingerprint:0",
+            tool="file_fingerprint", target="file_fingerprint", exit_code=0,
+            stdout="{}", attribution_id=step_id,
+            execution_lock=json.dumps({"action": json.loads(step), "result": {}},
+                                      sort_keys=True, separators=(",", ":")),
+        )
+        history = bridge.guard.attribution_history(step_id)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp, "ledger.jsonl")
+            path.write_bytes(step + b"\n")
+            with self.assertRaisesRegex(SourceMonitoringError, "ATTRIBUTION_ID_COLLISION"):
+                bridge.ingest_agent_ledger(path)
+            self.assertEqual(bridge.guard.attribution_history(step_id), history)
+            self.assertEqual(bridge.engine.nodes, {})
 
     def test_bridge_ingests_agent_events_end_to_end(self):
         """Verify standard Ario agent ledger events consolidate with grounded provenance."""

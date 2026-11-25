@@ -5,8 +5,8 @@ to Cognitive Memory (ConsolidationEngine, SourceMonitoringGuard, ProspectiveMemo
 
 Epistemic Invariant Guarantees:
 1. Read-Only Ingestion: Does not write, mutate, truncate, or overwrite agent execution ledgers.
-2. Grounded Provenance: Tools observed in STEP_OBSERVED generate EMPIRICAL_OBSERVATION with locked SHA-256 digests.
-3. Anti-Self-Citation: Rejects synthetic agent claims masquerading as empirical facts.
+2. Imported goals and step reports enter source monitoring as unverified external testimony.
+3. The step attribution ID identifies the reported line. Execution remains unverified.
 4. Contradiction Preservation: Contradictory step results are marked CONTESTED without historical erasure.
 5. Prospective Intention Evaluation: Task completion events trigger queued conditional actions.
 6. No-History-Promotion: Repeated unverified steps retain RECORDED status without upgrading to SUPPORTED.
@@ -145,13 +145,16 @@ class EpistemicLedgerBridge:
                 event_type = event.get("event")
                 total_events += 1
 
-                # 1. TASK_STARTED: Ingest task goal as internal hypothesis
+                # 1. TASK_STARTED: Preserve the historical goal ID on external testimony.
                 if event_type == "TASK_STARTED":
                     task_id = str(event.get("task_id", f"task-{line_no}"))
                     goal = str(event.get("goal", ""))
                     if goal:
-                        self.guard.create_hypothesis(
-                            assertion=f"task_goal:{task_id}:{goal}",
+                        goal_claim = f"task_goal:{task_id}:{goal}"
+                        goal_digest = hashlib.sha256(goal_claim.encode("utf-8")).hexdigest()
+                        self.guard.create_external_testimony(
+                            assertion=goal_claim,
+                            attribution_id=f"ATTR-HYP-{goal_digest[:12]}",
                             falsification_condition=f"task_{task_id}_fails",
                         )
                         self.engine.ingest_event_stream([(
@@ -163,12 +166,13 @@ class EpistemicLedgerBridge:
                             },
                         )])
 
-                # 2. STEP_OBSERVED: Tool execution -> Empirical provenance -> Semantic schema
+                # 2. STEP_OBSERVED: Attribute only what the file reports.
                 elif event_type == "STEP_OBSERVED":
                     steps_observed += 1
                     tool = str(event.get("tool", ""))
-                    step_id = str(event.get("step_id", f"step-{line_no}"))
-                    task_id = str(event.get("task_id", "unknown"))
+                    # Retain the injected guard's configured input boundary.
+                    if not tool.strip() or tool not in self.guard._allowlisted_tools:
+                        raise SourceMonitoringError(f"Tool '{tool}' is not allowlisted for ledger import")
                     status = str(event.get("status", "UNKNOWN"))
                     result = event.get("result", {})
                     if not isinstance(result, dict):
@@ -176,17 +180,10 @@ class EpistemicLedgerBridge:
 
                     path_val = str(result.get("path", event.get("path", "")))
                     target_name = path_val or str(result.get("target", tool))
-                    lock_payload = json.dumps({"action": event, "result": result}, sort_keys=True, separators=(",", ":"))
                     stdout_str = json.dumps(result, sort_keys=True)
 
-                    # Source monitoring guard attribution
-                    attribution = self.guard.record_empirical_observation(
-                        assertion=f"tool_exit:{tool}:{target_name}:{0 if status == 'COMPLETED' else 1}",
-                        tool=tool,
-                        target=target_name,
-                        exit_code=0 if status == "COMPLETED" else 1,
-                        stdout=stdout_str,
-                        execution_lock=lock_payload,
+                    self.guard.create_external_testimony(
+                        assertion=f"reported_step_execution:{tool}:{target_name}:{status}",
                         attribution_id=f"ATTR-STEP-{line_hash[:24]}",
                     )
 
