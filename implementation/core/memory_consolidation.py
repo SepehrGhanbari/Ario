@@ -440,7 +440,7 @@ class ConsolidationEngine:
         self.node_id_version = node_id_version
         self.default_status = default_status
         self._nodes: Dict[str, SemanticNode] = {}
-        self._legacy_aliases: Dict[str, str] = {}
+        self._legacy_aliases: Dict[str, Optional[str]] = {}
         self._links: List[CausalLink] = []
         self._ledger_hashes: Set[str] = set()
         # Tracks exact processed event bytes for replay/hash-collision detection.
@@ -464,9 +464,17 @@ class ConsolidationEngine:
             return f"SEM-v2-{hashlib.sha256(payload.encode('utf-8')).hexdigest()[:16]}"
         return f"SEM-{hashlib.sha256((concept + ':' + assertion).encode('utf-8')).hexdigest()[:16]}"
 
+    @classmethod
+    def _index_legacy_alias(cls, aliases: Dict[str, Optional[str]],
+                            concept: str, assertion: str, node_id: str) -> None:
+        legacy_id = cls.compute_node_id(concept, assertion, version="v1")
+        if aliases.setdefault(legacy_id, node_id) != node_id:
+            # Once ambiguous, further repetitions cannot select a winner.
+            aliases[legacy_id] = None
+
     @_synchronized_memory
     def resolve_node_id(self, identifier: str) -> Optional[str]:
-        """Resolve node identifier via exact match or legacy dual-resolver alias."""
+        """Return the exact ID or unique legacy target, or None if unresolved."""
         if identifier in self._nodes:
             return identifier
         return self._legacy_aliases.get(identifier)
@@ -663,7 +671,23 @@ class ConsolidationEngine:
                 or any(not isinstance(link, CausalLink) or not hashes.issuperset(link.evidence_hashes)
                        for link in links)):
             raise ConsolidationError("HOLD_INVALID_SNAPSHOT_REPLAY_INDEX")
+        # Old v2 snapshots retained just the last target of each legacy ID.
+        # Derive this read index from the nodes before installing any state.
+        version = state.get("node_id_version", "v1")
+        if version not in ("v1", "v2"):
+            raise ConsolidationError("HOLD_INVALID_SNAPSHOT_NODE_ID")
+        aliases: Dict[str, Optional[str]] = {}
+        restored_nodes = nodes.copy()
+        for node_id, node in restored_nodes.items():
+            if node.node_id != node_id or node_id != self.compute_node_id(
+                    node.concept, node.assertion, version=version):
+                raise ConsolidationError("HOLD_INVALID_SNAPSHOT_NODE_ID")
+            if version == "v2":
+                self._index_legacy_alias(aliases, node.concept, node.assertion, node_id)
         self.__dict__.update(state)
+        self._nodes = restored_nodes
+        self._legacy_aliases = aliases
+        self.node_id_version = version
         self.max_batch_events = limit
         for key in keys:
             self.__dict__[key] = state.get(key, {})
@@ -737,8 +761,7 @@ class ConsolidationEngine:
 
         node_id = self.compute_node_id(concept, assertion, version=self.node_id_version)
         if self.node_id_version == "v2":
-            legacy_id = self.compute_node_id(concept, assertion, version="v1")
-            self._legacy_aliases[legacy_id] = node_id
+            self._index_legacy_alias(self._legacy_aliases, concept, assertion, node_id)
 
         now_iso = datetime.now(timezone.utc).isoformat()
 
