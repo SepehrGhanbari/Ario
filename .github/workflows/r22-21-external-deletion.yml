@@ -1,0 +1,185 @@
+name: R22.21 external deletion and rollback (advisory)
+on:
+  push:
+    branches: [research/r22-21-external-deletion-recovery-20261125]
+    paths:
+      - .github/workflows/r22-21-external-deletion.yml
+      - implementation/research/r22_21_external_deletion/*.py
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: r22-21-synthetic-publication
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - name: Install prior pinned research clients
+        run: |
+          set -euo pipefail
+          for tool in sigsum-key sigsum-submit sigsum-verify; do
+            go install "sigsum.org/sigsum-go/cmd/$tool@v0.14.1"
+          done
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+          python -m pip install coincurve==21.0.0 websockets==15.0.1
+      - name: Recover exact R22.20 archived synthetic inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          L="$RUNNER_TEMP/lab"; mkdir -p "$L"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15043316960/zip" > "$L/first.zip"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15043212139/zip" > "$L/second.zip"
+          echo "91f96a3bcb004e8d7fbd6e6b00810a9fe63f6a65d3d1ff2defcf3824ec53a83f  $L/first.zip" | sha256sum -c -
+          echo "33e4d317a158f7c1b7b172dad5c487f2835069d339bc21d5b42820a35d8b0bbd  $L/second.zip" | sha256sum -c -
+          python - "$L" <<'PY'
+          from pathlib import Path
+          import sys,zipfile
+          p=Path(sys.argv[1])
+          for name in ("first","second"):
+              out=p/name;out.mkdir()
+              with zipfile.ZipFile(p/(name+".zip")) as z:
+                  assert z.testzip() is None
+                  for n in ("event.json","event-id.txt","event-id.txt.proof","envelope.json","ledger.jsonl")+(("log-key.pub",) if name=="first" else ()):
+                      (out/n).write_bytes(z.read(n))
+          PY
+          for n in first second; do
+            sigsum-verify -k "$L/first/log-key.pub" -P sigsum-test1-2025 "$L/$n/event-id.txt.proof" < "$L/$n/event-id.txt"
+          done
+      - name: Publish same synthetic payloads to three relays and send own signed NIP09 requests to two
+        run: |
+          set -euo pipefail
+          L="$RUNNER_TEMP/lab"
+          python implementation/research/r22_21_external_deletion/experiment.py prepare "$L/first" "$L/second" "$L/out"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r22-21-FIRST-ONLY
+          path: ${{ runner.temp }}/lab/out/first/
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r22-21-REVEAL
+          path: ${{ runner.temp }}/lab/out/second/
+          if-no-files-found: error
+          retention-days: 30
+  cold:
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - run: |
+          set -euo pipefail
+          go install sigsum.org/sigsum-go/cmd/sigsum-verify@v0.14.1
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+          python -m pip install coincurve==21.0.0 websockets==15.0.1
+      - uses: actions/download-artifact@v4
+        with:
+          name: r22-21-FIRST-ONLY
+          path: ${{ runner.temp }}/first-only
+      - name: Verify old and new first proofs and build unchanged scanner
+        run: |
+          set -euo pipefail
+          F="$RUNNER_TEMP/first-only"; D="$RUNNER_TEMP/scanner"
+          test ! -e "$F/historical-second.json"
+          test ! -e "$F/deletion.json"
+          sigsum-verify -k "$F/historical-log.pub" -P sigsum-test1-2025 "$F/historical-first.proof" < "$F/historical-first-id.txt"
+          sigsum-verify -k "$F/sigsum.pub" -P sigsum-test1-2025 "$F/event-id.txt.proof" < "$F/event-id.txt"
+          find "$F" -type f -print0 | sort -z | xargs -0 sha256sum > "$RUNNER_TEMP/first.sha256"
+          mkdir "$D"
+          cp implementation/research/r22_10_blind_discovery/{main.go,main_test.go,go.mod} "$D/"
+          cp "$F/bootstrap.json" "$D/"
+          cd "$D"; go mod tidy; go test ./...; go build -o scan .
+      - name: Blind discovery and third-only recovery after publisher exit
+        run: |
+          set -euo pipefail
+          F="$RUNNER_TEMP/first-only"; D="$RUNNER_TEMP/scanner"
+          mkdir "$RUNNER_TEMP/results"
+          (cd "$D"; ./scan) | tee "$RUNNER_TEMP/results/discovery.jsonl"
+          python implementation/research/r22_21_external_deletion/experiment.py recover "$F" "$RUNNER_TEMP/results/discovery.jsonl" "$RUNNER_TEMP/results/recovered"
+          sha256sum -c "$RUNNER_TEMP/first.sha256"
+      - name: Real rollback of disposable publisher and bare Git refs then fresh external re-read
+        run: |
+          set -euo pipefail
+          F="$RUNNER_TEMP/first-only"; D="$RUNNER_TEMP/scanner"; R="$RUNNER_TEMP/results"
+          if test -f "$R/recovered/ledger.jsonl"; then
+            python implementation/research/r22_21_external_deletion/experiment.py rollback "$F" "$R/recovered" "$RUNNER_TEMP/disposable" | tee "$R/rollback.jsonl"
+          else
+            echo '{"rollback":"NOT_EXECUTED_THIRD_UNAVAILABLE"}' > "$R/rollback.jsonl"
+          fi
+          (cd "$D"; ./scan) | tee "$R/repeat-discovery.jsonl"
+          python implementation/research/r22_21_external_deletion/experiment.py recover "$F" "$R/repeat-discovery.jsonl" "$R/repeat"
+          sha256sum -c "$RUNNER_TEMP/first.sha256"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r22-21-COLD
+          path: ${{ runner.temp }}/results/
+          if-no-files-found: error
+          retention-days: 30
+  audit:
+    needs: cold
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - run: |
+          set -euo pipefail
+          go install sigsum.org/sigsum-go/cmd/sigsum-verify@v0.14.1
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+          python -m pip install coincurve==21.0.0
+      - uses: actions/download-artifact@v4
+        with:
+          name: r22-21-FIRST-ONLY
+          path: ${{ runner.temp }}/first
+      - uses: actions/download-artifact@v4
+        with:
+          name: r22-21-REVEAL
+          path: ${{ runner.temp }}/second
+      - uses: actions/download-artifact@v4
+        with:
+          name: r22-21-COLD
+          path: ${{ runner.temp }}/cold
+      - name: Verify original and new second proof and audit withheld exact bytes
+        run: |
+          set -euo pipefail
+          F="$RUNNER_TEMP/first"; S="$RUNNER_TEMP/second"; R="$RUNNER_TEMP/cold"
+          sigsum-verify -k "$F/historical-log.pub" -P sigsum-test1-2025 "$S/historical-second.proof" < "$S/historical-second-id.txt"
+          sigsum-verify -k "$F/sigsum.pub" -P sigsum-test1-2025 "$S/event-id.txt.proof" < "$S/event-id.txt"
+          python implementation/research/r22_21_external_deletion/experiment.py audit "$F" "$S" "$R/recovered" "$R/repeat" | tee "$RUNNER_TEMP/audit.jsonl"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r22-21-AUDIT
+          path: ${{ runner.temp }}/audit.jsonl
+          if-no-files-found: error
+          retention-days: 30
