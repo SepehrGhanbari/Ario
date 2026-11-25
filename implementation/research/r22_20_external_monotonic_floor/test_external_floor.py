@@ -106,7 +106,8 @@ class ExternalFloorTests(unittest.TestCase):
 
     def test_wrong_sequence_rejected(self):
         key,prior,l6,e6,v6,l8,e8,v8=pair()
-        x=f.parse_envelope(e8);x["seq"]=6
+        x=f.parse_envelope(e8);x["seq"]=6;x["ledger_sha256"]=f.sha(l6)
+        x["head_sha256"]=f.parse_ledger(l6,6)[-1]["sha256"]
         bad=f.make_event(f.canonical(x),l6,key)
         status,_=f.validate_successor(v6,bad,f.target_for_event(bad),key.public_key_xonly.format().hex(),prior)
         self.assertEqual(status,"HOLD_PREDECESSOR_OR_SCOPE")
@@ -114,8 +115,7 @@ class ExternalFloorTests(unittest.TestCase):
     def test_authority_flag_rejected(self):
         key,prior,l6,e6,v6,l8,e8,v8=pair()
         x=f.parse_envelope(e8);x["authoritative"]=True
-        bad=f.make_event(f.canonical(x),l8,key)
-        with self.assertRaises(ValueError): f.verify_event(bad,key.public_key_xonly.format().hex())
+        with self.assertRaises(ValueError): f.parse_envelope(f.canonical(x))
 
     def test_duplicate_envelope_field_rejected(self):
         key,prior,l6,e6,v6,l8,e8,v8=pair()
