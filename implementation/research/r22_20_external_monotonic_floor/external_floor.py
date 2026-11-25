@@ -413,8 +413,8 @@ def create_bootstrap(first_dir, log_pub):
     msg = (first / "event-id.txt").read_bytes()
     first_hash = checksum(msg)
     leaf_fields = fields["leaf"].split()
-    if len(leaf_fields) < 2 or leaf_fields[1] != first_hash:
-        raise ValueError("proof message binding")
+    if len(leaf_fields) != 2 or leaf_fields[0] != hashlib.sha256(public).hexdigest() or not re.fullmatch(r"[0-9a-f]{128}", leaf_fields[1]):
+        raise ValueError("proof leaf schema/signer binding")
     boot = {
         "start": int(fields["leaf_index"]), "size": int(fields["size"]),
         "root": fields["root_hash"], "public": public.hex(), "first_checksum": first_hash,
