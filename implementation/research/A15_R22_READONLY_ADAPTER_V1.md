@@ -36,7 +36,7 @@ No event rows, request IDs, choices, input hashes, user text, or SQLite bytes ar
 
 First enrollment requires explicit `--enroll-genesis` and is labelled `INITIAL_BASELINE`. It means “this is the initial externally proposed baseline at the current observed Broker head”; it does **not** prove the history before that head. Later runs require `--previous-checkpoint PATH`. The previous envelope's schema and payload digest are verified, its scope and source pins must match, and the current Broker chain must contain the previous `(seq, hash)` and be strictly ahead. A rollback, same-sequence fork, missing predecessor row or no advancement is HOLD.
 
-The previous envelope is only integrity-checked. A plain SHA-256 digest is not a signature and does not authenticate who retained or supplied the previous checkpoint. Independent custody can be claimed only after a separately administered external source returns the prior checkpoint and the R22 witness/monitor evidence is verified.
+The previous envelope is only integrity-checked. A plain SHA-256 digest is not a signature and does not authenticate who retained or supplied the previous checkpoint. Re-running the adapter against the same Broker head and same previous checkpoint yields the same envelope; the external publisher must deduplicate by payload digest. Independent custody can be claimed only after a separately administered external source returns the prior checkpoint and the R22 witness/monitor evidence is verified.
 
 ## Hold matrix
 
