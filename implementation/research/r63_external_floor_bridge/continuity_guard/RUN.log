@@ -1,0 +1,44 @@
+test_01_genesis_active (test_continuity_guard.Continuity.test_01_genesis_active) ... ok
+test_02_transition_requires_three_durable_anchor_receipts (test_continuity_guard.Continuity.test_02_transition_requires_three_durable_anchor_receipts) ... ok
+test_03_local_memory_loss_quarantines_same_identity (test_continuity_guard.Continuity.test_03_local_memory_loss_quarantines_same_identity) ... ok
+test_04_old_local_snapshot_quarantined (test_continuity_guard.Continuity.test_04_old_local_snapshot_quarantined) ... ok
+test_05_one_anchor_lost_tolerated (test_continuity_guard.Continuity.test_05_one_anchor_lost_tolerated) ... ok
+test_06_two_anchor_stores_lost_hold (test_continuity_guard.Continuity.test_06_two_anchor_stores_lost_hold) ... ok
+test_07_two_anchor_rollback_hold (test_continuity_guard.Continuity.test_07_two_anchor_rollback_hold) ... ok
+test_08_three_old_one_new_never_falls_back (test_continuity_guard.Continuity.test_08_three_old_one_new_never_falls_back) ... ok
+test_09_two_of_four_partial_write_holds_then_resumes (test_continuity_guard.Continuity.test_09_two_of_four_partial_write_holds_then_resumes) ... ok
+test_10_crash_after_local_pending_recovers (test_continuity_guard.Continuity.test_10_crash_after_local_pending_recovers) ... ok
+test_11_crash_after_anchor_quorum_recovers (test_continuity_guard.Continuity.test_11_crash_after_anchor_quorum_recovers) ... ok
+test_12_crash_after_local_commit_is_idempotent (test_continuity_guard.Continuity.test_12_crash_after_local_commit_is_idempotent) ... ok
+test_13_identity_proof_contains_three_or_four_signed_anchor_reads (test_continuity_guard.Continuity.test_13_identity_proof_contains_three_or_four_signed_anchor_reads) ... ok
+test_14_one_bad_anchor_signature_tolerated (test_continuity_guard.Continuity.test_14_one_bad_anchor_signature_tolerated) ... ok
+test_15_two_bad_anchor_signatures_hold (test_continuity_guard.Continuity.test_15_two_bad_anchor_signatures_hold) ... ok
+test_16_wrong_witness_key_quarantined (test_continuity_guard.Continuity.test_16_wrong_witness_key_quarantined) ... ok
+test_17_no_implicit_reenrollment_after_history_loss (test_continuity_guard.Continuity.test_17_no_implicit_reenrollment_after_history_loss) ... ok
+test_18_local_loss_at_genesis_retires_identity (test_continuity_guard.Continuity.test_18_local_loss_at_genesis_retires_identity) ... ok
+test_19_crash_after_external_init_marker_retires_identity (test_continuity_guard.Continuity.test_19_crash_after_external_init_marker_retires_identity) ... ok
+test_20_partial_init_marker_can_complete_before_service (test_continuity_guard.Continuity.test_20_partial_init_marker_can_complete_before_service) ... ok
+test_21_duplicate_genesis_enrollment_rejected (test_continuity_guard.Continuity.test_21_duplicate_genesis_enrollment_rejected) ... ok
+test_22_anchor_refuses_fork_after_commit (test_continuity_guard.Continuity.test_22_anchor_refuses_fork_after_commit) ... ok
+test_23_corrupt_local_state_quarantined (test_continuity_guard.Continuity.test_23_corrupt_local_state_quarantined) ... ok
+test_24_two_of_four_anchor_reads_hold (test_continuity_guard.Continuity.test_24_two_of_four_anchor_reads_hold) ... ok
+test_25_new_identity_new_key_is_required_for_replacement (test_continuity_guard.Continuity.test_25_new_identity_new_key_is_required_for_replacement) ... ok
+test_26_joint_rollback_all_anchors_and_local_state_RED (test_continuity_guard.Continuity.test_26_joint_rollback_all_anchors_and_local_state_RED) ... RED: joint rollback of all four anchor stores and local state is undetectable
+ok
+test_27_three_anchor_rollback_one_missing_plus_local_RED (test_continuity_guard.Continuity.test_27_three_anchor_rollback_one_missing_plus_local_RED) ... RED: 3/4 anchor rollback plus one missing anchor and local rollback is undetectable
+ok
+test_28_real_process_exit_after_pending (test_continuity_guard.Continuity.test_28_real_process_exit_after_pending) ... /mnt/data/r63_continuity/test_continuity_guard.py:132: DeprecationWarning: This process (pid=645) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  pid=os.fork()
+ok
+test_29_real_process_exit_after_anchor_quorum (test_continuity_guard.Continuity.test_29_real_process_exit_after_anchor_quorum) ... /mnt/data/r63_continuity/test_continuity_guard.py:141: DeprecationWarning: This process (pid=645) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  pid=os.fork()
+ok
+test_30_real_process_exit_after_local_commit (test_continuity_guard.Continuity.test_30_real_process_exit_after_local_commit) ... /mnt/data/r63_continuity/test_continuity_guard.py:150: DeprecationWarning: This process (pid=645) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  pid=os.fork()
+ok
+
+----------------------------------------------------------------------
+Ran 30 tests in 1.160s
+
+OK
+UNITTEST_EXIT=0
