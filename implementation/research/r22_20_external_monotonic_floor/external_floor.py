@@ -534,9 +534,9 @@ def recover(first_dir, discovery_path, output_dir):
 if __name__ == "__main__":
     if len(sys.argv) == 4 and sys.argv[1] == "prepare":
         prepare(sys.argv[2], sys.argv[3])
-    elif len(sys.argv) == 3 and sys.argv[1] == "bootstrap":
+    elif len(sys.argv) == 4 and sys.argv[1] == "bootstrap":
         create_bootstrap(sys.argv[2], sys.argv[3])
-    elif len(sys.argv) == 4 and sys.argv[1] == "recover":
+    elif len(sys.argv) == 5 and sys.argv[1] == "recover":
         recover(sys.argv[2], sys.argv[3], sys.argv[4])
     else:
         raise SystemExit("invalid invocation")
