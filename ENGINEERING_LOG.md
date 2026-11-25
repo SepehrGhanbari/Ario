@@ -947,3 +947,7 @@ Limits: this corrects exception consistency, not an established evidence-admissi
 - Bounded experiment PASS / RESEARCH_ONLY HOLD. Nostr operator independence, permanent availability, global freshness, truth, signer continuity and production trust NOT_ESTABLISHED. Earlier harness failures left only synthetic public TEST artifacts/orphan leaf; disclosed in research record. No merge or trust activation.
 
 - R22.20 repeat confirmation: [run 45656683810](https://github.com/SepehrGhanbari/Ario/actions/runs/45656683810), HEAD ef7af73a6b02abe43f725d1d6c556520d8bfb5aa, publish/discover/audit SUCCESS after workflow path hardening. Sigsum leaves 281662/281663, tree size 281664 root 390cb805b80935f2961f7f44aa7419e6071dfe06b97921b578673e498c0908ee; both public relays accepted and returned seq8; blind recovery and reveal audit passed. Forced outage fallback PASS; replay and total content loss HOLD. Repeat artifact hashes are in RESEARCH_RECORD.md. Limitations unchanged; RESEARCH_ONLY/HOLD.
+
+## 2026-11-25 — R22.21 external deletion and local rollback
+
+- [PR #378](https://github.com/SepehrGhanbari/Ario/pull/378), follows #375. Reuses exact public synthetic R22.20 content under fresh ephemeral transport identity; original keys destroyed. New witnessed TEST leaves precede own signed NIP-09 deletion requests to two relays; third-only cold recovery and disposable local joint Git-ref rollback with fresh readback. Physical erasure, real administrator rollback and independent custody NOT_ESTABLISHED. Execution pending; no admission, merge or activation.
