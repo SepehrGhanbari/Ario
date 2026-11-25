@@ -426,6 +426,10 @@ def recover(first_dir, discovery_path, output_dir):
     pubkey = (first_dir / "nostr.pub").read_text("ascii").strip()
     if first_event["pubkey"] != pubkey:
         raise ValueError("first public key mismatch")
+    if (type(boot.get("start")) is not int or type(boot.get("size")) is not int
+            or boot["size"] <= boot["start"] or not HEX64.fullmatch(boot.get("first_checksum", ""))
+            or target_for_event(first_event) != boot["first_checksum"]):
+        raise ValueError("first event/bootstrap binding")
     first_payload = verify_event(first_event, pubkey)
     if first_payload[0] != first_env_raw or first_payload[2] != first_ledger:
         raise ValueError("first event package mismatch")
