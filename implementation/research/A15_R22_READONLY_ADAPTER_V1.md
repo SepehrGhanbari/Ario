@@ -10,7 +10,7 @@ This adapter is stacked on the exact open Draft #346 Broker head:
 - Broker source Git blob SHA-1: `612fa44e6eb2cb1078561bca85bb0f69f984bff9`
 - Broker source path: `implementation/research/a15_custodian_broker_v0_5.py`
 
-Before reading the ledger, the adapter verifies the exact Git blob object ID of the Broker source file. A changed source blob is HOLD, not an implicit compatibility upgrade.
+Before reading the ledger, the adapter verifies the exact Git blob object ID of the Broker source file. Windows CRLF checkout bytes are normalized to LF before calculating the Git object ID; a changed source blob is HOLD, not an implicit compatibility upgrade.
 
 ## Read-only boundary
 
