@@ -155,7 +155,7 @@ jobs:
           test ! -e "$F/second"
           test ! -e "$RUNNER_TEMP/r22-20/publisher/second"
           find "$F" -maxdepth 1 -type f -printf '%f\n' | sort
-          sha256sum "$F"/* > "$RUNNER_TEMP/first-before.sha256"
+          find "$F" -type f -print0 | sort -z | xargs -0 sha256sum > "$RUNNER_TEMP/first-before.sha256"
       - name: Build unchanged official Sigsum cosigned-tree scanner
         run: |
           set -euo pipefail
