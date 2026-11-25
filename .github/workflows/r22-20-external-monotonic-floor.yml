@@ -34,7 +34,7 @@ jobs:
           python -m pip install coincurve==21.0.0 websockets==15.0.1
       - name: Retrieve and verify exact R22.15B six-record anchor
         env:
-          GH_TOKEN: \${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           L="$RUNNER_TEMP/r22-20"; mkdir -p "$L/prior"
@@ -106,13 +106,13 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: r22-20-FIRST-ONLY
-          path: \${{ runner.temp }}/r22-20/publisher/first/
+          path: ${{ runner.temp }}/r22-20/publisher/first/
           if-no-files-found: error
           retention-days: 30
       - uses: actions/upload-artifact@v4
         with:
           name: r22-20-SECOND-REVEAL
-          path: \${{ runner.temp }}/r22-20/publisher/second/
+          path: ${{ runner.temp }}/r22-20/publisher/second/
           if-no-files-found: error
           retention-days: 30
   discover:
@@ -139,7 +139,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: r22-20-FIRST-ONLY
-          path: \${{ runner.temp }}/first-only
+          path: ${{ runner.temp }}/first-only
       - name: Prove the cold runner received no second event or reveal material
         run: |
           set -euo pipefail
@@ -178,9 +178,9 @@ jobs:
         with:
           name: r22-20-BLIND-RECOVERY
           path: |
-            \${{ runner.temp }}/discovery.jsonl
-            \${{ runner.temp }}/recovery-report.jsonl
-            \${{ runner.temp }}/recovered/
+            ${{ runner.temp }}/discovery.jsonl
+            ${{ runner.temp }}/recovery-report.jsonl
+            ${{ runner.temp }}/recovered/
           if-no-files-found: error
           retention-days: 30
   audit:
@@ -199,15 +199,15 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: r22-20-FIRST-ONLY
-          path: \${{ runner.temp }}/first
+          path: ${{ runner.temp }}/first
       - uses: actions/download-artifact@v4
         with:
           name: r22-20-SECOND-REVEAL
-          path: \${{ runner.temp }}/second
+          path: ${{ runner.temp }}/second
       - uses: actions/download-artifact@v4
         with:
           name: r22-20-BLIND-RECOVERY
-          path: \${{ runner.temp }}/blind
+          path: ${{ runner.temp }}/blind
       - name: Compare blind recovery with withheld original and exact Sigsum inclusion
         run: |
           set -euo pipefail
@@ -215,6 +215,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: r22-20-AUDIT-REPORT
-          path: \${{ runner.temp }}/audit-report.jsonl
+          path: ${{ runner.temp }}/audit-report.jsonl
           if-no-files-found: error
           retention-days: 30
