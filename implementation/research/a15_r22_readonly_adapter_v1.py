@@ -25,8 +25,8 @@ LEDGER_FILENAME = "custodian.sqlite3"
 FLOOR_FILENAME = "custodian.floor.json"
 FLOOR_FORMAT = "a15-custodian-floor-v1"
 GENESIS = "GENESIS"
-HASH_RE = re.compile(r"[0-9a-f]{64}\\Z")
-SCOPE_RE = re.compile(r"[A-Z0-9_-]{4,64}\\Z")
+HASH_RE = re.compile(r"[0-9a-f]{64}\Z")
+SCOPE_RE = re.compile(r"[A-Z0-9_-]{4,64}\Z")
 MAX_FLOOR_BYTES = 4096
 MAX_PREVIOUS_BYTES = 16384
 EXPECTED_COLUMNS = (
@@ -77,7 +77,7 @@ def _sha256(data):
 
 def git_blob_sha1(data):
     """Return Git's object ID for exact file bytes; this is source pinning only."""
-    header = b"blob " + str(len(data)).encode("ascii") + b"\\0"
+    header = b"blob " + str(len(data)).encode("ascii") + b"\0"
     return hashlib.sha1(header + data).hexdigest()
 
 
@@ -402,10 +402,10 @@ def main(argv=None):
             previous_checkpoint_path=args.previous_checkpoint,
             enroll_genesis=args.enroll_genesis,
         )
-        sys.stdout.write(canonical(envelope) + "\\n")
+        sys.stdout.write(canonical(envelope) + "\n")
         return 0
     except (AdapterHold, OSError, sqlite3.Error, ValueError) as exc:
-        sys.stderr.write("A15_R22_ADAPTER_HOLD:" + type(exc).__name__ + "\\n")
+        sys.stderr.write("A15_R22_ADAPTER_HOLD:" + type(exc).__name__ + "\n")
         return 2
 
 
