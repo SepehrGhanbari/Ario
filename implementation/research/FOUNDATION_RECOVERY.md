@@ -43,8 +43,12 @@ The tests cover both privileged labels, direct `__setstate__` refusal, the actua
 - Base #321 source: `7365e7a9ac7febb78b34039c7b36469b3344cfff`.
 - Resolver/snapshot implementation blob after the bounded change: `c2e740fc9eef188f5022064687dd0ce0467f8849`.
 - Focused test blob after the actual-pickle-path addition: `7d1e8b2d75c9948a2036c5cea98afad965f6386d`.
-- Codex previously reported 7 focused alias tests passing on Windows CPython 3.13 before the two new snapshot-admission tests were added. That earlier local result is not a result for the current head.
-- **Current exact-head test status: NOT YET RUN.** A PR-triggered Linux/Windows CI run is required before any PASS claim.
+- Codex previously reported 7 focused alias tests passing on Windows CPython 3.13 before the two new snapshot-admission tests were added. That earlier local result is not used as current-head evidence.
+- **Exact code-head CI** for `86a326c930968a5620ca1a9dcc4f7c7710918440` completed successfully:
+  - [Implementation Regression run 45666289088](https://github.com/SepehrGhanbari/Ario/actions/runs/45666289088): Linux CPython 3.13 **1,953 passed, 7 skipped, 2 xfailed, 2 warnings, 279 subtests passed**; Windows CPython 3.13 **1,951 passed, 9 skipped, 2 xfailed, 2 warnings, 279 subtests passed**; CPython 3.14 differential advisory **1,953 passed, 7 skipped, 2 xfailed, 2 warnings, 279 subtests passed**. The dedicated cognitive-memory job reports **114 passed**, plus **3 seeded fuzz tests passed**.
+  - [Published TXT Restore Security run 45666289144](https://github.com/SepehrGhanbari/Ario/actions/runs/45666289144): all **10 jobs succeeded**.
+- The CPython 3.14 log retains an `ARIO_HTTP403_DIAGNOSTIC` warning: metadata returned HTTP 200, but a job-log download timed out; execution attestation for that diagnostic remained `NOT_ESTABLISHED`. This did not fail the test job and is not evidence of an HTTP 403.
+- The two newly added snapshot tests are included in the full `pytest -q tests` run. The logs use quiet mode and do not print each test name individually. Skips, xfails, and warnings remain visible and are not relabelled as passes.
 
 ## 5. Existing ledger-boundary work — reuse, do not duplicate
 
