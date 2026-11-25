@@ -138,12 +138,12 @@ class ReadOnlyAdapterTests(unittest.TestCase):
             second["payload"]["broker_head"]["hash"],
             second_receipt["chain_head_hash"],
         )
-        with self.assertRaises(adapter.AdapterHold):
-            adapter.build_checkpoint(
-                self.state,
-                "A15_SYNTHETIC_SCOPE",
-                previous_checkpoint_path=previous,
-            )
+        repeated = adapter.build_checkpoint(
+            self.state,
+            "A15_SYNTHETIC_SCOPE",
+            previous_checkpoint_path=previous,
+        )
+        self.assertEqual(repeated, second)  # deterministic retry; publisher must dedupe by digest
 
     def test_previous_checkpoint_detects_joint_local_rollback_when_retained_externally(self):
         self.seed(1)
