@@ -1,0 +1,32 @@
+{
+  "schema": "ARIO-TRUSTED-MERGE-POLICY-RESEARCH-0.1",
+  "scope": "SYNTHETIC_TWO_ROLE_LAB_ONLY",
+  "repository": {
+    "id": 990001,
+    "full_name": "synthetic/ario-candidate"
+  },
+  "required_approvals": 2,
+  "required_check": {
+    "name": "m0-regression",
+    "app_id": 15368,
+    "workflow_id": 379498305,
+    "workflow_path": ".github/workflows/implementation-regression.yml"
+  },
+  "allowed_merge_methods": ["merge"],
+  "require_log_append": true,
+  "log_path": "ENGINEERING_LOG.md",
+  "require_explicit_pr_association": true,
+  "bypass_actor_ids": [104393545],
+  "protected_paths": {
+    "basenames": [
+      "AGENTS.md",
+      "GOVERNANCE.md",
+      "REVIEWER_INSTRUCTIONS.md",
+      "SECURITY.md",
+      "CONTRIBUTING.md",
+      "CODEOWNERS"
+    ],
+    "prefixes": [".github/", "GOVERNANCE/"],
+    "name_pattern": "(^|/)[A-Z0-9_]*(POLICY|CONTRACT|GOVERNANCE|AUTHORIZATION|DELEGATION)[A-Z0-9_]*(\\.[A-Za-z0-9]+)?$"
+  }
+}
