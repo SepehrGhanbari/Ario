@@ -111,6 +111,18 @@ class LegacyResolutionTests(unittest.TestCase):
                     engine.__setstate__(state)
                 self.assertEqual(pickle.dumps(state), archived_state)
                 self.assertEqual(engine.nodes, before)
+                # Exercise the real pickle.loads -> __setstate__ path too.
+                serialized_engine = engine_with(PAIRS[0])
+                serialized_node_id, serialized_node = next(iter(serialized_engine.nodes.items()))
+                serialized_engine._nodes[serialized_node_id] = dataclasses.replace(
+                    serialized_node, status=status
+                )
+                serialized_snapshot = pickle.dumps(serialized_engine)
+                with self.assertRaisesRegex(
+                    ConsolidationError, "HOLD_UNVERIFIED_SNAPSHOT_ADMISSION"
+                ):
+                    pickle.loads(serialized_snapshot)
+                self.assertEqual(serialized_engine._nodes[serialized_node_id].status, status)
 
     def test_snapshot_restore_rejects_non_enum_status(self):
         engine = engine_with(PAIRS[0])
