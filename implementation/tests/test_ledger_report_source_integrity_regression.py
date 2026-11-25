@@ -11,7 +11,7 @@ from core.source_monitoring import (
 )
 
 
-def test_identical_report_replay_preserves_initial_registration_object_and_time():
+def test_identical_report_replay_preserves_initial_registration_value_and_time():
     guard = SourceMonitoringGuard()
     first = guard.record_unverified_ledger_report(
         assertion="synthetic repeated ledger status", record_sha256="a" * 64,
@@ -44,7 +44,8 @@ def test_ledger_report_claim_is_rejected_before_any_lineage_mutation():
     with pytest.raises(SourceMonitoringError):
         guard.evaluate_claim_promotion(report.attribution_id, [parent.attribution_id])
     assert guard.attributions == before
-    assert guard.attributions[report.attribution_id] is report
+    assert guard.attributions[report.attribution_id] == report
+    assert len(guard.attribution_history(report.attribution_id)) == 1
 
 
 def test_ledger_report_cannot_be_made_empirical_even_with_direct_verified_support():
@@ -53,7 +54,7 @@ def test_ledger_report_cannot_be_made_empirical_even_with_direct_verified_suppor
         assertion="synthetic replayed completion", record_sha256="c" * 64,
     )
     direct = guard.record_empirical_observation(
-        assertion="SYNTHETIC direct API; no external custody",
+        assertion="tool_exit:run_tests:synthetic/example.py:0",
         tool="run_tests", target="synthetic/example.py",
         exit_code=0, stdout="ok", execution_lock="local-lock",
         attribution_id="synthetic-direct",
@@ -62,7 +63,8 @@ def test_ledger_report_cannot_be_made_empirical_even_with_direct_verified_suppor
     with pytest.raises(SourceMonitoringError):
         guard.evaluate_claim_promotion(report.attribution_id, [direct.attribution_id])
     assert guard.attributions == before
-    assert guard.attributions[report.attribution_id] is report
+    assert guard.attributions[report.attribution_id] == report
+    assert len(guard.attribution_history(report.attribution_id)) == 1
 
 
 def test_hypothesis_still_cannot_promote_using_ledger_report_as_support():
