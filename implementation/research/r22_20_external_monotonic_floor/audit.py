@@ -37,11 +37,16 @@ def main(first,second,recovered,discovery):
     assert prior_env["record"]["ledger_sha256"]==f.sha(prior_ledger)
     assert prior_env["scope"]==f.parse_envelope(env_a)["scope"]
     assert x[0]==env_a and x[2]==led_a and y[0]==env_b and y[2]==led_b
+    assert (a/"event-id.txt").read_bytes()==f.event_leaf_message(ev_a)
+    assert (b/"event-id.txt").read_bytes()==f.event_leaf_message(ev_b)
     assert f.target_for_event(ev_a)==boot["first_checksum"]
     assert f.target_for_event(ev_b)==rep["matching_signed_leaves"][1]["checksum"]
+    assert fields_a["leaf"].split()[1]==boot["first_checksum"]
+    assert fields_b["leaf"].split()[1]==rep["matching_signed_leaves"][1]["checksum"]
     assert fields_a["log"]==fields_b["log"]==f.LOG_ID
     assert int(fields_b["leaf_index"])==rep["matching_signed_leaves"][1]["index"]
     assert int(fields_b["leaf_index"])>int(fields_a["leaf_index"])
+    assert int(fields_b["size"])>int(fields_a["size"])
     assert fields_b["leaf"].split()[0]==fields_a["leaf"].split()[0]
     assert recovered_env==env_b and recovered_led==led_b and recovered_event==ev_b
     status,result=f.validate_successor(ev_a,ev_b,f.target_for_event(ev_b),pub,
