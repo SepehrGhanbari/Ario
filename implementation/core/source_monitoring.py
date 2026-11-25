@@ -37,11 +37,13 @@ class SourceType(str, Enum):
     INTERNAL_HYPOTHESIS = "INTERNAL_HYPOTHESIS"
     EMPIRICAL_OBSERVATION = "EMPIRICAL_OBSERVATION"
     EXTERNAL_TESTIMONY = "EXTERNAL_TESTIMONY"
+    LEDGER_REPORT = "LEDGER_REPORT"  # replayed bytes, not authenticated execution
 
 
 class VeracityState(str, Enum):
     UNVERIFIED_HYPOTHESIS = "UNVERIFIED_HYPOTHESIS"
     EXTERNAL_ASSERTION = "EXTERNAL_ASSERTION"
+    REPORTED_UNVERIFIED = "REPORTED_UNVERIFIED"  # no empirical provenance
     VERIFIED_EMPIRICAL = "VERIFIED_EMPIRICAL"
     UNSUPPORTED = "UNSUPPORTED"
     ATTRIBUTION_MISMATCH = "ATTRIBUTION_MISMATCH"
@@ -153,6 +155,11 @@ class SourceAttribution:
             ):
                 raise SourceMonitoringError(f"Invalid veracity state for EMPIRICAL_OBSERVATION: {self.veracity_state}")
 
+        # Replayed ledger bytes cannot carry execution provenance or verified status.
+        if self.source_type == SourceType.LEDGER_REPORT:
+            if self.veracity_state != VeracityState.REPORTED_UNVERIFIED or self.provenance is not None:
+                raise SourceMonitoringError("LEDGER_REPORT must be REPORTED_UNVERIFIED without empirical provenance")
+
         # Invariant: Hypotheses and external testimony cannot natively be VERIFIED_EMPIRICAL
         if self.source_type in (SourceType.INTERNAL_HYPOTHESIS, SourceType.EXTERNAL_TESTIMONY):
             if self.veracity_state == VeracityState.VERIFIED_EMPIRICAL and not self.parent_attribution_ids:
@@ -196,7 +203,8 @@ class SourceMonitoringGuard:
     """Reality monitoring guard enforcing origin attribution and anti-self-citation."""
 
     def __init__(self, allowlisted_tools: Optional[Set[str]] = None) -> None:
-        self._allowlisted_tools = set(allowlisted_tools) if allowlisted_tools else set(ALLOWLISTED_TOOLS)
+        # An explicit empty set is deny-all, not a request to restore defaults.
+        self._allowlisted_tools = set(ALLOWLISTED_TOOLS) if allowlisted_tools is None else set(allowlisted_tools)
         self._attributions: Dict[str, SourceAttribution] = {}
         # In-memory audit snapshots: NOT a persistent append-only journal.
         self._revisions: Dict[str, List[SourceAttribution]] = {}
@@ -279,6 +287,32 @@ class SourceMonitoringGuard:
             parent_attribution_ids=(),
             falsification_condition=falsification_condition,
         )
+        return self._register(attr)
+
+    def record_unverified_ledger_report(
+        self,
+        assertion: str,
+        *,
+        record_sha256: str,
+    ) -> SourceAttribution:
+        """Register replayed ledger bytes as a report, never as tool attestation.
+
+        The digest binds the observed line bytes only. It cannot establish that
+        a tool ran or authorize an empirical status transition.
+        """
+        if type(record_sha256) is not str or not _is_valid_sha256(record_sha256):
+            raise SourceMonitoringError("unverified ledger report requires a valid record sha256")
+        if type(assertion) is not str or not assertion.strip():
+            raise SourceMonitoringError("unverified ledger report requires a nonempty assertion")
+        attr = SourceAttribution(
+            attribution_id=f"ATTR-LEDGER-{record_sha256.lower()}",
+            source_type=SourceType.LEDGER_REPORT,
+            assertion=assertion,
+            veracity_state=VeracityState.REPORTED_UNVERIFIED,
+            provenance=None,
+        )
+        # Use the target branch's collision-safe, defensive-copy registration
+        # and in-memory revision history; do not bypass its existing contract.
         return self._register(attr)
 
     def record_empirical_observation(
@@ -428,6 +462,9 @@ class SourceMonitoringGuard:
         claim = self._attributions.get(claim_id)
         if not claim:
             raise SourceMonitoringError(f"Unknown claim_id: {claim_id}")
+        if claim.source_type == SourceType.LEDGER_REPORT:
+            # Reject before attaching parent IDs or mutating the lineage graph.
+            raise SourceMonitoringError(f"HOLD_LEDGER_REPORT_NOT_PROMOTABLE: {claim_id}")
         # An observation's veracity comes only from its own provenance; citing
         # another record must not launder a failed lock/stdout check.
         if (
