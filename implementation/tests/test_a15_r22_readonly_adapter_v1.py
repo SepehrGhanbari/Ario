@@ -19,6 +19,7 @@ import a15_custodian_broker_v0_5 as broker
 import a15_r22_readonly_adapter_v1 as adapter
 
 BROKER_SOURCE = RESEARCH / "a15_custodian_broker_v0_5.py"
+LEDGER_FILENAME = "custodian.sqlite3"
 CHOICE = {
     "actor": "ARIO",
     "role": "RESEARCH_DIALOGUE",
@@ -48,7 +49,7 @@ class ReadOnlyAdapterTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(prefix="a15-r22-readonly-")
         self.addCleanup(self.temp.cleanup)
         self.state = Path(self.temp.name) / "state"
-        self.state.mkdir()
+        self.state.mkdir(mode=0o700)
 
     def seed(self, count=1):
         journal = broker.Journal(self.state, provision=True)
@@ -95,7 +96,7 @@ class ReadOnlyAdapterTests(unittest.TestCase):
 
     def test_snapshot_is_read_only_and_creates_no_sidecars(self):
         self.seed(2)
-        db = self.state / broker.LEDGER_FILENAME
+        db = self.state / LEDGER_FILENAME
         floor = self.state / broker.FLOOR_NAME
         before_db = db.read_bytes()
         before_floor = floor.read_bytes()
@@ -146,7 +147,7 @@ class ReadOnlyAdapterTests(unittest.TestCase):
 
     def test_previous_checkpoint_detects_joint_local_rollback_when_retained_externally(self):
         self.seed(1)
-        first_db = (self.state / broker.LEDGER_FILENAME).read_bytes()
+        first_db = (self.state / LEDGER_FILENAME).read_bytes()
         first_floor = (self.state / broker.FLOOR_NAME).read_bytes()
         first = self.build_initial()
         previous = self.state.parent / "external-retained-checkpoint.json"
@@ -166,7 +167,7 @@ class ReadOnlyAdapterTests(unittest.TestCase):
 
         # Simulate same-admin rollback of BOTH local files. The retained seq=2
         # checkpoint is kept outside the rolled-back local state directory.
-        (self.state / broker.LEDGER_FILENAME).write_bytes(first_db)
+        (self.state / LEDGER_FILENAME).write_bytes(first_db)
         (self.state / broker.FLOOR_NAME).write_bytes(first_floor)
         with self.assertRaises(adapter.AdapterHold):
             adapter.build_checkpoint(
@@ -183,7 +184,7 @@ class ReadOnlyAdapterTests(unittest.TestCase):
         previous.write_text(adapter.canonical(first) + "\n", encoding="utf-8")
 
         fork_state = Path(self.temp.name) / "fork"
-        fork_state.mkdir()
+        fork_state.mkdir(mode=0o700)
         fork_journal = broker.Journal(fork_state, provision=True)
         fork_req = request("ATT_DIFFERENT")
         fork_req["choice_json"] = broker.encode({
@@ -235,7 +236,7 @@ class ReadOnlyAdapterTests(unittest.TestCase):
 
     def test_tampered_broker_hash_chain_holds(self):
         self.seed(1)
-        db = self.state / broker.LEDGER_FILENAME
+        db = self.state / LEDGER_FILENAME
         conn = sqlite3.connect(str(db))
         conn.execute("UPDATE events SET hash=? WHERE seq=1", ("0" * 64,))
         conn.commit()
@@ -244,7 +245,7 @@ class ReadOnlyAdapterTests(unittest.TestCase):
             self.build_initial()
 
     def test_unexpected_schema_holds(self):
-        db = self.state / broker.LEDGER_FILENAME
+        db = self.state / LEDGER_FILENAME
         conn = sqlite3.connect(str(db))
         conn.execute("CREATE TABLE unexpected(value TEXT)")
         conn.commit()
@@ -252,7 +253,7 @@ class ReadOnlyAdapterTests(unittest.TestCase):
         floor = self.state / broker.FLOOR_NAME
         floor.write_text(json.dumps({
             "format": broker.FLOOR_FORMAT,
-            "ledger": broker.LEDGER_FILENAME,
+            "ledger": LEDGER_FILENAME,
             "expected_seq": 0,
             "expected_hash": "GENESIS",
         }), encoding="utf-8")
@@ -261,7 +262,7 @@ class ReadOnlyAdapterTests(unittest.TestCase):
 
     def test_sqlite_sidecar_holds(self):
         self.seed(1)
-        (self.state / (broker.LEDGER_FILENAME + "-wal")).write_bytes(b"synthetic")
+        (self.state / (LEDGER_FILENAME + "-wal")).write_bytes(b"synthetic")
         with self.assertRaises(adapter.AdapterHold):
             self.build_initial()
 
@@ -363,7 +364,7 @@ class ReadOnlyAdapterTests(unittest.TestCase):
 
     def test_database_symlink_is_refused(self):
         self.seed(1)
-        db = self.state / broker.LEDGER_FILENAME
+        db = self.state / LEDGER_FILENAME
         target = self.state / "ledger-target.sqlite3"
         db.rename(target)
         try:
