@@ -87,7 +87,7 @@ class HistoricalQuestionAnswerResearchTests(unittest.TestCase):
         self.assertTrue(got["historical_text_hidden"])
 
     def test_unknown_question_stays_unknown_and_hides_text(self):
-        got = preview_historical_question(self.view(), "Never asked", include_historical_quote=True)
+        got = preview_historical_question(self.view(), "Never asked")
         self.assertEqual(got["disposition"], "UNKNOWN_NO_EXACT_QUESTION_MATCH")
         self.assertIsNone(got["historical_quote"])
         self.assertIsNone(got["answer"])
@@ -95,7 +95,7 @@ class HistoricalQuestionAnswerResearchTests(unittest.TestCase):
     def test_ambiguous_archive_question_stays_unknown(self):
         self.rows.append(make_pair("s3", "WHAT   WAS THE PRIOR ANSWER?", "Conflicting legacy answer."))
         self.rewrite_fixture()
-        got = preview_historical_question(self.view(), "what was the prior answer?", include_historical_quote=True)
+        got = preview_historical_question(self.view(), "what was the prior answer?")
         self.assertEqual(got["disposition"], "UNKNOWN_MULTIPLE_HISTORICAL_MATCHES")
         self.assertEqual(got["matching_record_count"], 2)
         self.assertIsNone(got["historical_quote"])
@@ -127,14 +127,14 @@ class HistoricalQuestionAnswerResearchTests(unittest.TestCase):
         self.rows[0]["evidence_admission"] = "ADMITTED"
         self.rows[0]["source_attribution_v1_constructed"] = True
         self.rewrite_fixture()
-        got = preview_historical_question(self.view(), "What was the prior answer?", include_historical_quote=True)
+        got = preview_historical_question(self.view(), "What was the prior answer?")
         self.assertEqual(got["source_authenticity"], "NOT_ESTABLISHED")
         self.assertEqual(got["truth_assessment"], "NOT_EVALUATED")
         self.assertEqual(got["evidence_admission"], "NO_ADMISSION")
         self.assertFalse(got["source_attribution_v1_constructed"])
 
     def test_opaque_relations_preserved_as_unknown(self):
-        got = preview_historical_question(self.view(), "What about safety?", include_historical_quote=True)
+        got = preview_historical_question(self.view(), "What about safety?")
         self.assertTrue(got["has_opaque_relations"])
         self.assertEqual(got["relation_interpretation"], "HOLD_UNKNOWN_RELATION_SEMANTICS")
         self.assertIsNone(got["answer"])
@@ -188,10 +188,6 @@ class HistoricalQuestionAnswerResearchTests(unittest.TestCase):
         self.assertIsNone(got["historical_quote"])
         self.assertNotIn("x" * 100, str(got))
 
-ZE_HISTORICAL_QUOTE"):
-            preview_historical_question(self.view(), "What was the prior answer?", include_historical_quote=True)
-        got = preview_historical_question(self.view(), "What was the prior answer?")
-        self.assertIsNone(got["historical_quote"])
 
     def test_quote_text_is_not_a_preview_field(self):
         self.rows[0] = make_pair("s1", "What was the prior answer?", "x" * 4096)
@@ -199,8 +195,8 @@ ZE_HISTORICAL_QUOTE"):
         got = preview_historical_question(self.view(), "What was the prior answer?")
         self.assertIsNone(got["historical_quote"])
 
-    def test_unknown_question_not_echoed_even_with_opt_in(self):
-        got = preview_historical_question(self.view(), "Secret user question", include_historical_quote=True)
+    def test_unknown_question_not_echoed(self):
+        got = preview_historical_question(self.view(), "Secret user question")
         self.assertFalse(got["user_question_echoed"])
         self.assertNotIn("Secret user question", str(got))
 

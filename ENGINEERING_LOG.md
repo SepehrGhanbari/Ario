@@ -840,3 +840,9 @@ RESEARCH_ONLY / DRAFT / HOLD / NO_AUTOMATIC_MERGE / NO_REAL_KEYS / NO_TRUST_ACTI
 - Updated `CONSUMER_SECURITY_REVIEW_R1.md` and R1 README with the R2 scope and residual limitations. Prior review findings are preserved as history and explicitly superseded in scope, not erased.
 - Files changed: `implementation/core/legacy_v153_historical_view.py`, `historical_qa_research_boundary.py`, `historical_qa_consumer_sink.py`; corresponding reader/boundary/sink tests and `test_historical_qa_consumer_bypass_r1.py`; review packet and README; this append-only log.
 - **No private V15.3 archive opened, no QwenMemory, signer, keys, model, tools, active chat loop, evidence admission or production path touched.** RIO-01 R1 local model results unchanged. Exact-head CI pending after this commit; keep PR #351 DRAFT/HOLD, RESEARCH_ONLY, NO_TRUST_ACTIVATION, NO_PRODUCTION, NO_AUTOMATIC_MERGE.
+
+## 2026-11-25 — RIO-01 R2 CI syntax correction
+
+- First exact-head CI attempt after R2 reported a Python syntax error in `test_historical_qa_research_boundary.py`: a stale fragment remained after replacing the old quote-opt-in test. The failing jobs were collection failures, not test assertions or runtime behavior.
+- Removed the orphan fragment and removed obsolete `include_historical_quote=True` arguments from metadata-only tests; retained only explicit TypeError assertions proving the removed parameter is rejected.
+- No production/core code changed in this correction. Re-run exact-head CI before any disposition change. RIO-F1 public API path remains mitigated only; same-process boundary remains HOLD. RIO-F2 ordinary mutation blocked only; hostile same-process tampering remains HOLD.
