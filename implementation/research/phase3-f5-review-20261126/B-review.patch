@@ -1,0 +1,43 @@
+--- a/capture_gateway.py
++++ b/capture_gateway.py
+@@ -20,6 +20,7 @@
+ 
+ from message_journal import ZERO_HASH, MessageJournal, MessageRecord, _canonical, _hash
+ from portable_witness import PortableWitness
++from review_guard import verified_head
+ 
+ 
+ HONEST_POLICY = b"ario-phase3-capture-gateway-v1"
+@@ -1115,6 +1116,8 @@
+             if identity not in self.available:
+                 continue
+             state = self.witnesses[identity].status()
++            if state["witness_id"] != identity:
++                return "QUORUM_MISMATCH", []
+             if state["retired"]:
+                 continue
+             seq = state["sequence"]
+@@ -1158,12 +1161,22 @@
+                 count += 1
+             return count
+ 
+-    def commit_bundle(self, bundle: dict[str, int | str]) -> dict:
++    def commit_bundle(self, bundle: dict[str, int | str], *, records=None) -> dict:
+         with self._mutex:
+             state, online = self._read()
+             if state != "QUORUM_MATCH":
+                 return {"status": state, "online": online, "head": self.head, "sequence": self.sequence,
+                         "signature": None, "warning": "model quorum only; no freshness attestation"}
++            if records is None:
++                return {"status": "HOLD_MISSING_MESSAGE_PROOF", "signature": None}
++            prior = self._certs.get(self.sequence)
++            floor = (0, ZERO_HASH) if prior is None else (prior["cumulative_message_count"], prior["cumulative_history_commitment"])
++            try:
++                verified = verified_head(tuple(records), floor)
++                if verified != (bundle["message_count"], bundle["history_commitment"]):
++                    raise ValueError("bundle does not match message proof")
++            except (ValueError, TypeError, KeyError):
++                return {"status": "HOLD_INVALID_MESSAGE_PROOF", "signature": None}
+             self.catch_up()
+             state, online = self._read()
+             if state != "QUORUM_MATCH":
