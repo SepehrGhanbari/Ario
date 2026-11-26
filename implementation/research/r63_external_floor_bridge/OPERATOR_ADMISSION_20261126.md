@@ -44,3 +44,36 @@ Prepared an unsent targeted inquiry to IPng public CT operations contact about t
 - https://wit26n0.testing.archive.rip/about.txt
 
 Decision HOLD_EXTERNAL_CUSTODY_NOT_ESTABLISHED. Required before advancement: explicit operator agreement, independent management evidence, state-loss/key-retirement policy, fresh authenticated read, authorized durability/reset test, and 3-of-4 R63-specific durable receipt integration. Do not substitute more same-administrator databases, generic C2SP signatures, uptime, or key counts for these requirements.
+
+
+## New corporate failure-domain finding — 2026-11-26
+
+The Sigsum policy's company names must not be mistaken for independent administrative domains:
+
+- Glasklar Teknik's own About page describes Glasklar Teknik AB as a sister company of Mullvad VPN AB and Tillitis AB.
+- Tillitis' official FAQ says Tillitis AB is wholly owned by Amagicom AB and is a spin-off from its sister company Mullvad VPN.
+- The Sigsum named-policy article explicitly states that the three witnesses in `sigsum-generic-2025-1` are operated by separate companies but share the same parent company and are therefore dependent in some ways.
+
+For R63, **Glasklar + Mullvad + Tillitis = one corporate failure domain (AMAGICOM_GROUP)**. The 2-of-3 threshold in `sigsum-generic-2025-1` is not evidence of two independent parent-company domains. This does not invalidate that policy for its intended use; it is a stricter R63 interpretation.
+
+A useful precedent exists in `SIGSUM_TEST_2025_3`: three Glasklar employee witnesses (`poc.sigsum.org/nisse`, `rgdd.se/poc-witness`, `witness1.smartit.nu/witness1`) are explicitly grouped and counted as one policy unit. Its top-level quorum is 4-of-6. This is failure-domain-aware policy structure, not proof of state-loss continuity.
+
+## R63 domain quorum model
+
+Added `domain_quorum/` with a pure policy gate and 44 synthetic regression tests. It requires distinct values for four pinned failure-domain classes: operator/corporate group, admin, key custody, and state/backup administration. It also binds the exact sequence and proposal hash, requires readback for read-quorum receipts, and checks the read/write quorum-intersection inequality using the number of distinct operator domains rather than the number of keys.
+
+Local execution: `python -m unittest -v test_domain_quorum.py` — 44/44 PASS. These are synthetic tests of the policy gate only; the model does not verify real signatures, authenticate the domain evidence, or establish real custody. The code consumes pre-verified receipt booleans and must not be integrated as a production verifier without a separate cryptographic adapter and externally pinned roster.
+
+The public staging table lists GDB Security, Geomys, IPng, Markovian, Mullvad, and TrustFabric. For R63, Mullvad belongs to AMAGICOM_GROUP. IPng's Kladje and Krabbel are two witness identities under one operator and therefore count as one operator domain. GDB's documented list configuration is staging, not the current testing list. The remaining operator names are only candidate domains: shared administrators, key custodians, backup control, and actual durable readback remain unverified. No operator is admitted.
+
+### Primary evidence
+
+- https://www.glasklarteknik.se/about/
+- https://www.tillitis.se/faq/
+- https://www.glasklarteknik.se/post/named-policies-for-sigsum/
+- https://docs.rs/sigsum/latest/sigsum/policy/static.SIGSUM_TEST_2025_3.html
+- https://docs.rs/sigsum/latest/sigsum/policy/static.SIGSUM_GENERIC_2025_1.html
+- https://witness-network.org/witness-tables/
+- https://ipng.ch/s/ct/
+
+Decision remains `HOLD_EXTERNAL_CUSTODY_NOT_ESTABLISHED`. The 44/44 result does not promote any witness, key, or trust state.
