@@ -139,7 +139,7 @@ func parseProof(raw []byte) proofFields {
 	return proofFields{Log: fields["log"], Leaf: leaf[0], Size: size, Root: fields["root_hash"], Index: index}
 }
 
-func verifyOfficial(proof, eventID, pubkey, temp string, label string) {
+func verifyOfficial(proof, eventID, pubkey []byte, temp string, label string) {
 	proofPath := filepath.Join(temp, label+".proof")
 	pubPath := filepath.Join(temp, label+".pub")
 	if err := os.WriteFile(proofPath, proof, 0600); err != nil { fail("write proof: %v", err) }
