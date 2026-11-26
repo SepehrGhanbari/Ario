@@ -27,14 +27,13 @@ run(){ "$@" >"$TMP/last.out" 2>&1 || { cat "$TMP/last.out"; return 1; }; }
 
 tpm2 --version | head -n 1
 swtpm --version | head -n 1
-if ! swtpm_setup --tpm2 --tpmstate "dir://$STATE" --create-ek --create-platform-cert --lock-nvram >"$TMP/setup.log" 2>&1; then cat "$TMP/setup.log"; exit 1; fi
-swtpm socket --tpm2 --tpmstate "dir=$STATE" --server type=tcp,port=2321 --ctrl type=tcp,port=2322 --flags not-need-init >"$TMP/swtpm.log" 2>&1 &
+swtpm socket --tpm2 --tpmstate "dir=$STATE" --server type=tcp,port=2321 --ctrl type=tcp,port=2322 --flags startup-clear >"$TMP/swtpm.log" 2>&1 &
 SWTPM_PID=$!
 for _ in $(seq 1 80); do
-  if tpm2_startup -c >"$TMP/startup.log" 2>&1; then break; fi
+  if tpm2_getrandom 8 >/dev/null 2>&1; then break; fi
   sleep 0.1
 done
-if ! tpm2_getrandom 8 >/dev/null 2>&1; then cat "$TMP/startup.log" "$TMP/swtpm.log"; fail "swtpm startup"; fi
+if ! tpm2_getrandom 8 >/dev/null 2>&1; then cat "$TMP/swtpm.log"; fail "swtpm startup"; fi
 pass "software TPM 2.0 initialized"
 
 # Create a TPM-resident signing key whose object authPolicy requires
