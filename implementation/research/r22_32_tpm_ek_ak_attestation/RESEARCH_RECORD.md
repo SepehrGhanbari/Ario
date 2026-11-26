@@ -132,3 +132,12 @@ This remains software-TPM interoperability evidence, not proof of physical-devic
 - Corrected the test to insert a non-empty 32-byte `authorization policy` before the `size` field and assert that the field is present before invoking the parser.
 - Final generic regression head `09e0c224b9e25a2a2958d2fc52f70b4e4e9e0ddb`: M0 **2111 PASS**; Windows and Python 3.14 differential advisories PASS; manifest/restore/generator matrix PASS; self-audit readback PASS. Run **45859336248** (M0/differential) and **45859336333** (matrix).
 - Scope remains software TPM and synthetic CA only. No physical TPM, OEM trust, independent administrator, external rollback floor, real key, trust activation, production or merge is established.
+
+
+## AK TPMT_PUBLIC identity extension — 2026-11-26
+
+The harness now reads the persistent RSA AK public area back from the TPM, captures its raw TPMT_PUBLIC and Qualified Name, independently recomputes the AK Name, and checks fixedTPM, fixedParent, sensitiveDataOrigin, restricted and signEncrypt attributes. This closes the earlier asymmetry where the storage-primary Name was recomputed but the AK Name was only captured from tpm2_createak output.
+
+Dedicated R22.32 workflow [run 45858737039](https://github.com/SepehrGhanbari/Ario/actions/runs/45858737039), source head `1fda8008beaa6355344f90404fb45531a9f0fd73`, **SUCCESS: 36 PASS lines**. The subsequent exact-head Repository Implementation Regression on branch head `6b2344c52d26810bc7774b98b149cc3266616b79` [run 45859727760](https://github.com/SepehrGhanbari/Ario/actions/runs/45859727760) also succeeded, including the NV attestation parser tests. Advisory self-audit [run 45859727982](https://github.com/SepehrGhanbari/Ario/actions/runs/45859727982) and Published TXT Restore Security [run 45859727974](https://github.com/SepehrGhanbari/Ario/actions/runs/45859727974) succeeded on the same head.
+
+This remains software-TPM evidence with a synthetic lab CA, not OEM EK or physical hardware attestation. The AK public-area check strengthens Name binding but does not establish hardware non-extractability, manufacturer identity, independent custody, firmware trust or rollback resistance.
