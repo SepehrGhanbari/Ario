@@ -116,7 +116,7 @@ class AttestedCustodianTests(unittest.TestCase):
             "--anchor", str(self.anchor_path),
             "--anchor-signature", str(self.anchor_sig_path),
             "--public-key", str(self.custodian_public),
-            "--private-key", str(self.custodian_private),
+            "--private-key", str(custodian_private),
             "--journal", str(self.journal),
             "--lock", str(self.lock),
             "--output", str(self.challenge_path),
@@ -132,14 +132,20 @@ class AttestedCustodianTests(unittest.TestCase):
 
     def make_receipt(self, *, change=None):
         now = int(time.time())
-        storage_name = b"\x00\x0b" + hashlib.sha256(b"synthetic TPMT_PUBLIC storage root").digest()
-        ak_name = b"\x00\x0b" + hashlib.sha256(b"synthetic TPMT_PUBLIC AK").digest()
+        storage_attrs = (1 << 1) | (1 << 4) | (1 << 5)
+        ak_attrs = (1 << 1) | (1 << 4) | (1 << 5) | (1 << 16) | (1 << 18)
+        storage_public_area = b"\x00\x23\x00\x0b" + storage_attrs.to_bytes(4, "big") + b"storage-public-area"
+        ak_public_area = b"\x00\x01\x00\x0b" + ak_attrs.to_bytes(4, "big") + b"ak-public-area"
+        storage_name = storage_public_area[2:4] + hashlib.sha256(storage_public_area).digest()
+        ak_name = ak_public_area[2:4] + hashlib.sha256(ak_public_area).digest()
         manifest = {
             "ek_certificate_sha256": digest(b"synthetic EK certificate"),
             "ek_spki_sha256": digest(self.ek_spki),
             "ak_name_sha256": digest(ak_name),
             "ak_public_sha256": digest(self.ak_spki),
             "storage_name_sha256": digest(storage_name),
+            "storage_public_area_sha256": digest(storage_public_area),
+            "ak_public_area_sha256": digest(ak_public_area),
             "creation_attestation_sha256": digest(b"creation attest"),
             "creation_signature_sha256": digest(b"creation signature"),
             "quote_attestation_sha256": digest(b"quote attest"),
@@ -155,6 +161,7 @@ class AttestedCustodianTests(unittest.TestCase):
             "device_ek_sha256": digest(self.ek_spki),
             "ek_spki_der_b64": b64(self.ek_spki),
             "storage_name_b64": b64(storage_name),
+            "storage_public_area_tpmt_b64": b64(storage_public_area),
             "storage_root_sha256": digest(storage_name),
             "previous_storage_root_sha256": self.challenge["previous_storage_root_sha256"],
             "previous_epoch": self.challenge["previous_epoch"],
@@ -162,6 +169,7 @@ class AttestedCustodianTests(unittest.TestCase):
             "previous_head_sha256": self.challenge["previous_head_sha256"],
             "next_head_sha256": self.challenge["next_head_sha256"],
             "ak_name_b64": b64(ak_name),
+            "ak_public_area_tpmt_b64": b64(ak_public_area),
             "ak_name_sha256": digest(ak_name),
             "ak_public_spki_der_b64": b64(self.ak_spki),
             "ak_public_sha256": digest(self.ak_spki),
@@ -208,7 +216,8 @@ class AttestedCustodianTests(unittest.TestCase):
         return request
 
     def invoke(self, request, *, suffix="default", extra=(),
-               verifier_public_override=None, bundle_path_override=None):
+               verifier_public_override=None, private_key_override=None,
+               bundle_path_override=None):
         request_path = self.root / f"request-{suffix}.json"
         response_path = self.root / f"response-{suffix}.json"
         response_sig_path = self.root / f"response-{suffix}.sig"
@@ -216,6 +225,7 @@ class AttestedCustodianTests(unittest.TestCase):
         bundle_sig_path = self.root / f"bundle-{suffix}.sig"
         request_path.write_bytes(canonical(request))
         verifier_public = verifier_public_override or self.verifier_public
+        custodian_private = private_key_override or self.custodian_private
         command = [
             sys.executable, str(DEFAULT_GATE),
             "--anchor", str(self.anchor_path),
@@ -283,6 +293,60 @@ class AttestedCustodianTests(unittest.TestCase):
         request["device_ek_sha256"] = digest(b"another EK")
         result, *_ = self.invoke(request, suffix="ek-substitution")
         self.assert_rejected_without_commit(result, "REQUEST_ATTESTATION_BINDING_MISMATCH:device_ek_sha256")
+
+    def test_mismatched_custodian_keypair_is_rejected_before_commit(self):
+        wrong_private, _wrong_public = keypair(self.root, "wrong-custodian")
+        request = self.make_request()
+        result, *_ = self.invoke(
+            request, suffix="wrong-custodian-keypair", private_key_override=wrong_private,
+        )
+        self.assert_rejected_without_commit(result, "REJECT CUSTODIAN_KEYPAIR_MISMATCH")
+
+    def test_tampered_verifier_pin_signature_is_rejected(self):
+        original = self.pin_sig_path.read_bytes()
+        self.pin_sig_path.write_bytes(b"not-a-valid-signature")
+        request = self.make_request()
+        result, *_ = self.invoke(request, suffix="tampered-pin-signature")
+        self.assert_rejected_without_commit(result, "REJECT VERIFIER_PIN_SIGNATURE_INVALID")
+        self.pin_sig_path.write_bytes(original)
+
+    def test_storage_tpm_public_area_must_recompute_the_attested_name(self):
+        def mutate(receipt):
+            raw = base64.b64decode(receipt["storage_public_area_tpmt_b64"])
+            altered = raw[:-1] + bytes([raw[-1] ^ 1])
+            receipt["storage_public_area_tpmt_b64"] = b64(altered)
+            receipt["evidence_manifest"]["storage_public_area_sha256"] = digest(altered)
+            receipt["evidence_bundle_sha256"] = digest(canonical(receipt["evidence_manifest"]))
+        request = self.make_request(receipt=self.make_receipt(change=mutate))
+        result, *_ = self.invoke(request, suffix="storage-public-area-substitution")
+        self.assert_rejected_without_commit(result, "REJECT ATTESTATION_STORAGE_TPM_NAME_MISMATCH")
+
+    def test_ak_tpm_public_area_must_recompute_the_attested_name(self):
+        def mutate(receipt):
+            raw = base64.b64decode(receipt["ak_public_area_tpmt_b64"])
+            altered = raw[:-1] + bytes([raw[-1] ^ 1])
+            receipt["ak_public_area_tpmt_b64"] = b64(altered)
+            receipt["evidence_manifest"]["ak_public_area_sha256"] = digest(altered)
+            receipt["evidence_bundle_sha256"] = digest(canonical(receipt["evidence_manifest"]))
+        request = self.make_request(receipt=self.make_receipt(change=mutate))
+        result, *_ = self.invoke(request, suffix="ak-public-area-substitution")
+        self.assert_rejected_without_commit(result, "REJECT ATTESTATION_AK_TPM_NAME_MISMATCH")
+
+    def test_storage_tpm_public_area_requires_fixed_identity_attributes(self):
+        def mutate(receipt):
+            raw = bytearray(base64.b64decode(receipt["storage_public_area_tpmt_b64"]))
+            raw[7] &= ~(1 << 5)
+            altered = bytes(raw)
+            name = altered[2:4] + hashlib.sha256(altered).digest()
+            receipt["storage_public_area_tpmt_b64"] = b64(altered)
+            receipt["storage_name_b64"] = b64(name)
+            receipt["storage_root_sha256"] = digest(name)
+            receipt["evidence_manifest"]["storage_name_sha256"] = digest(name)
+            receipt["evidence_manifest"]["storage_public_area_sha256"] = digest(altered)
+            receipt["evidence_bundle_sha256"] = digest(canonical(receipt["evidence_manifest"]))
+        request = self.make_request(receipt=self.make_receipt(change=mutate))
+        result, *_ = self.invoke(request, suffix="storage-attributes")
+        self.assert_rejected_without_commit(result, "REJECT ATTESTATION_STORAGE_ATTRIBUTES_INVALID")
 
     def test_wrong_verifier_key_is_not_pinned(self):
         _private, wrong_public = keypair(self.root, "wrong-verifier")
