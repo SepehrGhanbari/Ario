@@ -5,6 +5,7 @@ on:
     paths:
       - .github/workflows/r22-33-attested-custodian-transition.yml
       - implementation/research/r22_31_custodian_monotonic_state/**
+      - implementation/research/r22_32_tpm_ek_ak_attestation/**
       - implementation/research/r22_33_attested_transition/**
 permissions:
   contents: read
@@ -19,7 +20,12 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: '3.13'
-      - name: Verify OpenSSL and compile strict and legacy entrypoints
+      - name: Install software TPM tools for the raw-evidence integration run
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tpm2-tools swtpm swtpm-tools openssl
+      - name: Verify OpenSSL and compile strict, legacy and raw-evidence verifiers
         run: |
           set -euo pipefail
           openssl version
@@ -29,7 +35,9 @@ jobs:
             implementation/research/r22_31_custodian_monotonic_state/test_custodian_state.py \
             implementation/research/r22_33_attested_transition/issue_challenge.py \
             implementation/research/r22_33_attested_transition/attested_custodian.py \
+            implementation/research/r22_33_attested_transition/verify_raw_evidence.py \
             implementation/research/r22_33_attested_transition/test_attested_custodian.py \
+            implementation/research/r22_32_tpm_ek_ak_attestation/verify_attestation.py \
             implementation/research/r22_32_tpm_ek_ak_attestation/verify_nv_attestation.py \
             implementation/research/r22_32_tpm_ek_ak_attestation/verify_tpm_public_name.py
       - name: Run preserved R22.31 state-machine regression suite
@@ -44,6 +52,78 @@ jobs:
           python -m unittest discover \
             -s implementation/research/r22_33_attested_transition \
             -p 'test_*.py' -v 2>&1 | tee "$RUNNER_TEMP/r22-33-attested-transition-tests.log"
+      - name: Run R22.32 raw TPM evidence through the R22.33 verifier and custodian gate
+        env:
+          ARIO_R22_32_EVIDENCE_DIR: ${{ runner.temp }}/r22-33-e2e/evidence
+          ARIO_R22_33_CI_CUSTODIAN_PRIVATE_KEY_PATH: ${{ runner.temp }}/r22-33-custodian-private.key
+        run: |
+          set -euo pipefail
+          E2E_DIR="$RUNNER_TEMP/r22-33-e2e"
+          EVIDENCE_DIR="$E2E_DIR/evidence"
+          CUSTODIAN_PRIVATE="$RUNNER_TEMP/r22-33-custodian-private.key"
+          VERIFIER_PRIVATE="$RUNNER_TEMP/r22-33-verifier-private.key"
+          mkdir -p "$EVIDENCE_DIR"
+
+          bash implementation/research/r22_32_tpm_ek_ak_attestation/run_swtpm_attestation.sh \
+            2>&1 | tee "$RUNNER_TEMP/r22-33-tpm-e2e.log"
+          test -s "$CUSTODIAN_PRIVATE"
+          test -s "$EVIDENCE_DIR/custodian-challenge.json"
+          test -s "$EVIDENCE_DIR/custodian-challenge.sig"
+
+          openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 \
+            -out "$VERIFIER_PRIVATE" >/dev/null 2>&1
+          openssl pkey -in "$VERIFIER_PRIVATE" -pubout \
+            -out "$E2E_DIR/verifier-public.pem" >/dev/null 2>&1
+          python3 - "$E2E_DIR/verifier-public.pem" "$E2E_DIR/verifier-pin.json" <<'PY'
+          import hashlib, json, subprocess, sys
+          from pathlib import Path
+          public = subprocess.run(
+              ["openssl", "pkey", "-pubin", "-in", sys.argv[1], "-outform", "DER"],
+              stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True,
+          ).stdout
+          pin = {
+              "format": "ARIO-R22.33-VERIFIER-PIN-V1",
+              "attestation_verifier_spki_sha256": hashlib.sha256(public).hexdigest(),
+              "policy_id": "R22.32_EK_AK_QUOTE_CERTIFYCREATION_V1",
+          }
+          Path(sys.argv[2]).write_bytes(
+              (json.dumps(pin, sort_keys=True, separators=(",", ":"), ensure_ascii=False) + "\n").encode()
+          )
+          PY
+          openssl dgst -sha256 -sign "$CUSTODIAN_PRIVATE" \
+            -out "$E2E_DIR/verifier-pin.sig" "$E2E_DIR/verifier-pin.json"
+
+          python3 implementation/research/r22_33_attested_transition/verify_raw_evidence.py \
+            --evidence-dir "$EVIDENCE_DIR" \
+            --verifier-private-key "$VERIFIER_PRIVATE" \
+            --verifier-public-key "$E2E_DIR/verifier-public.pem" \
+            --receipt-output "$E2E_DIR/verifier-receipt.json" \
+            --receipt-signature-output "$E2E_DIR/verifier-receipt.sig" \
+            --request-output "$E2E_DIR/attested-request.json"
+
+          python3 implementation/research/r22_33_attested_transition/attested_custodian.py \
+            --anchor "$EVIDENCE_DIR/custodian-anchor.json" \
+            --anchor-signature "$EVIDENCE_DIR/custodian-anchor.sig" \
+            --public-key "$EVIDENCE_DIR/custodian-public.pem" \
+            --private-key "$CUSTODIAN_PRIVATE" \
+            --journal "$E2E_DIR/journal.jsonl" \
+            --lock "$E2E_DIR/custodian.lock" \
+            --request "$E2E_DIR/attested-request.json" \
+            --response "$E2E_DIR/custodian-receipt.json" \
+            --response-signature "$E2E_DIR/custodian-receipt.sig" \
+            --verifier-pin "$E2E_DIR/verifier-pin.json" \
+            --verifier-pin-signature "$E2E_DIR/verifier-pin.sig" \
+            --attestation-verifier-public-key "$E2E_DIR/verifier-public.pem" \
+            --bundle "$E2E_DIR/attested-transition-bundle.json" \
+            --bundle-signature "$E2E_DIR/attested-transition-bundle.sig"
+
+          openssl dgst -sha256 -verify "$EVIDENCE_DIR/custodian-public.pem" \
+            -signature "$E2E_DIR/attested-transition-bundle.sig" \
+            "$E2E_DIR/attested-transition-bundle.json"
+          test "$(wc -l < "$E2E_DIR/journal.jsonl")" -eq 1
+          test ! -e "$E2E_DIR/custodian-private.key"
+          test ! -e "$E2E_DIR/verifier-private.key"
+          echo "R22_33_RAW_TPM_EVIDENCE_TO_CUSTODIAN_TRANSITION PASS"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -51,5 +131,7 @@ jobs:
           path: |
             ${{ runner.temp }}/r22-31-legacy-tests.log
             ${{ runner.temp }}/r22-33-attested-transition-tests.log
+            ${{ runner.temp }}/r22-33-tpm-e2e.log
+            ${{ runner.temp }}/r22-33-e2e/**
           if-no-files-found: warn
           retention-days: 30
