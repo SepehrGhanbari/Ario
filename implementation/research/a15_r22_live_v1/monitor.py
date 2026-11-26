@@ -3,6 +3,7 @@ No trusted freshness clock or independence claim; no publication.
 """
 import json, sys, time, urllib.request
 from pathlib import Path
+from note_normalizer import normalize_ed25519_note
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self,*args,**kwargs): raise ValueError("redirect refused")
 def get(url):
@@ -28,14 +29,11 @@ def main():
     for name,url in urls.items():
         try:
             raw=get(url);(out/(name+".raw")).write_bytes(raw)
-            body,sigs=raw.decode("utf-8").split("\n\n",1)
-            signer=KEYS[name].split("+",1)[0]
-            keep=[line for line in sigs.splitlines() if line.startswith("— "+ORIGIN+" ") or line.startswith("— "+signer+" ")]
-            normalized=(body+"\n\n"+"\n".join(keep)+"\n").encode()
+            normalized,unverified_extra=normalize_ed25519_note(raw,name,KEYS,ORIGIN)
             size,root,ts=note(normalized,KEYS[name])
             if not size>0:raise ValueError("zero size")
             heads[name]=(size,root)
-            observations[name]={"size":size,"root":root.hex(),"signed_timestamp":ts,"runner_clock_age_seconds":int(time.time())-ts,"ed25519":"VERIFIED","extra_signatures_not_checked":len(sigs.splitlines())-len(keep)}
+            observations[name]={"size":size,"root":root.hex(),"signed_timestamp":ts,"runner_clock_age_seconds":int(time.time())-ts,"ed25519":"VERIFIED","unverified_extra_signature_bytes":unverified_extra}
         except Exception as e: observations[name]={"status":"HOLD","error":type(e).__name__}
     result="HOLD_READ_QUORUM"
     try:
