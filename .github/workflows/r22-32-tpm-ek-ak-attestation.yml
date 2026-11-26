@@ -6,7 +6,9 @@ on:
       - .github/workflows/r22-32-tpm-ek-ak-attestation.yml
       - implementation/research/r22_32_tpm_ek_ak_attestation/*.py
       - implementation/research/r22_32_tpm_ek_ak_attestation/run_swtpm_attestation.sh
+      - implementation/research/r22_31_custodian_monotonic_state/custodian_state_legacy.py
       - implementation/research/r22_33_attested_transition/attested_custodian.py
+      - implementation/research/r22_33_attested_transition/issue_challenge.py
       - implementation/research/r22_33_attested_transition/verify_r22_32_evidence_bundle.py
       - implementation/research/r22_33_attested_transition/test_verify_r22_32_evidence_bundle.py
 permissions:
