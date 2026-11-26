@@ -1095,3 +1095,13 @@ Related #379 A15 retained-range experiment covers a different set of three commi
 - Closed the same-domain valid-prefix rollback item as ACCEPTED_RISK / OUT_OF_SCOPE for the current owner-operated research prototype. The expected-RED regression remains so the limitation cannot be forgotten or misreported as a pass.
 - Explicitly left account/credential/device compromise, an undisclosed second administrator, and hostile-owner resistance NOT_CLOSED. Those require a genuinely out-of-band owner-held floor or independent custodian, not another same-domain file/process.
 - No new Sigsum publication, witness test, external call, key, merge, trust activation, production action, or main-branch change.
+
+
+## 2026-11-26 — superseding correction: second administrator reported; inventory incomplete
+
+- Owner explicitly corrected the prior assumption and stated that another administrator exists and can perform relevant privileged actions. The earlier sole-owner ACCEPTED_RISK / OUT_OF_SCOPE disposition is withdrawn and must not be relied on.
+- Verified through the connected GitHub identity: authenticated login is `SepehrGhanbari` (ID `104393545`); repository owner is `SepehrGhanbari`; this account has `admin`. The old `Mrxxir` account has only `read` permission. The connected user has no GitHub organization memberships.
+- Read both active repository rulesets. The explicit bypass actor in `Protect main` is only user ID `104393545`; the no-bypass baseline lists no bypass actors. This identifies the explicit bypass configuration, not the complete administrator roster.
+- The connected GitHub tool does not expose a collaborator/admin enumeration endpoint. A named-user permission check is available, but the additional administrator's login has not yet been identified. Therefore do not claim that Sepehr is the only repository admin.
+- Current threat-model disposition: **OPEN / NOT_ASSESSED** until the additional administrator is identified and their effective permissions are verified. No access removal, ruleset change, branch protection change, or other security mutation was performed.
+- Next evidence path: inspect repository Settings → Collaborators (direct page: `https://github.com/SepehrGhanbari/Ario/settings/access`) or provide the second administrator's GitHub login for a direct permission check. Then map access to repository settings, rulesets, Actions, secrets, deployments, and external recovery sources.
