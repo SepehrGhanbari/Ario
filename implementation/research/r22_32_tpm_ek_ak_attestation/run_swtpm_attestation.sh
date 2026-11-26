@@ -67,6 +67,7 @@ AK_CTX="$TMP/ak.ctx"
 AK_PUB="$TMP/ak.pem"
 AK_NAME="$TMP/ak.name"
 AK_QN="$TMP/ak.qualified-name"
+AK_TPMT="$TMP/ak.tpmt"
 CRED_SECRET="$TMP/credential.secret"
 CRED_BLOB="$TMP/credential.blob"
 ACTIVATED_SECRET="$TMP/activated.secret"
@@ -139,6 +140,11 @@ tpm2_evictcontrol -C o -c "$AK_CTX" "$AK_HANDLE" >/dev/null
 tpm2_flushcontext -t >/dev/null
 AK_CTX="$AK_HANDLE"
 pass "AK persisted under its test handle; transient objects released"
+tpm2_readpublic -c "$AK_CTX" -n "$AK_NAME" -q "$AK_QN" \
+  -o "$AK_TPMT" -f tpmt >/dev/null
+python3 "$ROOT/verify_tpm_public_name.py" --public-tpmt "$AK_TPMT" \
+  --name "$AK_NAME" --require-ak
+pass "AK Name independently recomputed from TPMT_PUBLIC with restricted signing attributes"
 
 # Second software TPM: a credential created for TPM 1 must not activate with
 # a different EK and AK on TPM 2.
