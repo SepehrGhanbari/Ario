@@ -136,6 +136,11 @@ tpm2_activatecredential -c "$AK_CTX" -C "$EK_CTX" -i "$CRED_BLOB" \
 tpm2_flushcontext "$SESSION" >/dev/null
 cmp -s "$CRED_SECRET" "$ACTIVATED_SECRET" || fail "credential activation secret mismatch"
 pass "MakeCredential/ActivateCredential binds AK to the EK TPM"
+AK_HANDLE="0x81010010"
+tpm2_evictcontrol -C o -c "$AK_CTX" "$AK_HANDLE" >/dev/null
+tpm2_flushcontext -t >/dev/null
+AK_CTX="$AK_HANDLE"
+pass "AK persisted under its test handle; transient objects released"
 
 # Second software TPM: a credential created for TPM 1 must not activate with
 # a different EK and AK on TPM 2.
@@ -163,11 +168,15 @@ export TPM2TOOLS_TCTI="swtpm:host=127.0.0.1,port=2321"
 # Create an Owner-hierarchy storage primary and capture the TPM-computed
 # Name and Qualified Name. These are stronger object identifiers than a
 # caller-supplied hash of an exported PEM file.
-SRK_CTX="$TMP/storage-primary.ctx"
+SRK_HANDLE="0x81010002"
+SRK_TEMP_CTX="$TMP/storage-primary.transient.ctx"
+SRK_CTX="$SRK_HANDLE"
 SRK_NAME="$TMP/storage-primary.name"
 SRK_QN="$TMP/storage-primary.qualified-name"
 SRK_TPMT="$TMP/storage-primary.tpmt"
-tpm2_createprimary -C o -G ecc -g sha256 -c "$SRK_CTX" >/dev/null
+tpm2_createprimary -C o -G ecc -g sha256 -c "$SRK_TEMP_CTX" >/dev/null
+tpm2_evictcontrol -C o -c "$SRK_TEMP_CTX" "$SRK_HANDLE" >/dev/null
+tpm2_flushcontext -t >/dev/null
 tpm2_readpublic -c "$SRK_CTX" -n "$SRK_NAME" -q "$SRK_QN" \
   -o "$SRK_TPMT" -f tpmt >/dev/null
 ROOT_NAME_SHA256="$(sha256sum "$SRK_NAME" | awk '{print $1}')"
@@ -197,11 +206,15 @@ expect_fail "certify attestation rejected with a different challenge" \
     --object-name "$SRK_NAME" --object-qualified-name "$SRK_QN"
 
 # A different storage primary must not be accepted as the certified object.
-ALT_SRK_CTX="$TMP/alternate-storage-primary.ctx"
+ALT_SRK_HANDLE="0x81010003"
+ALT_SRK_TEMP_CTX="$TMP/alternate-storage-primary.transient.ctx"
+ALT_SRK_CTX="$ALT_SRK_HANDLE"
 ALT_SRK_NAME="$TMP/alternate-storage-primary.name"
 ALT_SRK_QN="$TMP/alternate-storage-primary.qualified-name"
 ALT_SRK_TPMT="$TMP/alternate-storage-primary.tpmt"
-tpm2_createprimary -C o -G rsa -g sha256 -c "$ALT_SRK_CTX" >/dev/null
+tpm2_createprimary -C o -G rsa -g sha256 -c "$ALT_SRK_TEMP_CTX" >/dev/null
+tpm2_evictcontrol -C o -c "$ALT_SRK_TEMP_CTX" "$ALT_SRK_HANDLE" >/dev/null
+tpm2_flushcontext -t >/dev/null
 tpm2_readpublic -c "$ALT_SRK_CTX" -n "$ALT_SRK_NAME" -q "$ALT_SRK_QN" \
   -o "$ALT_SRK_TPMT" -f tpmt >/dev/null
 expect_fail "certify attestation rejects substituted storage object Name" \
