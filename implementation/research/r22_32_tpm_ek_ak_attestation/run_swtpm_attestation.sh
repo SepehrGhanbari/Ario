@@ -177,8 +177,8 @@ SRK_TPMT="$TMP/storage-primary.tpmt"
 SRK_CREATION_DATA="$TMP/storage-primary.creation-data"
 SRK_CREATION_HASH="$TMP/storage-primary.creation-hash"
 SRK_CREATION_TICKET="$TMP/storage-primary.creation-ticket"
-tpm2_createprimary -C o -G ecc -g sha256 -c "$SRK_TEMP_CTX" \\
-  --creation-data "$SRK_CREATION_DATA" --creation-hash "$SRK_CREATION_HASH" \\
+tpm2_createprimary -C o -G ecc -g sha256 -c "$SRK_TEMP_CTX" \
+  --creation-data "$SRK_CREATION_DATA" --creation-hash "$SRK_CREATION_HASH" \
   --creation-ticket "$SRK_CREATION_TICKET" >/dev/null
 tpm2_evictcontrol -C o -c "$SRK_TEMP_CTX" "$SRK_HANDLE" >/dev/null
 tpm2_flushcontext -t >/dev/null
