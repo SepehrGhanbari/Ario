@@ -1138,3 +1138,71 @@ The owner-provided current GitHub Settings → Collaborators screenshot shows **
 This is not a cryptographic rollback fix. The expected-RED valid-prefix rollback test remains as a documented boundary for a different threat: compromise of the owner's GitHub account/device or an automated credential/app with write authority. One GitHub App installation is visible on the owner's account, but its effective repository permissions were not exposed in the available installation metadata; it is not evidence of a second human administrator and remains a separate machine-credential audit item only if that threat is in scope.
 
 No collaborator removal, ruleset change, key rotation, new witness test, merge, trust activation, or production action was performed.
+
+## 2026-11-26 — R22.32 TPM EK/AK binding, CertifyCreation and PCR Quote (RESEARCH_ONLY)
+
+- Stacked branch `research/r22-32-tpm-ek-ak-attestation-stacked-2026-11-26` on the latest R22.31 PR #411 head `1dba8ae472d0a0c8d02ab575eb62878fa705f897`; the feature branch was updated with a merge commit and now has that base as an ancestor. No R22.31 files were changed.
+- Pre-rebase exact-head CI [run 45853404250](https://github.com/SepehrGhanbari/Ario/actions/runs/45853404250), source `7e91aabf4d6bd3763027fead94ee7188b82087e1`, SUCCESS: **24/24 PASS**. A fresh exact-head run after updating to the latest R22.31 parent is pending. Implementation Regression [run 45853404032](https://github.com/SepehrGhanbari/Ario/actions/runs/45853404032) also succeeded on that SHA.
+- Environment: Ubuntu 24.04.5; tpm2-tools 5.6-1build4; swtpm 0.7.3-0ubuntu5.24.04.1; OpenSSL 3.0.13.
+- Tested synthetic EK X.509 path validation and SPKI binding; wrong-root rejection; AK-to-EK MakeCredential/ActivateCredential; cross-simulator credential rejection; TPM Name recomputation from TPMT_PUBLIC and mutation rejection; nonce-bound TPM2_CertifyCreation with signature/object Name/creation-hash validation; PCR 23 recomputation and Quote signature/nonce/selection verification; wrong nonce, wrong AK, tampered signature, substituted storage object, and post-quote PCR-change rejection.
+- Tool-version correction: Ubuntu's tpm2-tools 5.6 `tpm2_certify` does not expose qualifyingData, and `tpm2_print` cannot render the Creation attestation type. The harness uses TPM2_CertifyCreation with a fresh challenge and a direct binary TPMS_ATTEST parser. This is not claimed equivalent to TPM2_Certify; the storage object's Qualified Name is captured but is not claimed to be signed in the Creation attestation.
+- Explicit limits: synthetic lab CA, not an OEM EK certificate or manufacturer trust chain; no physical TPM, real device identity, Secure Boot/event-log appraisal, independent custodian, external rollback floor, Ario signer integration, trust activation, production, or merge. No real key was used. Earlier failed iterations remain in Actions history; only the final 24/24 run is counted.
+- Evidence artifact: [R22.32 TPM attestation evidence](https://github.com/SepehrGhanbari/Ario/actions/runs/45853404250/artifacts/15133389714).
+
+
+### R22.32 restack verification addendum — 2026-11-26
+
+- The feature branch was updated by a fast-forward merge commit `498e3620362cdea1940377c15be3edc611fcd19f` with the latest R22.31 PR #411 head `39ebaf8c5f043471f09fa56eeedce673ee00085d` as its second parent. Compare: 8 commits ahead, 0 behind; six changed files.
+- Dedicated exact-head CI [run 45854078266](https://github.com/SepehrGhanbari/Ario/actions/runs/45854078266): **SUCCESS, 24/24 PASS**.
+- Exact-head Repository Implementation Regression [run 45854078244](https://github.com/SepehrGhanbari/Ario/actions/runs/45854078244): **SUCCESS**.
+- Final evidence artifact: [R22.32 TPM attestation evidence](https://github.com/SepehrGhanbari/Ario/actions/runs/45854078266/artifacts/15134911715).
+- This addendum supersedes the earlier "fresh exact-head run pending" note. The limitations remain unchanged: synthetic lab CA, software TPM only, no OEM/manufacturer trust, no physical TPM, no event-log appraisal, no independent custodian, no signer integration, no trust activation, no production and no merge.
+
+### 2026-11-26 — R22.32 exact NV contents attestation extension
+
+- **Scope:** Continue existing PR #414 only; no new PR, merge, production promotion, real key or trust activation.
+- **Parent preserved:** `5f7e1f8ffc3835f00447f67489785a30a6cc6e58` (previous branch head remains addressable in Git history).
+- **Paths:** `implementation/research/r22_32_tpm_ek_ak_attestation/verify_nv_attestation.py` (new); `implementation/research/r22_32_tpm_ek_ak_attestation/run_swtpm_attestation.sh`; `implementation/research/r22_32_tpm_ek_ak_attestation/RESEARCH_RECORD.md`; this append-only log.
+- **Reason:** R22.32 previously certified a TPM storage-object creation record but did not sign the exact 32-byte root claim as NV contents. The new bounded experiment uses TPM2_NV_Certify and verifies the returned index Name, offset, challenge, AK Qualified Name and exact bytes.
+- **Preservation:** Existing research record and engineering log are retained and appended only. Prior branch commit 5f7e1f8ffc3835f00447f67489785a30a6cc6e58 is the recovery point.
+- **Local validation:** The new parser was exercised against a synthetic TPMS_ATTEST_NV positive fixture plus wrong-content and wrong-challenge negatives. This is parser-only, not TPM execution.
+- **CI status at commit preparation:** NOT_RUN for the new exact-source software-TPM harness. Do not report PASS until the dedicated workflow result and artifact are read back.
+- **Known boundary:** The owner can overwrite NV contents and obtain a fresh valid attestation. This authenticates a current TPM-held claim; it does not prove the claim's external measurement provenance, immutability, rollback resistance, or independent custody.
+
+### 2026-11-26 — R22.32 NV attestation validation correction
+
+- Moved the alternate-root fixture creation before the wrong-content negative control; the negative control now uses an existing 32-byte file.
+- Added an explicit `expect_reject` wrapper that requires a verifier `REJECT` line, preventing unrelated errors (such as a missing fixture) from being counted as a valid negative.
+- Added `implementation/tests/test_r22_32_nv_attestation.py` for NV public Name recomputation, written-state and handle checks, exact field acceptance, challenge/content/signer/offset/trailing-byte negatives, and Bash syntax/order checks.
+- Exact TPM simulator execution remains **NOT_RUN**: the R22.32 workflow file is branch-local and absent from `main`; no current-head TPM workflow run exists. The generic Implementation Regression workflow will run the new parser tests.
+
+### 2026-11-26 — R22.32 NV attestation first-run failure and correction
+
+- Dedicated TPM workflow run **45857424209** executed on exact head `ae553dac0ccf04578cb8156064d33088f7753f63` and failed **before** invoking `tpm2_nvcertify`: the verifier rejected the zero-length NV authorization-policy representation emitted by `tpm2_nvreadpublic`. The workflow log is the evidence; no NV attestation PASS is claimed for that run.
+- Generic Implementation Regression run **45857424187** reported **8 failed, 2100 passed, 8 skipped, 273 subtests passed**. The eight new parser tests all stopped while parsing their synthetic NV YAML fixture because the fixture encoded literal backslash-n sequences instead of line breaks. Existing-suite results remain separate from the new test failures.
+- This commit accepts only explicit empty-policy representations (blank, zero-length forms) and rejects non-empty policy material; it also prints the public NV metadata in the research workflow log for audit.
+- The synthetic fixture now uses actual newline characters. Exact TPM NV_Certify remains pending a fresh current-head workflow run.
+
+### 2026-11-26 — R22.32 NV public-name format and test assertion correction
+
+- The exact-head TPM workflow **45857768346** reached the real `tpm2_nvreadpublic` output. It reported NV Name `000b79a2c7d47eac1193512b3b1363f972df127b6507b61ec09dc6c0e513de792fd9` and attributes `0x20060006`. Independent recomputation from handle, SHA-256 nameAlg, attributes (including WRITTEN), empty authPolicy and size 32 produced the identical Name. The parser then failed because tpm2-tools 5.6 emits a `name:` field and omits an empty `authorization policy` field. The TPM2_NV_Certify command had not yet run.
+- The generic regression workflow **45857768351** reported **1 failed, 2107 passed, 8 skipped, 273 subtests passed**. The sole failure was a test's expected wording (`Qualified Name`) differing from the verifier's actual `qualifiedSigner` rejection; the wrong-signer case itself was rejected correctly.
+- This correction requires the TPM-reported NV Name to match the independently recomputed Name, accepts omission of the policy field only in conjunction with that match, adds a mismatched-reported-Name negative, and corrects the test assertion.
+- **Correction to prior workflow note:** the earlier statement that the branch-local workflow could not run was premature. It did trigger on the exact branch head; run 45857768346 is the evidence. The earlier NOT_RUN statement is superseded by these run results.
+
+
+## 2026-11-26 — R22.32 NV_Certify and authPolicy regression closure
+
+- Exact-head software-TPM run **45858729285** (job **140043831695**, head `a34473339a0ac6540e9e49d1ab6454ef27b38a12`) completed **30/30 PASS**, including NV_Certify and its content/challenge/signer negative controls. Summary artifact `r22-32-tpm-attestation-evidence`, ID **15137281473**.
+- Generic regression exposed a no-op test mutation: the synthetic NV YAML omitted `authorization policy`, so the non-empty-policy fixture never inserted a value. Corrected the test to insert a 32-byte non-empty policy before `size` and assert the mutation.
+- Final head `09e0c224b9e25a2a2958d2fc52f70b4e4e9e0ddb`: M0 **2111 PASS**; Windows and Python 3.14 differential advisories PASS; manifest/restore/generator matrix and self-audit readback PASS. Runs **45859336248** and **45859336333**.
+- The NV workflow artifact is a summary, not a portable raw-TPM evidence bundle. R22.33 still needs a verifier that consumes actual R22.32 evidence. No physical TPM, OEM trust, independent administrator, external rollback floor, real key, trust activation, production or merge is established.
+
+
+## 2026-11-26 — R22.32 AK TPMT_PUBLIC identity extension
+
+- Added TPM readback of the persistent RSA AK TPMT_PUBLIC and Qualified Name.
+- Independently recomputed the AK Name and checked fixedTPM, fixedParent, sensitiveDataOrigin, restricted and signEncrypt attributes.
+- Dedicated workflow [run 45858737039](https://github.com/SepehrGhanbari/Ario/actions/runs/45858737039), source head `1fda8008beaa6355344f90404fb45531a9f0fd73`: **36 PASS lines**.
+- Exact-head Repository Implementation Regression [run 45859727760](https://github.com/SepehrGhanbari/Ario/actions/runs/45859727760), advisory self-audit [run 45859727982](https://github.com/SepehrGhanbari/Ario/actions/runs/45859727982), and Published TXT Restore Security [run 45859727974](https://github.com/SepehrGhanbari/Ario/actions/runs/45859727974): all SUCCESS.
+- No physical TPM, OEM EK chain, independent custodian, trust activation, production or merge.

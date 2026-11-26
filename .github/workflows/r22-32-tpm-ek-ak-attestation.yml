@@ -1,0 +1,35 @@
+name: R22.32 TPM EK AK quote and object certification (research)
+on:
+  push:
+    branches: [research/r22-32-tpm-ek-ak-attestation-stacked-2026-11-26]
+    paths:
+      - .github/workflows/r22-32-tpm-ek-ak-attestation.yml
+      - implementation/research/r22_32_tpm_ek_ak_attestation/*.py
+      - implementation/research/r22_32_tpm_ek_ak_attestation/run_swtpm_attestation.sh
+permissions:
+  contents: read
+jobs:
+  tpm-attestation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install TPM simulator and tools
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tpm2-tools swtpm swtpm-tools openssl
+      - name: Compile verifier and run EK/AK/Quote/Certify adversarial matrix
+        run: |
+          set -euo pipefail
+          python3 -m py_compile implementation/research/r22_32_tpm_ek_ak_attestation/verify_attestation.py implementation/research/r22_32_tpm_ek_ak_attestation/verify_nv_attestation.py implementation/research/r22_32_tpm_ek_ak_attestation/verify_tpm_public_name.py
+          bash implementation/research/r22_32_tpm_ek_ak_attestation/run_swtpm_attestation.sh 2>&1 | tee "$RUNNER_TEMP/r22-32-tpm-attestation.log"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r22-32-tpm-attestation-evidence
+          path: ${{ runner.temp }}/r22-32-tpm-attestation.log
+          if-no-files-found: warn
+          retention-days: 30
