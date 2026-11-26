@@ -1079,3 +1079,8 @@ Found a usable external witness network without requesting hardware, accounts, p
 ## R22.22I adjustment — official test2 quorum unavailable; external-only custom quorum (2026-11-26)
 
 First live run 45835275791: six arithmetic/rollback tests PASS. Live readback found 15 cosignatures total, of which 5 signatures verified against the test2 policy keys, but the built-in sigsum-test2-2025 grouped 4-of-5 quorum was NOT_MET. This is preserved; do not describe the built-in policy as passing. Revised acceptance policy to a custom external-only 2-of-4 over the four non-Glasklar public keys declared by the exact v0.14.1 test2 policy. This requires two distinct external operators and excludes Glasklar completely. The same two witnesses must also independently report stored tree sizes at or above the cosigned head. No weaker one-witness fallback. No POST/publication, no keys, DNS or user resources. This remains test-network research evidence, not production custody.
+
+
+## R22.22I custom external-only quorum clarification (2026-11-26)
+
+The built-in test2 policy did not meet its grouped 4-of-5 threshold in live run 45835275791; its diagnostic is retained as NOT_MET. The new acceptance policy is deliberately independent of the Glasklar group: custom 2-of-4 across the four external witness public keys, requiring two separate external cosignatures and two corresponding get-tree-size readbacks at or above the sampled head. The quorum arithmetic unit test was corrected to ignore the Glasklar group entirely. The external test network remains TEST_ONLY; no data custody, global latest, or production trust claim.

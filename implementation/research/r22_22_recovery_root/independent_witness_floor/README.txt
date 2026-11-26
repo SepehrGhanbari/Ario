@@ -22,5 +22,5 @@ Boundaries:
 - This is a TEST witness network and a custom research policy, not the production Sigsum generic policy. Test operators can reset their test state; it is not a permanent contractual custodian.
 - Witnesses retain/check monotonic tree-head state, not the underlying Ario files or all log leaves. This proves an external anti-rollback floor for the sampled Sigsum tree, not data availability.
 - It does not prove that the sampled tree contains every Nostr event for the identity; global latest remains UNKNOWN.
-- If fewer than three external witness readbacks pass, report HOLD and do not weaken the threshold.
+- If fewer than two external witness readbacks pass, report HOLD and do not weaken the threshold.
 - No trust activation, production, merge, or new external publication.

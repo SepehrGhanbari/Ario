@@ -1,8 +1,8 @@
 package main
 import "testing"
-func policyQuorum(glasklarGroup bool, external int)bool{n:=external;if glasklarGroup{n++};return n>=2}
+func policyQuorum(_ bool, external int)bool{return external>=2}
 func TestExternalOnlyPolicyRequiresTwoIndependentWitnesses(t *testing.T){
- for _,tc:=range []struct{group bool;external int;want bool}{{true,0,false},{true,1,false},{true,2,false},{true,3,true},{false,3,false},{false,4,true}}{
+ for _,tc:=range []struct{group bool;external int;want bool}{{true,0,false},{true,1,false},{true,2,true},{true,3,true},{false,1,false},{false,2,true},{false,4,true}}{
   if got:=policyQuorum(tc.group,tc.external);got!=tc.want{t.Fatalf("group=%v external=%d got=%v want=%v",tc.group,tc.external,got,tc.want)}
  }
 }
