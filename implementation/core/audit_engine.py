@@ -100,6 +100,12 @@ def parse_evidence_ancestry_findings(basis: str) -> dict:
                     or row["property_id"] != "SUPPLIED_RECORD_PRESENT"
                     or target is None or target["reference_type"] not in ("CLAIM", "OBSERVATION")):
                 raise ValueError("M0 ancestry presence binding invalid")
+        if row["use_disposition"] == "RECORD_DESCRIPTION_ONLY" and (
+                row["record_presence"] != "MATCH"
+                or row["ancestry"] != "TRACEABLE_WITHIN_SUPPLIED_SNAPSHOT"
+                or row["assessment_id"] is None
+                or row["reasons"]):
+            raise ValueError("M0 ancestry description disposition inconsistent")
     if "use_disposition" in data and data["use_disposition"] != "UNKNOWN":
         raise ValueError("M0 ancestry fallback state invalid")
     return data

@@ -87,3 +87,8 @@ Source: [Copilot («عمو کاپی») philosophical and management critique](Re
 - Apply this to agents' own behavior as well as code: do not confuse the desire to be right with the ability to finish. Reopen accepted work only for a material new finding, changed scope, or invalidated evidence. This guidance is revisable and is not an exemption from any higher-priority constraint.
 
 **فارسی:** قبل از شروع هر کار، معیار پذیرش و شرط پایان مشخص باشد. آزمون و بازبینی بیشتر فقط وقتی ارزش دارد که تصمیم را عوض کند یا خطر مشخصی را روشن کند. محدودیت شناخته‌شده با محرومیت واقعی کاربر یکی نیست. پس از برآورده‌شدن معیارها و کنترل‌های الزامی، کار پذیرفته شود و موارد غیرمسدودکننده جدا ثبت شوند. نه توقف نامحدود به‌خاطر UNKNOWN، نه عبور از مرز ایمنی به‌بهانهٔ پایان کار.
+
+
+### Read-first reminder for every Ava and reviewer
+
+The owner explicitly identified repeated unnecessary caution, tests and HOLD cycles as a shared problem across the assistants. Before another review, ask: **What material decision could this change, and is the human/time cost justified?** If the bounded acceptance criteria are met and required gates pass, say "sufficient for the current goal" and finish. Record optional follow-up separately. Read both Copilot critiques in the linked resource. This is not permission to skip a required gate or misstate uncertainty.
