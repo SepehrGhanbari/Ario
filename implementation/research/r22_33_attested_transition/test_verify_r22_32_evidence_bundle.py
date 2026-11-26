@@ -63,6 +63,27 @@ class EvidenceBundleIntegrationTests(unittest.TestCase):
             path.write_text(("0" if value[0] != "0" else "1") + value[1:] + "\n", encoding="ascii")
         self.assert_rejected_after_mutation("custodian-challenge-nonce.txt", mutate)
 
+    def test_rejects_custodian_challenge_signature_tampering(self) -> None:
+        def mutate(path: Path) -> None:
+            data = bytearray(path.read_bytes())
+            data[-1] ^= 0x01
+            path.write_bytes(data)
+        self.assert_rejected_after_mutation("custodian-challenge.sig", mutate)
+
+    def test_rejects_custodian_anchor_signature_tampering(self) -> None:
+        def mutate(path: Path) -> None:
+            data = bytearray(path.read_bytes())
+            data[-1] ^= 0x01
+            path.write_bytes(data)
+        self.assert_rejected_after_mutation("custodian-anchor.sig", mutate)
+
+    def test_rejects_modified_signed_challenge_even_after_manifest_refresh(self) -> None:
+        def mutate(path: Path) -> None:
+            value = json.loads(path.read_text(encoding="utf-8"))
+            value["next_head_sha256"] = "0" * 64
+            path.write_text(json.dumps(value, sort_keys=True, separators=(",", ":")), encoding="utf-8")
+        self.assert_rejected_after_mutation("custodian-challenge.json", mutate)
+
     def test_rejects_nv_readback_not_matching_storage_root(self) -> None:
         def mutate(path: Path) -> None:
             data = bytearray(path.read_bytes())
