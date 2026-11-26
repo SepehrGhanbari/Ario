@@ -206,11 +206,11 @@ class R2230SourceRegressionTests(unittest.TestCase):
         repo_root = HERE.parents[2]
         source = repo_root / "implementation/research/r22_30_tpm_clear_custody/run_swtpm_clear_custody.sh"
         shell_text = source.read_text(encoding="utf-8")
-        marker = 'cat > "$SHARED/custodian_gate.py" <<\\'PY\\'\\n'
+        marker = "cat > \"$SHARED/custodian_gate.py\" <<'PY'\n"
         self.assertIn(marker, shell_text)
         start = shell_text.index(marker) + len(marker)
-        end = shell_text.index("\\nPY\\n", start)
-        gate_source = shell_text[start:end] + "\\n"
+        end = shell_text.index("\nPY\n", start)
+        gate_source = shell_text[start:end] + "\n"
 
         with tempfile.TemporaryDirectory(prefix="ario-r22-30-repro-") as directory:
             root = Path(directory)
