@@ -36,8 +36,15 @@ def tpm2b(value: bytes) -> bytes:
 
 
 def public_yaml(attributes: int = NV_ATTRIBUTES) -> str:
+    public_area = (
+        struct.pack(">IHI", NV_INDEX, 0x000B, attributes)
+        + b"\x00\x00"
+        + struct.pack(">H", 32)
+    )
+    nv_name = (struct.pack(">H", 0x000B) + hashlib.sha256(public_area).digest()).hex()
     return (
         "0x1500020:\n"
+        f"  name: {nv_name}\n"
         "  hash algorithm:\n"
         "    friendly: sha256\n"
         "    value: 0xB\n"
@@ -45,9 +52,7 @@ def public_yaml(attributes: int = NV_ATTRIBUTES) -> str:
         "    friendly: ownerread|ownerwrite|authread|authwrite|written\n"
         f"    value: 0x{attributes:x}\n"
         "  size: 32\n"
-        "  authorization policy:\n"
     )
-
 
 def make_attestation(
     *,
@@ -129,6 +134,19 @@ def test_nv_public_rejects_unwritten_index(tmp_path: Path) -> None:
         VERIFIER.parse_nv_public(str(public_path), hex(NV_INDEX))
 
 
+
+
+
+def test_nv_public_rejects_mismatched_reported_name(tmp_path: Path) -> None:
+    public_path = tmp_path / "nv-public.yaml"
+    lines = public_yaml().splitlines()
+    name_line = next(i for i, line in enumerate(lines) if line.strip().startswith("name:"))
+    lines[name_line] = "  name: " + ("00" * 34)
+    public_path.write_text("\\n".join(lines) + "\\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="does not match"):
+        VERIFIER.parse_nv_public(str(public_path), hex(NV_INDEX))
+
+
 def test_nv_public_rejects_unlisted_handle(tmp_path: Path) -> None:
     public_path = tmp_path / "nv-public.yaml"
     public_path.write_text(public_yaml(), encoding="utf-8")
@@ -161,7 +179,7 @@ def test_cli_rejects_wrong_signer(tmp_path: Path) -> None:
     wrong_signer.write_bytes(tpm2b(bytes.fromhex("44" * 34)))
     result = run_cli(tmp_path, signer_path=wrong_signer)
     assert result.returncode == 3
-    assert "Qualified Name" in result.stdout
+    assert "qualifiedSigner" in result.stdout
 
 
 def test_cli_rejects_nonzero_offset(tmp_path: Path) -> None:

@@ -104,26 +104,25 @@ def parse_nv_public(yaml_path: str, handle_text: str) -> tuple[bytes, int, int]:
         raise ValueError("NV public output lacks data size")
     size = int(re.search(r"\d+", size_line).group(0))
 
+    # tpm2-tools 5.6 omits an empty authorization-policy field entirely.
+    # If a version prints it, accept only explicit empty/zero-length forms.
     policy_line = next((line for line in block if line.strip().startswith("authorization policy:")), None)
-    if policy_line is None:
-        raise ValueError("NV public output lacks authorization policy")
-    policy_inline = policy_line.split(":", 1)[1].strip().lower()
-    if policy_inline not in ("", "0x", "0x0", "0", "none", "null"):
-        raise ValueError("this bounded verifier requires an empty NV authorization policy")
-    policy_idx = block.index(policy_line)
-    policy_tail = [line.strip().lower() for line in block[policy_idx + 1:] if line.strip()]
-    if policy_tail:
-        # Some tpm2-tools builds render an empty TPM2B_DIGEST as a nested
-        # zero-value pair rather than a blank YAML field.
-        empty_policy_forms = (
-            ["friendly: none", "value: 0x0"],
-            ["friendly: none", "value: 0"],
-            ["friendly: sha256", "value: 0x"],
-            ["friendly: sha256", "value: 0x0"],
-            ["friendly: (null)", "value: 0x0"],
-        )
-        if policy_tail not in empty_policy_forms:
-            raise ValueError("unexpected non-empty NV authorization policy output")
+    if policy_line is not None:
+        policy_inline = policy_line.split(":", 1)[1].strip().lower()
+        if policy_inline not in ("", "0x", "0x0", "0", "none", "null"):
+            raise ValueError("this bounded verifier requires an empty NV authorization policy")
+        policy_idx = block.index(policy_line)
+        policy_tail = [line.strip().lower() for line in block[policy_idx + 1:] if line.strip()]
+        if policy_tail:
+            empty_policy_forms = (
+                ["friendly: none", "value: 0x0"],
+                ["friendly: none", "value: 0"],
+                ["friendly: sha256", "value: 0x"],
+                ["friendly: sha256", "value: 0x0"],
+                ["friendly: (null)", "value: 0x0"],
+            )
+            if policy_tail not in empty_policy_forms:
+                raise ValueError("unexpected non-empty NV authorization policy output")
 
     if name_alg != TPM_ALG_SHA256:
         raise ValueError(f"unsupported NV nameAlg 0x{name_alg:04x}")
@@ -140,6 +139,15 @@ def parse_nv_public(yaml_path: str, handle_text: str) -> tuple[bytes, int, int]:
         + struct.pack(">H", size)
     )
     name = struct.pack(">H", name_alg) + hashlib.sha256(public_area).digest()
+    reported_line = next((line for line in block if line.strip().startswith("name:")), None)
+    if reported_line is None:
+        raise ValueError("TPM2_NV_ReadPublic output lacks the TPM-reported NV Name")
+    try:
+        reported_name = bytes.fromhex(reported_line.split(":", 1)[1].strip())
+    except ValueError as exc:
+        raise ValueError("TPM2_NV_ReadPublic returned a malformed NV Name") from exc
+    if reported_name != name:
+        raise ValueError("TPM-reported NV Name does not match the independently recomputed public Name")
     return name, attributes, size
 
 
