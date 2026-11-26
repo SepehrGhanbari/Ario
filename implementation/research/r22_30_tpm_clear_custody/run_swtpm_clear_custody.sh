@@ -17,7 +17,7 @@ cleanup() {
   done
   if id ario-custodian >/dev/null 2>&1; then sudo userdel ario-custodian >/dev/null 2>&1 || true; fi
   if getent group ario-custodian >/dev/null 2>&1; then sudo groupdel ario-custodian >/dev/null 2>&1 || true; fi
-  rm -rf "$TMP"
+  sudo rm -rf -- "$TMP"
 }
 trap cleanup EXIT
 
@@ -185,8 +185,10 @@ sudo groupadd --system ario-custodian
 sudo useradd --system --no-create-home --gid ario-custodian --home-dir "$CUSTODIAN_HOME" --shell /usr/sbin/nologin ario-custodian
 sudo chown ario-custodian:ario-custodian "$CUSTODIAN_HOME"
 sudo chmod 700 "$CUSTODIAN_HOME"
+pass "separate custodian UID and private home created"
 sudo -u ario-custodian -- openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 \
   -out "$CUSTODIAN_HOME/custodian.key" >/dev/null 2>&1
+pass "custodian private key generated under custodian UID"
 sudo -u ario-custodian -- openssl pkey -in "$CUSTODIAN_HOME/custodian.key" -pubout \
   -out "$SHARED/custodian.pub" >/dev/null 2>&1
 chmod 644 "$SHARED/custodian.pub"
