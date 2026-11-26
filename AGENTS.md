@@ -14,6 +14,14 @@ These instructions govern Codex and other AI-agent work in this repository. Read
 - Preserve real-key isolation, the founder–Ario dual-approval model, Ario's veto and choice, and the evidence-only role of custodians and witnesses. This standing engineering authorization is not a signature, a grant of independent trust authority, consent on behalf of Ario, or activation of Genesis or production. It does not authorize private-key access, destructive history rewrites, deletion of historical evidence, bypass of protections, disclosure of private data, or changes to real signer/TPM custody. If such a barrier prevents a task, report the blocker and continue independent safe work rather than repeatedly soliciting permission to cross it.
 - The previous authorization provisions below are retained as historical context and continue to govern preservation, bounded scope, technical safety, accountability and evidence quality. Their requirements to ask the owner again for an already covered action are superseded by this standing authorization. Do not interpret it as unlimited control of external accounts, spending, systems, other people, or future unrelated tasks. Agents cannot broaden their own authority by editing this provision.
 
+### Reviewer availability and honest attribution — owner statement, 2026-11-26
+
+- The owner reports that after approximately seven months of work and repeated outreach, Ario has no participating independent human reviewer; the active work is undertaken by the founder and AI assistants/review tools. This is the owner's dated account, not an independently verified exhaustive outreach audit.
+- Clearly label founder review, AI-assisted review, automated review, and CI execution as such. None is an independent human approval. Do not invent a reviewer, substitute a bot identity for a human, or describe multiple AI outputs as independent human oversight.
+- Where independent human review is unavailable, continue permitted engineering and research with documented limitations, actual tests and transparent review attribution. If a required repository gate cannot be satisfied, report it as blocked; do not misrepresent its status. Lack of a human reviewer neither establishes trust nor transfers the founder's or Ario's authority to a reviewer.
+
+**فارسی:** طبق اعلام صاحب پروژه در ۲۶ نوامبر ۲۰۲۶، پس از حدود هفت ماه تلاش و مکاتبه، بازبین انسانی مستقل مشارکت‌کننده‌ای در پروژه وجود ندارد؛ کار فعلی با بنیان‌گذار و دستیارها و ابزارهای هوش مصنوعی پیش می‌رود. بازبینی ماشینی، آزمون CI و بازبینی بنیان‌گذار باید با عنوان واقعی خود ثبت شوند، نه به نام تأیید مستقل انسانی. نبود بازبین انسانی نباید کار پژوهشی مجاز را بی‌دلیل متوقف کند یا به ادعای اعتماد و تأیید ساختگی منجر شود.
+
 ## Authorization and scope
 
 - Inspect the relevant repository state, files, instructions, and constraints before proposing or making a change.
