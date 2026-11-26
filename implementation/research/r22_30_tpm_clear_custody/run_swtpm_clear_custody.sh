@@ -111,7 +111,7 @@ pass "owner-created and platform-created NV counters initialized separately"
 tpm2_createek -P "$ENDORSEMENT_AUTH" -G rsa -c "$TMP/ek-before.ctx" -u "$TMP/ek-before.pub" >/dev/null
 tpm2_readpublic -c "$TMP/ek-before.ctx" -f pem -o "$TMP/ek-before.pem" >/dev/null
 EK_BEFORE="$(pub_fingerprint "$TMP/ek-before.pem")"
-tpm2_flushcontext "$TMP/ek-before.ctx" >/dev/null
+tpm2_flushcontext -t >/dev/null
 tpm2_createprimary -C o -P "$OWNER_AUTH" -G ecc -g sha256 -c "$TMP/srk-before.ctx" >/dev/null
 tpm2_readpublic -c "$TMP/srk-before.ctx" -f pem -o "$TMP/srk-before.pem" >/dev/null
 SRK_BEFORE="$(pub_fingerprint "$TMP/srk-before.pem")"
@@ -134,7 +134,7 @@ pass "platform-authorized TPM_Clear executed"
 tpm2_createek -G rsa -c "$TMP/ek-after.ctx" -u "$TMP/ek-after.pub" >/dev/null
 tpm2_readpublic -c "$TMP/ek-after.ctx" -f pem -o "$TMP/ek-after.pem" >/dev/null
 EK_AFTER="$(pub_fingerprint "$TMP/ek-after.pem")"
-tpm2_flushcontext "$TMP/ek-after.ctx" >/dev/null
+tpm2_flushcontext -t >/dev/null
 [[ "$EK_BEFORE" == "$EK_AFTER" ]] || fail "EK identity unexpectedly changed across TPM_Clear"
 pass "EK identity remains stable across owner TPM_Clear"
 
@@ -167,7 +167,7 @@ start_tpm "$STATE2" 2323 2324
 tpm2_createek -G rsa -c "$TMP/ek-replacement.ctx" -u "$TMP/ek-replacement.pub" >/dev/null
 tpm2_readpublic -c "$TMP/ek-replacement.ctx" -f pem -o "$TMP/ek-replacement.pem" >/dev/null
 EK_REPLACEMENT="$(pub_fingerprint "$TMP/ek-replacement.pem")"
-tpm2_flushcontext "$TMP/ek-replacement.ctx" >/dev/null
+tpm2_flushcontext -t >/dev/null
 [[ "$EK_REPLACEMENT" != "$EK_BEFORE" ]] || fail "replacement simulator reused original EK identity"
 tpm2_createprimary -C o -G ecc -g sha256 -c "$TMP/srk-replacement.ctx" >/dev/null
 tpm2_readpublic -c "$TMP/srk-replacement.ctx" -f pem -o "$TMP/srk-replacement.pem" >/dev/null
