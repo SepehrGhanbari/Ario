@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+set -x
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 TMP="$(mktemp -d)"
