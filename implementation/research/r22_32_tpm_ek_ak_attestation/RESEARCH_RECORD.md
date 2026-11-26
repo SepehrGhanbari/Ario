@@ -88,3 +88,12 @@ Evidence artifact: [R22.32 TPM attestation evidence](https://github.com/SepehrGh
 The earlier pre-restack run 45853404250 also passed 24/24; it is retained as historical evidence. The run above is the final exact-head result after the feature branch was updated to the latest R22.31 PR #411 head.
 
 This remains software-TPM interoperability evidence, not proof of physical-device or manufacturer identity.
+
+
+## AK TPMT_PUBLIC identity extension — 2026-11-26
+
+The R22.32 harness now also reads the persistent AK public area back from the TPM, captures its raw TPMT_PUBLIC and Qualified Name, independently recomputes the AK Name, and checks the expected restricted RSA signing attributes (fixedTPM, fixedParent, sensitiveDataOrigin, restricted, signEncrypt). This closes the earlier asymmetry where the storage-primary Name was recomputed but the AK Name was only captured from tpm2_createak output.
+
+Dedicated R22.32 workflow on the R22.33 integration branch: [run 45857398519](https://github.com/SepehrGhanbari/Ario/actions/runs/45857398519), source head `6050263e6075415d5261b876c61a2d9cf5c8a30f`, **SUCCESS: 26/26 PASS**. Environment: Ubuntu 24.04; tpm2-tools 5.6-1build4; swtpm 0.7.3-0ubuntu5.24.04.1; OpenSSL 3.0.13. Evidence artifact [ID 15135289752](https://github.com/SepehrGhanbari/Ario/actions/runs/45857398519/artifacts/15135289752).
+
+This is still software-TPM evidence with a synthetic lab CA, not OEM EK or physical hardware attestation. The AK public area check strengthens the Name binding but does not establish hardware non-extractability, manufacturer identity, independent custody, firmware trust, or rollback resistance.
