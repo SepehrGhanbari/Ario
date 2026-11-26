@@ -53,3 +53,13 @@ The seven R22.31 prototype tests passed: single transition, second distinct requ
 Earlier failed workflow attempts are preserved in Actions history: the first exposed a Python string-escaping error in the reproducer; the second exposed a test fixture that incorrectly inherited setup state. Both were corrected. Only final run 45848502455 is counted as passing.
 
 Boundaries remain: caller-supplied storage-root data is explicitly UNATTESTED; software-only synthetic keys; root-readable custodian key; same-runner journal; no TPM quote, AK/EK binding, physical TPM, independent custodian, external rollback floor, trust activation, production, or merge.
+
+## 2026-11-26 — valid-prefix rollback counterexample and precise evidence boundary
+
+The prior wording “detects journal tampering/truncation” was too broad. Source inspection of `custodian_state.py` shows that the loader rejects byte-level record tampering and an incomplete final record, but a complete-record tail deletion (including deleting the entire journal) leaves a valid shorter prefix. Because the signed initial anchor remains unchanged and there is no independent retained floor, replay cannot know that a later record ever existed.
+
+Added `test_expected_red_valid_prefix_rollback_is_not_detected_without_external_floor`: it commits a synthetic 7→8 transition, removes the complete journal, then submits a second distinct 7→8 request. The prototype accepts it. This is an **expected RED counterexample**; the test harness passes because it successfully reproduces the documented weakness. It is not a security pass and does not claim anti-rollback protection.
+
+Dedicated CI [run 45853039157](https://github.com/SepehrGhanbari/Ario/actions/runs/45853039157), exact branch head `19d78881138451a0b75404f96a0d78a8d3155034`, completed SUCCESS: **9 tests passed** on CPython 3.13.18 / OpenSSL 3.0.13. The nine comprise seven original prototype controls, one exact-source reproduction of the R22.30 defect, and this expected-RED valid-prefix rollback reproduction. The workflow artifact path was corrected; evidence artifact `r22-31-custodian-monotonic-state-evidence`, ID `15133349967`, 543 bytes, was uploaded successfully.
+
+The local state-machine repair remains bounded: it prevents duplicate epoch consumption while the journal is intact and detects record corruption, but cannot detect restoration of an older valid journal prefix by an administrator who controls the journal. Closing that boundary requires an authenticated floor retained outside the runner's administrative domain. A second same-domain file or another local simulation would not establish that independence. No trust activation, production, real keys, or merge occurred.
