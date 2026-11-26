@@ -32,3 +32,9 @@ Two attempts to fetch previous-run artifacts from inside this workflow failed wi
 ## Exact-head verifier source-pin correction — 2026-11-26
 
 The first fixture-backed run `45837293507` safely verified both ZIP digests and pinned A15/R22 event-codec sources, then stopped at the R22 pure BIP340 verifier Git-blob pin. The expected hash literal contained a one-character transcription error; the exact file at pinned R22.22G commit `255398a8e243d3738b132dafe0fe0edcaab29679` reports blob `a29990a1e695b64d7611483e1e0d5f486c02c932`. Corrected only that literal. No event/proof test ran in the failed attempt; no evidence or protocol state changed.
+
+## A15/R22 proof-envelope compatibility exact-head result — 2026-11-26
+
+Dedicated read-only workflow 45837502441 at source head `56f2890bb14a1e25e05e891a16d52eda597c12a7` completed **22/22 checks PASS**. Exact original A15 fixture ZIP digests were verified before safe extraction. Both archived A15 Nostr events and both official Sigsum TEST proofs verified; leaf indexes 282772 and 282773, sizes 282773 and 282774. First bootstrap bound the first leaf; seq=2 checkpoint predecessor digest exactly matched seq=1 payload digest. Pinned R22.20 codec accepted its own valid throwaway synthetic event and rejected A15 envelope/event; A15 parser accepted its own archived events and rejected R22.20 envelope/event. Official Sigsum verifier rejected swapped and tampered proofs.
+
+This is a retained-evidence compatibility result, not a new live publication or global-latest proof. The previous cold-recovery record is not re-run by this job; the original live run's final reveal failure remains unchanged. R22.22G generic successor is not a drop-in verifier for A15. A15-specific proof envelope remains required. `global_latest=UNKNOWN`, `independent_custody=NOT_ESTABLISHED`, `evidence_admission=NO_ADMISSION`; trust/production NO_GO. No merge, key, floor, policy, trust activation or production change.
