@@ -66,3 +66,52 @@ jobs:
           path: ${{ runner.temp }}/r22-30-integrated.log
           if-no-files-found: warn
           retention-days: 30
+
+  clear-custody:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install TPM simulator and tools
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tpm2-tools swtpm swtpm-tools openssl
+      - name: Run TPM_Clear identity and custodian controls
+        working-directory: implementation/research/r22_30_tpm_clear_custody
+        run: |
+          set -euo pipefail
+          bash run_swtpm_clear_custody.sh 2>&1 | tee "$RUNNER_TEMP/r22-30-tpm-clear-custody.log"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r22-30-tpm-clear-custody-evidence
+          path: ${{ runner.temp }}/r22-30-tpm-clear-custody.log
+          if-no-files-found: warn
+          retention-days: 30
+
+  monotonic-custodian:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - name: Compile and test monotonic custodian journal
+        run: |
+          set -euo pipefail
+          openssl version
+          python -m py_compile implementation/research/r22_31_custodian_monotonic_state/custodian_state.py implementation/research/r22_31_custodian_monotonic_state/test_custodian_state.py
+          python -m unittest discover -s implementation/research/r22_31_custodian_monotonic_state -p 'test_*.py' -v 2>&1 | tee "$RUNNER_TEMP/r22-31-custodian-tests.log"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r22-31-custodian-monotonic-state-evidence
+          path: ${{ runner.temp }}/r22-31-custodian-tests.log
+          if-no-files-found: warn
+          retention-days: 30

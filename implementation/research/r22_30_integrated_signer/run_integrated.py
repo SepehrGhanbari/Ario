@@ -19,6 +19,7 @@ import tempfile
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from threading import Barrier
 
 from ario_r2230.common import LabError, atomic_write, canonical_bytes, hash_object, read_json, run, sha256_hex, strict_loads
 from ario_r2230.tpm import TpmLab, provision, verify_with_openssl
@@ -308,6 +309,64 @@ def bundle_for(base, op):
     approvals = [approve(base, role, op) for role in ("founder", "ario")]
     return {"operation": op, "approvals": approvals, "proofs": reservations(base, op)}
 
+def run_conflicting_request_race(bridge):
+    with fixture(bridge) as (base, pins):
+        operations = [
+            operation(pins, b"competing operation A"),
+            operation(pins, b"competing operation B"),
+        ]
+        approvals = [
+            [approve(base, role, op) for role in ("founder", "ario")]
+            for op in operations
+        ]
+        roles = ("w1", "w2", "w3")
+        jobs = [(index, role) for index in range(len(operations)) for role in roles]
+        start = Barrier(len(jobs))
+
+        def reserve(job):
+            index, role = job
+            start.wait(timeout=20)
+            op = operations[index]
+            return as_role(role, [
+                base / "public" / "bridge", "reserve", base / role,
+                base / "public" / "witnesses.json",
+                sha256_hex(op["request_id"].encode()), hash_object(op),
+            ])
+
+        with ThreadPoolExecutor(max_workers=len(jobs)) as pool:
+            outcomes = list(pool.map(reserve, jobs))
+
+        proofs = [[] for _ in operations]
+        for (index, _role), outcome in zip(jobs, outcomes):
+            if outcome.returncode == 0:
+                proofs[index].append(json.loads(successful(outcome)))
+        for role in roles:
+            accepted = sum(
+                outcome.returncode == 0
+                for (index, candidate_role), outcome in zip(jobs, outcomes)
+                if candidate_role == role
+            )
+            require(accepted == 1, f"{role} did not serialize competing reservations")
+        require(sum(map(len, proofs)) == len(roles), "witness accepted duplicate or missing reservation")
+
+        full_quorums = [index for index, candidate_proofs in enumerate(proofs)
+                        if len(candidate_proofs) == len(roles)]
+        require(len(full_quorums) <= 1, "conflicting requests both reached a full witness quorum")
+        committed = []
+        for index, op in enumerate(operations):
+            bundle = {"operation": op, "approvals": approvals[index], "proofs": proofs[index]}
+            if index not in full_quorums:
+                denied(worker(base, "policy", bundle),
+                       f"conflicting request {index + 1} without full quorum")
+                continue
+            token = result(worker(base, "policy", bundle))
+            signed = result(worker(base, "signer", {"operation": op, "token": token}))
+            check_receipt(base, signed["receipt"], op, base / "signer")
+            committed.append(index)
+        require(len(committed) <= 1, "conflicting requests both committed")
+        print("PASS distinct concurrent requests serialized; full-quorum winners="
+              + str(len(committed)), flush=True)
+
 def run_matrix(bridge):
     with fixture(bridge) as (base, pins):
         op = operation(pins, b"synthetic approved operation")
@@ -359,6 +418,7 @@ def run_matrix(bridge):
                 print("PASS crash", point, "verified receipt recovered", flush=True)
             else:
                 denied(retry, "crash " + point + " uncertain, no retry signing")
+    run_conflicting_request_race(bridge)
     print("INTEGRATED_FIRST_GENERATION_COMPLETE", flush=True)
 
 def main():
