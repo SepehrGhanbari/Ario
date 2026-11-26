@@ -290,9 +290,11 @@ sudo -u ario-custodian -- python3 "$SHARED/custodian_gate.py" \
   --anchor "$CUSTODIAN_HOME/anchor.json" --anchor-signature "$CUSTODIAN_HOME/anchor.sig" \
   --public-key "$SHARED/custodian.pub" --private-key "$CUSTODIAN_HOME/custodian.key" \
   --nonce-ledger "$CUSTODIAN_HOME/consumed_nonces.jsonl" \
-  --request "$SHARED/recovery-request.json" --response "$SHARED/recovery-response.json" \
+  --request "$SHARED/recovery-request.json" --response "$CUSTODIAN_HOME/recovery-response.json" \
   >"$TMP/approval.out"
 grep -Fq "APPROVED EXPLICIT_RECOVERY epoch=8" "$TMP/approval.out" || fail "custodian recovery approval missing"
+sudo cp "$CUSTODIAN_HOME/recovery-response.json" "$SHARED/recovery-response.json"
+sudo cp "$CUSTODIAN_HOME/recovery-response.json.sig" "$SHARED/recovery-response.json.sig"
 openssl dgst -sha256 -verify "$SHARED/custodian.pub" \
   -signature "$SHARED/recovery-response.json.sig" "$SHARED/recovery-response.json" >/dev/null 2>&1 \
   || fail "custodian recovery response signature invalid"
@@ -308,26 +310,26 @@ PY
 pass "same-device TPM_Clear requires and receives signed epoch-8 recovery approval"
 
 expect_reject "custodian rejects replayed recovery nonce" NONCE_REPLAY \
-  "$SHARED/recovery-request.json" "$SHARED/replay-response.json"
+  "$SHARED/recovery-request.json" "$CUSTODIAN_HOME/replay-response.json"
 
 make_request "$SHARED/replacement-request.json" "$EK_REPLACEMENT" "$SRK_REPLACEMENT" 7 8 \
   "$HEAD_SHA256" TPM_CLEAR_RECOVERY "$(openssl rand -hex 32)"
 expect_reject "custodian rejects replacement TPM identity" DEVICE_IDENTITY_MISMATCH \
-  "$SHARED/replacement-request.json" "$SHARED/replacement-response.json"
+  "$SHARED/replacement-request.json" "$CUSTODIAN_HOME/replacement-response.json"
 
 make_request "$SHARED/skipped-epoch-request.json" "$EK_AFTER" "$SRK_AFTER" 7 9 \
   "$HEAD_SHA256" TPM_CLEAR_RECOVERY "$(openssl rand -hex 32)"
 expect_reject "custodian rejects skipped epoch" EPOCH_STEP_INVALID \
-  "$SHARED/skipped-epoch-request.json" "$SHARED/skipped-epoch-response.json"
+  "$SHARED/skipped-epoch-request.json" "$CUSTODIAN_HOME/skipped-epoch-response.json"
 
 make_request "$SHARED/stale-head-request.json" "$EK_AFTER" "$SRK_AFTER" 7 8 \
   "$(printf 'stale checkpoint' | sha256sum | awk '{print $1}')" TPM_CLEAR_RECOVERY "$(openssl rand -hex 32)"
 expect_reject "custodian rejects stale previous checkpoint" PREVIOUS_HEAD_MISMATCH \
-  "$SHARED/stale-head-request.json" "$SHARED/stale-head-response.json"
+  "$SHARED/stale-head-request.json" "$CUSTODIAN_HOME/stale-head-response.json"
 
 make_request "$SHARED/no-reset-request.json" "$EK_AFTER" "$SRK_BEFORE" 7 8 \
   "$HEAD_SHA256" TPM_CLEAR_RECOVERY "$(openssl rand -hex 32)"
 expect_reject "custodian rejects unchanged storage-root identity" RESET_NOT_PROVEN \
-  "$SHARED/no-reset-request.json" "$SHARED/no-reset-response.json"
+  "$SHARED/no-reset-request.json" "$CUSTODIAN_HOME/no-reset-response.json"
 
 printf 'R22_30_TPM_CLEAR_CUSTODY_COMPLETE RESEARCH_ONLY HOLD HARDWARE_NOT_TESTED INDEPENDENT_CUSTODY_NOT_ESTABLISHED ROOT_CAN_BYPASS_UID\n'
