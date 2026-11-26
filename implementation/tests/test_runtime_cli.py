@@ -345,6 +345,31 @@ class RuntimeEntryPointTests(unittest.TestCase):
         self.assertEqual(result["verdict"], "FAIL")
         self.assertIn("TEMPORALLY_UNRESOLVED", result["violations"])
 
+    def test_forward_ref_authorization_decodes_to_typed_object(self):
+        # Locks the CPython 3.10 case: get_type_hints() yields the bare name
+        # "LineageCompatibilityAuthorization" instead of the class. A raw dict
+        # here used to crash AuditEngine with AttributeError.
+        from ario_cli import decode_value
+        from core.schema import LineageCompatibilityAuthorization
+
+        raw = self.authorization("AUTH-FWD", "STATE_CONTENT", "EVENT_RECORD")
+        decoded = decode_value(
+            "LineageCompatibilityAuthorization", raw, "$.authorization"
+        )
+        self.assertIsInstance(decoded, LineageCompatibilityAuthorization)
+        self.assertEqual(decoded.authorization_id, "AUTH-FWD")
+        self.assertEqual(
+            decoded.provenance.source_reference.reference_id, "SOURCE-AUTH-FWD"
+        )
+
+    def test_unresolved_schema_type_name_fails_closed(self):
+        from ario_cli import decode_value
+
+        with self.assertRaises(ValueError) as caught:
+            decode_value("NotASchemaType", {"authorization_id": "SECRET-TEXT"}, "$.nope")
+        message = str(caught.exception)
+        self.assertIn("unresolved schema type", message)
+        self.assertNotIn("SECRET-TEXT", message)
 
     # Always-on M0 reference firewall; JSON CLI must reflect the core contract.
     def test_m0_guard_cli_typed_audit_observation_without_f15(self):

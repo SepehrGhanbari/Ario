@@ -1,0 +1,24 @@
+{
+  "source_doi": "10.5281/zenodo.24054535",
+  "title": "Ario: Provenance-Aware Auditing of AI Claims — Research Summary and Proposed Studies",
+  "license": "cc-by-4.0",
+  "original": {
+    "original_zenodo_filename": "Ario_Provenance_Aware_Auditing_v0_1.pdf",
+    "local_filename": "provenance-aware-auditing.pdf",
+    "size": 102518,
+    "md5": "99e456f58c37c7061e80055b273a7ea7",
+    "sha256": "4650895c429b4419cae9db7f5245256a96c2f27ec222367ff53dcf0f49380c0f",
+    "api_asset_url": "https://zenodo.org/api/records/24054535/files/Ario_Provenance_Aware_Auditing_v0_1.pdf/content",
+    "checksum_verified": true
+  },
+  "extraction_quality": {
+    "pages": 5,
+    "text_chars": 13874,
+    "pages_with_over_80_chars": 5,
+    "near_blank_pages": [],
+    "persian_chars": 0,
+    "original_sha256": "4650895c429b4419cae9db7f5245256a96c2f27ec222367ff53dcf0f49380c0f",
+    "page_1_text_excerpt_escaped": "Ghanbari, S. (2026). Ario: Provenance-Aware Auditing of AI Claims. Working paper v0.1. Not peer reviewed.\\n1\\nArio: Provenance-Aware Auditing of AI Claims\\nResearch Summary and Proposed Studies\\nSepehr Gh"
+  },
+  "peer_review": "No independent peer review verified"
+}

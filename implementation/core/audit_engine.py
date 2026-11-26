@@ -629,10 +629,10 @@ class AuditEngine:
             "COMPOSITION_SUMMARY",
         }
 
-        observation_owners: dict[str, list[Evidence]] = {}
+        observation_owners: dict[tuple[str, str], list[Evidence]] = {}
 
         for item in evidence_items:
-            seen_in_item: set[str] = set()
+            seen_in_item: set[tuple[str, str]] = set()
 
             # F15 applies to every typed reference carried by an evidence
             # wrapper, not only observation_refs. Otherwise a composition
@@ -661,13 +661,19 @@ class AuditEngine:
                     violations.append("COMPOSITION_FORBIDDEN")
                     continue
 
-                if observation_id in seen_in_item:
+                # Anti-laundering ID restrictions above remain text-ID only
+                # (M0-EAG-0.1). Inflation plurality, however, must key on the
+                # full two-field identity: distinct canonical kinds may share a
+                # text ID without being the same observed source.
+                observation_key = (reference.reference_type, observation_id)
+
+                if observation_key in seen_in_item:
                     continue
 
-                seen_in_item.add(observation_id)
+                seen_in_item.add(observation_key)
 
                 observation_owners.setdefault(
-                    observation_id,
+                    observation_key,
                     [],
                 ).append(item)
 

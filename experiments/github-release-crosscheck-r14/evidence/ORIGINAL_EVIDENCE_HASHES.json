@@ -1,0 +1,18 @@
+{
+  "review_zip_sha256": "b94abb906995f807515b968e816dd0a4661c265d59e696277c3fda723ce78491",
+  "closeout_zip_sha256": "ea532a4de58262d4a04dae60be20ca8d22f3aafc40f8a145446a2ca01b7c6e6a",
+  "original_windows_log_sha256": "332a106fb61372392eaeaa58cc8e05253a0de5fe8730c8dc7407489ae5797e8b",
+  "public_windows_log_sha256": "0d9f1280e9f1e9b11e87a2016ffbc24cca9baa8516833f13605bd5d4e6663c9d",
+  "redaction": "Only the local Windows scratch root was replaced by <WINDOWS_SCRATCH> in the public log.",
+  "omitted_from_public_copy": [
+    {
+      "path": "input/ario-github-crosscheck-R1-v0.2-adversarial-review.zip",
+      "sha256": "9ff9bae00bf0d5aecea663e33d7490708c5f676dba9ab98b971f18fca386632a"
+    },
+    {
+      "path": "input/ario-github-crosscheck-R13-independent-review.zip",
+      "sha256": "4c5dcd81f7f838c5883fe9ccdf166984f43059e39dda4f8127e6b0303d978725"
+    }
+  ],
+  "original_review_manifest": "evidence/original-review-manifest.json (historical inventory of original package, not the public directory inventory)"
+}

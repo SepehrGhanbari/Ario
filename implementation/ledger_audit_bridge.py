@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from bounded_json import loads_bounded
 from ledger_observation_adapter import observe_ledger
 
 MAX_MANIFEST_BYTES = 4 * 1024 * 1024
@@ -81,7 +82,7 @@ def verify_manifest_file(manifest_path: str | Path, ledger_path: str | Path) -> 
     if len(raw) > MAX_MANIFEST_BYTES:
         return {"status": "UNKNOWN", "reason": "manifest byte limit exceeded", "epistemic_limit": LIMIT}
     try:
-        manifest = json.loads(raw.decode("utf-8"))
+        manifest = loads_bounded(raw.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError):
         return {"status": "REJECTED", "reason": "manifest is not valid UTF-8 JSON", "epistemic_limit": LIMIT}
     return verify_observation_manifest(manifest, ledger_path)
