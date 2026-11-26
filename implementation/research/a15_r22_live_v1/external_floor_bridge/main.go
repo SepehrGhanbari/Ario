@@ -65,7 +65,7 @@ type externalFloorRecord struct {
 	ExternalWitnesses []struct {
 		Name string `json:"name"`
 		SignatureValid bool `json:"signature_valid"`
-	} `json:"external_witnesses"`
+	} `json:"verified_external_cosigners"`
 	CustomPolicy string `json:"custom_research_policy"`
 	BuiltinPolicy string `json:"builtin_sigsum_test2_2025"`
 	DataAvailability string `json:"data_availability"`
