@@ -113,4 +113,27 @@ Primary sources:
 - https://www.tillitis.se/faq/
 - https://www.glasklarteknik.se/post/named-policies-for-sigsum/
 
-Decision: `HOLD_EXTERNAL_CUSTODY_NOT_ESTABLISHED`. Markovian is the strongest candidate for a recovery-floor integration found so far, but it is not yet an admitted independent R63 custodian.
+Decision: `HOLD_EXTERNAL_CUSTODY_NOT_ESTABLISHED`. Markovian has the most relevant published recovery-floor design description found so far, but the recovery implementation is not source-verified and it is not an admitted independent R63 custodian.
+
+
+## Markovian deployed-source discrepancy — 2026-11-26
+
+The live `https://witness.markovianprotocol.com/about` page describes hourly external floor recovery, a fresh-state check for fetchable logs, and a best-effort service that may itself be rolled back. However, the current public GitHub `main` source inspected does not contain that recovery component:
+
+- `MarkovianProtocol/log-server/witness_server.py`, blob `c97a1cad5b79a8036d0f3dc4701c8a6996376c89`, implements the C2SP per-log cosign path. It verifies the pinned log key and consistency proof, rejects stale sizes/forks/rollback, commits its SQLite row, then returns the cosignature. Its generated `about_text` has no hourly external-floor recovery section.
+- `witness_poller.py` says it never writes witness state; it fetches log checkpoints and submits them to the witness server.
+- The `witness_server.py` self-test creates `sqlite3.connect(":memory:")` and exercises same-process growth, stale-size rejection, bad proofs, equivocation, unknown origins, and signature failure. It does not test disk persistence, process restart, empty-database recovery, or external-floor restore.
+- `log_server.py`, blob `1863bceb31487d29ac372e73e0a31bee7922215c`, implements OpenTimestamps/Bitcoin anchoring for the log's own checkpoints. That is not by itself a recovery implementation for the separate witness database.
+- The live about page says the witness and log run on the same Hetzner VM and the service is best-effort; it may be unavailable or have its state rolled back.
+
+The published `witness_server.py` does commit its per-origin state before returning a cosignature, which is useful crash ordering. The source does not explicitly set SQLite `journal_mode` or `synchronous`; runtime durability settings are not established by the code inspected.
+
+A follow-up email was sent in the existing thread asking for the exact deployed commit or separate component implementing the floor, empty/rolled-back DB recovery, current-state re-fetch, and Bitcoin-anchor verification. Until that source is supplied, classify the recovery mechanism as `UNVERIFIED_IMPLEMENTATION`; do not count the live page alone as proof of the R63 memory-loss requirement.
+
+Primary source URLs:
+- https://witness.markovianprotocol.com/about
+- https://github.com/MarkovianProtocol/log-server/blob/main/witness_server.py
+- https://github.com/MarkovianProtocol/log-server/blob/main/witness_poller.py
+- https://github.com/MarkovianProtocol/log-server/blob/main/log_server.py
+
+Decision remains `HOLD_EXTERNAL_CUSTODY_NOT_ESTABLISHED`.
