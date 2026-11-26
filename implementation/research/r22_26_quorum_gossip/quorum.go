@@ -14,7 +14,7 @@ type Policy struct { Scope string; Epoch uint64; Threshold int; Members []Member
 type Floor struct { Generation uint64; Hash string }
 type Statement struct { Profile, Scope, PolicyHash, Nonce string; Epoch uint64; History []string }
 type Reply struct { ID string; Statement Statement; Signature []byte }
-type Result struct { Status string; Floor Floor; Evidence int }
+type Result struct { Status string; Floor Floor; Evidence int; UnadmittedObservation *Floor }
 
 func hash(v any) string { b,_:=json.Marshal(v);h:=sha256.Sum256(b);return hex.EncodeToString(h[:]) }
 func validHash(s string)bool{b,e:=hex.DecodeString(s);return e==nil&&len(b)==32&&hex.EncodeToString(b)==s}
@@ -35,7 +35,7 @@ func head(h []string)Floor{
  // Hash chain over every receipt digest: bind prefix, order and length.
  prev:="ARIO-R22.26-GENESIS";for _,r:=range h{prev=hash([]string{prev,r})};return Floor{uint64(len(h)),prev}
 }
-func hold(reason string,n int)Result{return Result{"HOLD_"+reason,Floor{},n}}
+func hold(reason string,n int)Result{return Result{"HOLD_"+reason,Floor{},n,nil}}
 // All supplied replies are checked. Any signed disagreement is HOLD, never
 // discard a higher or conflicting observation to construct a matching quorum.
 // Missing responses are allowed only by the explicitly pinned threshold.
@@ -53,8 +53,8 @@ func Read(p Policy,nonce string,replies []Reply,prior *Floor)Result{
   h:=hash(s.History)
   if selected==nil{selected=s.History;selectedHash=h}else if h!=selectedHash{return hold("WITNESS_DISAGREEMENT",len(seen))}
  }
- if len(seen)<p.Threshold{return hold("QUORUM",len(seen))}
- return Result{"REVIEWABLE_ONLY",head(selected),len(seen)}
+ if len(seen)<p.Threshold{r:=hold("QUORUM",len(seen));if len(seen)>0{h:=head(selected);r.UnadmittedObservation=&h};return r}
+ return Result{"REVIEWABLE_ONLY",head(selected),len(seen),nil}
 }
 // Minimum intersection of two quorums. Honest durable non-equivocation
 // must be established separately; this is only an arithmetic condition.
