@@ -164,6 +164,7 @@ class AttestedCustodianTests(unittest.TestCase):
         manifest = {
             "ek_certificate_sha256": digest(b"synthetic EK certificate"),
             "ek_spki_sha256": digest(self.ek_spki),
+            "raw_evidence_manifest_sha256": digest(b"synthetic raw evidence manifest"),
             "ak_name_sha256": digest(ak_name),
             "ak_public_sha256": digest(self.ak_spki),
             "storage_name_sha256": digest(storage_name),
@@ -191,6 +192,9 @@ class AttestedCustodianTests(unittest.TestCase):
             "challenge_nonce": self.challenge["nonce"],
             "device_ek_sha256": digest(self.ek_spki),
             "ek_spki_der_b64": b64(self.ek_spki),
+            "ek_certificate_sha256": manifest["ek_certificate_sha256"],
+            "creation_hash_sha256": manifest["creation_hash_sha256"],
+            "raw_evidence_manifest_sha256": manifest["raw_evidence_manifest_sha256"],
             "storage_name_b64": b64(storage_name),
             "storage_public_area_tpmt_b64": b64(storage_public_area),
             "storage_root_sha256": storage_root,
