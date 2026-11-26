@@ -52,8 +52,10 @@ pub_fingerprint() {
 }
 
 printf 'R22.32 TPM EK/AK/Quote/Certify research harness\n'
-tpm2 --version | head -n 1
-swtpm --version | head -n 1
+tpm2 --version >"$TMP/tpm2-version.txt"
+sed -n '1p' "$TMP/tpm2-version.txt"
+swtpm --version >"$TMP/swtpm-version.txt"
+sed -n '1p' "$TMP/swtpm-version.txt"
 openssl version
 
 # First software TPM: EK, AK, storage primary, PCR quote and certification.
