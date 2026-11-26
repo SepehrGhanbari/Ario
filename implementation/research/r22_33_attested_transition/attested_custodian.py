@@ -84,6 +84,11 @@ def require_exact_keys(value: Any, expected: set[str], code: str) -> dict[str, A
     return value
 
 
+def require_int(value: Any, expected: int, code: str) -> None:
+    if isinstance(value, bool) or not isinstance(value, int) or value != expected:
+        fail(code)
+
+
 def validate_hash(value: Any, code: str) -> str:
     if not isinstance(value, str) or not HASH_RE.fullmatch(value):
         fail(code)
@@ -194,7 +199,7 @@ def validate_time_window(issued: Any, expires: Any, now: int, code: str) -> None
 
 
 def derived_nv_nonce(challenge_nonce: str) -> str:
-    material = b"ARIO-R22.33-NV-ATTESTATION-NONCE-V1\\x00" + bytes.fromhex(challenge_nonce)
+    material = b"ARIO-R22.33-NV-ATTESTATION-NONCE-V1\x00" + bytes.fromhex(challenge_nonce)
     return sha256(material)
 
 
@@ -331,16 +336,11 @@ def validate_receipt(receipt: Any, signature_b64: Any, challenge: dict[str, Any]
     if len(ak_qualified_name) < 34 or sha256(ak_qualified_name) != receipt["ak_qualified_name_sha256"]:
         fail("ATTESTATION_AK_QUALIFIED_NAME_MISMATCH")
 
-    if receipt.get("nv_index_handle") != NV_INDEX_HANDLE:
-        fail("ATTESTATION_NV_INDEX_HANDLE_INVALID")
-    if receipt.get("nv_name_alg") != NV_NAME_ALG:
-        fail("ATTESTATION_NV_NAME_ALG_INVALID")
-    if receipt.get("nv_attributes") != NV_ATTRIBUTES:
-        fail("ATTESTATION_NV_ATTRIBUTES_INVALID")
-    if receipt.get("nv_data_size") != NV_DATA_SIZE:
-        fail("ATTESTATION_NV_DATA_SIZE_INVALID")
-    if receipt.get("nv_offset") != 0:
-        fail("ATTESTATION_NV_OFFSET_INVALID")
+    require_int(receipt.get("nv_index_handle"), NV_INDEX_HANDLE, "ATTESTATION_NV_INDEX_HANDLE_INVALID")
+    require_int(receipt.get("nv_name_alg"), NV_NAME_ALG, "ATTESTATION_NV_NAME_ALG_INVALID")
+    require_int(receipt.get("nv_attributes"), NV_ATTRIBUTES, "ATTESTATION_NV_ATTRIBUTES_INVALID")
+    require_int(receipt.get("nv_data_size"), NV_DATA_SIZE, "ATTESTATION_NV_DATA_SIZE_INVALID")
+    require_int(receipt.get("nv_offset"), 0, "ATTESTATION_NV_OFFSET_INVALID")
 
     nv_auth_policy = decode_b64(
         receipt.get("nv_auth_policy_b64"), "ATTESTATION_NV_AUTH_POLICY_INVALID"
@@ -349,7 +349,7 @@ def validate_receipt(receipt: Any, signature_b64: Any, challenge: dict[str, Any]
         fail("ATTESTATION_NV_AUTH_POLICY_NOT_EMPTY")
     nv_public_area = (
         struct.pack(">IHI", NV_INDEX_HANDLE, NV_NAME_ALG, NV_ATTRIBUTES)
-        + b"\\x00\\x00"
+        + b"\x00\x00"
         + struct.pack(">H", NV_DATA_SIZE)
     )
     expected_nv_name = struct.pack(">H", NV_NAME_ALG) + hashlib.sha256(nv_public_area).digest()
