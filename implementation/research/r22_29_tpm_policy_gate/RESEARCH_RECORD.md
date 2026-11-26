@@ -17,7 +17,7 @@ Positive anti-rollback control: after generation one used NV count 1 and generat
 
 swtpm is software emulation: no hardware non-extractability, secure element certification, actual TPM vendor behavior, anti-tamper, firmware boundary, real device provisioning, root-vs-platform auth isolation or Windows test is claimed. TPM key private blob files are TPM-protected blobs under the simulator's storage hierarchy, not proof that a physical device's secret cannot be extracted by invasive or firmware attacks. Policy-authority private key is ephemeral CI fixture data and is not an independent custodian.
 
-No connection to the production Ario signer, no real keys, no external log publication, no trust activation, no production or merge. Existing R22.22–28 pins and delayed checks unchanged. Execution pending final rerun after the anti-rollback assertion was corrected.
+No connection to the production Ario signer, no real keys, no external log publication, no trust activation, no production or merge. Existing R22.22–28 pins and delayed checks unchanged. Final execution verified on 2026-11-26; see the appended run record below.
 
 ## Technical references used
 
@@ -29,3 +29,11 @@ No connection to the production Ario signer, no real keys, no external log publi
 - TCG TPM 2.0 Architecture, Rev. 1.83, §37.2.6.3 NV Counter Index: https://trustedcomputinggroup.org/wp-content/uploads/TPM-2.0-1.83-Part-1-Architecture.pdf
 - tpm2-tools `tpm2_nvundefine`: https://github.com/tpm2-software/tpm2-tools/blob/master/man/tpm2_nvundefine.1.md
 - Ubuntu swtpm simulator package documentation: https://manpages.ubuntu.com/manpages/noble/man8/swtpm_setup.8.html
+
+## Final verified execution — 2026-11-26
+
+[GitHub Actions run 45836481812](https://github.com/SepehrGhanbari/Ario/actions/runs/45836481812), exact source/workflow commit 9c9e9cf4c269e7cf6fa57f77548e5b6da551ff53, job 139966587093 SUCCESS. 12 named assertions PASS on Ubuntu 24.04 using tpm2-tools 5.6 and swtpm/libtpms 0.7.3. Verified: simulator initialized; TPM signing object has fixedTPM/fixedParent; NV counter initialized; raw Sign without policy rejected; duplicate attempt rejected; changed message rejected by PolicyCpHash; exact authorized signature verified; old authorization rejected after NV increment; next generation requires fresh authorization; owner undefine/redefine did not roll counter back (observed 1 -> 4); old signed policy rejected after redefinition. Final marker: R22_29_TPM_POLICY_SIMULATOR_COMPLETE RESEARCH_ONLY HOLD REAL_HARDWARE_NOT_TESTED TPM_CLEAR_AND_PLATFORM_BOUNDARIES_UNTESTED.
+
+Artifact 15126575607, name r22-29-tpm-policy-evidence, ZIP SHA256 sha256:73e145f79f228f687227b207a282a261f3c0702fe6ed36438a1bec3df8090fc1, 691 bytes, expires 2026-12-26T14:12:08Z. Artifact metadata only; archive not independently downloaded/rehashed. Earlier setup, transient-slot and assertion failures remain visible in workflow history and were not counted as passes.
+
+Interpretation: the simulator's NV counter follows TCG's lifetime high-water rule on delete/redefine; this closes the specific owner NV-index recreation rollback tested here. It does not establish a hardware root of trust, resistance to TPM_Clear/platform authority/firmware attacks, vendor conformance, physical non-extractability, or independent policy-authority custody. The authorization private key is ephemeral and co-located in the same CI job. The model remains disconnected from Ario production signing and R22.26 quorum validation. No real key, public log, merge, trust activation or production. Existing R22.22–28 pins and delayed checks unchanged.
