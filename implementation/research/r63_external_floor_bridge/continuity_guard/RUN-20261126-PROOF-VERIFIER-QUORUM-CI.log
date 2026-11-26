@@ -1,0 +1,19 @@
+R63 continuity guard — independent proof verifier, 3-of-4 and init quorum CI
+Date: 2026-11-26
+Workflow: https://github.com/SepehrGhanbari/Ario/actions/runs/45828036041
+Tested source HEAD: e44e95632b58d75fdf34c371a8b9ed5e04cb134d
+Documentation commit: e2239ee10d6071ddcff6b5f72e6b5d0480a53940
+Workflow permissions: contents:read only
+External network/publication: NONE
+
+Ubuntu latest / Python 3.11: Ran 48 tests; OK.
+Ubuntu latest / Python 3.13: Ran 48 tests; OK.
+Windows 2022 / Python 3.11: Ran 48 tests; OK (3 fork-only process tests skipped).
+Windows 2022 / Python 3.13: Ran 48 tests; OK (3 fork-only process tests skipped).
+
+New positive/negative controls:
+- a valid exactly-3-of-4 nonce-bound proof is independently accepted;
+- an invalid anchor commit signature is rejected even when the anchor read response is re-signed;
+- fewer than 3 initialization markers is rejected.
+
+Independent verifier requires an out-of-band pinned roster, expected identity/key/policy and caller-held nonce. It does not establish administrator independence, external durable custody, trusted time, hardware monotonicity, or production readiness. Original two joint-rollback RED controls remain. RESEARCH_ONLY / HOLD / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTION.
