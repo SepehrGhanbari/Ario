@@ -789,3 +789,9 @@ RESEARCH_ONLY / PASS_BOUNDED / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTIO
 ## 2026-11-26 — #336 reconcile current main
 
 - Kept current main engineering log as an exact prefix; imported only the two #336 numeric parser history entries from the preserved branch. Source and test blobs are exactly the reviewed #336 versions. Main's source/test blobs were unchanged from the original base. New-head CI required; no historical data or authority changes.
+
+
+## 2026-11-26 — V15.3 paired-answer lookup fix from #351
+
+- Extracted only the reviewed paired-answer eligibility correction from #351 (source 9900bc63b7ae3bc8c32a87bc9b95aeec40e530d4). The main reader accepts content records with a user field but no Ario reply, then previously treated them as answers: false recall/currentness metadata, potential KeyError on reveal and false ambiguity. Restrict recall and selfcheck to validated paired user/Ario rows; preserve content records and existing reveal API unchanged. No other #351 boundary or custody research integrated.
+- Two existing synthetic regression cases adapted to the current main API. Existing log preserved as exact prefix; no private archive, model, trust or runtime integration. Exact-head CI pending.
