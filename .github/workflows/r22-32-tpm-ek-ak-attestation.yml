@@ -4,7 +4,8 @@ on:
     branches: [research/r22-32-tpm-ek-ak-attestation-2026-11-26]
     paths:
       - .github/workflows/r22-32-tpm-ek-ak-attestation.yml
-      - implementation/research/r22_32_tpm_ek_ak_attestation/**
+      - implementation/research/r22_32_tpm_ek_ak_attestation/*.py
+      - implementation/research/r22_32_tpm_ek_ak_attestation/run_swtpm_attestation.sh
 permissions:
   contents: read
 jobs:
