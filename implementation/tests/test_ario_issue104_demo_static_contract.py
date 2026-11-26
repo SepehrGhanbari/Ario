@@ -121,14 +121,47 @@ def test_repository_and_ref_guard_contract():
     # Structural test of the actual workflow expression, not Actions execution.
     text = WORKFLOW.read_text(encoding="utf-8")
     guards = re.findall(r"^    if: (.+)$", text, re.MULTILINE)
-    assert guards == ["github.repository == 'SepehrGhanbari/Ario' && "
-                      "github.ref == 'refs/heads/research/issue104-demo-completion-20261122'"]
-    clauses = re.fullmatch(r"github\.repository == '([^']+)' && github\.ref == '([^']+)'",
-                           guards[0])
-    assert clauses is not None
-    repo, ref = clauses.groups()
-    for candidate_repo, candidate_ref, expected in [
-        (repo, ref, True), ("Other/Ario", ref, False),
-        (repo, "refs/heads/main", False), ("Other/Ario", "refs/heads/main", False),
+    expected_guard = ("github.repository == 'SepehrGhanbari/Ario' && "
+                      "(github.event_name == 'pull_request' || "
+                      "github.ref == 'refs/heads/research/issue104-demo-completion-20261122' || "
+                      "github.ref == 'refs/heads/research/demo-accessibility-104-208-20261126')")
+    assert guards == [expected_guard]
+    for candidate_repo, event, candidate_ref, expected in [
+        ("SepehrGhanbari/Ario", "push", "refs/heads/research/issue104-demo-completion-20261122", True),
+        ("SepehrGhanbari/Ario", "push", "refs/heads/research/demo-accessibility-104-208-20261126", True),
+        ("SepehrGhanbari/Ario", "pull_request", "refs/pull/399/merge", True),
+        ("SepehrGhanbari/Ario", "push", "refs/heads/main", False),
+        ("Other/Ario", "pull_request", "refs/pull/399/merge", False),
     ]:
-        assert ((candidate_repo == repo) and (candidate_ref == ref)) is expected
+        actual = (candidate_repo == "SepehrGhanbari/Ario" and
+                  (event == "pull_request" or candidate_ref in (
+                      "refs/heads/research/issue104-demo-completion-20261122",
+                      "refs/heads/research/demo-accessibility-104-208-20261126")))
+        assert actual is expected
+
+
+def test_revision_status_is_bilingual_and_separate_from_history():
+    s = source()
+    assert '<div class="log" id="rev-view"></div>' in s
+    assert '<p id="rev-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>' in s
+    assert s.count("revEraseStatus:") == 2
+    assert s.count("revKeepStatus:") == 2
+    assert 'var announcement = mode === "erase" ? t.revEraseStatus : t.revKeepStatus;' in s
+    assert 'if (status.textContent !== announcement) status.textContent = announcement;' in s
+    assert "Teaching erase view:" in s
+    assert "Teaching revision view:" in s
+    assert "نمایش آموزشی حذف:" in s
+    assert "نمایش آموزشی اصلاح:" in s
+
+
+def test_browser_workflow_smokes_both_explainer_copies_and_announcement_suppression_mutant():
+    text = WORKFLOW.read_text(encoding="utf-8")
+    assert "pull_request:" in text
+    assert "website/ario-demo.html" in text
+    assert "ARIO_DEMO_SOURCE: website/ario-demo.html" in text
+    assert 'status.textContent = "";' in text
+
+
+def test_browser_smoke_allows_canonical_metadata_but_not_external_assets():
+    assert 'node.rel === "canonical"' in SMOKE.JS
+    assert 'externalAssets.length === 0' in SMOKE.JS

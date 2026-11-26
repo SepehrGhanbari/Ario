@@ -142,17 +142,17 @@ footer a:hover { text-decoration: underline; }</style>
   <section class="card">
     <h2 id="t-scen-h">سناریوهای نمایشی شواهد</h2>
     <div class="scen-grid">
-      <button class="scen-btn active" id="btn-base" type="button">
+      <button class="scen-btn active" id="btn-base" type="button" aria-pressed="true">
         <b id="t-scen-base-b">۱. شواهد تجربی معتبر (Baseline)</b>
         <span id="t-scen-base-s">ابزار فایل را خوانده، هش تأیید شده و استنتاج به درستی صورت گرفته است.</span>
       </button>
 
-      <button class="scen-btn" id="btn-fals" type="button">
+      <button class="scen-btn" id="btn-fals" type="button" aria-pressed="false">
         <b id="t-scen-fals-b">۲. ابطال هش (Falsification)</b>
         <span id="t-scen-fals-s">هش فایل با تعهد ورودی نمی‌خواند؛ تمام گره‌های وابسته ابطال می‌شوند.</span>
       </button>
 
-      <button class="scen-btn" id="btn-self" type="button">
+      <button class="scen-btn" id="btn-self" type="button" aria-pressed="false">
         <b id="t-scen-self-b">۳. ادعای بدون شاهد (Anti-Self-Citation)</b>
         <span id="t-scen-self-s">مدل فرضیه‌ای را بدون سند تجربی مطرح می‌کند؛ ارتقای ادعا مسدود می‌شود.</span>
       </button>
@@ -164,7 +164,7 @@ footer a:hover { text-decoration: underline; }</style>
     <p class="graph-hint" id="t-graph-hint">(برای بازرسی، روی هر گره کلیک کنید)</p>
     
     <div class="graph-wrap">
-      <svg id="graphSvg" class="svg-graph" viewBox="0 0 580 340" role="group" aria-label="Synthetic evidence dependency graph"></svg>
+      <svg id="graphSvg" class="svg-graph" viewBox="0 0 580 340" role="group" aria-label="گراف ساختگی وابستگی شواهد"></svg>
     </div>
 
     <div class="inspector"><h3 id="t-inspect-h" class="inspector-title"></h3><div id="inspectorBox" aria-live="polite"></div></div>
@@ -205,7 +205,7 @@ footer a:hover { text-decoration: underline; }</style>
 
 <script>var currentLang = 'fa';
 var currentScenario = 'base';
-var selectedNodeId = 'N2';
+var selectedNodeId = 'N4';
 
 var I18N = {
   fa: {
@@ -220,6 +220,7 @@ var I18N = {
     scenSelfB: '۳. فرضیهٔ بدون شاهد مستقل',
     scenSelfS: 'N3 فقط فرضیه است؛ ترکیب معلق و اقدام حافظه مسدود می‌شود.',
     graphH: 'گراف وابستگی شواهد (نه مدل استنتاج علّی)',
+    graphName: 'گراف ساختگی وابستگی شواهد',
     graphHint: '(برای انتخاب گره، کلیک کنید یا از Enter/Space استفاده کنید)',
     inspectH: 'جزئیات گرهٔ ساختگی',
     ledgerH: 'گزارش سناریو (فقط داخل همین صفحه)',
@@ -244,6 +245,7 @@ var I18N = {
     scenSelfB: '3. A hypothesis without independent support',
     scenSelfS: 'N3 remains an unverified hypothesis; synthesis is suspended and the proposed memory action is blocked.',
     graphH: 'Evidence dependency graph (not a causal model)',
+    graphName: 'Synthetic evidence dependency graph',
     graphHint: '(Click a node or focus it and press Enter/Space)',
     inspectH: 'Synthetic node details',
     ledgerH: 'Scenario log (page-local only)',
@@ -285,6 +287,7 @@ function setLang(lang) {
   document.getElementById('t-scen-self-b').innerText = t.scenSelfB;
   document.getElementById('t-scen-self-s').innerText = t.scenSelfS;
   document.getElementById('t-graph-h').innerText = t.graphH;
+  document.getElementById('graphSvg').setAttribute('aria-label', t.graphName);
   document.getElementById('t-graph-hint').innerText = t.graphHint;
   document.getElementById('t-inspect-h').innerText = t.inspectH;
   document.getElementById('t-ledger-h').innerText = t.ledgerH;
@@ -329,7 +332,10 @@ function selectScenario(scen) {
   NODES[4].status = 'SIMULATED_READY';
   currentScenario = scen;
   var btns = document.querySelectorAll('.scen-btn');
-  for (var b = 0; b < btns.length; b++) { btns[b].classList.remove('active'); }
+  for (var b = 0; b < btns.length; b++) {
+    btns[b].classList.remove('active');
+    btns[b].setAttribute('aria-pressed', btns[b].id === 'btn-' + scen ? 'true' : 'false');
+  }
   document.getElementById('btn-' + scen).classList.add('active');
 
   if (scen === 'base') {
@@ -363,6 +369,10 @@ function selectNode(id) {
 
 function renderGraph() {
   var svg = document.getElementById('graphSvg');
+  // Rebuilding SVG children must not strand keyboard focus on the document.
+  var active = document.activeElement;
+  var focusedNodeId = active && svg.contains(active) && active.classList.contains('node-circle')
+    ? active.getAttribute('data-id') : null;
   var html = '<defs>' +
     '<marker id="arr" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#8c9aa6" /></marker>' +
     '<marker id="arr-ok" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#0e6b5c" /></marker>' +
@@ -401,7 +411,7 @@ function renderGraph() {
     else if (n.status === 'SUSPENDED') color = '#8a6208';
     else if (n.status === 'UNVERIFIED_HYPOTHESIS') color = '#23527c';
 
-    html += '<g class="node-circle" data-id="' + n.id + '" role="button" tabindex="0" aria-label="' + n.id + ': ' + (currentLang === 'fa' ? n.labelFa : n.labelEn) + '" transform="translate(' + n.x + ',' + n.y + ')">';
+    html += '<g class="node-circle" data-id="' + n.id + '" role="button" tabindex="0" aria-pressed="' + (isSel ? 'true' : 'false') + '" aria-label="' + n.id + ': ' + (currentLang === 'fa' ? n.labelFa : n.labelEn) + '" transform="translate(' + n.x + ',' + n.y + ')">';
     if (isSel) {
       html += '<circle r="24" fill="none" stroke="' + color + '" stroke-width="2" stroke-dasharray="3 3" opacity="0.8" />';
     }
@@ -425,6 +435,9 @@ function renderGraph() {
         selectNode(this.getAttribute('data-id'));
       }
     });
+    if (focusedNodeId && circles[c].getAttribute('data-id') === focusedNodeId) {
+      circles[c].focus({ preventScroll: true });
+    }
   }
 }
 

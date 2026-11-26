@@ -7,6 +7,7 @@ This is not a screen-reader, security penetration test, or production release.
 """
 from __future__ import annotations
 
+import os
 import re
 import shutil
 import subprocess
@@ -15,7 +16,10 @@ from pathlib import Path
 from html.parser import HTMLParser
 
 ROOT = Path(__file__).resolve().parents[2]
-SOURCE = ROOT / "docs/ario-explainer-demo-2026-11-08/index.html"
+_DEFAULT_SOURCE = ROOT / "docs/ario-explainer-demo-2026-11-08/index.html"
+SOURCE = Path(os.environ.get("ARIO_DEMO_SOURCE", str(_DEFAULT_SOURCE)))
+if not SOURCE.is_absolute():
+    SOURCE = ROOT / SOURCE
 JS = r"""
 (() => {
   let checks = 0;
@@ -31,7 +35,10 @@ JS = r"""
     ck(options().every(x => x.querySelectorAll(".opts button").length === 3), "choice-buttons");
     ck(byId("banner").textContent.includes("SYNTHETIC"), "fictional-banner");
     ck(!document.querySelector("form, input, textarea"), "no-user-upload");
-    ck(document.querySelectorAll("script[src],link[href^='http']").length === 0, "no-external-assets");
+    const externalAssets = Array.from(document.querySelectorAll("script[src],link[href^='http']")).filter(
+      node => !(node.tagName === "LINK" && node.rel === "canonical")
+    );
+    ck(externalAssets.length === 0, "no-external-assets");
     const feedback = options()[0].querySelector(".feedback");
     options()[0].querySelector(".opts button:nth-child(2)").click();
     ck(feedback.textContent.includes("درست"), "fa-feedback-updated");
@@ -52,8 +59,13 @@ JS = r"""
       entries()[1].textContent.includes(newEntry) &&
       entries()[1].textContent.includes("REVISED") &&
       byId("revEraseBtn").getAttribute("aria-pressed") === "false" &&
-      byId("revReviseBtn").getAttribute("aria-pressed") === "true";
+      byId("revReviseBtn").getAttribute("aria-pressed") === "true" &&
+      byId("rev-status").getAttribute("role") === "status" &&
+      byId("rev-status").getAttribute("aria-live") === "polite" &&
+      byId("rev-status").getAttribute("aria-atomic") === "true" &&
+      byId("rev-status").textContent === "Teaching revision view: the previous record and correction are both retained.";
     ck(revised(), "initial-revision-preserved");
+    byId("revEraseBtn").focus();
     byId("revEraseBtn").click();
     ck(entries().length === 1 &&
       entries()[0].classList.contains("new") &&
@@ -62,9 +74,12 @@ JS = r"""
       !revision().querySelector(".struck") &&
       revision().textContent.includes("The trail was erased.") &&
       byId("revEraseBtn").getAttribute("aria-pressed") === "true" &&
-      byId("revReviseBtn").getAttribute("aria-pressed") === "false", "erase-view");
+      byId("revReviseBtn").getAttribute("aria-pressed") === "false" &&
+      byId("rev-status").textContent === "Teaching erase view: the previous record is hidden in this view." &&
+      document.activeElement === byId("revEraseBtn"), "erase-view");
+    byId("revReviseBtn").focus();
     byId("revReviseBtn").click();
-    ck(revised(), "revision-preserved");
+    ck(revised() && document.activeElement === byId("revReviseBtn"), "revision-preserved");
     byId("evidenceDisputedBtn").click();
     ck(byId("evidence-output").textContent.includes("CONTESTED"), "disputed-mode");
     ck(byId("evidenceDisputedBtn").getAttribute("aria-pressed") === "true", "disputed-aria");
@@ -74,7 +89,8 @@ JS = r"""
     ck(required.every(id => byId(id).tagName === "BUTTON"), "native-keyboard-controls");
     ck(!!document.querySelector('#evidence-output[aria-live="polite"]'), "status-announcement");
     byId("langBtn").click();
-    ck(document.documentElement.lang === "fa" && options().length === 5, "return-fa");
+    ck(document.documentElement.lang === "fa" && options().length === 5 &&
+      byId("rev-status").textContent === "نمایش آموزشی اصلاح: سابقهٔ قبلی و اصلاح جدید هر دو حفظ شده‌اند.", "return-fa");
     ck(performance.getEntriesByType("resource").length === 0, "no-auto-network-resources");
     const marker = document.createElement("pre");
     marker.id = "ario-browser-smoke";
