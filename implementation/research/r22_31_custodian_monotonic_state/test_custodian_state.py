@@ -216,6 +216,16 @@ class R2230SourceRegressionTests(unittest.TestCase):
             root = Path(directory)
             gate = root / "custodian_gate.py"
             gate.write_text(gate_source, encoding="utf-8")
+            private_key = root / "custodian.key"
+            public_key = root / "custodian.pub"
+            subprocess.run(
+                ["openssl", "genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:2048", "-out", str(private_key)],
+                check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            )
+            subprocess.run(
+                ["openssl", "pkey", "-in", str(private_key), "-pubout", "-out", str(public_key)],
+                check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            )
             anchor = {
                 "device_ek_sha256": digest(b"r22.30-synthetic-ek"),
                 "storage_root_sha256": digest(b"r22.30-original-storage-root"),
@@ -227,7 +237,7 @@ class R2230SourceRegressionTests(unittest.TestCase):
             anchor_bytes = canonical(anchor)
             anchor_path.write_bytes(anchor_bytes)
             anchor_sig.write_bytes(subprocess.run(
-                ["openssl", "dgst", "-sha256", "-sign", str(self.private)],
+                ["openssl", "dgst", "-sha256", "-sign", str(private_key)],
                 input=anchor_bytes, check=True, stdout=subprocess.PIPE,
             ).stdout)
             nonce_ledger = root / "consumed_nonces.jsonl"
@@ -249,8 +259,8 @@ class R2230SourceRegressionTests(unittest.TestCase):
                     sys.executable, str(gate),
                     "--anchor", str(anchor_path),
                     "--anchor-signature", str(anchor_sig),
-                    "--public-key", str(self.public),
-                    "--private-key", str(self.private),
+                    "--public-key", str(public_key),
+                    "--private-key", str(private_key),
                     "--nonce-ledger", str(nonce_ledger),
                     "--request", str(request_path),
                     "--response", str(response_path),
