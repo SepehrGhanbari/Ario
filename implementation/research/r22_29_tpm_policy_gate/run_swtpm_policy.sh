@@ -46,14 +46,12 @@ tpm2_startauthsession -S key-trial.ctx >/dev/null
 tpm2_policyauthorize -S key-trial.ctx -n policy-authority.name -L key-auth.policy >/dev/null
 echo "MARK flush-trial" >&2
 tpm2_flushcontext key-trial.ctx >/dev/null
-echo "MARK flush-auth-key" >&2
-tpm2_flushcontext policy-authority.ctx >/dev/null
+tpm2_flushcontext -t >/dev/null
+tpm2_createprimary -C o -G ecc -g sha256 -c primary.ctx >/dev/null
 tpm2_create -C primary.ctx -G ecc -g sha256 -L key-auth.policy \
   -a "fixedtpm|fixedparent|sensitivedataorigin|sign|noda" \
   -u signer.public -r signer.private >/dev/null
 tpm2_load -C primary.ctx -u signer.public -r signer.private -c signer.ctx >/dev/null
-echo "MARK flush-primary" >&2
-tpm2_flushcontext primary.ctx >/dev/null
 tpm2_loadexternal -C o -G rsa -u policy-authority.public.pem -c policy-authority.ctx -n policy-authority.name >/dev/null
 tpm2_readpublic -c signer.ctx -f yaml -o signer-public.yaml >/dev/null
 grep -Eiq 'fixedtpm' signer-public.yaml || fail "fixedTPM attribute missing"
