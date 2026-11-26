@@ -33,11 +33,15 @@ The harness therefore tests `MakeCredential/ActivateCredential`, rather than inv
 
 The storage-root identifier emitted by this harness is the SHA-256 of the TPM Name bytes, explicitly named `TPM_STORAGE_PRIMARY_NAME_SHA256`. It is not silently equated with the earlier R22.30 caller-supplied storage-root fingerprint. A future adapter must define and validate the exact mapping before using it in a custodian transition.
 
+## CertifyCreation versus Certify
+
+The Ubuntu runner's packaged `tpm2_certify` does not expose a qualifying-data option, while `tpm2_certifycreation` does. The harness therefore uses `TPM2_CertifyCreation` with a fresh challenge. It proves that the loaded object is associated with TPM-generated creation data and signs the object Name and creation hash. This is not the same statement as `TPM2_Certify`; the attested Qualified Name is not claimed to be signed here. The Qualified Name is captured separately, while the object Name is independently recomputed from the raw `TPMT_PUBLIC` structure. The binary verifier parses `TPMS_ATTEST` directly because the runner's `tpm2_print` version cannot render the Creation attestation type.
+
 ## EK certificate and AK identity boundaries
 
 The certificate chain in this experiment terminates at a generated lab root. It tests X.509 path validation and EK SubjectPublicKeyInfo matching only. It is **not** an OEM/manufacturer EK certificate, a TCG certification, or proof of genuine hardware. No vendor trust anchors are installed or inferred.
 
-The AK is bound to the EK through credential activation. The AK public key is then used to verify Quote and Certify attestations. This is not a manufacturer-issued AK X.509 certificate.
+The AK is bound to the EK through credential activation. The AK public key is then used to verify Quote and CertifyCreation attestations. This is not a manufacturer-issued AK X.509 certificate.
 
 ## PCR and measured-boot boundaries
 
@@ -57,7 +61,7 @@ The script reads PCR values after the quote and checks them against the quote di
 
 - TCG EK Credential Profile for TPM Family 2.0, Level 0, Version 2.7 (2026-03-19): https://www.trustedcomputinggroup.org/resources/documents/http-trustedcomputinggroup-org-wp-content-uploads-tcg-ek-credential-profile
 - TCG TPM 2.0 Library Part 1: Architecture, Version 185 (2026-03-12), especially attestation and PCR attestation: https://trustedcomputinggroup.org/wp-content/uploads/Trusted-Platform-Module-2.0-Library-Part-1-Architecture_Version-185_pub.pdf
-- TCG TPM 2.0 Library Part 3: Commands, Version 185 (2026-03-12), TPM2_Certify and TPM2_Quote: https://medias.cdn.trustedcomputinggroup.org/production/Trusted_Platform_Module_2_0_Library_Part_3_Commands_Version_185_pub_87a5c10230.pdf
+- TCG TPM 2.0 Library Part 3: Commands, Version 185 (2026-03-12), TPM2_CertifyCreation and TPM2_Quote: https://medias.cdn.trustedcomputinggroup.org/production/Trusted_Platform_Module_2_0_Library_Part_3_Commands_Version_185_pub_87a5c10230.pdf
 - tpm2-tools `tpm2_makecredential`: https://tpm2-tools.readthedocs.io/en/latest/man/tpm2_makecredential.1/
 - tpm2-tools `tpm2_activatecredential`: https://tpm2-tools.readthedocs.io/en/latest/man/tpm2_activatecredential.1/
 - tpm2-tools `tpm2_quote` and `tpm2_checkquote`: https://tpm2-tools.readthedocs.io/en/latest/man/tpm2_quote.1/ and https://tpm2-tools.readthedocs.io/en/latest/man/tpm2_checkquote.1/
