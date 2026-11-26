@@ -1099,3 +1099,8 @@ Custom external-only quorum and all unit/parser tests pass, but run 45836088990 
 ## R22.22I — two external test-witness cosignatures identified (2026-11-26)
 
 Live run 45836342538 returned cosigned head size 282811/root 7f5a1fbf808e3a63652c0817a568c50b9965af19d4fd0faf98fe426166b90ff7. Built-in sigsum-test2-2025 quorum remained NOT_MET (15 total signatures, 5 individually verified). Custom external-only 2-of-4 policy passed and identified two valid external cosignatures on that exact head: remora.n621.de (Florian Larysch) and witness.stagemole.eu (Grégoire Détrez). The attempted get-tree-size readbacks for both returned HTTP 404, so do not claim independent size readback; use only the verified signed cosignatures and the witness protocol's monotonicity semantics. R22.22I now pins this exact externally cosigned head and verifies future readback consistency. TEST_ONLY; no data custody/global latest/production claim.
+
+
+## R22.22I public witness archive retrieval added (2026-11-26)
+
+The external cosignatures are cryptographically valid, but the two selected witness get-tree-size endpoints returned HTTP 404. Added a strictly read-only fetch of their published cosignatures.json/status/about documents (where available) to determine whether the witnesses expose a separate recoverable checkpoint archive. No POST, state change, or publication.

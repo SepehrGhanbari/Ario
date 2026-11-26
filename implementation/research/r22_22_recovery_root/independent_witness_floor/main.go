@@ -11,6 +11,7 @@ import (
  "sigsum.org/sigsum-go/pkg/client"
  "sigsum.org/sigsum-go/pkg/crypto"
  "sigsum.org/sigsum-go/pkg/policy"
+ "sigsum.org/sigsum-go/pkg/requests"
  "sigsum.org/sigsum-go/pkg/types"
 )
 const (
