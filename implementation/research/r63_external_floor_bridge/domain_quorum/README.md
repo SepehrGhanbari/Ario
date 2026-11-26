@@ -20,7 +20,7 @@ For each receipt, the pinned roster records four independently evidenced failure
 
 A receipt is eligible only if the policy hash, proposal hash, exact sequence, key, signature, freshness, durability, continuity and (for reads) readback checks pass. At least three witnesses and at least three distinct labels in every required failure-domain class are required. Unknown/unresolved labels fail closed. Multiple keys under one organization, parent group, administrator, key custodian or backup controller do not create independent votes.
 
-Read/write quorum intersection must satisfy `read_q + write_q > n + f`, where `n` is the number of independent operator domains and `f` is the maximum number of faulty domains tolerated. For n=4, read=write=3, f=1, minimum intersection is 2 > 1. This arithmetic is only meaningful if the roster's failure-domain labels are accurate and pinned outside the control of the witnesses.
+Read/write quorum intersection must satisfy `read_q + write_q > n_class + f` **separately for every critical failure-domain class**, where `n_class` is the number of distinct labels in that class and `f` is the maximum number of faulty domains tolerated. The receipt gate also requires the selected read/write quorum count in every class, not just distinct keys or operator names. For n_class=4, read=write=3, f=1, minimum intersection is 2 > 1. If one class has only two independent domains, the policy fails closed. This arithmetic is only meaningful if the roster's failure-domain labels are accurate and pinned outside the control of the witnesses.
 
 ## Evidence mapping (not an admitted roster)
 
