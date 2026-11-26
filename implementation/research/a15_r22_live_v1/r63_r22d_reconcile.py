@@ -38,9 +38,9 @@ def proof_nodes(m, n, out, tag):
         raise ValueError("consistency proof bounds")
     nodes = []
     for line in lines:
-        if not line.startswith("node="):
+        if not line.startswith("node_hash="):
             raise ValueError("consistency proof syntax")
-        value = bytes.fromhex(line[5:])
+        value = bytes.fromhex(line[len("node_hash="):])
         if len(value) != 32:
             raise ValueError("consistency node length")
         nodes.append(value)
