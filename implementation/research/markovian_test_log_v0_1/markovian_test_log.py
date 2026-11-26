@@ -44,7 +44,7 @@ WITNESS_VKEY = (
 )
 WITNESS_SUBMIT_URL = "https://witness.markovianprotocol.com/add-checkpoint"
 WITNESS_MONITOR_BASE = "https://witness.markovianprotocol.com"
-USER_AGENT = "ario-research-log/0.1 (+https://github.com/SepehrGhanbari/Ario; C2SP tlog-witness)"
+USER_AGENT = "markovian-log/1.0 (+https://markovianprotocol.com/log; c2sp tlog-witness submit)"
 CAPSULE_FORMAT = "ario.synthetic-memory-capsule.v1"
 LEAF_FORMAT = "ario.external-witness.synthetic-record.v1"
 SCOPE = "RESEARCH_ONLY"
