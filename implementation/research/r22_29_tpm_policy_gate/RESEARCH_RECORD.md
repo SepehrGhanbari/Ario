@@ -13,11 +13,11 @@ The policy authority signs the resulting approved policy digest. The TPM verifie
 
 The NV counter is a TPM monotonic counter, not a full external witness service. A valid authorization is bound to the exact sign command and the counter value; reusing the same token for the exact same command before advancing the counter can at most re-sign the same message. The external authorizer is a separate cryptographic role in the protocol, but in this CI fixture its private key is ephemeral and exists in the same runner/job; no real organizational separation or quorum validation is established.
 
-Explicit RED control: the test deliberately undefines and recreates the owner-managed NV counter at the same handle with the same public definition, returning it to zero. If the owner hierarchy can do this while the signer key and policy-authority authorization remain usable, the old signed policy becomes eligible again. This demonstrates that TPM NV alone is not rollback-proof against an owner/root who can undefine/redefine it. The correct production design must constrain NV deletion/reset using platform policy/physical-presence or an independently administered external monotonic witness, and pin the TPM identity/epoch externally. TPM Clear, firmware/platform authority, malicious firmware, device replacement, TPM reset and physical hardware behavior are not fully assessed.
+Positive anti-rollback control: after generation one used NV count 1 and generation two advanced it to 3, the test owner-undefined and redefined the same counter handle with the same public definition, then incremented the new definition. swtpm returned 4, not 1; the old policy token bound to count 1 was rejected by PolicyNV. This matches TCG TPM 2.0 Architecture Rev. 1.83, §37.2.6.3: the first increment of a recreated counter must be greater than any value previously held by a counter with the same Name over the lifetime of the TPM, specifically to prevent delete/redefine rollback. This is a meaningful positive result for the tested counter semantics, not proof against TPM_Clear, firmware/platform authority, malicious firmware, device replacement, vendor deviations or physical hardware faults. Production still must pin TPM identity/epoch externally, constrain policy authority, and define recovery behavior if TPM is cleared or replaced.
 
 swtpm is software emulation: no hardware non-extractability, secure element certification, actual TPM vendor behavior, anti-tamper, firmware boundary, real device provisioning, root-vs-platform auth isolation or Windows test is claimed. TPM key private blob files are TPM-protected blobs under the simulator's storage hierarchy, not proof that a physical device's secret cannot be extracted by invasive or firmware attacks. Policy-authority private key is ephemeral CI fixture data and is not an independent custodian.
 
-No connection to the production Ario signer, no real keys, no external log publication, no trust activation, no production or merge. Existing R22.22–28 pins and delayed checks unchanged. Execution pending.
+No connection to the production Ario signer, no real keys, no external log publication, no trust activation, no production or merge. Existing R22.22–28 pins and delayed checks unchanged. Execution pending final rerun after the anti-rollback assertion was corrected.
 
 ## Technical references used
 
@@ -26,4 +26,6 @@ No connection to the production Ario signer, no real keys, no external log publi
 - tpm2-tools `tpm2_policynv`: https://github.com/tpm2-software/tpm2-tools/blob/master/man/tpm2_policynv.1.md
 - tpm2-tools `tpm2_sign`: https://github.com/tpm2-software/tpm2-tools/blob/master/man/tpm2_sign.1.md
 - tpm2-tools `tpm2_duplicate`: https://github.com/tpm2-software/tpm2-tools/blob/master/man/tpm2_duplicate.1.md
+- TCG TPM 2.0 Architecture, Rev. 1.83, §37.2.6.3 NV Counter Index: https://trustedcomputinggroup.org/wp-content/uploads/TPM-2.0-1.83-Part-1-Architecture.pdf
+- tpm2-tools `tpm2_nvundefine`: https://github.com/tpm2-software/tpm2-tools/blob/master/man/tpm2_nvundefine.1.md
 - Ubuntu swtpm simulator package documentation: https://manpages.ubuntu.com/manpages/noble/man8/swtpm_setup.8.html
