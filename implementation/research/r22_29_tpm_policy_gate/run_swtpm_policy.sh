@@ -61,7 +61,8 @@ grep -Eiq 'fixedparent' signer-public.yaml || fail "fixedParent attribute missin
 if grep -q 'BEGIN .*PRIVATE KEY' signer.private; then fail "TPM private blob unexpectedly PEM"; fi
 pass "TPM-generated fixedTPM/fixedParent signing object created"
 tpm2_nvdefine -C o -a "nt=counter|ownerread|ownerwrite" "$NV" >/dev/null
-tpm2_nvread -C o -s 8 -o counter-0.bin "$NV" >/dev/null
+tpm2_nvincrement -C o "$NV" >/dev/null
+tpm2_nvread -C o -s 8 -o counter-1.bin "$NV" >/dev/null
 pass "TPM monotonic NV counter initialized"
 
 make_authorization(){
@@ -101,13 +102,13 @@ expect_fail "raw TPM sign without policy session" tpm2_sign -c signer.ctx -g sha
 expect_fail "fixed TPM object duplication blocked" tpm2_duplicate -C primary.ctx -c signer.ctx -G null -r duplicate.private -s duplicate.seed
 
 # Authorize A only for the current NV counter and exact TPM2_Sign cpHash.
-make_authorization message-a.bin counter-0.bin a
+make_authorization message-a.bin counter-1.bin a
 # Reuse A's policy session for B: command cpHash differs, so TPM must reject.
-start_policy a counter-0.bin
+start_policy a counter-1.bin
 expect_fail "altered message rejected by TPM cpHash policy" tpm2_sign -c signer.ctx -g sha256 -o altered.signature -p session:a.session.ctx message-b.bin
 tpm2_flushcontext a.session.ctx >/dev/null
 # The exact authorized command succeeds and verifies.
-start_policy a counter-0.bin
+start_policy a counter-1.bin
 sign_authorized a message-a.bin
 pass "exact externally authorized TPM signature verified"
 # Same token is tied to counter zero; advance hardware NV counter.
@@ -118,8 +119,8 @@ expect_fail "stale authorization rejected after NV counter increment" tpm2_polic
 tpm2_flushcontext stale-counter.session >/dev/null
 
 # A new counter value and new exact command hash require a fresh authority signature.
-make_authorization message-c.bin counter-1.bin c
-start_policy c counter-1.bin
+make_authorization message-c.bin counter-2.bin c
+start_policy c counter-2.bin
 sign_authorized c message-c.bin
 pass "generation two signed only under fresh counter-bound authorization"
 tpm2_nvincrement -C o "$NV" >/dev/null
@@ -128,8 +129,9 @@ tpm2_nvincrement -C o "$NV" >/dev/null
 # the same public definition and reset its value. This is not a security pass.
 tpm2_nvundefine -C o "$NV" >/dev/null
 tpm2_nvdefine -C o -a "nt=counter|ownerread|ownerwrite" "$NV" >/dev/null
+tpm2_nvincrement -C o "$NV" >/dev/null
 tpm2_nvread -C o -s 8 -o counter-reset.bin "$NV" >/dev/null
-cmp -s counter-0.bin counter-reset.bin || fail "counter reset control not reproduced"
+cmp -s counter-1.bin counter-reset.bin || fail "counter reset control not reproduced"
 start_policy a counter-0.bin
 sign_authorized a message-a.bin
 pass "RED owner NV undefine/recreate restored stale policy eligibility"
