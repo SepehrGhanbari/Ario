@@ -4,6 +4,7 @@ on:
     branches: [research/a15-r22-live-checkpoint-20261126]
     paths:
       - .github/workflows/a15-r63-r22d-reconcile.yml
+      - implementation/research/a15_r22_live_v1/r63_r22d_reconcile.py
 permissions:
   contents: read
   actions: read
