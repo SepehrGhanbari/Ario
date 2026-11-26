@@ -394,6 +394,28 @@ class AttestedCustodianTests(unittest.TestCase):
         result, *_ = self.invoke(request, suffix="manifest-mismatch")
         self.assert_rejected_without_commit(result, "REJECT ATTESTATION_MANIFEST_BINDING_MISMATCH:quote_signature_sha256")
 
+    def test_invalid_ak_spki_der_is_rejected_even_with_matching_claimed_hash(self):
+        def mutate(receipt):
+            invalid = b"not a DER SubjectPublicKeyInfo"
+            receipt["ak_public_spki_der_b64"] = b64(invalid)
+            receipt["ak_public_sha256"] = digest(invalid)
+            receipt["evidence_manifest"]["ak_public_sha256"] = digest(invalid)
+            receipt["evidence_bundle_sha256"] = digest(canonical(receipt["evidence_manifest"]))
+        request = self.make_request(receipt=self.make_receipt(change=mutate))
+        result, *_ = self.invoke(request, suffix="invalid-ak-spki")
+        self.assert_rejected_without_commit(result, "REJECT ATTESTATION_AK_PUBLIC_DER_INVALID")
+
+    def test_expired_custodian_challenge_is_rejected(self):
+        challenge = dict(self.challenge)
+        challenge["issued_at"] = int(time.time()) - 400
+        challenge["expires_at"] = int(time.time()) - 1
+        signature = b64(sign(self.custodian_private, canonical(challenge)))
+        request = self.make_request(
+            challenge=challenge, challenge_signature_b64=signature,
+        )
+        result, *_ = self.invoke(request, suffix="expired-challenge")
+        self.assert_rejected_without_commit(result, "REJECT CHALLENGE_EXPIRED")
+
     def test_expired_attestation_receipt_is_rejected(self):
         def mutate(receipt):
             receipt["issued_at"] = int(time.time()) - 400
