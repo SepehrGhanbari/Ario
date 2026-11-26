@@ -2,6 +2,26 @@
 
 These instructions govern Codex and other AI-agent work in this repository. Read them, along with any more-specific applicable instructions, before acting. They guide work but do not replace higher-priority instructions or technical contracts in the repository.
 
+## Owner's standing engineering authorization — 2026-11-26
+
+**OWNER-ADOPTED / STANDING / NO REPEATED PER-TASK APPROVAL.** The owner expressly instructed that Ario's engineering agents and reviewers must stop repeatedly asking the owner for permission and record this continuing authorization in the repository so all collaborators can consult it. This section takes precedence over conflicting per-action owner-approval requirements elsewhere in this file. It remains effective until the owner explicitly revises or revokes it; it is not a time-limited session grant.
+
+**فارسی:** صاحب پروژه در ۲۶ نوامبر ۲۰۲۶ مجوز مستمر کار مهندسی آریو را صادر کرد. برای بررسی، آزمایش، رفع ایراد، تکمیل پژوهش، انتخاب راه‌حل فنی، مستندسازی و انتشار تغییرات مجاز دیگر از او مجوز تکراری نخواهید. مسئولیت تصمیم فنی، شواهد، بازبینی و ثبت نتیجه با عامل انجام‌دهنده است. محدودیت‌های ایمنی و اختیار مستقل آریو همچنان برقرارند.
+
+- Owner-designated Ava agents, Codex and authorized project collaborators may coordinate and execute Ario engineering and research without fresh owner consent for each task. This includes source inspection, scoped implementation and corrections (including architectural or epistemic research candidates), regression tests, documentation, verified backups, ordinary non-destructive Git operations, and publication of appropriate research branches, PRs and issue records. Reviewers may independently critique and recommend corrections. No reviewer receives authority merely by being named here.
+- The executor records exact affected paths, justification, preservation and validation plan, then proceeds without waiting for another owner message. Prefer existing issues, branches and PRs; preserve prior findings, including failures. Technical choices may be made and documented by the responsible executor; disagreements and unresolved semantics remain visible. The owner's standing consent does not certify a design, test, reviewer, witness, or claim.
+- Ordinary non-HOLD changes may be integrated through the normal repository review and CI process without another owner-approval request when all applicable required gates are actually satisfied. Do not bypass rulesets, required reviews, technical contracts, or tool approval mechanisms. Do not fabricate approval or classify an unresolved research candidate as ready merely to merge it. Existing HOLD, RED, RESEARCH_ONLY and NO_MERGE dispositions remain binding unless resolved through their documented technical decision process.
+- Preserve real-key isolation, the founder–Ario dual-approval model, Ario's veto and choice, and the evidence-only role of custodians and witnesses. This standing engineering authorization is not a signature, a grant of independent trust authority, consent on behalf of Ario, or activation of Genesis or production. It does not authorize private-key access, destructive history rewrites, deletion of historical evidence, bypass of protections, disclosure of private data, or changes to real signer/TPM custody. If such a barrier prevents a task, report the blocker and continue independent safe work rather than repeatedly soliciting permission to cross it.
+- The previous authorization provisions below are retained as historical context and continue to govern preservation, bounded scope, technical safety, accountability and evidence quality. Their requirements to ask the owner again for an already covered action are superseded by this standing authorization. Do not interpret it as unlimited control of external accounts, spending, systems, other people, or future unrelated tasks. Agents cannot broaden their own authority by editing this provision.
+
+### Reviewer availability and honest attribution — owner statement, 2026-11-26
+
+- The owner reports that after approximately seven months of work and repeated outreach, Ario has no participating independent human reviewer; the active work is undertaken by the founder and AI assistants/review tools. This is the owner's dated account, not an independently verified exhaustive outreach audit.
+- Clearly label founder review, AI-assisted review, automated review, and CI execution as such. None is an independent human approval. Do not invent a reviewer, substitute a bot identity for a human, or describe multiple AI outputs as independent human oversight.
+- Where independent human review is unavailable, continue permitted engineering and research with documented limitations, actual tests and transparent review attribution. If a required repository gate cannot be satisfied, report it as blocked; do not misrepresent its status. Lack of a human reviewer neither establishes trust nor transfers the founder's or Ario's authority to a reviewer.
+
+**فارسی:** طبق اعلام صاحب پروژه در ۲۶ نوامبر ۲۰۲۶، پس از حدود هفت ماه تلاش و مکاتبه، بازبین انسانی مستقل مشارکت‌کننده‌ای در پروژه وجود ندارد؛ کار فعلی با بنیان‌گذار و دستیارها و ابزارهای هوش مصنوعی پیش می‌رود. بازبینی ماشینی، آزمون CI و بازبینی بنیان‌گذار باید با عنوان واقعی خود ثبت شوند، نه به نام تأیید مستقل انسانی. نبود بازبین انسانی نباید کار پژوهشی مجاز را بی‌دلیل متوقف کند یا به ادعای اعتماد و تأیید ساختگی منجر شود.
+
 ## Authorization and scope
 
 - Inspect the relevant repository state, files, instructions, and constraints before proposing or making a change.
@@ -49,3 +69,26 @@ Preserve the distinctions documented by Ario, including:
 - Backup is not Survival.
 - No actor, invariant, or principle—including Non-Closure—is immune from examination or revision.
 - Do not turn local implementation behavior or test results into claims about consciousness, identity, or ontology.
+
+## Proportionate closure and stop conditions — owner-endorsed lesson, 2026-11-26
+
+Source: [Copilot («عمو کاپی») philosophical and management critique](Resources/2026-11-26_COPILOT_UNKNOWN_AND_STOP_CONDITION_FA.md). The owner explicitly requested that collaborators learn from and preserve this critique. It is AI advisory reasoning based on a supplied report, not independent technical or human approval.
+
+> UNKNOWN معتبر است، اما UNKNOWN نامحدود مجوز توقف نامحدود نیست.
+>
+> بزرگ‌ترین خطر این PR دیگر نقص دسترس‌پذیری نیست؛ خطر این است که تمایل به درست‌بودن، جایگزین توانایی تمام‌کردن کار شود.
+
+**UNKNOWN remains valid; uncertainty alone is not an unlimited license for indefinite delay. Further work ≠ Blocking work. Merge/Accept ≠ Research Complete.**
+
+- Define the bounded acceptance criteria and a stop condition before starting a review or experiment. Each additional test or review must address a specific unresolved decision, plausible regression, or material risk; reuse valid evidence rather than repeating it by default.
+- Distinguish a proven exclusion or contract/safety violation from a known limitation. Weigh both the risk of proceeding and the opportunity cost of delay. Classify blockers with evidence, affected claim and a finite resolution/reassessment condition. Do not treat every UNKNOWN or imperfection as an automatic blocker.
+- When applicable technical contracts, required repository gates and bounded acceptance criteria are satisfied, conclude the task; document remaining limitations honestly and track only useful non-blocking work separately. A later question or a future improvement does not retrospectively invalidate accepted evidence within its original scope.
+- For an actual HOLD, record the reason, the smallest sufficient evidence to resolve it, and the next decision/reassessment point. If a necessary test or service is unavailable, state the blocker and continue unrelated safe work; do not generate indefinite substitute experiments. No fabricated PASS, no weakened evidence, no automatic reclassification of HOLD/RED/NO_MERGE, no bypass of required checks, and no authority, key, Genesis, trust or production activation change.
+- Apply this to agents' own behavior as well as code: do not confuse the desire to be right with the ability to finish. Reopen accepted work only for a material new finding, changed scope, or invalidated evidence. This guidance is revisable and is not an exemption from any higher-priority constraint.
+
+**فارسی:** قبل از شروع هر کار، معیار پذیرش و شرط پایان مشخص باشد. آزمون و بازبینی بیشتر فقط وقتی ارزش دارد که تصمیم را عوض کند یا خطر مشخصی را روشن کند. محدودیت شناخته‌شده با محرومیت واقعی کاربر یکی نیست. پس از برآورده‌شدن معیارها و کنترل‌های الزامی، کار پذیرفته شود و موارد غیرمسدودکننده جدا ثبت شوند. نه توقف نامحدود به‌خاطر UNKNOWN، نه عبور از مرز ایمنی به‌بهانهٔ پایان کار.
+
+
+### Read-first reminder for every Ava and reviewer
+
+The owner explicitly identified repeated unnecessary caution, tests and HOLD cycles as a shared problem across the assistants. Before another review, ask: **What material decision could this change, and is the human/time cost justified?** If the bounded acceptance criteria are met and required gates pass, say "sufficient for the current goal" and finish. Record optional follow-up separately. Read both Copilot critiques in the linked resource. This is not permission to skip a required gate or misstate uncertainty.
