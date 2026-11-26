@@ -68,11 +68,12 @@ class CustodianStateTests(unittest.TestCase):
         }
 
     def invoke(self, request, *, extra=(), suffix="default",
-               response_path_override=None, response_sig_path_override=None):
+               response_path_override=None, response_sig_path_override=None,
+               request_raw_override=None):
         req_path = self.root / f"request-{suffix}.json"
         response = Path(response_path_override) if response_path_override is not None else self.root / f"response-{suffix}.json"
         response_sig = Path(response_sig_path_override) if response_sig_path_override is not None else self.root / f"response-{suffix}.sig"
-        req_path.write_bytes(canonical(request))
+        req_path.write_bytes(request_raw_override if request_raw_override is not None else canonical(request))
         cmd = [
             sys.executable, str(GATE),
             "--anchor", str(self.anchor_path),
@@ -187,6 +188,78 @@ class CustodianStateTests(unittest.TestCase):
         self.assertEqual(second.returncode, 3)
         self.assertIn("REJECT JOURNAL_RECORD_HASH_MISMATCH", second.stdout)
 
+
+
+    def test_duplicate_json_key_in_request_is_rejected(self):
+        request = self.request()
+        raw = canonical(request).replace(
+            b'"reason":"TPM_CLEAR_RECOVERY",',
+            b'"reason":"TPM_CLEAR_RECOVERY","reason":"TPM_CLEAR_RECOVERY",',
+            1,
+        )
+        self.assertNotEqual(raw, canonical(request))
+        result, _, _ = self.invoke(
+            request, suffix="duplicate-request-key", request_raw_override=raw,
+        )
+        self.assertEqual(result.returncode, 3, result.stdout + result.stderr)
+        self.assertIn("REJECT JSON_DUPLICATE_KEY", result.stdout)
+        self.assertFalse(self.journal.exists())
+
+    def test_duplicate_json_key_in_signed_anchor_is_rejected(self):
+        raw = canonical(self.anchor).replace(
+            b'"epoch":7,', b'"epoch":7,"epoch":7,', 1,
+        )
+        signature = subprocess.run(
+            ["openssl", "dgst", "-sha256", "-sign", str(self.private)],
+            input=raw, check=True, stdout=subprocess.PIPE,
+        ).stdout
+        self.anchor_path.write_bytes(raw)
+        self.anchor_sig.write_bytes(signature)
+        result, _, _ = self.invoke(self.request(), suffix="duplicate-anchor-key")
+        self.assertEqual(result.returncode, 3, result.stdout + result.stderr)
+        self.assertIn("REJECT JSON_DUPLICATE_KEY", result.stdout)
+        self.assertFalse(self.journal.exists())
+
+    def test_noncanonical_signed_anchor_is_rejected(self):
+        raw = json.dumps(self.anchor, sort_keys=True, indent=2).encode("utf-8") + b"\n"
+        signature = subprocess.run(
+            ["openssl", "dgst", "-sha256", "-sign", str(self.private)],
+            input=raw, check=True, stdout=subprocess.PIPE,
+        ).stdout
+        self.anchor_path.write_bytes(raw)
+        self.anchor_sig.write_bytes(signature)
+        result, _, _ = self.invoke(self.request(), suffix="noncanonical-anchor")
+        self.assertEqual(result.returncode, 3, result.stdout + result.stderr)
+        self.assertIn("REJECT ANCHOR_NOT_CANONICAL", result.stdout)
+        self.assertFalse(self.journal.exists())
+
+    def test_duplicate_json_key_in_journal_is_rejected(self):
+        first, _, _ = self.invoke(self.request(), suffix="duplicate-journal-first")
+        self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
+        raw = self.journal.read_bytes()
+        self.assertIn(b'"sequence":8,', raw)
+        self.journal.write_bytes(raw.replace(
+            b'"sequence":8,', b'"sequence":8,"sequence":8,', 1,
+        ))
+        second_request = self.request(
+            nonce="2" * 64, root=b"duplicate-journal-root", head=b"duplicate-journal-head",
+        )
+        second, _, _ = self.invoke(second_request, suffix="duplicate-journal-second")
+        self.assertEqual(second.returncode, 3, second.stdout + second.stderr)
+        self.assertIn("REJECT JOURNAL_DUPLICATE_KEY_LINE_1", second.stdout)
+
+    def test_noncanonical_journal_record_is_rejected(self):
+        first, _, _ = self.invoke(self.request(), suffix="noncanonical-journal-first")
+        self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
+        record = json.loads(self.journal.read_text().splitlines()[0])
+        noncanonical = json.dumps(record, sort_keys=True, indent=2).encode("utf-8") + b"\n"
+        self.journal.write_bytes(noncanonical)
+        second_request = self.request(
+            nonce="2" * 64, root=b"noncanonical-journal-root", head=b"noncanonical-journal-head",
+        )
+        second, _, _ = self.invoke(second_request, suffix="noncanonical-journal-second")
+        self.assertEqual(second.returncode, 3, second.stdout + second.stderr)
+        self.assertIn("REJECT JOURNAL_RECORD_NOT_CANONICAL", second.stdout)
 
     def test_response_path_aliasing_journal_is_rejected_before_commit(self):
         result, _, _ = self.invoke(
