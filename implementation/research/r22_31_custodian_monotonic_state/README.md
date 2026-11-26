@@ -36,7 +36,8 @@ A complete-record rollback is specifically undetectable here: deleting the journ
 - Exact retry returns byte-identical receipt and signature without appending a second record.
 - A post-commit process crash is recoverable from the journal.
 - Concurrent distinct requests for the same epoch yield exactly one winner.
-- Tampered journal data is rejected.
+- Byte-level record tampering and an incomplete final record are rejected.
+- Complete-tail deletion / rollback to a valid earlier prefix is reproduced as an expected RED; this local prototype does not prevent it.
 - The receipt does not overclaim TPM evidence provenance.
 
 See RESEARCH_RECORD.md for exact source, tests, and CI evidence.
@@ -44,4 +45,4 @@ See RESEARCH_RECORD.md for exact source, tests, and CI evidence.
 
 ## Exact regression reproduction
 
-The dedicated CI also extracts and runs the exact embedded gate from R22.30. It demonstrates that two different nonces can both obtain an epoch-8 approval from the same unchanged epoch-7 anchor. The final run passed all 8 tests (7 prototype controls plus this exact-source reproduction): https://github.com/SepehrGhanbari/Ario/actions/runs/45848502455.
+The dedicated CI also extracts and runs the exact embedded gate from R22.30. It demonstrates that two different nonces can both obtain an epoch-8 approval from the same unchanged epoch-7 anchor. The final run [45853039157](https://github.com/SepehrGhanbari/Ario/actions/runs/45853039157) passed all 9 tests on CPython 3.13.18 / OpenSSL 3.0.13: the seven original prototype controls, this exact-source R22.30 reproduction, and an expected-RED control showing that deletion of the complete journal permits a second 7→8 approval. The expected-RED test passing means the vulnerability was reproduced; it does not mean rollback is prevented.
