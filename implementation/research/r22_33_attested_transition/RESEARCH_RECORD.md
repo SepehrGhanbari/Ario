@@ -72,4 +72,10 @@ The next research task is to implement the verifier that consumes the actual R22
 
 ## Execution
 
-Pending dedicated GitHub Actions run on the exact R22.33 branch head. No test count is claimed until the final workflow and logs are inspected.
+Dedicated exact-head R22.33 workflow [run 45857631971](https://github.com/SepehrGhanbari/Ario/actions/runs/45857631971), source commit c79a656d52297959fb1cf3b27b503aca4500884e, **SUCCESS: 25/25 R22.33 tests**. The same run also completed the preserved R22.31 legacy state-machine suite: **18/18 PASS**.
+
+Repository Implementation Regression on the same source commit: [run 45857631880](https://github.com/SepehrGhanbari/Ario/actions/runs/45857631880), **SUCCESS**. Evidence artifact: [R22.33 test logs, ID 15136158735](https://github.com/SepehrGhanbari/Ario/actions/runs/45857631971/artifacts/15136158735).
+
+The R22.32 software-TPM dependency was extended to include AK TPMT_PUBLIC Name and restricted-signing checks: [run 45857398519](https://github.com/SepehrGhanbari/Ario/actions/runs/45857398519), **26/26 PASS**, source head 6050263e6075415d5261b876c61a2d9cf5c8a30f. Evidence artifact [ID 15135289752](https://github.com/SepehrGhanbari/Ario/actions/runs/45857398519/artifacts/15135289752).
+
+The R22.33 tests use synthetic verifier keys and synthetic evidence manifests. They validate the custodian-side signature, pinning, freshness, field-binding, TPMT_PUBLIC Name derivation, and transition protocol. They do not prove that a real verifier has consumed the R22.32 raw evidence; that verifier implementation and independent key custody remain the next step.
