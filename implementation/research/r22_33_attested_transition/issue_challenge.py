@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import fcntl
 import secrets
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -36,6 +37,20 @@ def reject_aliases(named_paths: list[tuple[str, Path]]) -> None:
         seen.append((name, path, resolved))
 
 
+def custodian_keypair_matches(public_key: Path, private_key: Path) -> bool:
+    public = subprocess.run(
+        ["openssl", "pkey", "-pubin", "-in", str(public_key), "-outform", "DER"],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+    )
+    private = subprocess.run(
+        ["openssl", "pkey", "-in", str(private_key), "-pubout", "-outform", "DER"],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+    )
+    if public.returncode != 0 or private.returncode != 0:
+        raise legacy.GateError("CUSTODIAN_KEY_PARSE_FAILED")
+    return bool(public.stdout) and public.stdout == private.stdout
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     for name in ("anchor", "anchor-signature", "public-key", "private-key",
@@ -49,6 +64,8 @@ def main() -> int:
         if not 30 <= args.ttl_seconds <= 300:
             raise legacy.GateError("CHALLENGE_TTL_OUT_OF_RANGE")
         legacy.validate_hash(args.next_head_sha256, "NEXT_HEAD_INVALID")
+        if not custodian_keypair_matches(args.public_key, args.private_key):
+            raise legacy.GateError("CUSTODIAN_KEYPAIR_MISMATCH")
         reject_aliases([
             ("anchor", args.anchor), ("anchor_signature", args.anchor_signature),
             ("public_key", args.public_key), ("private_key", args.private_key),
