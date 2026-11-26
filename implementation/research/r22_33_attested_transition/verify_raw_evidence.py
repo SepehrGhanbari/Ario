@@ -199,7 +199,12 @@ def validate_storage_ecc_public(public_area: bytes) -> None:
     name_alg = reader.u16()
     attributes = reader.u32()
     auth_policy = reader.tpm2b()
-    symmetric = reader.u16()
+    symmetric_alg = reader.u16()
+    if symmetric_alg == 0x0006:  # TPM_ALG_AES
+        symmetric_key_bits = reader.u16()
+        symmetric_mode = reader.u16()
+    else:
+        reject("STORAGE_TPMT_PUBLIC_SYMMETRIC_ALGORITHM_INVALID")
     scheme = reader.u16()
     curve = reader.u16()
     kdf = reader.u16()
@@ -209,7 +214,9 @@ def validate_storage_ecc_public(public_area: bytes) -> None:
         reject("STORAGE_TPMT_PUBLIC_TRAILING_DATA")
     if public_type != 0x0023 or name_alg != TPM_ALG_SHA256 or auth_policy:
         reject("STORAGE_TPMT_PUBLIC_TYPE_OR_POLICY_INVALID")
-    if symmetric != 0x0010 or scheme != 0x0010 or curve != 0x0003 or kdf != 0x0010:
+    if symmetric_key_bits != 128 or symmetric_mode != 0x0043:
+        reject("STORAGE_TPMT_PUBLIC_SYMMETRIC_PROFILE_INVALID")
+    if scheme != 0x0010 or curve != 0x0003 or kdf != 0x0010:
         reject("STORAGE_TPMT_PUBLIC_MUST_BE_ECC_NIST_P256")
     if len(x) != 32 or len(y) != 32:
         reject("STORAGE_TPMT_PUBLIC_ECC_POINT_LENGTH_INVALID")
@@ -397,7 +404,7 @@ def verify_bundle(root: Path, challenge: dict[str, Any], now: int) -> tuple[dict
     storage_public_area = (root / "storage-public-area.tpmt").read_bytes()
     storage_name = (root / "storage-name.bin").read_bytes()
     gate.validate_tpm_public_area(storage_public_area, storage_name, "storage")
-    validate_storage_ecc_public(storage_public_area)
+    parse_with_context("STORAGE_TPMT_PUBLIC_PARSE_FAILED", validate_storage_ecc_public, storage_public_area)
     storage_qualified_name = (root / "storage-qualified-name.bin").read_bytes()
     if len(storage_qualified_name) != 34 or storage_qualified_name[:2] != b"\x00\x0b":
         reject("STORAGE_QUALIFIED_NAME_FORMAT_INVALID")
