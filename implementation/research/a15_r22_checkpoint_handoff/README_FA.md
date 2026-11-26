@@ -19,3 +19,6 @@ python3 negative_audit.py ./out .
 ```
 
 The bundle is a historical checkpoint handoff, not proof of global latest, trusted time, independent administration, independent custody, local fsync, or production authority. Runner clock is explicitly unattested. Keep the ZIP and its outer SHA-256 pin on separately controlled media. No real keys; no trust activation; no production; no merge.
+
+
+The GitHub Actions read-only verifier is exercised by the stacked draft review workflow; no publication or signing step is included.
