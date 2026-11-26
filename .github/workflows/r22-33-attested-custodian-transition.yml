@@ -46,12 +46,6 @@ jobs:
           python -m unittest discover \
             -s implementation/research/r22_31_custodian_monotonic_state \
             -p 'test_*.py' -v 2>&1 | tee "$RUNNER_TEMP/r22-31-legacy-tests.log"
-      - name: Run R22.33 challenge, verifier-pin and attested-transition matrix
-        run: |
-          set -euo pipefail
-          python -m unittest discover \
-            -s implementation/research/r22_33_attested_transition \
-            -p 'test_*.py' -v 2>&1 | tee "$RUNNER_TEMP/r22-33-attested-transition-tests.log"
       - name: Run R22.32 raw TPM evidence through the R22.33 verifier and custodian gate
         env:
           ARIO_R22_32_EVIDENCE_DIR: ${{ runner.temp }}/r22-33-e2e/evidence
@@ -124,6 +118,14 @@ jobs:
           test ! -e "$E2E_DIR/custodian-private.key"
           test ! -e "$E2E_DIR/verifier-private.key"
           echo "R22_33_RAW_TPM_EVIDENCE_TO_CUSTODIAN_TRANSITION PASS"
+      - name: Run R22.33 challenge, verifier-pin and attested-transition matrix
+        env:
+          ARIO_R22_32_EVIDENCE_DIR: ${{ runner.temp }}/r22-33-e2e/evidence
+        run: |
+          set -euo pipefail
+          python -m unittest discover \
+            -s implementation/research/r22_33_attested_transition \
+            -p 'test_*.py' -v 2>&1 | tee "$RUNNER_TEMP/r22-33-attested-transition-tests.log"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
