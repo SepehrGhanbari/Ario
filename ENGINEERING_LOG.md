@@ -1189,3 +1189,11 @@ No collaborator removal, ruleset change, key rotation, new witness test, merge, 
 - The generic regression workflow **45857768351** reported **1 failed, 2107 passed, 8 skipped, 273 subtests passed**. The sole failure was a test's expected wording (`Qualified Name`) differing from the verifier's actual `qualifiedSigner` rejection; the wrong-signer case itself was rejected correctly.
 - This correction requires the TPM-reported NV Name to match the independently recomputed Name, accepts omission of the policy field only in conjunction with that match, adds a mismatched-reported-Name negative, and corrects the test assertion.
 - **Correction to prior workflow note:** the earlier statement that the branch-local workflow could not run was premature. It did trigger on the exact branch head; run 45857768346 is the evidence. The earlier NOT_RUN statement is superseded by these run results.
+
+
+## 2026-11-26 — R22.32 NV_Certify and authPolicy regression closure
+
+- Exact-head software-TPM run **45858729285** (job **140043831695**, head `a34473339a0ac6540e9e49d1ab6454ef27b38a12`) completed **30/30 PASS**, including NV_Certify and its content/challenge/signer negative controls. Summary artifact `r22-32-tpm-attestation-evidence`, ID **15137281473**.
+- Generic regression exposed a no-op test mutation: the synthetic NV YAML omitted `authorization policy`, so the non-empty-policy fixture never inserted a value. Corrected the test to insert a 32-byte non-empty policy before `size` and assert the mutation.
+- Final head `09e0c224b9e25a2a2958d2fc52f70b4e4e9e0ddb`: M0 **2111 PASS**; Windows and Python 3.14 differential advisories PASS; manifest/restore/generator matrix and self-audit readback PASS. Runs **45859336248** and **45859336333**.
+- The NV workflow artifact is a summary, not a portable raw-TPM evidence bundle. R22.33 still needs a verifier that consumes actual R22.32 evidence. No physical TPM, OEM trust, independent administrator, external rollback floor, real key, trust activation, production or merge is established.
