@@ -63,6 +63,19 @@ type Floor struct {
 	ReceiptSHA256 string
 }
 
+// CustodianWriter is implemented only by the separately administered keeper.
+// Its real deployment must hold the signing key and monotonic head outside
+// publisher/GitHub credentials; AdvanceHead must be an atomic compare-and-swap.
+type AdvanceRequest struct {
+	Scope string
+	ExpectedReceiptSHA256 string
+	Checkpoint []byte
+	TransitionProof []byte
+}
+type CustodianWriter interface {
+	StoreAndAdvance(context.Context, AdvanceRequest) (Receipt, error)
+}
+
 type Custodian interface {
 	Latest(context.Context, string) (Receipt, error)
 	Checkpoint(context.Context, string) ([]byte, error)
@@ -81,6 +94,7 @@ type TransitionVerifier interface {
 
 type Recovery struct {
 	Receipt Receipt
+	ReceiptSHA256 string
 	Checkpoint Checkpoint
 	CheckpointSHA256 string
 	Complete bool
@@ -267,9 +281,7 @@ func Recover(ctx context.Context, scope, keyID string, public ed25519.PublicKey,
 			return out, fmt.Errorf("%w: below caller's retained floor", ErrHold)
 		}
 	}
-	out = Recovery{Receipt: previousReceipt, Checkpoint: previousCheckpoint,
-		CheckpointSHA256: previousHashForCheckpoint(previousReceipt), Complete: previousCheckpoint.Cursor == previousCheckpoint.TargetSize}
+	out = Recovery{Receipt: previousReceipt, ReceiptSHA256: previousHash, Checkpoint: previousCheckpoint,
+		CheckpointSHA256: previousReceipt.CheckpointSHA256, Complete: previousCheckpoint.Cursor == previousCheckpoint.TargetSize}
 	return out, nil
 }
-
-func previousHashForCheckpoint(r Receipt) string { return r.CheckpointSHA256 }
