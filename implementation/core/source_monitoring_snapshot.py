@@ -277,7 +277,10 @@ def _validate_history(
                 VeracityState.UNSUPPORTED,
                 VeracityState.VERIFIED_EMPIRICAL,
             },
-            VeracityState.VERIFIED_EMPIRICAL: {VeracityState.VERIFIED_EMPIRICAL},
+            VeracityState.VERIFIED_EMPIRICAL: {
+                VeracityState.VERIFIED_EMPIRICAL,
+                VeracityState.UNSUPPORTED,
+            },
         }
         if current.veracity_state not in allowed[previous.veracity_state]:
             _reject("HOLD_UNAUTHORIZED_SOURCE_STATUS_TRANSITION")
@@ -287,6 +290,7 @@ def decode_source_monitoring_data(
     value: Any,
     *,
     allowlisted_tools: set[str],
+    semantic_nodes: dict[str, Any] | None = None,
 ) -> SourceMonitoringGuard:
     """Validate histories and rebuild current attribution indexes.
 
@@ -318,10 +322,29 @@ def decode_source_monitoring_data(
         _validate_history(attribution_id, revisions)
         histories[attribution_id] = revisions
 
-    for revisions in histories.values():
+    # The existing working-memory recall path records one typed-by-convention
+    # semantic parent (recall_<node_id>). It is a historical memory reference,
+    # never an empirical supporting attribution. Validate it against the
+    # jointly recovered engine; do not accept arbitrary missing parent IDs.
+    semantic_nodes = {} if semantic_nodes is None else semantic_nodes
+    if set(histories).intersection(semantic_nodes):
+        _reject("HOLD_AMBIGUOUS_SOURCE_REFERENCE")
+    for attribution_id, revisions in histories.items():
+        initial = revisions[0]
         for revision in revisions:
-            if any(parent not in histories for parent in revision.parent_attribution_ids):
-                _reject("HOLD_DANGLING_SOURCE_REFERENCE")
+            for position, parent in enumerate(revision.parent_attribution_ids):
+                if parent in histories:
+                    continue
+                node = semantic_nodes.get(parent)
+                if not (
+                    position == 0
+                    and initial.parent_attribution_ids == (parent,)
+                    and initial.source_type == SourceType.INTERNAL_HYPOTHESIS
+                    and attribution_id == "recall_" + parent
+                    and node is not None
+                    and initial.assertion == node.assertion
+                ):
+                    _reject("HOLD_DANGLING_SOURCE_REFERENCE")
 
     attributions = {attribution_id: revisions[-1] for attribution_id, revisions in histories.items()}
     for attribution_id, revisions in histories.items():
@@ -333,7 +356,8 @@ def decode_source_monitoring_data(
                 continue
             suffix = current.parent_attribution_ids[len(previous.parent_attribution_ids):]
             has_matching_observation = any(
-                attributions[parent].source_type == SourceType.EMPIRICAL_OBSERVATION
+                parent in attributions
+                and attributions[parent].source_type == SourceType.EMPIRICAL_OBSERVATION
                 and attributions[parent].veracity_state == VeracityState.VERIFIED_EMPIRICAL
                 and attributions[parent].assertion == current.assertion
                 for parent in suffix
@@ -353,14 +377,33 @@ def decode_source_monitoring_data(
             continue
         has_historical_support = any(
             parent in attributions
-            and attributions[parent].source_type == SourceType.EMPIRICAL_OBSERVATION
+            and parent in attributions
+                and attributions[parent].source_type == SourceType.EMPIRICAL_OBSERVATION
             and attributions[parent].veracity_state == VeracityState.VERIFIED_EMPIRICAL
             and attributions[parent].assertion == attr.assertion
             for parent in attr.parent_attribution_ids
         )
         if not has_historical_support:
             _reject("HOLD_VERIFIED_SOURCE_WITHOUT_EVIDENCE")
-    for attribution_id in attributions:
-        if guard.detect_circular_dependency(attribution_id):
-            _reject("HOLD_CIRCULAR_SOURCE_DEPENDENCY")
+    # Parent lists only grow across revisions. Checking the final graph
+    # checks all historical edges as well. One linear traversal avoids
+    # quadratic work on a long, otherwise valid attribution chain.
+    incoming = {key: 0 for key in attributions}
+    children = {key: [] for key in attributions}
+    for key, attr in attributions.items():
+        for parent in attr.parent_attribution_ids:
+            if parent in attributions:
+                incoming[key] += 1
+                children[parent].append(key)
+    ready = [key for key, degree in incoming.items() if degree == 0]
+    visited = 0
+    while ready:
+        key = ready.pop()
+        visited += 1
+        for child in children[key]:
+            incoming[child] -= 1
+            if incoming[child] == 0:
+                ready.append(child)
+    if visited != len(attributions):
+        _reject("HOLD_CIRCULAR_SOURCE_DEPENDENCY")
     return guard

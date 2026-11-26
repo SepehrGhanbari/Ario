@@ -279,3 +279,39 @@ def test_joint_snapshot_waits_for_mutations_and_captures_consistent_pair():
     )
     assert len(recovered_engine.nodes) == 1
     assert recovered_guard.attributions["paired-source"].assertion == "paired source"
+
+
+def test_existing_ltm_recall_reference_survives_joint_recovery():
+    engine, guard, _, _ = _populated_pair()
+    node = next(iter(engine.nodes.values()))
+    recall_id = "recall_" + node.node_id
+    guard.create_hypothesis(node.assertion, attribution_id=recall_id,
+                            parent_attribution_ids=(node.node_id,))
+    raw = encode_cognitive_memory_snapshot(engine, guard)
+    restored_engine, restored_guard = decode_cognitive_memory_snapshot(
+        ConsolidationEngine, raw, expected_sha256=_digest(raw), allowlisted_tools=set()
+    )
+    assert restored_engine.get_node(node.node_id) == node
+    assert restored_guard.attribution_history(recall_id) == guard.attribution_history(recall_id)
+    assert not restored_guard.filter_working_memory_candidates([recall_id], require_verified=True)
+    bad = json.loads(raw)
+    rec = next(r for r in bad["source_monitoring"]["records"] if r["attribution_id"] == recall_id)
+    rec["revisions"][0]["assertion"] = "unrelated forged recall"
+    changed = _canonical(bad)
+    with pytest.raises(ConsolidationError, match="HOLD_DANGLING_SOURCE_REFERENCE"):
+        decode_cognitive_memory_snapshot(ConsolidationEngine, changed,
+            expected_sha256=_digest(changed), allowlisted_tools=set())
+
+
+def test_previously_verified_claim_can_be_revised_to_unsupported_and_recovered():
+    engine, guard, claim_id, observation_id = _populated_pair()
+    with pytest.raises(SelfCitationError):
+        guard.evaluate_claim_promotion(claim_id, ["testimony-id"])
+    assert guard.attributions[claim_id].veracity_state is VeracityState.UNSUPPORTED
+    raw = encode_cognitive_memory_snapshot(engine, guard)
+    _, recovered = decode_cognitive_memory_snapshot(
+        ConsolidationEngine, raw, expected_sha256=_digest(raw), allowlisted_tools=set()
+    )
+    assert recovered.attribution_history(claim_id) == guard.attribution_history(claim_id)
+    assert recovered.attributions[claim_id].veracity_state is VeracityState.UNSUPPORTED
+    assert not recovered.filter_working_memory_candidates([claim_id, observation_id], require_verified=True)

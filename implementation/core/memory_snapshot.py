@@ -619,7 +619,8 @@ def _decode_cognitive_recovery_document(
     }
     engine_candidate = _decode_document(engine_type, engine_document)
     guard_candidate = decode_source_monitoring_data(
-        top["source_monitoring"], allowlisted_tools=allowlisted_tools
+        top["source_monitoring"], allowlisted_tools=allowlisted_tools,
+        semantic_nodes=engine_candidate.nodes
     )
     return engine_candidate, guard_candidate
 

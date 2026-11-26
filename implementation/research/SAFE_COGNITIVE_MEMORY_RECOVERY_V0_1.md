@@ -19,3 +19,6 @@ The caller's tool allowlist is not serialized and is preserved exactly on restor
 ## Boundary correction
 
 The writer runs the same canonical byte parser and structural limits as the reader before returning or replacing a file. Same-thread engine restore is rejected during batch materialization or active application; existing thread-local state is retained across successful swaps. Joint recovery acquires both object locks in a stable order for capture and installation. Recovery is a deliberate replacement, not a cross-process freshness guarantee. A filesystem error after atomic replace (e.g. directory fsync) can leave the new file present with durability uncertain; only pre-replace failure preserves the prior file unconditionally.
+
+
+Joint recovery accepts the existing `recall_<semantic_node_id>` hypothesis reference only when its first parent is the exact recovered semantic node and the assertion matches. This is historical recall, not empirical support; other dangling or ambiguous references remain rejected. Explicit VERIFIED_EMPIRICAL-to-UNSUPPORTED revisions are preserved, matching the existing guard. Cycle validation is linear in the final attribution graph (historical parent lists are prefixes). The two-lock capture is coherent at one instant, not a transaction across separately invoked bridge operations or working-memory/prospective state.
