@@ -347,9 +347,11 @@ def validate_receipt(receipt: Any, signature_b64: Any, challenge: dict[str, Any]
     )
     if nv_auth_policy:
         fail("ATTESTATION_NV_AUTH_POLICY_NOT_EMPTY")
+    # Match the exact TPMT_NV_PUBLIC wire encoding used by the R22.32
+    # verifier: indexHandle, nameAlg, attributes, and dataSize. Empty
+    # authPolicy is represented by the omitted zero-length TPM2B_DIGEST.
     nv_public_area = (
         struct.pack(">IHI", NV_INDEX_HANDLE, NV_NAME_ALG, NV_ATTRIBUTES)
-        + b"\x00\x00"
         + struct.pack(">H", NV_DATA_SIZE)
     )
     expected_nv_name = struct.pack(">H", NV_NAME_ALG) + hashlib.sha256(nv_public_area).digest()
