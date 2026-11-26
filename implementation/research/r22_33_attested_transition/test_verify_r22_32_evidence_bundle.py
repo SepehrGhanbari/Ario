@@ -46,7 +46,7 @@ class EvidenceBundleIntegrationTests(unittest.TestCase):
     def test_real_swtpm_bundle_verifies_offline(self) -> None:
         result = verify_bundle(SOURCE)
         self.assertEqual(result["status"], "VERIFIED")
-        self.assertEqual(result["checks"]["nv_certify_signature"], "PASS_RSASSA_SHA256")
+        self.assertEqual(result["checks"]["nv_certify_signature_and_fields"], "PASS_RSASSA_SHA256")
         self.assertIn("external timestamp independence not established", result["challenge_issue_order"])
         self.assertEqual(result["transition_receipt"], "NOT_EMITTED")
 
