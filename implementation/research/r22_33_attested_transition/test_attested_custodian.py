@@ -4,6 +4,7 @@ import base64
 import hashlib
 import json
 import subprocess
+import struct
 import sys
 import tempfile
 import time
@@ -17,7 +18,7 @@ LEGACY_GATE = R31_DIR / "custodian_state_legacy.py"
 ISSUER = HERE / "issue_challenge.py"
 
 sys.path.insert(0, str(HERE))
-from attested_custodian import derived_transition_nonce  # noqa: E402
+from attested_custodian import derived_nv_nonce, derived_transition_nonce  # noqa: E402
 
 
 def canonical(value):
@@ -138,6 +139,22 @@ class AttestedCustodianTests(unittest.TestCase):
         ak_public_area = b"\x00\x01\x00\x0b" + ak_attrs.to_bytes(4, "big") + b"ak-public-area"
         storage_name = storage_public_area[2:4] + hashlib.sha256(storage_public_area).digest()
         ak_name = ak_public_area[2:4] + hashlib.sha256(ak_public_area).digest()
+        ak_qualified_name = b"\\x00\\x0b" + hashlib.sha256(b"synthetic AK qualified name").digest()
+        nv_index_handle = 0x01500020
+        nv_name_alg = 0x000B
+        nv_attributes = 0x20060006
+        nv_data_size = 32
+        nv_public_area = (
+            struct.pack(">IHI", nv_index_handle, nv_name_alg, nv_attributes)
+            + b"\\x00\\x00"
+            + struct.pack(">H", nv_data_size)
+        )
+        nv_index_name = struct.pack(">H", nv_name_alg) + hashlib.sha256(nv_public_area).digest()
+        storage_root = digest(storage_name)
+        nv_contents = bytes.fromhex(storage_root)
+        nv_nonce = derived_nv_nonce(self.challenge["nonce"])
+        nv_attestation_sha256 = digest(b"synthetic NV attestation")
+        nv_signature_sha256 = digest(b"synthetic NV signature")
         manifest = {
             "ek_certificate_sha256": digest(b"synthetic EK certificate"),
             "ek_spki_sha256": digest(self.ek_spki),
@@ -146,6 +163,14 @@ class AttestedCustodianTests(unittest.TestCase):
             "storage_name_sha256": digest(storage_name),
             "storage_public_area_sha256": digest(storage_public_area),
             "ak_public_area_sha256": digest(ak_public_area),
+            "ak_qualified_name_sha256": digest(ak_qualified_name),
+            "nv_index_name_sha256": digest(nv_index_name),
+            "nv_public_area_sha256": digest(nv_public_area),
+            "nv_contents_sha256": digest(nv_contents),
+            "nv_qualified_signer_sha256": digest(ak_qualified_name),
+            "nv_nonce_sha256": digest(bytes.fromhex(nv_nonce)),
+            "nv_attestation_sha256": nv_attestation_sha256,
+            "nv_signature_sha256": nv_signature_sha256,
             "creation_attestation_sha256": digest(b"creation attest"),
             "creation_signature_sha256": digest(b"creation signature"),
             "quote_attestation_sha256": digest(b"quote attest"),
@@ -162,7 +187,7 @@ class AttestedCustodianTests(unittest.TestCase):
             "ek_spki_der_b64": b64(self.ek_spki),
             "storage_name_b64": b64(storage_name),
             "storage_public_area_tpmt_b64": b64(storage_public_area),
-            "storage_root_sha256": digest(storage_name),
+            "storage_root_sha256": storage_root,
             "previous_storage_root_sha256": self.challenge["previous_storage_root_sha256"],
             "previous_epoch": self.challenge["previous_epoch"],
             "next_epoch": self.challenge["next_epoch"],
@@ -173,6 +198,20 @@ class AttestedCustodianTests(unittest.TestCase):
             "ak_name_sha256": digest(ak_name),
             "ak_public_spki_der_b64": b64(self.ak_spki),
             "ak_public_sha256": digest(self.ak_spki),
+            "ak_qualified_name_b64": b64(ak_qualified_name),
+            "ak_qualified_name_sha256": digest(ak_qualified_name),
+            "nv_index_handle": nv_index_handle,
+            "nv_name_alg": nv_name_alg,
+            "nv_attributes": nv_attributes,
+            "nv_data_size": nv_data_size,
+            "nv_auth_policy_b64": b64(b""),
+            "nv_index_name_b64": b64(nv_index_name),
+            "nv_contents_b64": b64(nv_contents),
+            "nv_offset": 0,
+            "nv_nonce": nv_nonce,
+            "nv_qualified_signer_b64": b64(ak_qualified_name),
+            "nv_attestation_sha256": nv_attestation_sha256,
+            "nv_signature_sha256": nv_signature_sha256,
             "quote_attestation_sha256": manifest["quote_attestation_sha256"],
             "quote_signature_sha256": manifest["quote_signature_sha256"],
             "creation_attestation_sha256": manifest["creation_attestation_sha256"],
@@ -483,6 +522,84 @@ class AttestedCustodianTests(unittest.TestCase):
         )
         result, *_ = self.invoke(request, suffix="expired-challenge")
         self.assert_rejected_without_commit(result, "REJECT CHALLENGE_EXPIRED")
+
+    def test_nv_contents_must_equal_the_attested_storage_root(self):
+        def mutate(receipt):
+            contents = bytearray(base64.b64decode(receipt["nv_contents_b64"]))
+            contents[0] ^= 0x01
+            contents = bytes(contents)
+            receipt["nv_contents_b64"] = b64(contents)
+            receipt["evidence_manifest"]["nv_contents_sha256"] = digest(contents)
+            receipt["evidence_bundle_sha256"] = digest(canonical(receipt["evidence_manifest"]))
+        request = self.make_request(receipt=self.make_receipt(change=mutate))
+        result, *_ = self.invoke(request, suffix="nv-root-content-mismatch")
+        self.assert_rejected_without_commit(result, "REJECT ATTESTATION_NV_CONTENTS_STORAGE_ROOT_MISMATCH")
+
+    def test_nv_index_name_must_be_recomputed_from_exact_public_fields(self):
+        def mutate(receipt):
+            name = bytearray(base64.b64decode(receipt["nv_index_name_b64"]))
+            name[-1] ^= 0x01
+            name = bytes(name)
+            receipt["nv_index_name_b64"] = b64(name)
+            receipt["evidence_manifest"]["nv_index_name_sha256"] = digest(name)
+            receipt["evidence_bundle_sha256"] = digest(canonical(receipt["evidence_manifest"]))
+        request = self.make_request(receipt=self.make_receipt(change=mutate))
+        result, *_ = self.invoke(request, suffix="nv-index-name-mismatch")
+        self.assert_rejected_without_commit(result, "REJECT ATTESTATION_NV_INDEX_NAME_MISMATCH")
+
+    def test_nonempty_nv_auth_policy_is_rejected(self):
+        request = self.make_request(receipt=self.make_receipt(
+            change=lambda receipt: receipt.update({"nv_auth_policy_b64": b64(b"non-empty")})
+        ))
+        result, *_ = self.invoke(request, suffix="nv-nonempty-policy")
+        self.assert_rejected_without_commit(result, "REJECT ATTESTATION_NV_AUTH_POLICY_NOT_EMPTY")
+
+    def test_nv_nonce_must_be_derived_from_custodian_challenge(self):
+        def mutate(receipt):
+            receipt["nv_nonce"] = "f" * 64
+            receipt["evidence_manifest"]["nv_nonce_sha256"] = digest(bytes.fromhex(receipt["nv_nonce"]))
+            receipt["evidence_bundle_sha256"] = digest(canonical(receipt["evidence_manifest"]))
+        request = self.make_request(receipt=self.make_receipt(change=mutate))
+        result, *_ = self.invoke(request, suffix="nv-nonce-mismatch")
+        self.assert_rejected_without_commit(result, "REJECT ATTESTATION_NV_NONCE_NOT_CHALLENGE_DERIVED")
+
+    def test_nv_cerification_signer_must_be_the_receipt_ak_qualified_name(self):
+        def mutate(receipt):
+            other = b"\\x00\\x0b" + hashlib.sha256(b"different AK qualified name").digest()
+            receipt["nv_qualified_signer_b64"] = b64(other)
+            receipt["evidence_manifest"]["nv_qualified_signer_sha256"] = digest(other)
+            receipt["evidence_bundle_sha256"] = digest(canonical(receipt["evidence_manifest"]))
+        request = self.make_request(receipt=self.make_receipt(change=mutate))
+        result, *_ = self.invoke(request, suffix="nv-signer-mismatch")
+        self.assert_rejected_without_commit(result, "REJECT ATTESTATION_NV_SIGNER_AK_QUALIFIED_NAME_MISMATCH")
+
+    def test_nv_certification_requires_zero_offset(self):
+        request = self.make_request(receipt=self.make_receipt(
+            change=lambda receipt: receipt.update({"nv_offset": 1})
+        ))
+        result, *_ = self.invoke(request, suffix="nv-offset")
+        self.assert_rejected_without_commit(result, "REJECT ATTESTATION_NV_OFFSET_INVALID")
+
+    def test_nv_index_attributes_are_exactly_pinned(self):
+        request = self.make_request(receipt=self.make_receipt(
+            change=lambda receipt: receipt.update({"nv_attributes": receipt["nv_attributes"] ^ 0x01})
+        ))
+        result, *_ = self.invoke(request, suffix="nv-attributes")
+        self.assert_rejected_without_commit(result, "REJECT ATTESTATION_NV_ATTRIBUTES_INVALID")
+
+    def test_nv_index_handle_is_exactly_pinned(self):
+        request = self.make_request(receipt=self.make_receipt(
+            change=lambda receipt: receipt.update({"nv_index_handle": 0x01500021})
+        ))
+        result, *_ = self.invoke(request, suffix="nv-handle")
+        self.assert_rejected_without_commit(result, "REJECT ATTESTATION_NV_INDEX_HANDLE_INVALID")
+
+    def test_nv_offset_float_is_rejected_as_non_integer(self):
+        request = self.make_request(receipt=self.make_receipt(
+            change=lambda receipt: receipt.update({"nv_offset": 0.0})
+        ))
+        result, *_ = self.invoke(request, suffix="nv-offset-float")
+        self.assert_rejected_without_commit(result, "REJECT ATTESTATION_NV_OFFSET_INVALID")
 
     def test_expired_attestation_receipt_is_rejected(self):
         def mutate(receipt):
