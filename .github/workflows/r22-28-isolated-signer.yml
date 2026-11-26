@@ -1,0 +1,41 @@
+name: R22.28 isolated signing authority (advisory)
+on:
+  push:
+    branches: [research/r22-28-isolated-signing-authority-20261126]
+    paths:
+      - .github/workflows/r22-28-isolated-signer.yml
+      - implementation/research/r22_28_isolated_signer/*.go
+      - implementation/research/r22_28_isolated_signer/*.py
+      - implementation/research/r22_28_isolated_signer/go.mod
+permissions:
+  contents: read
+jobs:
+  boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: false
+      - name: Build isolated research signer
+        working-directory: implementation/research/r22_28_isolated_signer
+        run: |
+          set -euo pipefail
+          go vet ./...
+          go build -o "$RUNNER_TEMP/r22-28-signer" .
+      - name: Actual Linux UID and RPC boundary test
+        working-directory: implementation/research/r22_28_isolated_signer
+        run: |
+          set -euo pipefail
+          sudo python3 test_boundary.py "$RUNNER_TEMP/r22-28-signer" | tee "$RUNNER_TEMP/r22-28-evidence.log"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r22-28-isolation-evidence
+          path: ${{ runner.temp }}/r22-28-evidence.log
+          if-no-files-found: warn
+          retention-days: 30
