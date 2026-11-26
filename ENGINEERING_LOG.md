@@ -1105,3 +1105,13 @@ Related #379 A15 retained-range experiment covers a different set of three commi
 - Exact-head Repository Implementation Regression [run 45854078244](https://github.com/SepehrGhanbari/Ario/actions/runs/45854078244): **SUCCESS**.
 - Final evidence artifact: [R22.32 TPM attestation evidence](https://github.com/SepehrGhanbari/Ario/actions/runs/45854078266/artifacts/15134911715).
 - This addendum supersedes the earlier "fresh exact-head run pending" note. The limitations remain unchanged: synthetic lab CA, software TPM only, no OEM/manufacturer trust, no physical TPM, no event-log appraisal, no independent custodian, no signer integration, no trust activation, no production and no merge.
+
+
+## 2026-11-26 — R22.32 AK TPMT_PUBLIC identity extension
+
+- Added TPM readback of the persistent AK TPMT_PUBLIC and Qualified Name.
+- Independently recomputed the AK Name and checked fixedTPM, fixedParent, sensitiveDataOrigin, restricted and signEncrypt attributes for the RSA AK.
+- Dedicated workflow [run 45857398519](https://github.com/SepehrGhanbari/Ario/actions/runs/45857398519), source head `6050263e6075415d5261b876c61a2d9cf5c8a30f`: **26/26 PASS**.
+- Environment: Ubuntu 24.04; tpm2-tools 5.6-1build4; swtpm 0.7.3-0ubuntu5.24.04.1; OpenSSL 3.0.13.
+- Evidence artifact [ID 15135289752](https://github.com/SepehrGhanbari/Ario/actions/runs/45857398519/artifacts/15135289752).
+- No physical TPM, OEM EK chain, independent custodian, trust activation, production or merge.
