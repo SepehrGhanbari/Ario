@@ -767,3 +767,15 @@ RESEARCH_ONLY / PASS_BOUNDED / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTIO
 - The gate is an explicitly invoked research entrypoint, not a universal first-start enforcement mechanism, sandbox, cryptographic signature, identity/custody or freshness proof. Fixed startup pin remains the tested pre-admission base. No changes to legacy runtime, memory, signer, real keys, governance, prior verifiers or historical publication assets. CI required before owner-authorized merge.
 
 RESEARCH_ONLY / PASS_BOUNDED / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTION / NO_AUTOMATIC_MERGE.
+
+
+## 2026-11-26 — Self-Audit R2.4 adversarial verification of R2.3-D logs
+
+- R2.3-D owner-supplied report and six local raw log samples were cross-checked against repeated GitHub job-log reads. Three job pairs matched byte-for-byte; fixed observations: M0 22,782 bytes / SHA-256 def5b16d547b34ed2fe14fb31a1068cb105d91291a783f821ebfd6bae2c181b4; Python 3.14 24,017 bytes / SHA-256 48dd555debd9377944b0380f3a7d00dd11208b31881c34f743af55b255991763; Windows 24,059 bytes / SHA-256 5d5a634095767b714b62e29961b7380e5209fce43938529d1b6361c8de406045.
+- Added offline bounded verifier at scripts/ario_self_audit_r24.py, 19 focused adversarial tests at scripts/test_ario_self_audit_r24.py, Windows launcher RUN_SELF_AUDIT_R2_4.cmd, dedicated read-only workflow .github/workflows/ario-self-audit-r24.yml, and source-backed documentation/evidence under docs/self-audit-r2-4-evidence/.
+- The verifier checks fixed raw-byte pins, run/job/file mapping, transport event chain, expected checkout fetch and git-log output, runner/Python markers, exact pytest command and exact summary. Adversarial tests cover byte tampering, report re-pinning, wrong commit, fabricated success claims, swapped jobs, identity/event tampering, duplicate JSON keys, missing files and symlink paths.
+- Fresh Linux focused suite: 19/19 PASS. Actual historical logs were inspected via GitHub connector for the same expected checkout, command, runner/Python marker and summary. Windows execution of R2.4 itself remains pending owner-side run.
+- Metadata associates the three job IDs with run 45460415487 and records completed/success. The run appears in pull-request-triggered commit-run results for PR #366 head c91300a3e4430ddbb4f60ab5fb23513be23d3b1e. Exclusive run-to-PR association, execution attestation, source custody, freshness and correctness remain NOT_ESTABLISHED.
+- No change to operational runtime, memory, ledger, signer, governance, historical logs, trust activation or production. No merge performed.
+
+RESEARCH_ONLY / PASS_BOUNDED / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTION / NO_AUTOMATIC_MERGE.

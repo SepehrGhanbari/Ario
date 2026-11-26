@@ -1,0 +1,29 @@
+{
+  "schema": "ARIO-SELF-AUDIT-R2.4-RUN-METADATA-REFERENCE",
+  "repository": "SepehrGhanbari/Ario",
+  "run_id": 45460415487,
+  "workflow_run_url": "https://github.com/SepehrGhanbari/Ario/actions/runs/45460415487",
+  "pr": {
+    "number": 366,
+    "url": "https://github.com/SepehrGhanbari/Ario/pull/366",
+    "state": "closed",
+    "merged": true,
+    "head_sha": "c91300a3e4430ddbb4f60ab5fb23513be23d3b1e",
+    "base_sha": "89ef7ba466db2e7a267ee7780df348ee9e5920e6"
+  },
+  "pull_request_commit_run_lookup": {
+    "queried_commit": "c91300a3e4430ddbb4f60ab5fb23513be23d3b1e",
+    "returned_run_ids": [45460415487, 45460414893],
+    "run_45460415487_returned": true,
+    "exclusive_pr_association": "NOT_ESTABLISHED"
+  },
+  "job_list_observation": [
+    {"job_id": 138681144591, "name": "m0-regression", "run_id": 45460415487, "status": "completed", "conclusion": "success"},
+    {"job_id": 138681144245, "name": "python-314-differential-advisory", "run_id": 45460415487, "status": "completed", "conclusion": "success"},
+    {"job_id": 138681144844, "name": "windows-differential-advisory", "run_id": 45460415487, "status": "completed", "conclusion": "success"}
+  ],
+  "qualification": "Connector-observed GitHub metadata. The wrapper response does not provide enough event/pull-request fields to establish exclusive PR association, independent custody, or runner execution attestation.",
+  "merge_authorized": false,
+  "memory_admission": false,
+  "trust_activation": false
+}
