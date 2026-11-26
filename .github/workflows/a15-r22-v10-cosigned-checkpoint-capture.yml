@@ -41,7 +41,7 @@ jobs:
           go run . capture "$RUNNER_TEMP/a15-v10-bundle"
           go run . verify "$RUNNER_TEMP/a15-v10-bundle"
           V="$RUNNER_TEMP/a15-v10-bundle/verifier"; mkdir -p "$V"
-          cp implementation/research/a15_r22_checkpoint_handoff/{capture.go,capture_test.go,negative_audit.py,README_FA.md,verify.sh,go.mod,go.sum} "$V/"
+          cp "$GITHUB_WORKSPACE"/implementation/research/a15_r22_checkpoint_handoff/{capture.go,capture_test.go,negative_audit.py,README_FA.md,verify.sh,go.mod,go.sum} "$V/"
       - name: Cryptographic negative controls against captured real bytes
         run: |
           set -euo pipefail
