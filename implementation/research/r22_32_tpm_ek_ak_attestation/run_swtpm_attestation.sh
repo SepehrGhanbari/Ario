@@ -139,6 +139,28 @@ tpm2_evictcontrol -C o -c "$AK_CTX" "$AK_HANDLE" >/dev/null
 tpm2_flushcontext -t >/dev/null
 AK_CTX="$AK_HANDLE"
 pass "AK persisted under its test handle; transient objects released"
+AK_TPMT="$TMP/ak.tpmt"
+tpm2_readpublic -c "$AK_CTX" -n "$AK_NAME" -q "$AK_QN" \
+  -o "$AK_TPMT" -f tpmt >/dev/null
+python3 "$ROOT/verify_tpm_public_name.py" --public-tpmt "$AK_TPMT" \
+  --name "$AK_NAME" --require-ak
+pass "AK Name independently recomputed from TPMT_PUBLIC with restricted signing attributes"
+
+# A restricted signing AK must not also be a decrypt-capable object. Recompute
+# the Name after mutation so this specifically tests the usage-profile guard.
+python3 - "$AK_TPMT" "$TMP/ak-decrypt.tpmt" "$TMP/ak-decrypt.name" <<'PY'
+import hashlib, sys
+from pathlib import Path
+raw = bytearray(Path(sys.argv[1]).read_bytes())
+attrs = int.from_bytes(raw[4:8], "big") | (1 << 17)
+raw[4:8] = attrs.to_bytes(4, "big")
+Path(sys.argv[2]).write_bytes(raw)
+Path(sys.argv[3]).write_bytes(raw[2:4] + hashlib.sha256(raw).digest())
+PY
+expect_fail "AK profile rejects decrypt usage even with recomputed Name" \
+  python3 "$ROOT/verify_tpm_public_name.py" --public-tpmt "$TMP/ak-decrypt.tpmt" \
+    --name "$TMP/ak-decrypt.name" --require-ak
+
 
 # Second software TPM: a credential created for TPM 1 must not activate with
 # a different EK and AK on TPM 2.
@@ -200,6 +222,22 @@ expect_fail "TPM Name verifier rejects a modified TPMT_PUBLIC" \
 ROOT_NAME_SHA256="$(sha256sum "$SRK_NAME" | awk '{print $1}')"
 printf 'TPM_STORAGE_PRIMARY_NAME_SHA256=%s\n' "$ROOT_NAME_SHA256"
 pass "storage primary Name and Qualified Name captured from TPM"
+# A storage primary is a restricted decryption object, never a signer.
+python3 - "$SRK_TPMT" "$TMP/storage-sign.tpmt" "$TMP/storage-sign.name" <<'PY'
+import hashlib, sys
+from pathlib import Path
+raw = bytearray(Path(sys.argv[1]).read_bytes())
+attrs = int.from_bytes(raw[4:8], "big") | (1 << 18)
+raw[4:8] = attrs.to_bytes(4, "big")
+Path(sys.argv[2]).write_bytes(raw)
+Path(sys.argv[3]).write_bytes(raw[2:4] + hashlib.sha256(raw).digest())
+PY
+expect_fail "storage profile rejects sign usage even with recomputed Name" \
+  python3 "$ROOT/verify_tpm_public_name.py" --public-tpmt "$TMP/storage-sign.tpmt" \
+    --name "$TMP/storage-sign.name" --require-storage-primary
+
+# TPM2_Certify proves the exact storage object is loaded and binds it to a
+# fresh verifier challenge. The verifier checks the signature and decoded fields.
 
 expect_reject() {
   local label="$1"

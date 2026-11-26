@@ -10,7 +10,7 @@ The old result remains historically valid for the specific 27 assertions it ran.
 
 ## Prototype behavior
 
-custodian_state.py is a separate, standard-library Python prototype using OpenSSL for RSA signatures and Linux flock for inter-process serialization.
+The original R22.31 implementation is preserved as `custodian_state_legacy.py`, a standard-library Python prototype using OpenSSL for RSA signatures and Linux flock for inter-process serialization. In the R22.33 descendant branch, `custodian_state.py` is now the default strict entrypoint and requires a custodian-signed challenge plus a pinned verifier-signed TPM attestation receipt. The legacy file remains only for historical regression tests and comparison.
 
 - Verifies the signed initial anchor and every signed receipt in the journal.
 - Replays an append-only, hash-chained transition journal to derive the current state.
@@ -63,3 +63,8 @@ Six new regressions cover duplicate keys in anchor/request/journal, noncanonical
 Latest dedicated CI: [run 45854444069](https://github.com/SepehrGhanbari/Ario/actions/runs/45854444069), exact tested head `0229727e6b297a1fd13e598f79940c32c2524ca0`, **18/18 PASS** on CPython 3.13.18 / OpenSSL 3.0.13. Artifact `r22-31-custodian-monotonic-state-evidence`, ID `15135810639` (702 bytes).
 
 This does not close same-domain journal rollback: a valid older prefix can still be restored without an independently retained authenticated floor. The prototype remains RESEARCH_ONLY; no external custodian, TPM attestation, real key, trust activation, production or merge is established.
+
+
+## R22.33 default-entrypoint change
+
+The original R22.31 CLI is preserved as `custodian_state_legacy.py` so its 18-test state-machine evidence remains reproducible. The default `custodian_state.py` entrypoint in the R22.33 descendant now delegates to the strict attested wrapper. A bare caller-supplied request is rejected by the default entrypoint; only the explicitly named legacy script accepts the original unattested request schema. See `implementation/research/r22_33_attested_transition/RESEARCH_RECORD.md` for the verifier-pin, signed challenge, TPM Name derivation, evidence receipt, and remaining limitations.

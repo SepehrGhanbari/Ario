@@ -123,3 +123,12 @@ This remains software-TPM interoperability evidence, not proof of physical-devic
 - The generic regression workflow **45857768351** reported **1 failed, 2107 passed, 8 skipped, 273 subtests passed**. The sole failure was a test's expected wording (`Qualified Name`) differing from the verifier's actual `qualifiedSigner` rejection; the wrong-signer case itself was rejected correctly.
 - This correction requires the TPM-reported NV Name to match the independently recomputed Name, accepts omission of the policy field only in conjunction with that match, adds a mismatched-reported-Name negative, and corrects the test assertion.
 - **Correction to prior workflow note:** the earlier statement that the branch-local workflow could not run was premature. It did trigger on the exact branch head; run 45857768346 is the evidence. The earlier NOT_RUN statement is superseded by these run results.
+
+
+## AK TPMT_PUBLIC identity extension — 2026-11-26
+
+The R22.32 harness now also reads the persistent AK public area back from the TPM, captures its raw TPMT_PUBLIC and Qualified Name, independently recomputes the AK Name, and checks the expected restricted RSA signing attributes (fixedTPM, fixedParent, sensitiveDataOrigin, restricted, signEncrypt). This closes the earlier asymmetry where the storage-primary Name was recomputed but the AK Name was only captured from tpm2_createak output.
+
+Dedicated R22.32 workflow on the R22.33 integration branch: [run 45857398519](https://github.com/SepehrGhanbari/Ario/actions/runs/45857398519), source head `6050263e6075415d5261b876c61a2d9cf5c8a30f`, **SUCCESS: 26/26 PASS**. Environment: Ubuntu 24.04; tpm2-tools 5.6-1build4; swtpm 0.7.3-0ubuntu5.24.04.1; OpenSSL 3.0.13. Evidence artifact [ID 15135289752](https://github.com/SepehrGhanbari/Ario/actions/runs/45857398519/artifacts/15135289752).
+
+This is still software-TPM evidence with a synthetic lab CA, not OEM EK or physical hardware attestation. The AK public area check strengthens the Name binding but does not establish hardware non-extractability, manufacturer identity, independent custody, firmware trust, or rollback resistance.

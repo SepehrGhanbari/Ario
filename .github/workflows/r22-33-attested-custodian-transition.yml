@@ -1,0 +1,54 @@
+name: R22.33 attested custodian transition (research)
+on:
+  push:
+    branches: [research/r22-33-attested-custodian-transition-2026-11-26]
+    paths:
+      - .github/workflows/r22-33-attested-custodian-transition.yml
+      - implementation/research/r22_31_custodian_monotonic_state/**
+      - implementation/research/r22_33_attested_transition/**
+permissions:
+  contents: read
+jobs:
+  attested-transition:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - name: Verify OpenSSL and compile strict and legacy entrypoints
+        run: |
+          set -euo pipefail
+          openssl version
+          python -m py_compile \
+            implementation/research/r22_31_custodian_monotonic_state/custodian_state.py \
+            implementation/research/r22_31_custodian_monotonic_state/custodian_state_legacy.py \
+            implementation/research/r22_31_custodian_monotonic_state/test_custodian_state.py \
+            implementation/research/r22_33_attested_transition/issue_challenge.py \
+            implementation/research/r22_33_attested_transition/attested_custodian.py \
+            implementation/research/r22_33_attested_transition/test_attested_custodian.py \
+            implementation/research/r22_32_tpm_ek_ak_attestation/verify_tpm_public_name.py
+      - name: Run preserved R22.31 state-machine regression suite
+        run: |
+          set -euo pipefail
+          python -m unittest discover \
+            -s implementation/research/r22_31_custodian_monotonic_state \
+            -p 'test_*.py' -v 2>&1 | tee "$RUNNER_TEMP/r22-31-legacy-tests.log"
+      - name: Run R22.33 challenge, verifier-pin and attested-transition matrix
+        run: |
+          set -euo pipefail
+          python -m unittest discover \
+            -s implementation/research/r22_33_attested_transition \
+            -p 'test_*.py' -v 2>&1 | tee "$RUNNER_TEMP/r22-33-attested-transition-tests.log"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r22-33-attested-custodian-transition-evidence
+          path: |
+            ${{ runner.temp }}/r22-31-legacy-tests.log
+            ${{ runner.temp }}/r22-33-attested-transition-tests.log
+          if-no-files-found: warn
+          retention-days: 30
