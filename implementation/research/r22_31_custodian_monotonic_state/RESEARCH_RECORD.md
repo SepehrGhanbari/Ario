@@ -76,3 +76,23 @@ Three regressions verify: response→journal is rejected before journal creation
 Dedicated CI [run 45853154583](https://github.com/SepehrGhanbari/Ario/actions/runs/45853154583), head `3eea8bcd642762912c4a3d4b00c1169275d4d0ad`, SUCCESS: **12/12 tests PASS** on CPython 3.13.18 / OpenSSL 3.0.13. This count includes the expected-RED valid-prefix rollback reproduction and exact-source R22.30 regression; neither is a claim that those vulnerabilities are prevented. The three new path-alias tests pass by confirming rejection before mutation.
 
 No Sigsum call, new witness, external publication, real key, TPM, trust activation, production promotion, or merge was performed.
+
+
+## 2026-11-26 — strict JSON ledger parsing and typed sequence validation
+
+Source audit found three parser-boundary weaknesses in the R22.31 prototype:
+1. Python's default JSON decoder accepts duplicate object keys and silently keeps the last value.
+2. Journal records were hashed after decoding but the stored JSONL line was not required to be canonical, allowing noncanonical encodings of the same decoded object.
+3. `record["sequence"]` was compared with an integer request epoch using equality only; JSON `8.0` compares equal to Python integer `8`.
+
+Implemented:
+- a duplicate-key-rejecting object-pairs hook for signed anchors, requests and journal records;
+- canonical-byte enforcement for the signed anchor;
+- exact single-line canonical JSONL enforcement for every journal record;
+- explicit integer-only sequence validation, rejecting bool and float values before equality comparison.
+
+Six regression tests cover duplicate keys in anchor/request/journal, noncanonical signed anchor and journal record encodings, and a float-valued sequence with a recomputed valid record hash. Existing path-alias regressions and expected-RED rollback control remain intact.
+
+Dedicated CI [run 45854444069](https://github.com/SepehrGhanbari/Ario/actions/runs/45854444069), exact tested head `0229727e6b297a1fd13e598f79940c32c2524ca0`, completed SUCCESS: **18/18 tests PASS** on CPython 3.13.18 / OpenSSL 3.0.13. Evidence artifact `r22-31-custodian-monotonic-state-evidence`, ID `15135810639`, 702 bytes.
+
+The same-domain valid-prefix rollback RED remains unresolved by design; no local parser change can create an independent floor. No Sigsum call, new witness, external publication, real key, TPM, trust activation, production promotion, or merge occurred.
