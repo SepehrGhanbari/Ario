@@ -25,7 +25,7 @@ expect_fail(){
 }
 run(){ "$@" >"$TMP/last.out" 2>&1 || { cat "$TMP/last.out"; return 1; }; }
 
-tpm2-tools --version | head -n 1
+tpm2 --version | head -n 1
 swtpm --version | head -n 1
 swtpm_setup --tpm2 --tpmstate "dir:$STATE" --create-ek --create-platform-cert --lock-nvram >"$TMP/setup.log" 2>&1
 swtpm socket --tpm2 --tpmstate "dir:$STATE" --server type=tcp,port=2321 --ctrl type=tcp,port=2322 --flags not-need-init >"$TMP/swtpm.log" 2>&1 &
@@ -108,7 +108,9 @@ pass "exact externally authorized TPM signature verified"
 # Same token is tied to counter zero; advance hardware NV counter.
 tpm2_nvincrement -C o "$NV" >/dev/null
 tpm2_nvread -C o -s 8 -o counter-1.bin "$NV" >/dev/null
-expect_fail "stale authorization rejected after NV counter increment" tpm2_policynv -S <(true) "$NV" eq -i counter-0.bin
+tpm2_startauthsession --policy-session -S stale-counter.session >/dev/null
+expect_fail "stale authorization rejected after NV counter increment" tpm2_policynv -S stale-counter.session -C o "$NV" eq -i counter-0.bin
+tpm2_flushcontext stale-counter.session >/dev/null
 
 # A new counter value and new exact command hash require a fresh authority signature.
 make_authorization message-c.bin counter-1.bin c
