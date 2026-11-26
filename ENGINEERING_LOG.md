@@ -767,3 +767,25 @@ RESEARCH_ONLY / PASS_BOUNDED / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTIO
 - The gate is an explicitly invoked research entrypoint, not a universal first-start enforcement mechanism, sandbox, cryptographic signature, identity/custody or freshness proof. Fixed startup pin remains the tested pre-admission base. No changes to legacy runtime, memory, signer, real keys, governance, prior verifiers or historical publication assets. CI required before owner-authorized merge.
 
 RESEARCH_ONLY / PASS_BOUNDED / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTION / NO_AUTOMATIC_MERGE.
+
+
+## 2026-11-22 — V15.3 historical reader rejects overflowing JSON float exponents
+
+- Finding: Python's default JSON float parser converts syntactically valid exponent values such as `1e999` and `-1e999` to non-finite `inf` / `-inf`. The existing `parse_constant` guard rejected literal `NaN` / `Infinity` tokens but did not cover this numeric-overflow path.
+- Bounded change is isolated on `fix/v153-json-nonfinite-floats`, based on main commit `15ebc65ca97f26396c152811a94646f86cbbfffe`. Only `implementation/core/legacy_v153_historical_view.py`, its focused test file, and this append-only log are in scope.
+- Parser now supplies a `parse_float` hook and rejects any converted value for which `math.isfinite` is false, using the existing constant failure code `HOLD_NONFINITE_JSON`. Finite large exponent `1e308` remains accepted.
+- Focused tests now cover `NaN`, `Infinity`, `-Infinity`, `1e999`, `-1e999`, plus the finite positive control. Synthetic fixtures only.
+- No private archive, conversation history, working-memory cache, runtime, signer, credentials, or trust state was accessed or changed. No PR has been opened and no merge has occurred at the time of this entry; validation is pending.
+
+
+## 2026-11-24 — PR #336 bounded follow-up: fail closed on JSON numeric underflow
+
+- Independent review on PR #336 HEAD `4acb25416de7f8d7ebc9e389b4be76e6bf70ff2a` found an additional finite-underflow path: nonzero `1e-10000` and `-1e-10000` were decoded as `0.0` / `-0.0`. This is silent reinterpretation of archive source text.
+- In the same `fix/v153-json-nonfinite-floats` branch, the bounded `parse_float` guard now distinguishes nonzero significands that round to zero, holding them with `HOLD_JSON_FLOAT_UNDERFLOW`. Exact zero lexemes remain valid; representable finite subnormal `5e-324` and `1e308` remain allowed. Existing explicit NaN/Infinity and overflow controls are preserved.
+- Added three synthetic regression methods for five underflow variants, four legitimate zero forms, and one representable subnormal; no private backup is used. `ENGINEERING_LOG.md` was append-only; previous content is an exact prefix.
+- This retains the historical read-only boundary: no model integration, no recall of private user data, no independent source custody or evidence admission, no signer/trust activation. Local test execution was not established by this log entry; verify exact new-head CI and independent review before merge.
+
+
+## 2026-11-26 — #336 reconcile current main
+
+- Kept current main engineering log as an exact prefix; imported only the two #336 numeric parser history entries from the preserved branch. Source and test blobs are exactly the reviewed #336 versions. Main's source/test blobs were unchanged from the original base. New-head CI required; no historical data or authority changes.
