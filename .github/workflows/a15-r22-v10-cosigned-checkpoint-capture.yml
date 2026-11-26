@@ -27,10 +27,10 @@ jobs:
       - name: Pin the historical Sigsum client source
         run: |
           set -euo pipefail
-          test "$(git hash-object implementation/research/r22_10_blind_discovery/go.mod)" = b49eeea0e7a303278b2316c68641ad505dfcd5c9
+          test "$(git hash-object implementation/research/a15_r22_checkpoint_handoff/go.mod)" = 74d46e3766442fbcb58180f284650dcf4d4d9f3f
+          test "$(git hash-object implementation/research/a15_r22_checkpoint_handoff/go.sum)" = c0bff701d560daf6281e1086f7ffdd5f871d3467
           LAB="$RUNNER_TEMP/a15-v10"; mkdir -p "$LAB"
-          cp implementation/research/r22_10_blind_discovery/go.mod "$LAB/go.mod"
-          cp implementation/research/a15_r22_checkpoint_handoff/capture.go implementation/research/a15_r22_checkpoint_handoff/capture_test.go "$LAB/"
+          cp implementation/research/a15_r22_checkpoint_handoff/go.mod implementation/research/a15_r22_checkpoint_handoff/go.sum implementation/research/a15_r22_checkpoint_handoff/capture.go implementation/research/a15_r22_checkpoint_handoff/capture_test.go "$LAB/"
           cd "$LAB"
           go mod tidy
           go test -count=1 -v ./...
