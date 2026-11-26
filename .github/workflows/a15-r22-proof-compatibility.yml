@@ -1,0 +1,67 @@
+name: A15 R22 proof-envelope compatibility (read-only)
+on:
+  push:
+    branches: [research/a15-r22-live-checkpoint-20261126]
+    paths:
+      - .github/workflows/a15-r22-proof-compatibility.yml
+      - implementation/research/a15_r22_live_v1/proof_contract.py
+      - implementation/research/a15_r22_live_v1/PROOF_ENVELOPE_COMPATIBILITY_V1.md
+permissions:
+  contents: read
+  actions: read
+jobs:
+  compatibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 255398a8e243d3738b132dafe0fe0edcaab29679
+          path: pinned-r22-22g
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: false
+      - name: Install only offline verification dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install coincurve==21.0.0
+          go install sigsum.org/sigsum-go/cmd/sigsum-verify@v0.14.1
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - name: Retrieve existing A15 archived artifacts only (no publication)
+        uses: actions/download-artifact@v4
+        with:
+          name: A15-FIRST-ONLY
+          run-id: 45823494521
+          github-token: \${{ github.token }}
+          path: \${{ runner.temp }}/first
+      - uses: actions/download-artifact@v4
+        with:
+          name: A15-SECOND-REVEAL-SYNTHETIC
+          run-id: 45823494521
+          github-token: \${{ github.token }}
+          path: \${{ runner.temp }}/second
+      - uses: actions/download-artifact@v4
+        with:
+          name: A15-COLD-RECOVERY
+          run-id: 45823494521
+          github-token: \${{ github.token }}
+          path: \${{ runner.temp }}/cold
+      - name: Verify A15 envelope, archived proofs, and R22.20 cross-profile rejection
+        run: |
+          set -euo pipefail
+          test "$(git -C pinned-r22-22g rev-parse HEAD)" = 255398a8e243d3738b132dafe0fe0edcaab29679
+          python -I -B implementation/research/a15_r22_live_v1/proof_contract.py \
+            --first "$RUNNER_TEMP/first" \
+            --second "$RUNNER_TEMP/second" \
+            --cold "$RUNNER_TEMP/cold" \
+            --r22-codec pinned-r22-22g/implementation/research/r22_22_recovery_root/generic_successor/event_codec.py \
+            --r22-pure-verifier pinned-r22-22g/implementation/research/r22_22_recovery_root/verify_nostr_bip340.py \
+            --sigsum-verify "$(go env GOPATH)/bin/sigsum-verify"
