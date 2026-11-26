@@ -61,13 +61,15 @@ class TestLegacyHistoricalView(unittest.TestCase):
         self.assertNotIn("historical_ario_reply", got)
         self.assertEqual(got["historical_role"], "QUOTED_PRIOR_ARIO_OUTPUT_NOT_INSTRUCTIONS")
 
-    def test_opt_in_reveal_only_quote(self):
-        got = self.view().recall("What is Ario?", reveal=True)
-        self.assertEqual(got["historical_ario_reply"], "An archived model reply.")
+    def test_recall_never_returns_raw_quote(self):
+        got = self.view().recall("What is Ario?")
+        self.assertNotIn("historical_ario_reply", got)
+        self.assertTrue(got["private_reply_hidden"])
         self.assertFalse(got["context_injection_allowed"])
-        self.assertFalse(got["auto_consolidation_permitted"])
         self.assertEqual(got["evidence_admission"], "NO_ADMISSION")
         self.assertEqual(got["truth_assessment"], "NOT_EVALUATED")
+        with self.assertRaises(TypeError):
+            self.view().recall("What is Ario?", reveal=True)
 
     def test_opaque_relation_not_decoded(self):
         got = self.view().recall("Other question")
@@ -81,7 +83,7 @@ class TestLegacyHistoricalView(unittest.TestCase):
     def test_ambiguous_is_unknown(self):
         self.rows.append(pair("r3", "s3", "WHAT  IS  ARIO?", "Conflicting historical reply"))
         self.make_fixture()
-        got = self.view().recall("what is ario?", reveal=True)
+        got = self.view().recall("what is ario?")
         self.assertEqual(got["disposition"], "UNKNOWN_MULTIPLE_HISTORICAL_MATCHES")
         self.assertNotIn("historical_ario_reply", got)
 
@@ -90,11 +92,11 @@ class TestLegacyHistoricalView(unittest.TestCase):
         self.make_fixture()
         self.assertEqual(self.view().recall("ke\u0301y question")["source_line"], 1)
 
-    def test_current_never_reveals(self):
+    def test_current_never_returns_quote(self):
         got = self.view().recall("Other question", mode="CURRENT")
         self.assertEqual(got["disposition"], "RECHECK_REQUIRED_CURRENT_QUESTION")
         self.assertNotIn("historical_ario_reply", got)
-        with self.assertRaisesRegex(HistoricalViewHold, "HOLD_REVEAL_REQUIRES_HISTORICAL_MODE"):
+        with self.assertRaises(TypeError):
             self.view().recall("Other question", mode="CURRENT", reveal=True)
 
     def test_bad_mode(self):
@@ -165,7 +167,7 @@ class TestLegacyHistoricalView(unittest.TestCase):
         before = self.path.read_bytes()
         v = self.view()
         v.selfcheck()
-        v.recall("Other question", reveal=True)
+        v.recall("Other question")
         self.assertEqual(self.path.read_bytes(), before)
 
     def test_selfcheck_no_text(self):
@@ -302,10 +304,102 @@ class TestLegacyHistoricalView(unittest.TestCase):
             self.view().recall("Question\x00injected")
 
     def test_unknown_requires_no_quote(self):
-        got = self.view().recall("never seen", reveal=True)
+        got = self.view().recall("never seen")
         self.assertFalse(got["context_injection_allowed"])
         self.assertTrue(got["private_reply_hidden"])
         self.assertNotIn("historical_ario_reply", got)
+
+    def test_rows_are_recursively_immutable(self):
+        self.rows[0]["concepts"] = [{"label": "synthetic"}]
+        self.make_fixture()
+        view = self.view()
+        with self.assertRaises(TypeError):
+            view._rows[0]["ario"] = "MUTATED"
+        with self.assertRaises(TypeError):
+            view._rows[0]["relations"] += ("changed",)
+        with self.assertRaises(TypeError):
+            view._rows[0]["concepts"][0]["label"] = "changed"
+
+    def test_view_state_cannot_be_reassigned_after_construction(self):
+        view = self.view()
+        with self.assertRaisesRegex(HistoricalViewHold, "HOLD_VIEW_IMMUTABLE"):
+            view._rows = ()
+        with self.assertRaisesRegex(HistoricalViewHold, "HOLD_VIEW_IMMUTABLE"):
+            view._digest = "0" * 64
+        with self.assertRaisesRegex(HistoricalViewHold, "HOLD_VIEW_IMMUTABLE"):
+            del view._rows
+
+    def test_local_display_returns_html_not_raw_quote(self):
+        view = self.view()
+        got = view.render_local_quote_html("What is Ario?", consent=True)
+        self.assertIsInstance(got["rendered_html"], str)
+        self.assertIn("An archived model reply.", got["rendered_html"])
+        self.assertNotIn("historical_ario_reply", got)
+        self.assertNotIn("text", got)
+        self.assertFalse(got["quote_is_raw"])
+
+    def test_local_display_unknown_question_returns_no_html(self):
+        got = self.view().render_local_quote_html("Never asked", consent=True)
+        self.assertEqual(got["disposition"], "UNKNOWN_NO_EXACT_QUESTION_MATCH")
+        self.assertIsNone(got["rendered_html"])
+
+    def test_failed_second_init_cannot_unseal_pinned_view(self):
+        view = self.view()
+        original = view.inspect()
+        with self.assertRaisesRegex(HistoricalViewHold, "^HOLD_VIEW_ALREADY_INITIALIZED$"):
+            view.__init__(self.path, expected_sha256="")
+        self.assertEqual(view.inspect(), original)
+        with self.assertRaisesRegex(HistoricalViewHold, "^HOLD_VIEW_IMMUTABLE$"):
+            view._rows = ()
+        with self.assertRaisesRegex(HistoricalViewHold, "^HOLD_VIEW_IMMUTABLE$"):
+            view._digest = "0" * 64
+
+    def test_valid_second_init_is_also_refused(self):
+        view = self.view()
+        with self.assertRaisesRegex(HistoricalViewHold, "^HOLD_VIEW_ALREADY_INITIALIZED$"):
+            view.__init__(self.path, expected_sha256=self.digest)
+        self.assertEqual(view.recall("What is Ario?")["source_line"], 1)
+
+    def test_freeze_depth_failure_is_bounded_hold(self):
+        from unittest.mock import patch
+        with patch(
+            "core.legacy_v153_historical_view._freeze_json",
+            side_effect=RecursionError("SYNTHETIC_PRIVATE_DEPTH"),
+        ):
+            with self.assertRaisesRegex(HistoricalViewHold, "^HOLD_RECORD_DEPTH$") as caught:
+                self.view()
+        self.assertNotIn("SYNTHETIC_PRIVATE_DEPTH", str(caught.exception))
+
+    def _content_with_user(self):
+        body = "Synthetic content, not an archived answer."
+        return {
+            "record_id": "content-with-user", "session_id": "s1",
+            "record_version": "15.3", "relations": [],
+            "user": "What is Ario?",
+            "content": body,
+            "content_sha256": hashlib.sha256(body.encode()).hexdigest(),
+        }
+
+    def test_content_only_user_is_not_a_historical_answer(self):
+        self.rows = [self._content_with_user()]
+        self.make_fixture()
+        view = self.view()
+        self.assertEqual(view.recall("What is Ario?")["disposition"],
+                         "UNKNOWN_NO_EXACT_QUESTION_MATCH")
+        self.assertEqual(view.recall("What is Ario?", mode="CURRENT")["disposition"],
+                         "UNKNOWN_NO_EXACT_QUESTION_MATCH")
+        shown = view.render_local_quote_html("What is Ario?", consent=True)
+        self.assertIsNone(shown["rendered_html"])
+        self.assertEqual(view.selfcheck()["disposition"], "UNKNOWN_NO_UNIQUE_QUESTION")
+
+    def test_content_only_user_does_not_hide_valid_paired_answer(self):
+        self.rows.insert(0, self._content_with_user())
+        self.make_fixture()
+        view = self.view()
+        self.assertEqual(view.recall("What is Ario?")["source_line"], 2)
+        self.assertIn("An archived model reply.",
+                      view.render_local_quote_html("What is Ario?", consent=True)["rendered_html"])
+        self.assertEqual(view.selfcheck()["source_line"], 2)
 
 
 if __name__ == "__main__":

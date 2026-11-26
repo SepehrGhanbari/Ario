@@ -91,3 +91,55 @@ jobs:
           python -m pip check
       - name: Run M0 and runtime regression suites on CPython 3.14
         run: python -m pytest -q tests
+
+  rio01-linux-two-uid-research:
+    # Disposable Linux runner only. No deployment, credentials, persistent accounts or live data.
+    if: github.event_name == 'pull_request' && github.event.pull_request.number == 351
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Check out source without persisted credentials
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.13"
+      - name: Test actual distinct Linux UIDs and retained source pin
+        run: |
+          python -VV
+          sudo -- "$(command -v python)" -I -B research/historical_qa_ollama_probe_r0/two_uid_metadata_lab_r3.py --run-synthetic-root-lab
+
+  rio01-r4-existing-external-reference:
+    # Read-only reuse of already-published public synthetic R22.22 evidence.
+    if: github.event_name == 'pull_request' && github.event.pull_request.number == 351
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13"
+      - name: Read existing public external kit (no upload or fallback)
+        run: |
+          set -euo pipefail
+          curl --proto '=https' --fail --silent --show-error --max-time 30 --max-filesize 4194304 https://paste.rs/m18dx -o "$RUNNER_TEMP/rio01-r4-pin.json"
+      - name: Fetch exact prior public synthetic receipt archives
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15047051021/zip" > "$RUNNER_TEMP/rio01-r4-first.zip"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15045299282/zip" > "$RUNNER_TEMP/rio01-r4-second.zip"
+      - name: Verify existing retained reference and exercise actual local joint rollback
+        run: |
+          python -VV
+          python -I -B research/historical_qa_ollama_probe_r0/retained_projection_r4.py --read-existing-synthetic-evidence "$RUNNER_TEMP/rio01-r4-pin.json" "$RUNNER_TEMP/rio01-r4-first.zip" "$RUNNER_TEMP/rio01-r4-second.zip"

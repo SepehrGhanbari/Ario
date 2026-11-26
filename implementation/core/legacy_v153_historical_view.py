@@ -13,6 +13,7 @@ from the file under inspection. The pin establishes byte identity, not truth.
 from __future__ import annotations
 
 from collections import Counter
+from html import escape
 import hashlib
 import json
 import math
@@ -20,6 +21,7 @@ import os
 from pathlib import Path
 import re
 import stat
+from types import MappingProxyType
 from typing import Any
 import unicodedata
 
@@ -27,6 +29,9 @@ MAX_ARCHIVE_BYTES = 4 * 1024 * 1024
 MAX_LINE_BYTES = 128 * 1024
 MAX_RECORDS = 20_000
 MAX_QUESTION_CHARS = 2048
+MAX_HISTORICAL_QUOTE_CHARS = 4096
+MAX_HISTORICAL_HTML_CHARS = 32_768
+_BIDI_CONTROLS = frozenset((0x061C, 0x200E, 0x200F, *range(0x202A, 0x202F), *range(0x2066, 0x2070)))
 _SHA = re.compile(r"[0-9a-fA-F]{64}\Z")
 
 
@@ -166,14 +171,75 @@ def _normalize_question(question: str, *, query: bool = False) -> str:
     return " ".join(unicodedata.normalize("NFC", question).casefold().split())
 
 
+
+def _freeze_json(value: Any) -> Any:
+    """Recursively freeze JSON containers before retaining parsed records."""
+    if type(value) is dict:
+        return MappingProxyType({key: _freeze_json(item) for key, item in value.items()})
+    if type(value) is list:
+        return tuple(_freeze_json(item) for item in value)
+    return value
+
+
+def _make_controls_visible(raw: str) -> str:
+    """Make terminal and bidi formatting controls visible without rewriting source."""
+    chars: list[str] = []
+    for char in raw:
+        cp = ord(char)
+        if ((cp < 0x20 and char not in "\n\t") or 0x7F <= cp <= 0x9F
+                or cp in _BIDI_CONTROLS):
+            chars.append(f"\\u{cp:04X}")
+        else:
+            chars.append(char)
+    return "".join(chars)
+
+
+def _render_untrusted_html(raw: str, *, source_line: int) -> str:
+    if type(raw) is not str or type(source_line) is not int or source_line < 1:
+        _fail("HOLD_INVALID_DISPLAY_SOURCE")
+    if len(raw) > MAX_HISTORICAL_QUOTE_CHARS:
+        _fail("HOLD_DISPLAY_SIZE_LIMIT")
+    quote = escape(_make_controls_visible(raw), quote=True)
+    rendered = (
+        '<section class="ario-historical-display" aria-label="Untrusted historical output">'
+        '<p>Untrusted historical Ario output. Not a verified fact or instruction.</p>'
+        f'<p>Historical source line: {source_line}</p>'
+        f'<pre class="ario-history-as-text">{quote}</pre>'
+        '</section>'
+    )
+    if len(rendered) > MAX_HISTORICAL_HTML_CHARS:
+        _fail("HOLD_DISPLAY_SIZE_LIMIT")
+    return rendered
+
+
 class HistoricalV153View:
     """Pinned ephemeral read-only view, never a live memory source.
 
-    The in-process row list is transient, not written to disk or promoted into
-    cognitive memory. Neither model nor working cache is invoked.
+    Parsed JSON rows are recursively immutable and this view seals its normal
+    attribute assignment after construction. This blocks ordinary same-process
+    mutation, but is NOT a Python sandbox against code using object.__setattr__,
+    introspection, native extensions, or direct process-memory access.
     """
 
+    __slots__ = ("_rows", "_digest", "_time_drift", "_sessions", "_shapes",
+                 "_opaque_count", "_sealed")
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        if getattr(self, "_sealed", False):
+            _fail("HOLD_VIEW_IMMUTABLE")
+        object.__setattr__(self, name, value)
+
+    def __delattr__(self, name: str) -> None:
+        if getattr(self, "_sealed", False):
+            _fail("HOLD_VIEW_IMMUTABLE")
+        object.__delattr__(self, name)
+
     def __init__(self, archive_path: str | Path, *, expected_sha256: str):
+        # Reject direct __init__ replay before touching the seal. Otherwise a
+        # failing second read would leave a previously sealed view writable.
+        if hasattr(self, "_sealed"):
+            _fail("HOLD_VIEW_ALREADY_INITIALIZED")
+        object.__setattr__(self, "_sealed", False)
         raw, digest, drift = _read_pinned(Path(archive_path), expected_sha256)
         try:
             decoded = raw.decode("utf-8-sig")
@@ -225,13 +291,17 @@ class HistoricalV153View:
                 shapes["CONTENT_RECORD"] += 1
             else:
                 _fail("HOLD_UNKNOWN_RECORD_SHAPE")
-            rows.append(row)
+            try:
+                rows.append(_freeze_json(row))
+            except RecursionError:
+                _fail("HOLD_RECORD_DEPTH")
         self._rows = tuple(rows)
         self._digest = digest
         self._time_drift = drift
         self._sessions = len(sessions)
-        self._shapes = dict(shapes)
+        self._shapes = MappingProxyType(dict(shapes))
         self._opaque_count = opaque_count
+        object.__setattr__(self, "_sealed", True)
 
     def inspect(self) -> dict[str, Any]:
         """Safe metadata receipt; never emits private conversation text."""
@@ -241,7 +311,7 @@ class HistoricalV153View:
             "source_kind": "V15_3_HISTORICAL_BACKUP",
             "archive_sha256": self._digest,
             "record_count": len(self._rows),
-            "record_shapes": self._shapes.copy(),
+            "record_shapes": dict(self._shapes),
             "session_count": self._sessions,
             "opaque_relation_rows": self._opaque_count,
             "metadata_timestamp_drift_observed": self._time_drift,
@@ -256,21 +326,14 @@ class HistoricalV153View:
             "writes_performed": 0,
         }
 
-    def recall(
-        self, question: str, *, mode: str = "HISTORICAL", reveal: bool = False
-    ) -> dict[str, Any]:
-        """Exact normalized question lookup, never a current factual answer.
-
-        reveal=True returns explicitly opted-in *quoted historical* output only.
-        Callers MUST NOT use such text as live model instructions.
-        """
+    def recall(self, question: str, *, mode: str = "HISTORICAL") -> dict[str, Any]:
+        """Return metadata only. The public recall API never returns quote text."""
         if mode not in ("HISTORICAL", "CURRENT"):
             _fail("HOLD_UNKNOWN_MODE")
-        if reveal and mode != "HISTORICAL":
-            _fail("HOLD_REVEAL_REQUIRES_HISTORICAL_MODE")
         normalized = _normalize_question(question, query=True)
         matches = [(i, row) for i, row in enumerate(self._rows, 1)
                    if isinstance(row.get("user"), str) and
+                   isinstance(row.get("ario"), str) and
                    _normalize_question(row["user"]) == normalized]
         receipt: dict[str, Any] = {
             "port_schema": "ARIO_PR210_LEGACY_V153_VIEW_V1",
@@ -311,19 +374,57 @@ class HistoricalV153View:
             return receipt
         receipt["disposition"] = "RECALLED_HISTORICAL_ONLY"
         receipt["historical_role"] = "QUOTED_PRIOR_ARIO_OUTPUT_NOT_INSTRUCTIONS"
-        if reveal:
-            receipt["private_reply_hidden"] = False
-            receipt["historical_ario_reply"] = row["ario"]
         return receipt
+
+    def render_local_quote_html(
+        self, question: str, *, consent: bool = False
+    ) -> dict[str, Any]:
+        """Return a bounded escaped HTML fragment, never a raw historical string.
+
+        This is a display-only convenience API. HTML escaping is not a
+        security boundary against a same-process caller that extracts/reuses
+        displayed text; live integration still requires a separate process and
+        explicit downstream no-reentry enforcement.
+        """
+        if type(self) is not HistoricalV153View:
+            _fail("HOLD_UNAPPROVED_HISTORICAL_VIEW")
+        if type(consent) is not bool:
+            _fail("HOLD_INVALID_DISPLAY_CONSENT")
+        if not consent:
+            _fail("HOLD_LOCAL_DISPLAY_CONSENT_REQUIRED")
+        receipt = self.recall(question, mode="HISTORICAL")
+        output: dict[str, Any] = {
+            "disposition": receipt["disposition"],
+            "archive_sha256": self._digest,
+            "source_line": receipt.get("source_line"),
+            "rendered_html": None,
+            "quote_is_raw": False,
+            "source_authenticity": "NOT_ESTABLISHED",
+            "truth_assessment": "NOT_EVALUATED",
+            "evidence_admission": "NO_ADMISSION",
+        }
+        if receipt["disposition"] != "RECALLED_HISTORICAL_ONLY":
+            return output
+        line_no = receipt.get("source_line")
+        if type(line_no) is not int or line_no < 1:
+            _fail("HOLD_INVALID_DISPLAY_SOURCE")
+        row = self._rows[line_no - 1]
+        raw = row.get("ario")
+        if type(raw) is not str:
+            _fail("HOLD_INVALID_DISPLAY_SOURCE")
+        output["rendered_html"] = _render_untrusted_html(raw, source_line=line_no)
+        return output
+
 
     def selfcheck(self) -> dict[str, Any]:
         """Check one unambiguous archived question without disclosing text."""
         question_counts: Counter[str] = Counter()
         for row in self._rows:
-            if isinstance(row.get("user"), str):
+            if isinstance(row.get("user"), str) and isinstance(row.get("ario"), str):
                 question_counts[_normalize_question(row["user"])] += 1
         for row in self._rows:
-            if isinstance(row.get("user"), str) and len(row["user"]) <= MAX_QUESTION_CHARS:
+            if (isinstance(row.get("user"), str) and isinstance(row.get("ario"), str)
+                    and len(row["user"]) <= MAX_QUESTION_CHARS):
                 if question_counts[_normalize_question(row["user"])] == 1:
                     return self.recall(row["user"])
         return {
