@@ -7,6 +7,7 @@ This is not a screen-reader, security penetration test, or production release.
 """
 from __future__ import annotations
 
+import os
 import re
 import shutil
 import subprocess
@@ -15,7 +16,10 @@ from pathlib import Path
 from html.parser import HTMLParser
 
 ROOT = Path(__file__).resolve().parents[2]
-SOURCE = ROOT / "docs/ario-explainer-demo-2026-11-08/index.html"
+_DEFAULT_SOURCE = ROOT / "docs/ario-explainer-demo-2026-11-08/index.html"
+SOURCE = Path(os.environ.get("ARIO_DEMO_SOURCE", str(_DEFAULT_SOURCE)))
+if not SOURCE.is_absolute():
+    SOURCE = ROOT / SOURCE
 JS = r"""
 (() => {
   let checks = 0;

@@ -162,3 +162,11 @@ test('graph name follows language and language button keeps focus', () => {
   assert.equal(svg.getAttribute('aria-label'), 'Synthetic evidence dependency graph');
   assert.equal(document.activeElement, button);
 });
+
+
+test('initial baseline selection agrees with the active scenario and selected graph node', () => {
+  assert.match(html, /<button class="scen-btn active" id="btn-base" type="button" aria-pressed="true">/);
+  assert.equal(context.currentScenario, 'base');
+  assert.equal(context.selectedNodeId, 'N4');
+  assert.deepEqual(svg.nodeElements.filter(node => node.getAttribute('aria-pressed') === 'true').map(node => node.dataId), ['N4']);
+});
