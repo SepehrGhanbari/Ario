@@ -308,5 +308,37 @@ class TestLegacyHistoricalView(unittest.TestCase):
         self.assertNotIn("historical_ario_reply", got)
 
 
+    def _content_with_user(self):
+        body = "Synthetic content, not an archived answer."
+        return {
+            "record_id": "content-with-user", "session_id": "s1",
+            "record_version": "15.3", "relations": [],
+            "user": "What is Ario?",
+            "content": body,
+            "content_sha256": hashlib.sha256(body.encode()).hexdigest(),
+        }
+
+    def test_content_only_user_is_not_a_historical_answer(self):
+        self.rows = [self._content_with_user()]
+        self.make_fixture()
+        view = self.view()
+        self.assertEqual(view.recall("What is Ario?")["disposition"],
+                         "UNKNOWN_NO_EXACT_QUESTION_MATCH")
+        self.assertEqual(view.recall("What is Ario?", mode="CURRENT")["disposition"],
+                         "UNKNOWN_NO_EXACT_QUESTION_MATCH")
+        shown = view.recall("What is Ario?", reveal=True)
+        self.assertNotIn("historical_ario_reply", shown)
+        self.assertEqual(view.selfcheck()["disposition"], "UNKNOWN_NO_UNIQUE_QUESTION")
+
+    def test_content_only_user_does_not_hide_valid_paired_answer(self):
+        self.rows.insert(0, self._content_with_user())
+        self.make_fixture()
+        view = self.view()
+        self.assertEqual(view.recall("What is Ario?")["source_line"], 2)
+        self.assertIn("An archived model reply.",
+                      view.recall("What is Ario?", reveal=True)["historical_ario_reply"])
+        self.assertEqual(view.selfcheck()["source_line"], 2)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
