@@ -90,6 +90,7 @@ type liveFloorRecord struct {
 	HeadRoot string `json:"head_root"`
 	RetainedFloorSize uint64 `json:"retained_floor_size"`
 	RetainedFloorRoot string `json:"retained_floor_root"`
+	CustodianReadbackSource string `json:"custodian_readback_source"`
 	CustodianReadbackSize uint64 `json:"custodian_readback_size"`
 	CustodianReadbackRoot string `json:"custodian_readback_root"`
 	CustodianReadbackMatchesSignedHead bool `json:"custodian_readback_matches_signed_head"`
@@ -251,16 +252,28 @@ func main() {
 		fail("live R22.22I retained-floor pin mismatch")
 	}
 	if live.HeadSize < floor.ExternalFloor.TreeSize { fail("live head below pinned external floor") }
-	if live.CustodianReadbackMatchesSignedHead != true || live.CustodianReadbackSize != live.HeadSize ||
+	if live.CustodianReadbackSource != "https://remora.n621.de/status" ||
+		live.CustodianReadbackMatchesSignedHead != true || live.CustodianReadbackSize != live.HeadSize ||
 		live.CustodianReadbackRoot != live.HeadRoot { fail("live Remora readback mismatch") }
 	if live.DataAvailability != "NOT_PROVEN_BY_WITNESSES" || live.GlobalLatest != "UNKNOWN" ||
 		live.NetworkTier != "TEST_ONLY" || live.TrustActivation != "NO_GO" ||
 		live.Production != "NO_GO" || live.Admission { fail("live floor limitation/policy flags changed") }
+	if len(live.ExternalWitnesses) != 4 { fail("live external witness inventory mismatch") }
 	liveWitnesses := map[string]bool{}
+	seenLiveWitnesses := map[string]bool{}
+	validLiveWitnessCount := 0
 	for _, witness := range live.ExternalWitnesses {
-		if witness.CosignatureValid { liveWitnesses[witness.Name] = true }
+		if witness.Name == "" || seenLiveWitnesses[witness.Name] { fail("duplicate/empty live witness name") }
+		seenLiveWitnesses[witness.Name] = true
+		if witness.CosignatureValid {
+			liveWitnesses[witness.Name] = true
+			validLiveWitnessCount++
+		}
 	}
-	if len(liveWitnesses) < 2 || !liveWitnesses["remora.n621.de"] { fail("live 2-of-4 quorum lacks independent Remora witness") }
+	if validLiveWitnessCount != live.VerifiedExternalCosignatures || len(liveWitnesses) != validLiveWitnessCount ||
+		validLiveWitnessCount < 2 || !liveWitnesses["remora.n621.de"] {
+		fail("live 2-of-4 quorum lacks distinct witnesses or Remora custodian signature")
+	}
 
 	oldHead := types.TreeHead{Size: p2.Size, RootHash: mustHash(p2.Root)}
 	newHead := types.TreeHead{Size: floor.ExternalFloor.TreeSize, RootHash: mustHash(floor.ExternalFloor.RootHash)}
