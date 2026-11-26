@@ -16,7 +16,11 @@ R22.20 outer envelope uses `profile/scope/seq/previous_checksum/previous_event_i
 These are intentionally incompatible protocols. Do not feed A15 events to R22.22G's generic-successor verifier, or R22.20 envelopes to the A15 adapter. A future bridge must be an explicitly versioned A15-specific proof contract, not schema coercion.
 
 ## What this read-only job verifies
-- Re-fetch the three exact existing A15 artifacts by ID from original workflow run 45823494521 via the already-used `gh api actions/artifacts/{id}/zip` route; each ZIP SHA256 is checked before bounded safe extraction. The first attempt using `actions/download-artifact` across runs failed with `Bad credentials`; no test ran in that attempt, and that failure is preserved in the PR history.
+- Uses three exact copies of existing public synthetic A15 artifacts from original workflow run 45823494521, stored as test fixtures in this branch and SHA256-pinned in the bounded extraction wrapper:
+  - artifact 15118184755 / FIRST-ONLY: `f6012b78741a23992be901141fb8eb560f7010d17ecc4ccf4e71d3f917cd5f97`
+  - artifact 15118049899 / SECOND-REVEAL-SYNTHETIC: `4eec66aeb8036e9628094acbe815c7418e88836d064b384dcd0558ed4910f3ec`
+  - artifact 15119226101 / COLD-RECOVERY: `b36acf47e4e2c82d6009c72957d8535536c6c1773cdd1967170107a31a05feac`
+- ZIP wrapper verifies CRC, exact member manifests, path traversal, symlinks, member bounds and total expanded size before extracting to a disposable directory. This removes any cross-run artifact token dependency.
 - Verify both A15 Nostr event IDs/signatures, exact checkpoint bytes, exact event-id message and Sigsum TEST inclusion proof using pinned Sigsum verifier.
 - Bind each proof leaf index/checksum to the original cold discovery report and bootstrap; enforce strict leaf order and exact seq1→seq2 checkpoint predecessor digest.
 - Compare cold-recovered checkpoint/event bytes to the original seq2 reveal bytes.
@@ -25,4 +29,4 @@ These are intentionally incompatible protocols. Do not feed A15 events to R22.22
 - Assert advisory/global-latest and independent-custody fields remain NOT_ESTABLISHED.
 
 ## Limits
-This is an offline verification of already-retained synthetic evidence. Sigsum TEST inclusion proves that the exact event-ID message is in the sampled test log under the pinned policy; it does not establish trusted current time, global latestness, long-term availability, independent administration of GitHub/relays/witnesses, A15 custodian admission, actual Ario memory truth, or production authority. The workflow reads artifacts from GitHub Actions, so it is not an independent administrative domain. The test-only R22 key is ephemeral and not exported. The old A15 live run's reveal failure remains visible. No merge, key, floor, policy, trust or production state is changed.
+This is an offline verification of already-retained synthetic evidence. The fixtures are stored in the same repository/administrative domain as the verifier, so they are not independent custody. Sigsum TEST inclusion proves that the exact event-ID message is in the sampled test log under the pinned policy; it does not establish trusted current time, global latestness, long-term availability, independent administration of GitHub/relays/witnesses, A15 custodian admission, actual Ario memory truth, or production authority. The workflow makes no relay calls or new publication. The test-only R22 key is ephemeral and not exported. The old A15 live run's reveal failure remains visible. No merge, key, floor, policy, trust or production state is changed.

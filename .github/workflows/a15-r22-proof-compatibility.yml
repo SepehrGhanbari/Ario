@@ -7,9 +7,9 @@ on:
       - implementation/research/a15_r22_live_v1/proof_contract.py
       - implementation/research/a15_r22_live_v1/proof_contract_from_zips.py
       - implementation/research/a15_r22_live_v1/PROOF_ENVELOPE_COMPATIBILITY_V1.md
+      - implementation/tests/fixtures/a15_r22_run_45823494521/**
 permissions:
   contents: read
-  actions: read
 jobs:
   compatibility:
     runs-on: ubuntu-latest
@@ -36,25 +36,14 @@ jobs:
           python -m pip install coincurve==21.0.0
           go install sigsum.org/sigsum-go/cmd/sigsum-verify@v0.14.1
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
-      - name: Fetch exact existing A15 artifacts (read-only, no publication)
-        env:
-          GH_TOKEN: \${{ github.token }}
-        run: |
-          set -euo pipefail
-          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15118184755/zip" > "$RUNNER_TEMP/first.zip"
-          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15118049899/zip" > "$RUNNER_TEMP/second.zip"
-          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15119226101/zip" > "$RUNNER_TEMP/cold.zip"
-          echo "f6012b78741a23992be901141fb8eb560f7010d17ecc4ccf4e71d3f917cd5f97  $RUNNER_TEMP/first.zip" | sha256sum -c -
-          echo "4eec66aeb8036e9628094acbe815c7418e88836d064b384dcd0558ed4910f3ec  $RUNNER_TEMP/second.zip" | sha256sum -c -
-          echo "b36acf47e4e2c82d6009c72957d8535536c6c1773cdd1967170107a31a05feac  $RUNNER_TEMP/cold.zip" | sha256sum -c -
       - name: Verify A15 envelope, archived proofs, and R22.20 cross-profile rejection
         run: |
           set -euo pipefail
           test "$(git -C pinned-r22-22g rev-parse HEAD)" = 255398a8e243d3738b132dafe0fe0edcaab29679
           python -I -B implementation/research/a15_r22_live_v1/proof_contract_from_zips.py \
-            --first-zip "$RUNNER_TEMP/first.zip" \
-            --second-zip "$RUNNER_TEMP/second.zip" \
-            --cold-zip "$RUNNER_TEMP/cold.zip" \
+            --first-zip implementation/tests/fixtures/a15_r22_run_45823494521/A15-FIRST-ONLY.zip \
+            --second-zip implementation/tests/fixtures/a15_r22_run_45823494521/A15-SECOND-REVEAL-SYNTHETIC.zip \
+            --cold-zip implementation/tests/fixtures/a15_r22_run_45823494521/A15-COLD-RECOVERY.zip \
             --r22-codec pinned-r22-22g/implementation/research/r22_22_recovery_root/generic_successor/event_codec.py \
             --r22-pure-verifier pinned-r22-22g/implementation/research/r22_22_recovery_root/verify_nostr_bip340.py \
             --sigsum-verify "$(go env GOPATH)/bin/sigsum-verify"
