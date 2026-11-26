@@ -1,0 +1,3 @@
+# R22.23 offline Merkle frontier
+
+Research-only extraction of the frontier, rightmost-path reconstruction, page-budget and final-root checks from #390 at 57f0c6e88138d88086032becb4f1cf17d725837b. Reuses existing test algorithms and replaces Sigsum library digest/head types with local equivalent fixed-size types. No network or signature verification; input heads MUST be authenticated separately. The page-bound tests retain the historical example floor 281670; not a freshness or admission policy. Run `go test -v .` in this directory. Original scanner and evidence remain at the pinned source. No production or trust activation.
