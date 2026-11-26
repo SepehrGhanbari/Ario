@@ -53,8 +53,8 @@ RECEIPT_FIELDS = {
     "ak_public_area_tpmt_b64", "ak_qualified_name_b64", "ak_qualified_name_sha256",
     "nv_index_handle", "nv_name_alg", "nv_attributes", "nv_data_size",
     "nv_auth_policy_b64", "nv_index_name_b64", "nv_contents_b64",
-    "nv_offset", "nv_nonce", "nv_qualified_signer_b64",
-    "nv_attestation_sha256", "nv_signature_sha256",
+    "nv_offset", "nv_nonce", "creation_nonce", "quote_nonce",
+    "nv_qualified_signer_b64", "nv_attestation_sha256", "nv_signature_sha256",
     "quote_attestation_sha256", "quote_signature_sha256",
     "creation_attestation_sha256", "creation_signature_sha256",
     "pcr_selection", "pcr_digest_sha256", "evidence_manifest",
@@ -203,6 +203,16 @@ def derived_nv_nonce(challenge_nonce: str) -> str:
     return sha256(material)
 
 
+def derived_creation_nonce(challenge_nonce: str) -> str:
+    material = b"ARIO-R22.33-CERTIFY-CREATION-NONCE-V1\x00" + bytes.fromhex(challenge_nonce)
+    return sha256(material)
+
+
+def derived_quote_nonce(challenge_nonce: str) -> str:
+    material = b"ARIO-R22.33-PCR-QUOTE-NONCE-V1\x00" + bytes.fromhex(challenge_nonce)
+    return sha256(material)
+
+
 def derived_transition_nonce(challenge_nonce: str, receipt_sha256: str) -> str:
     material = (
         b"ARIO-R22.33-TRANSITION-NONCE-V1\x00"
@@ -297,7 +307,8 @@ def validate_receipt(receipt: Any, signature_b64: Any, challenge: dict[str, Any]
                   "ak_public_sha256", "quote_attestation_sha256",
                   "quote_signature_sha256", "creation_attestation_sha256",
                   "creation_signature_sha256", "pcr_digest_sha256",
-                  "nv_nonce", "nv_attestation_sha256", "nv_signature_sha256",
+                  "nv_nonce", "creation_nonce", "quote_nonce",
+                  "nv_attestation_sha256", "nv_signature_sha256",
                   "ak_qualified_name_sha256", "evidence_bundle_sha256"):
         validate_hash(receipt.get(field), "ATTESTATION_" + field.upper() + "_INVALID")
 
@@ -374,6 +385,10 @@ def validate_receipt(receipt: Any, signature_b64: Any, challenge: dict[str, Any]
         fail("ATTESTATION_NV_SIGNER_AK_QUALIFIED_NAME_MISMATCH")
     if receipt.get("nv_nonce") != derived_nv_nonce(challenge["nonce"]):
         fail("ATTESTATION_NV_NONCE_NOT_CHALLENGE_DERIVED")
+    if receipt.get("creation_nonce") != derived_creation_nonce(challenge["nonce"]):
+        fail("ATTESTATION_CREATION_NONCE_NOT_CHALLENGE_DERIVED")
+    if receipt.get("quote_nonce") != derived_quote_nonce(challenge["nonce"]):
+        fail("ATTESTATION_QUOTE_NONCE_NOT_CHALLENGE_DERIVED")
 
     manifest = require_exact_keys(receipt.get("evidence_manifest"), MANIFEST_FIELDS,
                                   "ATTESTATION_EVIDENCE_MANIFEST_SCHEMA_INVALID")
