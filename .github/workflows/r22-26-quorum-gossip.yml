@@ -1,0 +1,35 @@
+name: R22.26 quorum gossip model (advisory)
+on:
+  push:
+    branches: [research/r22-26-quorum-gossip-20261126]
+    paths:
+      - .github/workflows/r22-26-quorum-gossip.yml
+      - implementation/research/r22_26_quorum_gossip/*.go
+      - implementation/research/r22_26_quorum_gossip/go.mod
+permissions:
+  contents: read
+jobs:
+  model:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: false
+      - name: Run isolated standard-library model tests
+        working-directory: implementation/research/r22_26_quorum_gossip
+        run: |
+          set -euo pipefail
+          go test -count=1 -v ./... | tee "$RUNNER_TEMP/r22-26-tests.log"
+          go test -race -count=1 ./...
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r22-26-quorum-gossip-evidence
+          path: ${{ runner.temp }}/r22-26-tests.log
+          if-no-files-found: warn
+          retention-days: 30
