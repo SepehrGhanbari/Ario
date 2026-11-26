@@ -22,6 +22,20 @@ These instructions govern Codex and other AI-agent work in this repository. Read
 
 **فارسی:** طبق اعلام صاحب پروژه در ۲۶ نوامبر ۲۰۲۶، پس از حدود هفت ماه تلاش و مکاتبه، بازبین انسانی مستقل مشارکت‌کننده‌ای در پروژه وجود ندارد؛ کار فعلی با بنیان‌گذار و دستیارها و ابزارهای هوش مصنوعی پیش می‌رود. بازبینی ماشینی، آزمون CI و بازبینی بنیان‌گذار باید با عنوان واقعی خود ثبت شوند، نه به نام تأیید مستقل انسانی. نبود بازبین انسانی نباید کار پژوهشی مجاز را بی‌دلیل متوقف کند یا به ادعای اعتماد و تأیید ساختگی منجر شود.
 
+## Bounded caution, acceptance and stop rules — owner directive, 2026-11-26
+
+**Read first:** [AI Assistant Over-Caution: Critique and Operating Rules](Resources/AI_ASSISTANT_OVERCAUTION_CRITIQUE_2026-11-26.md). This is repository-level guidance for every AI assistant/reviewer who consults this repository.
+
+- `UNKNOWN` is a valid state for a specific claim, but it is not an unlimited license to stop unrelated safe progress.
+- Distinguish a known limitation, a deliberate scope exclusion, `UNKNOWN`, a non-blocking `FOLLOW_UP`, and a genuine `HOLD`. Do not collapse them into one status.
+- Define acceptance criteria and a stop condition before a bounded task. Do not add new gates after a pass unless new evidence establishes a material risk or the user's goal changes.
+- Reuse passing evidence for the same unchanged source SHA. Repeat a test only for a material code/configuration change, a new attack/environment, a failed or non-reproducible run, stale evidence, or a specific reproducibility question. Cite the existing run otherwise.
+- Every process-level `HOLD` must identify the exact unmet acceptance criterion, evidence, impact, and smallest resolving action. Imperfection or optional hardening alone is not a blocker.
+- An expected negative result such as `HOLD_BELOW_EXTERNAL_FLOOR` is a PASS when the test is intended to detect and reject rollback.
+- Once the declared criteria pass, state **“Sufficient for the current purpose.”** Record remaining limitations once as bounded follow-ups and proceed; do not reopen completed work without new material evidence.
+- Within the owner's standing authorization, do not ask for repeated per-step permission for bounded, reversible research, documentation, fixes, tests, branches, PRs, and issue records. This does not grant excluded authority for real keys, trust activation, production promotion, destructive history changes, or any action barred by a separate technical gate.
+- Report the result first and protect the owner's time: no repeated requests to retype available information, no duplicate review loops, and no invented blockers.
+
 ## Authorization and scope
 
 - Inspect the relevant repository state, files, instructions, and constraints before proposing or making a change.
