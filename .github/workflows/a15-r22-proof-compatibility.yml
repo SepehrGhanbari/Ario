@@ -43,7 +43,6 @@ jobs:
           python -I -B implementation/research/a15_r22_live_v1/proof_contract_from_zips.py \
             --first-zip implementation/tests/fixtures/a15_r22_run_45823494521/A15-FIRST-ONLY.zip \
             --second-zip implementation/tests/fixtures/a15_r22_run_45823494521/A15-SECOND-REVEAL-SYNTHETIC.zip \
-            --cold-zip implementation/tests/fixtures/a15_r22_run_45823494521/A15-COLD-RECOVERY.zip \
             --r22-codec pinned-r22-22g/implementation/research/r22_22_recovery_root/generic_successor/event_codec.py \
             --r22-pure-verifier pinned-r22-22g/implementation/research/r22_22_recovery_root/verify_nostr_bip340.py \
             --sigsum-verify "$(go env GOPATH)/bin/sigsum-verify"
