@@ -77,3 +77,40 @@ The public staging table lists GDB Security, Geomys, IPng, Markovian, Mullvad, a
 - https://ipng.ch/s/ct/
 
 Decision remains `HOLD_EXTERNAL_CUSTODY_NOT_ESTABLISHED`. The 44/44 result does not promote any witness, key, or trust state.
+
+
+## Markovian rollback-floor candidate — direct evidence, 2026-11-26
+
+A new primary-source review found a stronger recovery mechanism than a generic witness endpoint. Markovian documents that its witness writes each per-log high-water mark hourly into its own public transparency log; that log is cosigned by a pinned 4-of-7 external witness policy and timestamped into Bitcoin. On startup, it reads the latest qualifying floor, checks inclusion, and retains the higher of restored and published marks. An empty local database is refused. For logs it can fetch, it also checks the current log state; push-only logs retain up to a one-hour recovery gap. The operator explicitly says full control of its own server can still edit local files; external records make rollback detectable, not impossible.
+
+Read-only endpoints fetched:
+- checkpoint: `log.markovianprotocol.com/log`, tree size 14904
+- anchor: latest stamped size 14903 pending; confirmed size 14899 in Bitcoin block 977669
+- anchor header verifier: 2686 confirmed checks, 0 mismatches at fetch time
+- policy: seven pinned witness keys, 4-of-7
+
+The seven pinned witness keys map conservatively to four corporate/operator domains:
+- AMAGICOM group: Stagemole/Mullvad, RGDD, SmartIT (3 keys)
+- Google TrustFabric: little-garden and ring-any-bells (2 keys)
+- Geomys (1 key)
+- Remora / Florian Larysch (1 key)
+
+Exact weighted analysis of all threshold-sized 4-of-7 subsets gives:
+- minimum distinct corporate domains in any valid four-key quorum: 2
+- minimum corporate-domain intersection between any two valid four-key quorums: 1
+
+Thus the current 4-of-7 policy can be met by two corporate groups (for example, three AMAGICOM keys plus one Google key), and two valid quorums can intersect only in one corporate group. It does not satisfy the stricter R63 f=1 requirement of an intersection greater than one independently controlled domain. This is not a criticism of Markovian's stated policy; it is a stricter R63 requirement. The rollback-floor mechanism remains a strong candidate component, but the pinned witness roster would need a domain-diverse policy for R63.
+
+An email inquiry was sent to `hello@markovianprotocol.com` asking about a low-volume synthetic Ario test, exact failure-domain grouping, whether 4-of-7 can guarantee three independently administered domains, the residual recovery gap, and offline verification. No Ario-specific record was published, no new key was generated, and no fault test was requested.
+
+Primary sources:
+- https://markovianprotocol.com/get-witnessed.html
+- https://markovianprotocol.com/witness-policy.html
+- https://log.markovianprotocol.com/policy
+- https://log.markovianprotocol.com/checkpoint
+- https://log.markovianprotocol.com/anchor
+- https://www.glasklarteknik.se/about/
+- https://www.tillitis.se/faq/
+- https://www.glasklarteknik.se/post/named-policies-for-sigsum/
+
+Decision: `HOLD_EXTERNAL_CUSTODY_NOT_ESTABLISHED`. Markovian is the strongest candidate for a recovery-floor integration found so far, but it is not yet an admitted independent R63 custodian.
