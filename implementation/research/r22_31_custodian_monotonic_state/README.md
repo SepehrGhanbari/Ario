@@ -38,3 +38,8 @@ The journal is also stored on the same research runner. A runner administrator c
 - The receipt does not overclaim TPM evidence provenance.
 
 See RESEARCH_RECORD.md for exact source, tests, and CI evidence.
+
+
+## Exact regression reproduction
+
+The dedicated CI also extracts and runs the exact embedded gate from R22.30. It demonstrates that two different nonces can both obtain an epoch-8 approval from the same unchanged epoch-7 anchor. The final run passed all 8 tests (7 prototype controls plus this exact-source reproduction): https://github.com/SepehrGhanbari/Ario/actions/runs/45848502455.
