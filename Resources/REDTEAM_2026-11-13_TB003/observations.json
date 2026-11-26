@@ -1,0 +1,122 @@
+{
+  "study": "AI_ASSISTED_EXPLORATORY_NOT_PREREGISTERED",
+  "date": "2026-11-13",
+  "source": {
+    "commit": "972a4199e5c52e1bdab559be623949c7d7a24b69",
+    "path": "implementation/witness_provenance_experiment.py",
+    "sha256": "71912958bad6db97218ac630cadee6c34c04b286aec99b3f7cda071f8d79f567",
+    "git_blob_sha1": "4faf010d73219af63c254097e9c135da68d60078"
+  },
+  "run": "Windows Python 3.13.14, source in memory, -B, no repository modification",
+  "keys": [
+    "id",
+    "custody_A",
+    "admin",
+    "source"
+  ],
+  "rows": [
+    [
+      "C01_clean",
+      "LAB_CHAIN_PRESENT",
+      "LAB_CONDITIONALLY_SEPARATE",
+      "LAB_CONDITIONALLY_DISTINCT"
+    ],
+    [
+      "C02_departure",
+      "LAB_CHAIN_PRESENT",
+      "LAB_CONDITIONALLY_SEPARATE",
+      "LAB_CONDITIONALLY_DISTINCT"
+    ],
+    [
+      "C03_departure_compromised",
+      "LAB_CHAIN_PRESENT",
+      "LAB_CONDITIONALLY_SEPARATE",
+      "LAB_CONDITIONALLY_DISTINCT"
+    ],
+    [
+      "C04_holder_is_P3",
+      "LAB_CHAIN_PRESENT",
+      "LAB_CONDITIONALLY_SEPARATE",
+      "LAB_CONDITIONALLY_DISTINCT"
+    ],
+    [
+      "C05_holder_P3_compromised",
+      "LAB_CHAIN_PRESENT",
+      "COMPROMISED_BY_SCENARIO",
+      "LAB_CONDITIONALLY_DISTINCT"
+    ],
+    [
+      "C06_forward_after_holder",
+      "LAB_CHAIN_PRESENT",
+      "LAB_CONDITIONALLY_SEPARATE",
+      "LAB_CONDITIONALLY_DISTINCT"
+    ],
+    [
+      "C07_forward_compromised",
+      "LAB_CHAIN_PRESENT",
+      "COMPROMISED_BY_SCENARIO",
+      "LAB_CONDITIONALLY_DISTINCT"
+    ],
+    [
+      "C08_missing_transfer",
+      "UNKNOWN",
+      "UNKNOWN",
+      "UNKNOWN"
+    ],
+    [
+      "C09_common_controller",
+      "LAB_CHAIN_PRESENT",
+      "COMMON_CONTROL_DETECTED",
+      "LAB_CONDITIONALLY_DISTINCT"
+    ],
+    [
+      "C10_incomplete_control",
+      "LAB_CHAIN_PRESENT",
+      "UNKNOWN",
+      "LAB_CONDITIONALLY_DISTINCT"
+    ],
+    [
+      "C11_common_source",
+      "LAB_CHAIN_PRESENT",
+      "LAB_CONDITIONALLY_SEPARATE",
+      "COMMON_SOURCE_DETECTED"
+    ],
+    [
+      "A01_distributed_alias",
+      "LAB_CHAIN_PRESENT",
+      "LAB_CONDITIONALLY_SEPARATE",
+      "LAB_CONDITIONALLY_DISTINCT"
+    ],
+    [
+      "A02_direct_identity",
+      "LAB_CHAIN_PRESENT",
+      "LAB_CONDITIONALLY_SEPARATE",
+      "COMMON_SOURCE_DETECTED"
+    ],
+    [
+      "A03_direct_ancestry",
+      "LAB_CHAIN_PRESENT",
+      "LAB_CONDITIONALLY_SEPARATE",
+      "COMMON_SOURCE_DETECTED"
+    ],
+    [
+      "A04_untrusted_ancestry",
+      "LAB_CHAIN_PRESENT",
+      "UNKNOWN",
+      "UNKNOWN"
+    ],
+    [
+      "A05_incomplete_surface",
+      "LAB_CHAIN_PRESENT",
+      "UNKNOWN",
+      "UNKNOWN"
+    ],
+    [
+      "A06_permutation",
+      "LAB_CHAIN_PRESENT",
+      "LAB_CONDITIONALLY_SEPARATE",
+      "LAB_CONDITIONALLY_DISTINCT"
+    ]
+  ],
+  "interpretation": "Statuses transcribed from two exploratory runtime sessions. Semantics contested. No live exploit or production authorization."
+}
