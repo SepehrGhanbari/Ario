@@ -1,0 +1,51 @@
+test_changed_verifier_never_runs_or_downloads (test_ario_verified_release.Wrapper.test_changed_verifier_never_runs_or_downloads) ... ok
+test_check_all_read_only (test_ario_verified_release.Wrapper.test_check_all_read_only) ... ok
+test_child_failure_and_timeout (test_ario_verified_release.Wrapper.test_child_failure_and_timeout) ... ok
+test_child_valid_result_and_isolated_invocation (test_ario_verified_release.Wrapper.test_child_valid_result_and_isolated_invocation) ... ok
+test_download_failure_cleans_own_directory (test_ario_verified_release.Wrapper.test_download_failure_cleans_own_directory) ... ok
+test_download_real_decoder_fixed_and_chunked (test_ario_verified_release.Wrapper.test_download_real_decoder_fixed_and_chunked) ... ok
+test_download_rejects_bad_transport (test_ario_verified_release.Wrapper.test_download_rejects_bad_transport) ... ok
+test_download_verify_and_preserve_existing (test_ario_verified_release.Wrapper.test_download_verify_and_preserve_existing) ... ok
+test_exact_reviewed_verifier (test_ario_verified_release.Wrapper.test_exact_reviewed_verifier) ... ok
+test_rejection_and_unknown_not_success (test_ario_verified_release.Wrapper.test_rejection_and_unknown_not_success) ... ok
+test_unverified_transport_and_bad_fields_not_accepted (test_ario_verified_release.Wrapper.test_unverified_transport_and_bad_fields_not_accepted) ... ok
+test_blocks_oversize (test_ario_verify_coverage.Coverage.test_blocks_oversize) ... ok
+test_blocks_truncated (test_ario_verify_coverage.Coverage.test_blocks_truncated) ... ok
+test_case_collision (test_ario_verify_coverage.Coverage.test_case_collision) ... ok
+test_doi_catalog_not_match (test_ario_verify_coverage.Coverage.test_doi_catalog_not_match) ... ok
+test_doi_concept_rejected (test_ario_verify_coverage.Coverage.test_doi_concept_rejected) ... ok
+test_doi_duplicate_file (test_ario_verify_coverage.Coverage.test_doi_duplicate_file) ... ok
+test_doi_filename_traversal (test_ario_verify_coverage.Coverage.test_doi_filename_traversal) ... ok
+test_doi_live_path_mock_match (test_ario_verify_coverage.Coverage.test_doi_live_path_mock_match) ... ok
+test_doi_missing_local_file (test_ario_verify_coverage.Coverage.test_doi_missing_local_file) ... ok
+test_doi_modified_same_size (test_ario_verify_coverage.Coverage.test_doi_modified_same_size) ... ok
+test_doi_short_remote (test_ario_verify_coverage.Coverage.test_doi_short_remote) ... ok
+test_doi_unavailable (test_ario_verify_coverage.Coverage.test_doi_unavailable) ... ok
+test_doi_wrong_remote (test_ario_verify_coverage.Coverage.test_doi_wrong_remote) ... ok
+test_duplicate_json (test_ario_verify_coverage.Coverage.test_duplicate_json) ... ok
+test_git_compare_against_actual_git_object (test_ario_verify_coverage.Coverage.test_git_compare_against_actual_git_object) ... ok
+test_git_metadata_not_read (test_ario_verify_coverage.Coverage.test_git_metadata_not_read) ... ok
+test_git_tree_exact (test_ario_verify_coverage.Coverage.test_git_tree_exact) ... ok
+test_missing (test_ario_verify_coverage.Coverage.test_missing) ... ok
+test_modified_same_size (test_ario_verify_coverage.Coverage.test_modified_same_size) ... ok
+test_symlink (test_ario_verify_coverage.Coverage.test_symlink) ... ok
+test_tree_omitted_entry (test_ario_verify_coverage.Coverage.test_tree_omitted_entry) ... ok
+test_tree_wrong_hash (test_ario_verify_coverage.Coverage.test_tree_wrong_hash) ... ok
+test_truncation (test_ario_verify_coverage.Coverage.test_truncation) ... ok
+test_unsafe_paths (test_ario_verify_coverage.Coverage.test_unsafe_paths) ... ok
+test_untracked (test_ario_verify_coverage.Coverage.test_untracked) ... ok
+test_metadata_drift (test_run_doi_bulk.TestBulk.test_metadata_drift) ... Download 1: a.txt
+ok
+test_second_response_mismatch (test_run_doi_bulk.TestBulk.test_second_response_mismatch) ... Download 1: a.txt
+ok
+test_tampered_download (test_run_doi_bulk.TestBulk.test_tampered_download) ... Download 1: a.txt
+ok
+test_two_reads (test_run_doi_bulk.TestBulk.test_two_reads) ... Download 1: a.txt
+ok
+test_unavailable (test_run_doi_bulk.TestBulk.test_unavailable) ... Download 1: a.txt
+ok
+
+----------------------------------------------------------------------
+Ran 41 tests in 0.131s
+
+OK

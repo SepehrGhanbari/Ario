@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://ario-research-independent.vercel.app/ario-causal-demo.html">
+<meta name="description" content="Synthetic Ario teaching prototype for evidence provenance and dependency states. No real file access, tool execution, hashing, memory writes, or causal inference.">
+<title>Ario Evidence Dependency DAG — Synthetic Teaching Demo</title>
+<style>:root {
+  --ink: #22303c;
+  --paper: #f6f4ee;
+  --card: #ffffff;
+  --line: #d9d3c5;
+  --accent: #0e6b5c;
+  --warn: #9c4a1e;
+  --mut: #555f69;
+  --blue: #23527c;
+  --amber: #8a6208;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.8;
+  font-family: "Segoe UI", Tahoma, system-ui, sans-serif;
+}
+.wrap { max-width: 920px; margin: 0 auto; padding: 0 18px; }
+header { background: var(--ink); color: #fff; padding: 26px 0 20px; }
+header h1 { margin: 0 0 6px; font-size: 1.45rem; }
+header p { margin: 0; opacity: 0.85; font-size: 0.92rem; }
+#langBtn {
+  margin-top: 12px;
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.45);
+  border-radius: 8px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 0.88rem;
+}
+#langBtn:hover { background: rgba(255,255,255,0.12); }
+.banner { background: #fff7e8; border-bottom: 1px solid var(--line); padding: 12px 0; font-size: 0.9rem; color: var(--warn); }
+.graph-hint { margin: 0; font-size: 0.82rem; color: var(--mut); }
+.ledger-heading { margin-top: 20px; }
+.inspector-title { margin: 0 0 10px; font-size: 1.05rem; color: var(--ink); }
+.inspector-title-row { display: flex; justify-content: space-between; align-items: center; }
+.inspector-detail { margin: 8px 0; font-size: 0.88rem; }
+.footer-wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.pill-warn { background: #fff5dc; color: var(--amber); border: 1px solid #e5d19b; }
+.node-circle:focus { outline: none; }
+.node-circle:focus circle { stroke: #22303c; stroke-width: 3; }
+main { padding: 24px 0 40px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 22px; margin-bottom: 22px; }
+h2 { margin: 0 0 14px; font-size: 1.2rem; color: var(--accent); }
+.scen-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin-top: 14px; }
+.scen-btn {
+  text-align: inherit;
+  font: inherit;
+  border: 2px solid var(--line);
+  background: #fbfaf6;
+  border-radius: 12px;
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.scen-btn:hover { border-color: var(--accent); background: #f2f8f6; }
+.scen-btn.active { border-color: var(--accent); background: #eaf5f2; }
+.scen-btn b { display: block; margin-bottom: 4px; font-size: 0.95rem; color: var(--ink); }
+.scen-btn span { font-size: 0.82rem; color: var(--mut); display: block; line-height: 1.5; }
+.pill {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  letter-spacing: 0.03em;
+}
+.pill-sup { background: #eaf5ee; color: var(--accent); border: 1px solid #b6d9c2; }
+.pill-cont { background: #faecea; color: var(--warn); border: 1px solid #e3c0bc; }
+.pill-hyp { background: #edf4f8; color: var(--blue); border: 1px solid #c0d3e2; }
+.graph-wrap {
+  position: relative;
+  width: 100%;
+  height: 380px;
+  background: #fbfaf6;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 14px 0;
+}
+.svg-graph { width: 100%; height: 100%; }
+.node-circle { cursor: pointer; transition: transform 0.2s; }
+.node-circle:hover { transform: scale(1.05); }
+.inspector {
+  background: #fbfaf6;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 14px;
+}
+.inspector h3 { margin: 0 0 10px; font-size: 1.05rem; }
+.meta-row { display: flex; justify-content: space-between; font-size: 0.82rem; color: var(--mut); margin: 6px 0; border-bottom: 1px dashed var(--line); padding-bottom: 4px; }
+.meta-row code { font-family: monospace; direction: ltr; font-weight: bold; }
+.ledger-box {
+  background: #fbfaf6;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  max-height: 180px;
+  overflow-y: auto;
+  margin-top: 14px;
+  font-size: 0.85rem;
+}
+.ledger-item { padding: 8px 10px; border-radius: 8px; margin: 4px 0; background: #fff; border: 1px solid var(--line); }
+.ledger-item .tag { font-size: 0.72rem; font-weight: bold; color: var(--accent); }
+.expl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-top: 12px; }
+.expl-card { background: #fbfaf6; border: 1px solid var(--line); border-radius: 10px; padding: 14px; font-size: 0.88rem; }
+.expl-card b { display: block; margin-bottom: 6px; color: var(--ink); }
+footer { border-top: 1px solid var(--line); padding: 22px 0; font-size: 0.84rem; color: var(--mut); }
+footer a { color: var(--accent); text-decoration: none; }
+footer a:hover { text-decoration: underline; }</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1 id="t-title">گراف وابستگی شواهد آریو — دموی ساختگی</h1>
+    <p id="t-sub">نمونهٔ آموزشی سمت مرورگر؛ نه موتور استنتاج علّی و نه سامانهٔ اجرایی آریو</p>
+    <button id="langBtn" type="button">English</button>
+  </div>
+</header>
+
+<div class="banner">
+  <div class="wrap" id="t-banner">
+    نمونهٔ آموزشی کاملاً ساختگی است: هیچ فایلی خوانده، ابزاری اجرا، هشی محاسبه یا حافظه‌ای نوشته نمی‌شود. این نمودار وابستگی شواهد است، نه موتور استنتاج علّی.
+  </div>
+</div>
+
+<main class="wrap">
+  <section class="card">
+    <h2 id="t-scen-h">سناریوهای نمایشی شواهد</h2>
+    <div class="scen-grid">
+      <button class="scen-btn active" id="btn-base" type="button">
+        <b id="t-scen-base-b">۱. شواهد تجربی معتبر (Baseline)</b>
+        <span id="t-scen-base-s">ابزار فایل را خوانده، هش تأیید شده و استنتاج به درستی صورت گرفته است.</span>
+      </button>
+
+      <button class="scen-btn" id="btn-fals" type="button">
+        <b id="t-scen-fals-b">۲. ابطال هش (Falsification)</b>
+        <span id="t-scen-fals-s">هش فایل با تعهد ورودی نمی‌خواند؛ تمام گره‌های وابسته ابطال می‌شوند.</span>
+      </button>
+
+      <button class="scen-btn" id="btn-self" type="button">
+        <b id="t-scen-self-b">۳. ادعای بدون شاهد (Anti-Self-Citation)</b>
+        <span id="t-scen-self-s">مدل فرضیه‌ای را بدون سند تجربی مطرح می‌کند؛ ارتقای ادعا مسدود می‌شود.</span>
+      </button>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2 id="t-graph-h">گراف وابستگی شواهد (نه مدل استنتاج علّی)</h2>
+    <p class="graph-hint" id="t-graph-hint">(برای بازرسی، روی هر گره کلیک کنید)</p>
+    
+    <div class="graph-wrap">
+      <svg id="graphSvg" class="svg-graph" viewBox="0 0 580 340" role="group" aria-label="Synthetic evidence dependency graph"></svg>
+    </div>
+
+    <div class="inspector"><h3 id="t-inspect-h" class="inspector-title"></h3><div id="inspectorBox" aria-live="polite"></div></div>
+
+    <h2 class="ledger-heading" id="t-ledger-h">گزارش سناریو (فقط داخل همین صفحه)</h2>
+    <div class="ledger-box" id="ledgerBox" aria-live="polite"></div>
+  </section>
+
+  <section class="card">
+    <h2 id="t-why-h">این نمونه چه چیزی را نشان می‌دهد؟</h2>
+    <div class="expl-grid">
+      <div class="expl-card">
+        <b id="t-e1-t">۱. برچسب‌گذاری منشأ (Source Tagging)</b>
+        <span id="t-e1-d">برچسب‌ها در این نمونه آموزشی‌اند و هیچ اعتبارسنجی واقعی اجرا نمی‌شود.</span>
+      </div>
+      <div class="expl-card">
+        <b id="t-e2-t">۲. ابطال زنجیره‌ای خودکار</b>
+        <span id="t-e2-d">در سناریوهای ساختگی، تعارض یا فرضیهٔ تأییدنشده نتیجهٔ وابسته را متوقف می‌کند.</span>
+      </div>
+      <div class="expl-card">
+        <b id="t-e3-t">۳. نگهداری شکست‌ها (No Erasure)</b>
+        <span id="t-e3-d">گزارش فقط در حافظهٔ موقت صفحه است؛ هیچ دفتر یا حافظهٔ پایداری نوشته نمی‌شود.</span>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap footer-wrap">
+    <div><strong>پروژه آریو (Ario)</strong> — نمونهٔ آموزشی ساختگی؛ بدون موتور اجرایی یا نوشتن پایدار</div>
+    <div>
+      <a href="https://github.com/SepehrGhanbari/Ario" target="_blank" rel="noopener noreferrer">GitHub</a> • 
+      <a href="/ario-demo.html">Teaching Demo</a> • 
+      <a href="/research.html">Research Log</a>
+    </div>
+  </div>
+</footer>
+
+<script>var currentLang = 'fa';
+var currentScenario = 'base';
+var selectedNodeId = 'N2';
+
+var I18N = {
+  fa: {
+    title: 'منشأ شواهد و گراف وابستگی آریو — دموی ساختگی',
+    sub: 'نمونهٔ آموزشی سمت مرورگر؛ نه موتور استنتاج علّی و نه سامانهٔ اجرایی آریو',
+    banner: 'دموی آموزشی کاملاً ساختگی است: هیچ فایلی خوانده، ابزاری اجرا، هشی محاسبه یا حافظه‌ای نوشته نمی‌شود. این نمودار وابستگی شواهد است، نه موتور استنتاج علّی.',
+    scenH: 'سناریوهای نمایشی شواهد',
+    scenBaseB: '۱. دو پیش‌فرض ساختگی تأییدشده',
+    scenBaseS: 'دو شاهد صرفاً در این نمونهٔ ساختگی تأیید شده‌اند؛ نتیجهٔ پایین‌دستی نیز فقط نمایشی است.',
+    scenFalsB: '۲. تعارض یک شاهد ساختگی',
+    scenFalsS: 'N2 متعارض می‌شود؛ نتیجه و اقدام وابسته مسدود می‌شوند، اما N3 به‌عنوان گرهٔ جداگانه باقی می‌ماند.',
+    scenSelfB: '۳. فرضیهٔ بدون شاهد مستقل',
+    scenSelfS: 'N3 فقط فرضیه است؛ ترکیب معلق و اقدام حافظه مسدود می‌شود.',
+    graphH: 'گراف وابستگی شواهد (نه مدل استنتاج علّی)',
+    graphHint: '(برای انتخاب گره، کلیک کنید یا از Enter/Space استفاده کنید)',
+    inspectH: 'جزئیات گرهٔ ساختگی',
+    ledgerH: 'گزارش سناریو (فقط داخل همین صفحه)',
+    whyH: 'این نمونه چه چیزی را نشان می‌دهد؟',
+    e1T: '۱. برچسب‌گذاری منشأ (Source Tagging)',
+    e1D: 'برچسب‌ها در این نمونه آموزشی‌اند و هیچ اعتبارسنجی واقعی اجرا نمی‌شود.',
+    e2T: '۲. ابطال زنجیره‌ای خودکار',
+    e2D: 'در سناریوهای ساختگی، تعارض یا فرضیهٔ تأییدنشده نتیجهٔ وابسته را متوقف می‌کند.',
+    e3T: '۳. نگهداری شکست‌ها (No Erasure)',
+    e3D: 'گزارش فقط در حافظهٔ موقت صفحه است؛ هیچ دفتر یا حافظهٔ پایداری نوشته نمی‌شود.',
+    resetBtn: 'بازنشانی'
+  },
+  en: {
+    title: 'Ario Evidence Provenance & Dependency DAG — Synthetic Demo',
+    sub: 'Client-side teaching prototype only; not a causal-inference engine or an operational Ario system',
+    banner: 'Synthetic teaching demo only: no file is read, no tool is executed, no hash is computed, and no memory is written. This is an evidence-dependency graph, not a causal-inference engine.',
+    scenH: 'Illustrative evidence scenarios',
+    scenBaseB: '1. Two synthetic premises marked supported',
+    scenBaseS: 'Two fictional observations are marked supported in this fixture; the downstream result is illustrative only.',
+    scenFalsB: '2. One synthetic premise is contested',
+    scenFalsS: 'N2 becomes contested; dependent synthesis and action are blocked while separate N3 remains unchanged.',
+    scenSelfB: '3. A hypothesis without independent support',
+    scenSelfS: 'N3 remains an unverified hypothesis; synthesis is suspended and the proposed memory action is blocked.',
+    graphH: 'Evidence dependency graph (not a causal model)',
+    graphHint: '(Click a node or focus it and press Enter/Space)',
+    inspectH: 'Synthetic node details',
+    ledgerH: 'Scenario log (page-local only)',
+    whyH: 'What does this teaching example illustrate?',
+    e1T: '1. Origin Source Tagging',
+    e1D: 'Labels in this example are illustrative; no real evidence validation is performed.',
+    e2T: '2. Cascading Falsification',
+    e2D: 'In these synthetic scenarios, a contested or unverified premise stops dependent conclusions.',
+    e3T: '3. Revision != Erasure',
+    e3D: 'The log exists only in this page session; no durable ledger or memory is written.',
+    resetBtn: 'Reset'
+  }
+};
+
+var NODES = [
+  { id: 'N1', x: 80, y: 120, labelFa: 'ورودی کاربر', labelEn: 'User Input', type: 'USER_INPUT', status: 'RECORDED', parents: [], fixtureRef: 'SYNTHETIC_FIXTURE_N1', detailFa: 'درخواست ساختگی با نام نمونهٔ backup.json؛ هیچ فایلی باز یا خوانده نمی‌شود.', detailEn: 'A fictional request mentioning backup.json; no file is opened or read.' },
+  { id: 'N2', x: 240, y: 70, labelFa: 'مشاهدهٔ ساختگی A', labelEn: 'Synthetic Observation A', type: 'SYNTHETIC_OBSERVATION', status: 'SIMULATED_SUPPORTED', parents: ['N1'], fixtureRef: 'SYNTHETIC_FIXTURE_N2', detailFa: 'رسید نمایشی و ساختگی؛ هیچ ابزاری اجرا و هیچ هشی محاسبه نشده است.', detailEn: 'A fictional teaching receipt; no tool was run and no digest was computed.' },
+  { id: 'N3', x: 240, y: 220, labelFa: 'مشاهدهٔ ساختگی B', labelEn: 'Synthetic Observation B', type: 'SYNTHETIC_OBSERVATION', status: 'SIMULATED_SUPPORTED', parents: ['N1'], fixtureRef: 'SYNTHETIC_FIXTURE_N3', detailFa: 'یک مشاهدهٔ فرضی جدا در همین مثال؛ دادهٔ واقعی یا تأیید بیرونی نیست.', detailEn: 'A second fictional observation in this example; not real data or external verification.' },
+  { id: 'N4', x: 400, y: 140, labelFa: 'ترکیب نمایشی', labelEn: 'Illustrative Synthesis', type: 'SYNTHESIS', status: 'SIMULATED_SUPPORTED', parents: ['N2', 'N3'], fixtureRef: 'SYNTHETIC_FIXTURE_N4', detailFa: 'ترکیب آموزشی N2 و N3؛ هیچ ادعای واقعی دربارهٔ سلامت فایل ساخته نمی‌شود.', detailEn: 'A teaching-only combination of N2 and N3; no real file-integrity claim is made.' },
+  { id: 'N5', x: 500, y: 280, labelFa: 'اقدام حافظهٔ پیشنهادی', labelEn: 'Proposed Memory Action', type: 'PROPOSED_ACTION', status: 'SIMULATED_READY', parents: ['N4'], fixtureRef: 'SYNTHETIC_FIXTURE_N5', detailFa: 'فقط نمایش یک اقدام احتمالی؛ هیچ حافظه، لجر یا فایل پایداری نوشته نمی‌شود.', detailEn: 'A display-only proposed next step; no memory, ledger, or persistent file is written.' }
+];
+
+var ledgerEntries = [];
+
+function setLang(lang) {
+  currentLang = lang;
+  document.documentElement.lang = lang;
+  document.documentElement.dir = (lang === 'fa' ? 'rtl' : 'ltr');
+  document.getElementById('langBtn').innerText = (lang === 'fa' ? 'English' : 'فارسی');
+  var t = I18N[lang];
+  document.getElementById('t-title').innerText = t.title;
+  document.getElementById('t-sub').innerText = t.sub;
+  document.getElementById('t-banner').innerText = t.banner;
+  document.getElementById('t-scen-h').innerText = t.scenH;
+  document.getElementById('t-scen-base-b').innerText = t.scenBaseB;
+  document.getElementById('t-scen-base-s').innerText = t.scenBaseS;
+  document.getElementById('t-scen-fals-b').innerText = t.scenFalsB;
+  document.getElementById('t-scen-fals-s').innerText = t.scenFalsS;
+  document.getElementById('t-scen-self-b').innerText = t.scenSelfB;
+  document.getElementById('t-scen-self-s').innerText = t.scenSelfS;
+  document.getElementById('t-graph-h').innerText = t.graphH;
+  document.getElementById('t-graph-hint').innerText = t.graphHint;
+  document.getElementById('t-inspect-h').innerText = t.inspectH;
+  document.getElementById('t-ledger-h').innerText = t.ledgerH;
+  document.getElementById('t-why-h').innerText = t.whyH;
+  document.getElementById('t-e1-t').innerText = t.e1T;
+  document.getElementById('t-e1-d').innerText = t.e1D;
+  document.getElementById('t-e2-t').innerText = t.e2T;
+  document.getElementById('t-e2-d').innerText = t.e2D;
+  document.getElementById('t-e3-t').innerText = t.e3T;
+  document.getElementById('t-e3-d').innerText = t.e3D;
+  renderGraph();
+  renderInspector();
+  renderLedger();
+}
+
+function statusLabel(status) {
+  var labels = currentLang === 'fa' ? {
+    RECORDED: 'ورودی ثبت‌شده',
+    SIMULATED_SUPPORTED: 'تأییدشده در سناریوی ساختگی',
+    SIMULATED_READY: 'آماده در سناریوی ساختگی',
+    SIMULATED_CONTESTED: 'متعارض در سناریوی ساختگی',
+    UNVERIFIED_HYPOTHESIS: 'فرضیهٔ تأییدنشده',
+    SUSPENDED: 'معلق',
+    BLOCKED: 'مسدود'
+  } : {
+    RECORDED: 'Recorded input',
+    SIMULATED_SUPPORTED: 'Supported in synthetic scenario',
+    SIMULATED_READY: 'Ready in synthetic scenario',
+    SIMULATED_CONTESTED: 'Contested in synthetic scenario',
+    UNVERIFIED_HYPOTHESIS: 'Unverified hypothesis',
+    SUSPENDED: 'Suspended',
+    BLOCKED: 'Blocked'
+  };
+  return labels[status] || status;
+}
+
+function selectScenario(scen) {
+  if (scen !== 'base' && scen !== 'fals' && scen !== 'self') return;
+  NODES[1].status = 'SIMULATED_SUPPORTED';
+  NODES[2].status = 'SIMULATED_SUPPORTED';
+  NODES[3].status = 'SIMULATED_SUPPORTED';
+  NODES[4].status = 'SIMULATED_READY';
+  currentScenario = scen;
+  var btns = document.querySelectorAll('.scen-btn');
+  for (var b = 0; b < btns.length; b++) { btns[b].classList.remove('active'); }
+  document.getElementById('btn-' + scen).classList.add('active');
+
+  if (scen === 'base') {
+    selectedNodeId = 'N4';
+    ledgerEntries.unshift({ tag: 'SYNTHETIC_BASELINE', msgFa: 'وضعیت‌های مثبت فقط در سناریوی ساختگی معتبرند؛ هیچ عملیات واقعی انجام نشد.', msgEn: 'Positive states apply only inside this synthetic fixture; no real operation occurred.' });
+  } else if (scen === 'fals') {
+    NODES[1].status = 'SIMULATED_CONTESTED';
+    NODES[3].status = 'BLOCKED';
+    NODES[4].status = 'BLOCKED';
+    selectedNodeId = 'N2';
+    ledgerEntries.unshift({ tag: 'SYNTHETIC_CONFLICT', msgFa: 'N2 متعارض شد؛ N4 و N5 مسدود شدند؛ N3 جداگانه بدون تغییر باقی ماند.', msgEn: 'N2 became contested; N4 and N5 were blocked; separate N3 remained unchanged.' });
+  } else if (scen === 'self') {
+    NODES[2].status = 'UNVERIFIED_HYPOTHESIS';
+    NODES[3].status = 'SUSPENDED';
+    NODES[4].status = 'BLOCKED';
+    selectedNodeId = 'N3';
+    ledgerEntries.unshift({ tag: 'UNVERIFIED_HYPOTHESIS', msgFa: 'N3 فرضیهٔ تأییدنشده است؛ N4 معلق و N5 مسدود شد.', msgEn: 'N3 is an unverified hypothesis; N4 was suspended and N5 was blocked.' });
+  }
+
+  if (ledgerEntries.length > 20) ledgerEntries.pop();
+  renderGraph();
+  renderInspector();
+  renderLedger();
+}
+
+function selectNode(id) {
+  selectedNodeId = id;
+  renderGraph();
+  renderInspector();
+}
+
+function renderGraph() {
+  var svg = document.getElementById('graphSvg');
+  var html = '<defs>' +
+    '<marker id="arr" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#8c9aa6" /></marker>' +
+    '<marker id="arr-ok" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#0e6b5c" /></marker>' +
+    '<marker id="arr-err" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#9c4a1e" /></marker>' +
+    '<marker id="arr-warn" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#8a6208" /></marker>' +
+    '</defs>';
+
+  for (var i = 0; i < NODES.length; i++) {
+    var node = NODES[i];
+    for (var j = 0; j < node.parents.length; j++) {
+      var pId = node.parents[j];
+      var parent = null;
+      for (var k = 0; k < NODES.length; k++) {
+        if (NODES[k].id === pId) { parent = NODES[k]; break; }
+      }
+      if (!parent) continue;
+
+      var errorStates = ['SIMULATED_CONTESTED', 'CONTESTED', 'BLOCKED'];
+      var warningStates = ['SUSPENDED', 'UNVERIFIED_HYPOTHESIS'];
+      var isErr = errorStates.indexOf(node.status) !== -1 || errorStates.indexOf(parent.status) !== -1;
+      var isWarn = warningStates.indexOf(node.status) !== -1 || warningStates.indexOf(parent.status) !== -1;
+      var color = isErr ? '#9c4a1e' : (isWarn ? '#8a6208' : ((node.status === 'SIMULATED_SUPPORTED' || node.status === 'SIMULATED_READY') ? '#0e6b5c' : '#8c9aa6'));
+      var dash = (isErr || isWarn) ? 'stroke-dasharray="4 4"' : '';
+      var marker = isErr ? 'url(#arr-err)' : (isWarn ? 'url(#arr-warn)' : ((node.status === 'SIMULATED_SUPPORTED' || node.status === 'SIMULATED_READY') ? 'url(#arr-ok)' : 'url(#arr)'));
+
+      html += '<line x1="' + parent.x + '" y1="' + parent.y + '" x2="' + node.x + '" y2="' + node.y + '" stroke="' + color + '" stroke-width="2" ' + dash + ' marker-end="' + marker + '" />';
+    }
+  }
+
+  for (var i = 0; i < NODES.length; i++) {
+    var n = NODES[i];
+    var isSel = (n.id === selectedNodeId);
+    var color = '#23527c';
+    if (n.status === 'SIMULATED_SUPPORTED' || n.status === 'SIMULATED_READY') color = '#0e6b5c';
+    else if (n.status === 'SIMULATED_CONTESTED' || n.status === 'CONTESTED' || n.status === 'BLOCKED') color = '#9c4a1e';
+    else if (n.status === 'SUSPENDED') color = '#8a6208';
+    else if (n.status === 'UNVERIFIED_HYPOTHESIS') color = '#23527c';
+
+    html += '<g class="node-circle" data-id="' + n.id + '" role="button" tabindex="0" aria-label="' + n.id + ': ' + (currentLang === 'fa' ? n.labelFa : n.labelEn) + '" transform="translate(' + n.x + ',' + n.y + ')">';
+    if (isSel) {
+      html += '<circle r="24" fill="none" stroke="' + color + '" stroke-width="2" stroke-dasharray="3 3" opacity="0.8" />';
+    }
+    html += '<circle r="18" fill="' + color + '" stroke="' + (isSel ? '#22303c' : '#ffffff') + '" stroke-width="' + (isSel ? '3' : '2') + '" />';
+    html += '<text text-anchor="middle" dy=".3em" fill="#ffffff" font-size="11px" font-weight="bold">' + n.id + '</text>';
+    var lbl = (currentLang === 'fa' ? n.labelFa : n.labelEn);
+    html += '<text text-anchor="middle" y="32" fill="#22303c" font-size="10px" font-weight="600">' + lbl + '</text>';
+    html += '</g>';
+  }
+
+  svg.innerHTML = html;
+
+  var circles = svg.querySelectorAll('.node-circle');
+  for (var c = 0; c < circles.length; c++) {
+    circles[c].addEventListener('click', function() {
+      selectNode(this.getAttribute('data-id'));
+    });
+    circles[c].addEventListener('keydown', function(event) {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        selectNode(this.getAttribute('data-id'));
+      }
+    });
+  }
+}
+
+function renderInspector() {
+  var node = null;
+  for (var i = 0; i < NODES.length; i++) {
+    if (NODES[i].id === selectedNodeId) { node = NODES[i]; break; }
+  }
+  if (!node) return;
+
+  var container = document.getElementById('inspectorBox');
+  var lbl = (currentLang === 'fa' ? node.labelFa : node.labelEn);
+  var det = (currentLang === 'fa' ? node.detailFa : node.detailEn);
+
+  var pillClass = 'pill-sup';
+  if (node.status === 'SIMULATED_CONTESTED' || node.status === 'CONTESTED' || node.status === 'BLOCKED') pillClass = 'pill-cont';
+  else if (node.status === 'SUSPENDED') pillClass = 'pill-warn';
+  else if (node.status === 'UNVERIFIED_HYPOTHESIS') pillClass = 'pill-hyp';
+
+  var parentsStr = node.parents.length > 0 ? node.parents.join(' -> ') : (currentLang === 'fa' ? 'ریشه ورودی' : 'Root Input');
+
+  container.innerHTML = '<div>' +
+    '<div class="inspector-title-row">' +
+      '<b>' + node.id + ': ' + lbl + '</b>' +
+      '<span class="pill ' + pillClass + '">' + statusLabel(node.status) + '</span>' +
+    '</div>' +
+    '<p class="inspector-detail">' + det + '</p>' +
+    '<div class="meta-row"><span>' + (currentLang === 'fa' ? 'نوع منشأ:' : 'Source Type:') + '</span><code>' + node.type + '</code></div>' +
+    '<div class="meta-row"><span>' + (currentLang === 'fa' ? 'شناسهٔ نمونه:' : 'Fixture ID:') + '</span><code>' + node.fixtureRef + '</code></div>' +
+    '<div class="meta-row"><span>' + (currentLang === 'fa' ? 'پیش‌نیازها:' : 'Precedents:') + '</span><code>' + parentsStr + '</code></div>' +
+  '</div>';
+}
+
+function renderLedger() {
+  var container = document.getElementById('ledgerBox');
+  var html = '';
+  for (var i = 0; i < ledgerEntries.length; i++) {
+    var item = ledgerEntries[i];
+    var m = (currentLang === 'fa' ? item.msgFa : item.msgEn);
+    html += '<div class="ledger-item"><span class="tag">[' + item.tag + ']</span> ' + m + '</div>';
+  }
+  container.innerHTML = html;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  ledgerEntries = [
+    { tag: 'DEMO_STARTED', msgFa: 'آغاز یک نمونهٔ آموزشی ساختگی؛ بدون دسترسی به فایل یا ابزار.', msgEn: 'Synthetic teaching example started; no file or tool access.' },
+    { tag: 'NO_PERSISTENCE', msgFa: 'هیچ هش، رسید، حافظه یا دفتر پایداری ساخته یا ذخیره نمی‌شود.', msgEn: 'No digest, receipt, memory, or persistent ledger is created or stored.' }
+  ];
+  setLang('fa');
+  document.getElementById('langBtn').addEventListener('click', function() {
+    setLang(currentLang === 'fa' ? 'en' : 'fa');
+  });
+  document.getElementById('btn-base').addEventListener('click', function() { selectScenario('base'); });
+  document.getElementById('btn-fals').addEventListener('click', function() { selectScenario('fals'); });
+  document.getElementById('btn-self').addEventListener('click', function() { selectScenario('self'); });
+});</script>
+</body>
+</html>

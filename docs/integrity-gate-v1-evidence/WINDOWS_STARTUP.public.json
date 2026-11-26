@@ -1,0 +1,24 @@
+{
+  "directory": "<REDACTED_LOCAL_STAGE>",
+  "evidence": {
+    "commit": "89ef7ba466db2e7a267ee7780df348ee9e5920e6",
+    "expected_bytes": 96396968,
+    "expected_files": 473,
+    "extra_paths": [],
+    "matched_files": 473,
+    "problems": [],
+    "scope": "WORKTREE_RAW_FILE_BYTES_ONLY; .git EXCLUDED; MODES NOT ATTESTED; GIT SHA1 OBJECT IDS; NO HISTORY OR IDENTITY CLAIM",
+    "status": "TRACKED_FILE_BYTES_MATCH_GITHUB_TREE",
+    "tree": "7b1566d33a52b5bb609976f94501bc63f69d2a09"
+  },
+  "exit_code": 0,
+  "mode": "startup-probe",
+  "qualification": "RESEARCH_ONLY; verified preparation, not execution authorization, publisher identity, independent custody, atomic filesystem snapshot, freshness, or protection against hostile local OS/runtime. Checkout checks Git SHA-1 raw worktree bytes, excludes .git and does not attest modes/history. Explicit startup probe is synthetic M0 only; no general runtime enforcement or sandbox guarantee.",
+  "startup_attempted": true,
+  "startup_result": {
+    "audit_id": "ARIO-INTEGRITY-GATE-SYNTHETIC",
+    "scope": "SYNTHETIC_M0_NO_LEDGER",
+    "verdict": "UNKNOWN"
+  },
+  "status": "MATCH_RESEARCH_STARTUP_PROBE"
+}
