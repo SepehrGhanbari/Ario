@@ -87,3 +87,82 @@ def test_empty_and_blank_lines_are_not_semantic_records(tmp_path):
     assert report.blank_lines == 2
     assert report.records_seen == 0
     assert report.lines == ()
+
+
+def test_legacy_and_raw_digests_roundtrip_without_alias_selection(tmp_path):
+    from core.memory_consolidation import ledger_line_digests
+    line = b'{"event":"TASK_STARTED","task_id":"t1","goal":"same"}'
+    variants = [line + b"\n", line + b"\r\n", b"  " + line + b"  \n"]
+    pairs = [ledger_line_digests(v) for v in variants]
+    assert {p[0] for p in pairs} == {digest(line)}
+    assert {p[1] for p in pairs} == {digest(v) for v in variants}
+    p = tmp_path / "roundtrip.jsonl"
+    p.write_bytes(b"".join(variants))
+    engine = ConsolidationEngine()
+    report = engine.ingest_ledger_file_with_coverage(p)
+    assert (report.records_newly_ingested, report.replayed_events) == (1, 2)
+    assert engine.known_ledger_hashes == {digest(line)}
+    snap = engine.to_snapshot()
+    recovered = ConsolidationEngine.from_snapshot(snap, expected_sha256=digest(snap))
+    assert next(iter(recovered.nodes.values())).source_event_hashes == (digest(line),)
+    again = recovered.ingest_ledger_file_with_coverage(p)
+    assert (again.records_newly_ingested, again.replayed_events) == (0, 3)
+
+
+@pytest.mark.parametrize("failure", ["malformed", "rejected", "after_attribution"])
+def test_bridge_commit_is_atomic_across_memory_and_guard(tmp_path, monkeypatch, failure):
+    from core.source_monitoring import SourceMonitoringError
+    from core.memory_snapshot import encode_cognitive_memory_snapshot
+    bridge = EpistemicLedgerBridge()
+    good = tmp_path / "good.jsonl"
+    good.write_bytes(b'{"event":"TASK_STARTED","task_id":"g1","goal":"safe inspect"}\n')
+    bridge.ingest_agent_ledger(good)
+    bridge.guard.record_empirical_observation(
+        "tool_exit:run_tests:sample:0", "run_tests", "sample", 0, "out", "lock",
+        attribution_id="existing-active")
+    before = encode_cognitive_memory_snapshot(bridge.engine, bridge.guard)
+    active = set(bridge.guard._active_verified_ids)
+    assert "existing-active" in active
+    locks = (bridge.engine._batch_lock, bridge.guard._lock)
+    registry_before = dict(bridge.registry._intentions)
+    bad = tmp_path / "bad.jsonl"
+    prefix = b'{"event":"TASK_STARTED","task_id":"b1","goal":"partial"}\n'
+    if failure == "malformed":
+        bad.write_bytes(prefix + b'{not-json\n')
+        exc = BridgeError
+    elif failure == "rejected":
+        bad.write_bytes(prefix + b'{"event":"STEP_OBSERVED","tool":"not_allowlisted_tool"}\n')
+        exc = SourceMonitoringError
+    else:
+        bad.write_bytes(prefix)
+        def fail_after_attribution(*args, **kwargs):
+            assert len(bridge.guard.attributions) > 2
+            raise KeyboardInterrupt("injected after attribution")
+        monkeypatch.setattr(bridge.engine, "ingest_event_stream", fail_after_attribution)
+        exc = KeyboardInterrupt
+    with pytest.raises(exc):
+        bridge.ingest_agent_ledger(bad)
+    assert encode_cognitive_memory_snapshot(bridge.engine, bridge.guard) == before
+    assert bridge.guard._active_verified_ids == active
+    assert (bridge.engine._batch_lock, bridge.guard._lock) == locks
+    assert bridge.registry._intentions == registry_before
+
+
+def test_bridge_conflicting_history_replays_after_joint_recovery(tmp_path):
+    from core.memory_snapshot import encode_cognitive_memory_snapshot, decode_cognitive_memory_snapshot
+    from core.ledger_memory_bridge import EpistemicLedgerBridge
+    p = tmp_path / "conflicts.jsonl"
+    lines = [json.dumps({"event":"STEP_OBSERVED", "tool":"file_fingerprint",
+                         "result":{"path":"x","sha256":v * 64}}).encode()
+             for v in ("1", "2")]
+    p.write_bytes(b"\n".join(lines) + b"\n")
+    bridge = EpistemicLedgerBridge()
+    assert bridge.ingest_agent_ledger(p).contested_nodes_count == 2
+    snap = encode_cognitive_memory_snapshot(bridge.engine, bridge.guard)
+    engine, guard = decode_cognitive_memory_snapshot(
+        ConsolidationEngine, snap, expected_sha256=digest(snap),
+        allowlisted_tools={"file_fingerprint"})
+    recovered = EpistemicLedgerBridge(consolidation_engine=engine, source_guard=guard)
+    p.write_bytes(b"\r\n".join(lines) + b"\r\n")
+    assert recovered.ingest_agent_ledger(p).contested_nodes_count == 2
+    assert encode_cognitive_memory_snapshot(engine, guard) == snap
