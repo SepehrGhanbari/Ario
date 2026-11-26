@@ -1,0 +1,40 @@
+name: R22.25 independent keeper protocol (advisory)
+on:
+  push:
+    branches: [research/r22-25-independent-keeper-protocol-20261126]
+    paths:
+      - .github/workflows/r22-25-independent-keeper.yml
+      - implementation/research/r22_25_independent_keeper/**
+permissions:
+  contents: read
+concurrency:
+  group: r22-25-independent-keeper
+  cancel-in-progress: false
+jobs:
+  adversarial-model:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - name: Run standard-library-only custody protocol tests
+        working-directory: implementation/research/r22_25_independent_keeper
+        run: |
+          set -euo pipefail
+          gofmt -w protocol.go protocol_test.go
+          go test -count=1 -v ./... | tee "$RUNNER_TEMP/r22-25-tests.log"
+          go test -race -count=1 ./...
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r22-25-independent-keeper-model
+          path: \${{ runner.temp }}/r22-25-tests.log
+          if-no-files-found: warn
+          retention-days: 30
