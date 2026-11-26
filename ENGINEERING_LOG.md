@@ -1105,3 +1105,25 @@ Related #379 A15 retained-range experiment covers a different set of three commi
 - The connected GitHub tool does not expose a collaborator/admin enumeration endpoint. A named-user permission check is available, but the additional administrator's login has not yet been identified. Therefore do not claim that Sepehr is the only repository admin.
 - Current threat-model disposition: **OPEN / NOT_ASSESSED** until the additional administrator is identified and their effective permissions are verified. No access removal, ruleset change, branch protection change, or other security mutation was performed.
 - Next evidence path: inspect repository Settings → Collaborators (direct page: `https://github.com/SepehrGhanbari/Ario/settings/access`) or provide the second administrator's GitHub login for a direct permission check. Then map access to repository settings, rulesets, Actions, secrets, deployments, and external recovery sources.
+
+
+## 2026-11-26 — final direct-access inventory correction (owner screenshot)
+
+**This entry supersedes the immediately preceding statement that a second administrator exists.** The earlier wording was a misinterpretation of the owner's question; the owner has now supplied the actual GitHub Settings → Collaborators screenshot.
+
+Observed directly in the screenshot for `SepehrGhanbari/Ario`:
+- Direct access: **0 collaborators**.
+- GitHub UI states: **"Only you can contribute to this repository."**
+- Manage access states no collaborators have been invited.
+
+Cross-checks from the connected GitHub account:
+- Repository owner: `SepehrGhanbari`; authenticated account has `admin`.
+- Authenticated account has no organization memberships.
+- The active `Protect main` ruleset lists only user ID `104393545` (SepehrGhanbari) as its explicit bypass actor; the second active no-bypass baseline lists no bypass actors.
+- The earlier `Mrxxir = read` permission result is not evidence of collaborator status; the repository is public, and the owner's Collaborators page explicitly shows zero direct collaborators.
+
+**Disposition for the question asked:** No second human collaborator/admin with direct repository access is present in the supplied current access view. The earlier "another administrator exists" note is withdrawn. No further search for a fictional second admin is warranted.
+
+**Remaining distinction:** this does not prove that the owner's account/device is uncompromised, nor does the Collaborators page enumerate GitHub App installation permissions, Actions credentials, deploy keys, or external service credentials. Those are separate machine/credential access paths, not evidence of another human repository administrator. The connected integration shows one GitHub App installation on the owner's user account; its effective repository permissions were not exposed in the returned installation metadata. No claim is made that this app is a second human admin.
+
+No collaborator removal, ruleset change, key rotation, new Sigsum test, merge, trust activation, or production action was performed. The R22.31 same-domain rollback behavior remains a distinct owner-account-compromise / credential-custody boundary; it must not be conflated with a nonexistent second direct collaborator.
