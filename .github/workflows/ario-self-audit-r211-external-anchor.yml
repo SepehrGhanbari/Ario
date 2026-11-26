@@ -1,0 +1,26 @@
+name: R2.11 one-shot research anchor
+on:
+  push:
+    branches:
+      - research/self-audit-r211-external-anchor-20261126
+    paths:
+      - .github/workflows/ario-self-audit-r211-external-anchor.yml
+permissions: {}
+jobs:
+  submit-once:
+    if: github.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Submit only the previously public R2.7 domain-separated commitment
+        shell: bash
+        run: |
+          set -euo pipefail
+          # RESEARCH_ONLY; no checkout, tokens, private keys or raw evidence.
+          # No retries. Ambiguous failures require read-only investigation.
+          digest=79e7b801f802634c4f9546238816a7af0e2c542ce22b39426b991eaf47dba99a
+          status=$(curl --silent --show-error --connect-timeout 10 --max-time 25 --retry 0 --output receipt.json --write-out '%{http_code}' --header 'Content-Type: text/plain' --data-binary "sha256:$digest" https://log.markovianprotocol.com/submit)
+          printf 'HTTP_STATUS=%s\n' "$status"
+          python3 -c 'import json; print("RECEIPT_JSON="+json.dumps(json.load(open("receipt.json")),ensure_ascii=True,sort_keys=True))'
+          [[ "$status" =~ ^2[0-9][0-9]$ ]]
+          echo 'PUBLIC_SUBMISSION_RESPONSE_ONLY / NO_TRUST_ACTIVATION / NO_PRODUCTION'
