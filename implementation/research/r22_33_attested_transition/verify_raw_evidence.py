@@ -279,6 +279,13 @@ def validate_anchor_and_challenge(root: Path, now: int) -> tuple[dict[str, Any],
     return anchor, challenge, challenge_sig, custodian_public
 
 
+def parse_with_context(label: str, function, *args):
+    try:
+        return function(*args)
+    except ValueError as exc:
+        reject(label + ":" + str(exc))
+
+
 def read_tpm2b_file(path: Path, expected_size: int | None = None) -> bytes:
     raw = path.read_bytes()
     if len(raw) < 2:
@@ -376,7 +383,7 @@ def verify_bundle(root: Path, challenge: dict[str, Any], now: int) -> tuple[dict
     ak_public_area = (root / "ak-public-area.tpmt").read_bytes()
     ak_name = (root / "ak-name.bin").read_bytes()
     gate.validate_tpm_public_area(ak_public_area, ak_name, "ak")
-    if rsa_spki_from_tpm_public(ak_public_area) != ak_spki:
+    if parse_with_context("AK_TPMT_PUBLIC_PARSE_FAILED", rsa_spki_from_tpm_public, ak_public_area) != ak_spki:
         reject("AK_TPMT_PUBLIC_DOES_NOT_MATCH_AK_SPKI")
     ak_qualified_name = (root / "ak-qualified-name.bin").read_bytes()
     if len(ak_qualified_name) != 34 or ak_qualified_name[:2] != b"\x00\x0b":
@@ -413,7 +420,8 @@ def verify_bundle(root: Path, challenge: dict[str, Any], now: int) -> tuple[dict
         reject("NV_INDEX_HANDLE_INVALID")
     if nv_index_handle != NV_INDEX_HANDLE:
         reject("NV_INDEX_HANDLE_NOT_PINNED")
-    nv_index_name, nv_attributes, nv_size = nv.parse_nv_public(
+    nv_index_name, nv_attributes, nv_size = parse_with_context(
+        "NV_PUBLIC_PARSE_FAILED", nv.parse_nv_public,
         str(root / "nv-public.yaml"), nv_index_text
     )
     if nv_attributes != NV_ATTRIBUTES or nv_size != NV_DATA_SIZE:
@@ -442,7 +450,9 @@ def verify_bundle(root: Path, challenge: dict[str, Any], now: int) -> tuple[dict
 
     nv_attestation = (root / "nv-attestation.bin").read_bytes()
     nv_signature = (root / "nv-attestation.sig").read_bytes()
-    nv_signer, nv_extra, nv_attested_name, nv_offset, nv_attested_contents = parse_nv_attestation(nv_attestation)
+    nv_signer, nv_extra, nv_attested_name, nv_offset, nv_attested_contents = parse_with_context(
+        "NV_ATTESTATION_PARSE_FAILED", parse_nv_attestation, nv_attestation
+    )
     if nv_signer != ak_qualified_name:
         reject("NV_ATTESTATION_AK_QUALIFIED_NAME_MISMATCH")
     if nv_extra != bytes.fromhex(nv_nonce):
@@ -455,7 +465,9 @@ def verify_bundle(root: Path, challenge: dict[str, Any], now: int) -> tuple[dict
 
     creation_attestation = (root / "creation-attestation.bin").read_bytes()
     creation_signature = (root / "creation-attestation.sig").read_bytes()
-    creation_signer, creation_extra, created_name, created_hash = parse_creation_attestation(creation_attestation)
+    creation_signer, creation_extra, created_name, created_hash = parse_with_context(
+        "CREATION_ATTESTATION_PARSE_FAILED", parse_creation_attestation, creation_attestation
+    )
     if creation_signer != ak_qualified_name or creation_extra != bytes.fromhex(creation_nonce):
         reject("CREATION_ATTESTATION_SIGNER_OR_NONCE_MISMATCH")
     if created_name != storage_name or created_hash != creation_hash:
@@ -476,7 +488,9 @@ def verify_bundle(root: Path, challenge: dict[str, Any], now: int) -> tuple[dict
 
     quote_attestation = (root / "quote-attestation.bin").read_bytes()
     quote_signature = (root / "quote-attestation.sig").read_bytes()
-    quote_signer, quote_extra, selections, quote_pcr_digest = parse_quote_attestation(quote_attestation)
+    quote_signer, quote_extra, selections, quote_pcr_digest = parse_with_context(
+        "QUOTE_ATTESTATION_PARSE_FAILED", parse_quote_attestation, quote_attestation
+    )
     expected_selection = [(TPM_ALG_SHA256, bytes((0x00, 0x00, 0x80)))]
     if quote_signer != ak_qualified_name or quote_extra != bytes.fromhex(quote_nonce):
         reject("QUOTE_ATTESTATION_SIGNER_OR_NONCE_MISMATCH")
