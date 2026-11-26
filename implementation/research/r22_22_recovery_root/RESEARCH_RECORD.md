@@ -130,3 +130,8 @@ First live run 45835275791: six arithmetic/rollback tests PASS. Live readback fo
 ## R22.22I custom external-only quorum clarification (2026-11-26)
 
 The built-in test2 policy did not meet its grouped 4-of-5 threshold in live run 45835275791; its diagnostic is retained as NOT_MET. The new acceptance policy is deliberately independent of the Glasklar group: custom 2-of-4 across the four external witness public keys, requiring two separate external cosignatures and two corresponding get-tree-size readbacks at or above the sampled head. The quorum arithmetic unit test was corrected to ignore the Glasklar group entirely. The external test network remains TEST_ONLY; no data custody, global latest, or production trust claim.
+
+
+## R22.22I witness readback parser correction (2026-11-26)
+
+Live run 45835737810: six quorum/rollback unit controls PASS, but external witness readbacks were 0/4 because the client parser expected key-value `size=N`. The Sigsum witness API specifies the get-tree-size response as a bare ASCII decimal number. Corrected the parser to accept the specified bare decimal (and key-value compatibility), reject ambiguous/multiline values, and added three parser controls. This was an adapter/parser mismatch; no witness was contacted with a write, and no state changed. Retry read-only.

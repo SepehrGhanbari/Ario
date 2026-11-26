@@ -46,13 +46,10 @@ var external=[]externalWitness{
 func mustHash(s string) crypto.Hash { b,e:=hex.DecodeString(s);if e!=nil||len(b)!=32{panic("bad fixed hash")};var h crypto.Hash;copy(h[:],b);return h }
 func parseWitnessSize(raw []byte)(uint64,error){
  if len(raw)==0||len(raw)>4096{return 0,fmt.Errorf("response bounds")}
- var size uint64;found:=false
- for _,line:=range strings.Split(strings.TrimSpace(string(raw)),"\n"){
-  k,v,ok:=strings.Cut(strings.TrimSpace(line),"=");if !ok||k!="size"{continue}
-  if found{return 0,fmt.Errorf("duplicate size field")}
-  n,e:=strconv.ParseUint(v,10,64);if e!=nil{return 0,fmt.Errorf("invalid size")};size=n;found=true
- }
- if !found{return 0,fmt.Errorf("missing size field")};return size,nil
+ value:=strings.TrimSpace(string(raw))
+ if strings.HasPrefix(value,"size="){value=strings.TrimPrefix(value,"size=")}
+ if value==""||strings.ContainsAny(value,"\\r\\n="){return 0,fmt.Errorf("invalid size response")}
+ n,e:=strconv.ParseUint(value,10,64);if e!=nil{return 0,fmt.Errorf("invalid size")};return n,nil
 }
 func readWitnessSize(ctx context.Context,w externalWitness)(uint64,error){
  req,e:=http.NewRequestWithContext(ctx,http.MethodGet,w.URL+"/get-tree-size/"+logKeyHash,nil);if e!=nil{return 0,e}

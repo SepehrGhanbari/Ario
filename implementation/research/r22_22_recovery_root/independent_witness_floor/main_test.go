@@ -14,4 +14,7 @@ func TestSecondHighestIsQuorumFloor(t *testing.T){
 func TestRollbackBelowIndependentFloorHolds(t *testing.T){if got:=floorDecision(282870,"a",282869,"a");got!="HOLD_BELOW_EXTERNAL_FLOOR"{t.Fatal(got)}}
 func TestSameSizeDifferentRootHolds(t *testing.T){if got:=floorDecision(282870,"a",282870,"b");got!="HOLD_SAME_SIZE_ROOT_CONFLICT"{t.Fatal(got)}}
 func TestSameSizeSameRootNotClassifiedAsRollback(t *testing.T){if got:=floorDecision(282870,"a",282870,"a");got!="SIZE_AND_ROOT_NOT_BELOW_FLOOR"{t.Fatal(got)}}
+func TestWitnessSizeParsesSigsumPlainDecimal(t *testing.T){got,err:=parseWitnessSize([]byte("282900\\n"));if err!=nil||got!=282900{t.Fatalf("got=%d err=%v",got,err)}}
+func TestWitnessSizeParsesKeyValueCompatibility(t *testing.T){got,err:=parseWitnessSize([]byte("size=282900\\n"));if err!=nil||got!=282900{t.Fatalf("got=%d err=%v",got,err)}}
+func TestWitnessSizeRejectsAmbiguousResponse(t *testing.T){if _,err:=parseWitnessSize([]byte("size=1\\nsize=2"));err==nil{t.Fatal("expected reject")}}
 func TestLessThanTwoExternalReadbacksIsNotAQuorum(t *testing.T){for _,n:=range []int{0,1}{if n>=2{t.Fatalf("unexpected quorum for %d",n)}}}
