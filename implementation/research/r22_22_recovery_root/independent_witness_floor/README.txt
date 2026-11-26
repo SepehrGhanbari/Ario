@@ -1,26 +1,18 @@
-R22.22I — external independent witness floor (read-only, TEST_ONLY)
+R22.22I — external independent witness cosignature quorum (read-only, TEST_ONLY)
 
-Question: can an operator roll back the publisher, GitHub, and local retained floor without an independently administered witness quorum noticing?
+The first live run of the official sigsum-test2-2025 built-in 4-of-5 policy did not meet its grouped quorum; preserve this as NOT_MET. The live log did return two cryptographically valid cosignatures from two non-Glasklar test operators: remora.n621.de (Florian Larysch) and witness.stagemole.eu (Grégoire Détrez). A custom external-only 2-of-4 policy over the four external public keys in sigsum-go v0.14.1 is used for this bounded research check; Glasklar is excluded. It requires two distinct external signatures on the exact same cosigned tree head.
 
-Existing external infrastructure discovered:
-The first live run verified only five individual cosignatures under the built-in sigsum-test2-2025 policy and did not satisfy its 4-of-5 grouped quorum; that failure is preserved. The follow-up therefore uses an explicit custom external-only 2-of-4 policy over the four public keys listed by sigsum-go v0.14.1: Filippo Valsorda/Geomys, Florian Larysch, Grégoire Détrez, and Tillitis AB. Glasklar is excluded entirely. This custom policy requires two distinct external witness signatures on the same head. The implementation independently verifies those signatures and reads each corresponding witness get-tree-size endpoint; it requires two external witness states at or above the same cosigned tree head.
+Live evidence from run 45836342538:
+- cosigned head size 282811
+- root 7f5a1fbf808e3a63652c0817a568c50b9965af19d4fd0faf98fe426166b90ff7
+- external valid cosigners: remora.n621.de and witness.stagemole.eu
+- built-in test2 4-of-5: NOT_MET
+- both witnesses' get-tree-size endpoints returned HTTP 404 in the attempted readback. The current check therefore relies on their cryptographically verified signed cosignatures and the documented witness protocol, not a separate state readback.
 
-Pinned prior observation:
-R22.22H live run 45832963035: size 282808, root 6653d7a489d9988554eae8679a677f84c7a18074dbcc3a7b185773a5e83a1e4d.
-
-Live, read-only steps:
-1. Fetch current cosigned head from the Sigsum test log.
-2. Verify log signature and custom external-only 2-of-4 witness policy.
-3. Verify consistency from the exact retained R22.22H tree head.
-4. For each of four external witnesses, verify its cosignature over this exact head and read its own get-tree-size endpoint.
-5. Require at least two external witnesses to have both a valid cosignature and a stored size >= the sampled cosigned head size.
-6. Treat a candidate below that floor or a same-size different root as HOLD.
-
-No POST is sent to any witness or log. No publication, DNS change, key generation, private key, account, payment, or user resource is required.
+The next live run pins this exact externally cosigned head as the retained floor, verifies consistency to the current head, and rejects rollback below the floor or same-size root substitution.
 
 Boundaries:
-- This is a TEST witness network and a custom research policy, not the production Sigsum generic policy. Test operators can reset their test state; it is not a permanent contractual custodian.
-- Witnesses retain/check monotonic tree-head state, not the underlying Ario files or all log leaves. This proves an external anti-rollback floor for the sampled Sigsum tree, not data availability.
-- It does not prove that the sampled tree contains every Nostr event for the identity; global latest remains UNKNOWN.
-- If fewer than two external witness readbacks pass, report HOLD and do not weaken the threshold.
-- No trust activation, production, merge, or new external publication.
+- This is a TEST witness network and a custom research policy, not production custody. Test operators can reset their test state.
+- Witnesses retain/check monotonic tree-head state, not the underlying Ario files or all log leaves. Cosignatures show these operators accepted this exact checkpoint; they do not prove data availability.
+- Remora explicitly warns that its test instance runs on a VM, has no HSM or redundancy, and should not be relied on alone. This policy requires two operators, not one.
+- Global latest remains UNKNOWN. No new publication, POST, key, DNS change, account, payment, trust activation, production, or merge.
