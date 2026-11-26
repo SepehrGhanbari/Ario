@@ -51,6 +51,7 @@ RECEIPT_FIELDS = {
     "previous_epoch", "next_epoch", "previous_head_sha256", "next_head_sha256",
     "ak_name_b64", "ak_name_sha256", "ak_public_spki_der_b64", "ak_public_sha256",
     "ak_public_area_tpmt_b64", "ak_qualified_name_b64", "ak_qualified_name_sha256",
+    "ek_certificate_sha256", "creation_hash_sha256", "raw_evidence_manifest_sha256",
     "nv_index_handle", "nv_name_alg", "nv_attributes", "nv_data_size",
     "nv_auth_policy_b64", "nv_index_name_b64", "nv_contents_b64",
     "nv_offset", "nv_nonce", "creation_nonce", "quote_nonce",
@@ -70,7 +71,7 @@ MANIFEST_FIELDS = {
     "quote_signature_sha256", "pcr_value_sha256", "creation_hash_sha256",
     "ak_qualified_name_sha256", "nv_index_name_sha256", "nv_public_area_sha256",
     "nv_contents_sha256", "nv_qualified_signer_sha256", "nv_nonce_sha256",
-    "nv_attestation_sha256", "nv_signature_sha256",
+    "nv_attestation_sha256", "nv_signature_sha256", "raw_evidence_manifest_sha256",
 }
 
 
@@ -309,7 +310,9 @@ def validate_receipt(receipt: Any, signature_b64: Any, challenge: dict[str, Any]
                   "creation_signature_sha256", "pcr_digest_sha256",
                   "nv_nonce", "creation_nonce", "quote_nonce",
                   "nv_attestation_sha256", "nv_signature_sha256",
-                  "ak_qualified_name_sha256", "evidence_bundle_sha256"):
+                  "ak_qualified_name_sha256", "ek_certificate_sha256",
+                  "creation_hash_sha256", "raw_evidence_manifest_sha256",
+                  "evidence_bundle_sha256"):
         validate_hash(receipt.get(field), "ATTESTATION_" + field.upper() + "_INVALID")
 
     ek_spki = decode_b64(receipt.get("ek_spki_der_b64"), "ATTESTATION_EK_SPKI_INVALID")
@@ -397,6 +400,9 @@ def validate_receipt(receipt: Any, signature_b64: Any, challenge: dict[str, Any]
         validate_hash(value, "ATTESTATION_MANIFEST_" + key.upper() + "_INVALID")
     expected_manifest_values = {
         "ek_spki_sha256": receipt["device_ek_sha256"],
+        "ek_certificate_sha256": receipt["ek_certificate_sha256"],
+        "creation_hash_sha256": receipt["creation_hash_sha256"],
+        "raw_evidence_manifest_sha256": receipt["raw_evidence_manifest_sha256"],
         "ak_name_sha256": receipt["ak_name_sha256"],
         "ak_public_sha256": receipt["ak_public_sha256"],
         "storage_name_sha256": receipt["storage_root_sha256"],
