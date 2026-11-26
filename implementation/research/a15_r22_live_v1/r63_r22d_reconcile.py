@@ -77,19 +77,21 @@ def load_modules(source):
     sys.path.insert(0, str(source))
     from verify_witness import KEYS, ORIGIN, note
     from verify_direct import consistency
+    from read_quorum import decide
     from audit import H
     from note_normalizer import normalize_ed25519_note
-    return KEYS, ORIGIN, note, consistency, H, normalize_ed25519_note
+    return KEYS, ORIGIN, note, consistency, H, normalize_ed25519_note, decide
 
-def parse_one(raw, name, KEYS, ORIGIN, note, normalizer):
+def parse_one(raw, name, KEYS, ORIGIN, note, normalizer, include_wire=False):
     normalized, extras = normalizer(raw, name, KEYS, ORIGIN)
     size, root, ts = note(normalized, KEYS[name])
-    return {"size": size, "root": root, "signed_timestamp": ts,
+    item = {"size": size, "root": root, "signed_timestamp": ts,
             "ed25519": "VERIFIED", "unverified_extra_signature_bytes": extras,
             "raw_sha256": hashlib.sha256(raw).hexdigest()}
+    return (item, normalized) if include_wire else item
 
 def selftest(archive, source):
-    KEYS, ORIGIN, note, consistency, H, normalizer = load_modules(source)
+    KEYS, ORIGIN, note, consistency, H, normalizer, decide = load_modules(source)
     rawzip = archive.read_bytes()
     if hashlib.sha256(rawzip).hexdigest() != ARCHIVE_SHA256:
         raise ValueError("retained archive digest mismatch")
@@ -162,14 +164,16 @@ def run(archive, source, out):
         report["archived_error"] = str(exc)[:180]
 
     current = {}
+    current_wire = {}
     report["retrieved_at_runner_utc"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     for name, url in URLS.items():
         try:
             raw = get(url)
             (out / (name + ".raw")).write_bytes(raw)
-            item = parse_one(raw, name, KEYS, ORIGIN, note, normalizer)
+            item, wire = parse_one(raw, name, KEYS, ORIGIN, note, normalizer, include_wire=True)
             item["runner_clock_age_seconds_diagnostic_only"] = int(time.time()) - item["signed_timestamp"]
             current[name] = item
+            current_wire[name] = wire
         except Exception as exc:
             current[name] = {"status": "HOLD", "error": type(exc).__name__, "detail": str(exc)[:180]}
     report["endpoint_notes"] = {
@@ -188,6 +192,19 @@ def run(archive, source, out):
             for name, item in current.items()
         }
         report["endpoint_result"] = "PASS_TWO_SIGNED_NOTES_PREFIX_CONSISTENT_REVIEW_ONLY"
+        high_name = max(current, key=lambda name: current[name]["size"])
+        high = current[high_name]
+        low_name = min(current, key=lambda name: current[name]["size"])
+        low = current[low_name]
+        read_proofs = {}
+        if low["size"] < high["size"]:
+            read_proofs[(low["size"], high["size"])] = proof_nodes(low["size"], high["size"], out, "endpoint-read-quorum")
+        report["r63_fixed_two_witness_policy_diagnostic"] = decide(
+            (high["size"], high["root"]),
+            [("geomys", current_wire["geomys"]), ("markovian", current_wire["markovian"])],
+            read_proofs,
+            int(time.time()))
+        report["r63_policy_clock_source"] = "RUNNER_CLOCK_DIAGNOSTIC_ONLY_NOT_TRUSTED"
     except Exception as exc:
         report["endpoint_result"] = "HOLD_" + type(exc).__name__
         report["endpoint_error"] = str(exc)[:180]
