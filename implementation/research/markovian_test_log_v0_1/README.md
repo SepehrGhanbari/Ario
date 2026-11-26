@@ -43,7 +43,7 @@ Verify offline:
 
     py -3 implementation/research/markovian_test_log_v0_1/markovian_test_log.py verify
 
-Append a second synthetic leaf only after the first checkpoint has been prepared and published:
+Append a second synthetic leaf only after the first checkpoint has been published and Markovian has cosigned it:
 
     py -3 implementation/research/markovian_test_log_v0_1/markovian_test_log.py append
 
