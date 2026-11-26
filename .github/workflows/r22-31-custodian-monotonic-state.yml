@@ -1,0 +1,36 @@
+name: R22.31 custodian monotonic state machine (research)
+on:
+  push:
+    branches: [research/r22-31-custodian-monotonic-state-2026-11-26]
+    paths:
+      - .github/workflows/r22-31-custodian-monotonic-state.yml
+      - implementation/research/r22_31_custodian_monotonic_state/**
+permissions:
+  contents: read
+jobs:
+  monotonic-custodian:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - name: Verify OpenSSL and compile sources
+        run: |
+          set -euo pipefail
+          openssl version
+          python -m py_compile implementation/research/r22_31_custodian_monotonic_state/custodian_state.py implementation/research/r22_31_custodian_monotonic_state/test_custodian_state.py
+      - name: Run monotonic state, crash, tamper and concurrency tests
+        run: |
+          set -euo pipefail
+          python -m unittest discover -s implementation/research/r22_31_custodian_monotonic_state -p 'test_*.py' -v 2>&1 | tee "$RUNNER_TEMP/r22-31-tests.log"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r22-31-custodian-monotonic-state-evidence
+          path: ${{ runner.temp }}/r22-31-tests.log
+          if-no-files-found: warn
+          retention-days: 30

@@ -1038,3 +1038,103 @@ Related #379 A15 retained-range experiment covers a different set of three commi
 ## 2026-11-26 — R22.28 isolated signing authority (#400)
 
 - [Run 45831235548](https://github.com/SepehrGhanbari/Ario/actions/runs/45831235548), source dab1286a809f334ff74882bde59c40c3c8ea6a4b SUCCESS: 25 Linux controls (23 functional/permission plus 2 expected RED). Distinct UIDs block publisher key/state access, deletion, socket replacement, process signal/memory, and unauthorized peer. Monotonic RPC, exact retry, publisher rollback/loss, SIGKILL restart, concurrent proposals, missing signer state HOLD verified. RED root can read exportable key and restore state to produce conflicting signatures. Earlier response-framing failures retained in record. Same root domain; no real key, independent keeper, semantic proof, hardware isolation, Windows, external publication, merge, trust or production. Artifact metadata only; previous pins and delayed checks unchanged. Research HOLD.
+
+## 2026-11-26 — R22.29 TPM policy-gated signing (#401)
+
+- [Run 45836481812](https://github.com/SepehrGhanbari/Ario/actions/runs/45836481812), exact script/workflow source 9c9e9cf4c269e7cf6fa57f77548e5b6da551ff53, SUCCESS: 12 named swtpm assertions. PolicyAuthorize object; PolicyCommandCode(Sign), PolicyNV current counter and PolicyCpHash exact command; raw Sign and duplicate rejected; altered message and stale counter rejected; exact signature and next generation verified. Owner NV counter undefine/redefine advanced from 1 to 4, and old signed policy remained rejected, matching TCG TPM 2.0 Architecture Rev 1.83 §37.2.6.3 lifetime high-water rule. Software emulator only; no physical TPM, hardware non-extractability, platform/TPM_Clear/firmware boundary, separate authorizer custody, production signer, quorum proof, real keys, external publication, merge or trust. Artifact metadata only, not independently rehashed. Research HOLD; R22.22–28 pins and delayed checks unchanged.
+
+## 2026-11-26 — R22.30 TPM_Clear and custodian-gated recovery
+
+- [Run 45841590621](https://github.com/SepehrGhanbari/Ario/actions/runs/45841590621), source `e32a6334f8f6639bd664fcfe00bb8def761624b9`, SUCCESS: 27 PASS assertions plus one expected RED (runner root can read UID-separated custodian key). Verified TPM_Clear semantics in swtpm: EK stable, SPS-derived storage root changes, owner-created NV removed, platform-created NV survives, Owner/Endorsement/Lockout auth reset; lockout clear blocked by disableClear but platform can re-enable and clear; replacement simulator EK differs. Simulated custodian signed epoch-8 recovery on same device; rejected replay nonce, replacement identity, skipped epoch, stale checkpoint and unchanged storage root. This is not hardware or independent custody; no EK certificate/AK quote/PCR proof, real key, Ario signer integration, trust activation, production or merge. Artifact 15129270513 metadata recorded, not independently rehashed. Failed attempts remain visible in workflow history. R22.22–29 unchanged.
+
+
+## 2026-11-26 — R22.31 custodian monotonic state machine (follow-up to #409)
+
+- Source audit of R22.30 at `fba551689eacd686380c54104fbe8452fc7830e1` found a deterministic state-machine gap: the embedded custodian gate appended consumed nonces but did not advance durable epoch/head/storage-root state. After one 7→8 approval, a second distinct nonce could be checked against the unchanged epoch-7 anchor and receive another 7→8 approval. The check-then-append nonce path also lacked inter-process serialization.
+- Added a separate synthetic-only prototype under `implementation/research/r22_31_custodian_monotonic_state/`: signed initial anchor, signed receipt, append-only hash-chained journal, exclusive flock, fsync, epoch/head/root advancement, exact-retry receipt recovery, and fail-closed journal validation.
+- Added dedicated CI workflow `r22-31-custodian-monotonic-state.yml` and tests for one-winner epoch consumption, distinct second request rejection, exact idempotent retry, post-commit crash recovery, concurrent requests, and journal tampering.
+- Explicit limitation: storage-root fingerprint remains caller-supplied and marked `CALLER_SUPPLIED_UNATTESTED`; no TPM quote, AK/EK binding, physical TPM, independent custodian, external rollback floor, trust activation, production, or real keys. R22.30's prior evidence is preserved unchanged.
+- Source/validation commit at log update time: pending final dedicated CI result. Tracking issue #410.
+- Final exact-source regression [run 45848502455](https://github.com/SepehrGhanbari/Ario/actions/runs/45848502455), source 540bd4f4962c7e0db94215373b871bcf40de59b2, SUCCESS: 8/8 tests on CPython 3.13.18 / OpenSSL 3.0.13. The eighth test extracted the exact embedded R22.30 gate and reproduced two distinct epoch-8 approvals from the same unchanged epoch-7 anchor. Seven v2 controls passed: one-winner state advancement, exact idempotent receipt, post-commit crash recovery, nonce conflict, tamper detection and concurrent single-winner behavior. The final source/documentation record is appended; earlier failed attempts remain visible and are not counted as passes. Storage-root provenance remains caller-supplied/unattested; same-runner key/journal remain non-independent.
+
+## 2026-11-26 — R22.31 valid-prefix journal rollback boundary
+
+- Re-read the exact R22.31 source, tests, README and evidence record before changing anything; reused open PR #411 rather than creating a duplicate experiment.
+- Tightened the README claim: byte-level record tampering and incomplete-final-record truncation are rejected; deletion of complete tail records / rollback to a valid earlier prefix is not detectable without an external retained floor.
+- Added `test_expected_red_valid_prefix_rollback_is_not_detected_without_external_floor`. It commits 7→8, removes the complete journal, then demonstrates that a distinct 7→8 request is accepted again from the unchanged signed epoch-7 anchor. This is an expected RED counterexample, not a security PASS.
+- Fixed the existing R22.31 workflow artifact path so the test log is actually uploaded.
+- Dedicated CI [run 45853039157](https://github.com/SepehrGhanbari/Ario/actions/runs/45853039157), exact head `19d78881138451a0b75404f96a0d78a8d3155034`, SUCCESS: 9 tests passed on CPython 3.13.18 / OpenSSL 3.0.13; artifact ID `15133349967` (543 bytes) uploaded.
+- Boundary remains explicit: this local prototype cannot prove rollback resistance against its own administrator. A genuine fix requires an authenticated, independently retained floor outside the runner's administrative domain; another same-domain file or synthetic local witness would not close it. No real key, TPM, trust activation, production, merge or prior evidence rewrite.
+
+
+## 2026-11-26 — R22.31 CLI path-alias data-loss fix
+
+- Re-read the current R22.31 source, tests, README and evidence record; reused existing PR #411 and its branch. No Sigsum or witness re-test was started.
+- Found a concrete destructive case: `--response` could alias `--journal`, causing the process to append a durable record and then replace the journal with the receipt. Other aliases could overwrite the signed anchor or response bytes.
+- Added a pre-I/O path distinctness guard for all nine CLI paths. It detects normalized/symlink aliases with `Path.resolve(strict=False)` and existing hard-link aliases with `os.path.samefile`. The guard is explicitly not a defense against a hostile concurrent filesystem race.
+- Added three regressions: response-to-journal, response-signature-to-anchor, and response/response-signature collision. All reject before mutation.
+- Dedicated CI [run 45853154583](https://github.com/SepehrGhanbari/Ario/actions/runs/45853154583), exact head `3eea8bcd642762912c4a3d4b00c1169275d4d0ad`, SUCCESS: 12/12 tests on CPython 3.13.18 / OpenSSL 3.0.13. The count includes the exact-source R22.30 reproduction and expected-RED valid-prefix rollback control; these are reproduced weaknesses, not security passes.
+- No Sigsum call, external witness, real key, TPM, trust activation, production promotion, or merge.
+
+
+## 2026-11-26 — R22.31 strict JSON ledger parsing and sequence typing
+
+- Re-read the current branch source and test harness; retained the existing PR #411 and made no main-branch changes.
+- Found that duplicate JSON object keys were silently accepted, journal JSONL records were not required to be canonical after parsing, and a float `8.0` could compare equal to integer sequence `8`.
+- Added duplicate-key rejection for anchors, requests and journal records; canonical-byte enforcement for signed anchors; canonical single-line JSONL enforcement for journal records; and explicit integer-only sequence validation.
+- Added six regressions: duplicate key in anchor, request and journal; noncanonical signed anchor and journal record; and float sequence with a recomputed valid record hash.
+- Dedicated CI [run 45854444069](https://github.com/SepehrGhanbari/Ario/actions/runs/45854444069), exact head `0229727e6b297a1fd13e598f79940c32c2524ca0`, SUCCESS: 18/18 tests on CPython 3.13.18 / OpenSSL 3.0.13. Artifact ID `15135810639` (702 bytes).
+- Earlier intermediate CI failures were preserved in Actions history; the final tested head is green. Same-domain valid-prefix rollback remains an expected RED and still requires an independently retained authenticated floor.
+- No Sigsum call, new witness, external publication, real key, TPM, trust activation, production promotion, or merge.
+
+
+## 2026-11-26 — R22.31 owner-admin rollback disposition
+
+- Checked existing R22.22I external 2-of-4 test-witness floor and W36/W37 verifier before deciding whether it could be reused. It is a real prior external test-log observation, but it does not commit to the R22.31 journal or branch; reusing it as this journal's floor would be a false binding.
+- Owner reports that they are the only trusted administrator of the current Ario research environment. Recorded this as an owner-provided threat-model assumption, not an independently verified access-control fact.
+- Closed the same-domain valid-prefix rollback item as ACCEPTED_RISK / OUT_OF_SCOPE for the current owner-operated research prototype. The expected-RED regression remains so the limitation cannot be forgotten or misreported as a pass.
+- Explicitly left account/credential/device compromise, an undisclosed second administrator, and hostile-owner resistance NOT_CLOSED. Those require a genuinely out-of-band owner-held floor or independent custodian, not another same-domain file/process.
+- No new Sigsum publication, witness test, external call, key, merge, trust activation, production action, or main-branch change.
+
+
+## 2026-11-26 — superseding correction: second administrator reported; inventory incomplete
+
+- Owner explicitly corrected the prior assumption and stated that another administrator exists and can perform relevant privileged actions. The earlier sole-owner ACCEPTED_RISK / OUT_OF_SCOPE disposition is withdrawn and must not be relied on.
+- Verified through the connected GitHub identity: authenticated login is `SepehrGhanbari` (ID `104393545`); repository owner is `SepehrGhanbari`; this account has `admin`. The old `Mrxxir` account has only `read` permission. The connected user has no GitHub organization memberships.
+- Read both active repository rulesets. The explicit bypass actor in `Protect main` is only user ID `104393545`; the no-bypass baseline lists no bypass actors. This identifies the explicit bypass configuration, not the complete administrator roster.
+- The connected GitHub tool does not expose a collaborator/admin enumeration endpoint. A named-user permission check is available, but the additional administrator's login has not yet been identified. Therefore do not claim that Sepehr is the only repository admin.
+- Current threat-model disposition: **OPEN / NOT_ASSESSED** until the additional administrator is identified and their effective permissions are verified. No access removal, ruleset change, branch protection change, or other security mutation was performed.
+- Next evidence path: inspect repository Settings → Collaborators (direct page: `https://github.com/SepehrGhanbari/Ario/settings/access`) or provide the second administrator's GitHub login for a direct permission check. Then map access to repository settings, rulesets, Actions, secrets, deployments, and external recovery sources.
+
+
+## 2026-11-26 — final direct-access inventory correction (owner screenshot)
+
+**This entry supersedes the immediately preceding statement that a second administrator exists.** The earlier wording was a misinterpretation of the owner's question; the owner has now supplied the actual GitHub Settings → Collaborators screenshot.
+
+Observed directly in the screenshot for `SepehrGhanbari/Ario`:
+- Direct access: **0 collaborators**.
+- GitHub UI states: **"Only you can contribute to this repository."**
+- Manage access states no collaborators have been invited.
+
+Cross-checks from the connected GitHub account:
+- Repository owner: `SepehrGhanbari`; authenticated account has `admin`.
+- Authenticated account has no organization memberships.
+- The active `Protect main` ruleset lists only user ID `104393545` (SepehrGhanbari) as its explicit bypass actor; the second active no-bypass baseline lists no bypass actors.
+- The earlier `Mrxxir = read` permission result is not evidence of collaborator status; the repository is public, and the owner's Collaborators page explicitly shows zero direct collaborators.
+
+**Disposition for the question asked:** No second human collaborator/admin with direct repository access is present in the supplied current access view. The earlier "another administrator exists" note is withdrawn. No further search for a fictional second admin is warranted.
+
+**Remaining distinction:** this does not prove that the owner's account/device is uncompromised, nor does the Collaborators page enumerate GitHub App installation permissions, Actions credentials, deploy keys, or external service credentials. Those are separate machine/credential access paths, not evidence of another human repository administrator. The connected integration shows one GitHub App installation on the owner's user account; its effective repository permissions were not exposed in the returned installation metadata. No claim is made that this app is a second human admin.
+
+No collaborator removal, ruleset change, key rotation, new Sigsum test, merge, trust activation, or production action was performed. The R22.31 same-domain rollback behavior remains a distinct owner-account-compromise / credential-custody boundary; it must not be conflated with a nonexistent second direct collaborator.
+
+
+## 2026-11-26 — final disposition: no second human repository administrator
+
+The owner-provided current GitHub Settings → Collaborators screenshot shows **0 collaborators**, **"Only you can contribute to this repository"**, and no invited collaborators. This is consistent with the connected GitHub account being the repository owner/admin, having no organization memberships, and being the only explicit bypass actor in the active `Protect main` ruleset. The old `Mrxxir` account is not a collaborator; the repository is public and the earlier `read` result did not imply write access.
+
+**Decision:** the threat scenario "a second human repository administrator deliberately rewinds the Ario repository/journal" is **NOT APPLICABLE to the currently observed access configuration**. Stop treating a second human admin as an unresolved blocker; do not build a mock admin, repeat Sigsum, or add another same-domain process for this scenario.
+
+This is not a cryptographic rollback fix. The expected-RED valid-prefix rollback test remains as a documented boundary for a different threat: compromise of the owner's GitHub account/device or an automated credential/app with write authority. One GitHub App installation is visible on the owner's account, but its effective repository permissions were not exposed in the available installation metadata; it is not evidence of a second human administrator and remains a separate machine-credential audit item only if that threat is in scope.
+
+No collaborator removal, ruleset change, key rotation, new witness test, merge, trust activation, or production action was performed.
