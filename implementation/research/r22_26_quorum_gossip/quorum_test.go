@@ -32,7 +32,7 @@ func TestThreeOfThreeTwoRollback(t *testing.T){
  f:=makeFixture(3,3,1)
  expect(t,Read(f.p,nonce,[]Reply{f.reply(0,oldHistory),f.reply(1,oldHistory)},nil),"HOLD_QUORUM")
  expect(t,Read(f.p,nonce,[]Reply{f.reply(0,oldHistory),f.reply(1,oldHistory),f.reply(2,newHistory)},nil),"HOLD_WITNESS_DISAGREEMENT")
- expect(t,Read(f.p,nonce,[]Reply{f.reply(2,newHistory)},nil),"HOLD_QUORUM")
+ one:=Read(f.p,nonce,[]Reply{f.reply(2,newHistory)},nil);expect(t,one,"HOLD_QUORUM");if one.Floor!=(Floor{})||one.UnadmittedObservation==nil||*one.UnadmittedObservation!=head(newHistory){t.Fatal("single witness evidence lost or admitted")}
  expect(t,Read(f.p,nonce,[]Reply{f.reply(0,newHistory),f.reply(1,newHistory),f.reply(2,newHistory)},nil),"REVIEWABLE_ONLY")
 }
 func TestThreeOfFourOneFault(t *testing.T){
