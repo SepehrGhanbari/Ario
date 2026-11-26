@@ -233,6 +233,23 @@ class CustodianStateTests(unittest.TestCase):
         self.assertIn("REJECT ANCHOR_NOT_CANONICAL", result.stdout)
         self.assertFalse(self.journal.exists())
 
+
+    def test_float_sequence_in_validly_rehashed_journal_is_rejected(self):
+        first, _, _ = self.invoke(self.request(), suffix="float-sequence-first")
+        self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
+        record = json.loads(self.journal.read_text().splitlines()[0])
+        record["sequence"] = 8.0
+        body = {key: value for key, value in record.items() if key != "record_sha256"}
+        record["record_sha256"] = digest(canonical(body))
+        self.journal.write_bytes(canonical(record))
+
+        second_request = self.request(
+            nonce="2" * 64, root=b"float-sequence-root", head=b"float-sequence-head",
+        )
+        second, _, _ = self.invoke(second_request, suffix="float-sequence-second")
+        self.assertEqual(second.returncode, 3, second.stdout + second.stderr)
+        self.assertIn("REJECT JOURNAL_SEQUENCE_TYPE_INVALID", second.stdout)
+
     def test_duplicate_json_key_in_journal_is_rejected(self):
         first, _, _ = self.invoke(self.request(), suffix="duplicate-journal-first")
         self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
