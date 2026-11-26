@@ -214,4 +214,17 @@ class DomainQuorumTests(unittest.TestCase):
         self.assertFalse(d.accepted)
         self.assertIn("INSUFFICIENT_INDEPENDENT_ADMIN_DOMAINS",d.reasons)
 
+    def test_47_sister_companies_collapse_to_one_corporate_domain(self):
+        rows=[("glasklar","k1","amagicom-group","a1","k1","b1"),
+              ("mullvad","k2","amagicom-group","a2","k2","b2"),
+              ("tillitis","k3","amagicom-group","a3","k3","b3"),
+              ("geomys","k4","geomys","ag","kg","bg"),
+              ("ipng","k5","ipng","ai","ki","bi"),
+              ("trustfabric","k6","trustfabric","at","kt","bt")]
+        p=build_policy(P,rows,read_q=4,write_q=4,f=1)
+        first_four=[receipt(p.roster[n]) for n in ("glasklar","mullvad","tillitis","geomys")]
+        self.assertFalse(evaluate(p,H,first_four,mode="write").accepted)
+        independent=[receipt(p.roster[n]) for n in ("glasklar","geomys","ipng","trustfabric")]
+        self.assertTrue(evaluate(p,H,independent,mode="write").accepted)
+
 if __name__=="__main__": unittest.main(verbosity=2)
