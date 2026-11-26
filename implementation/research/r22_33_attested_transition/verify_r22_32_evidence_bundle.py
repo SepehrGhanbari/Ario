@@ -14,6 +14,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -29,7 +30,9 @@ SUMMARY_FORMAT = "ARIO-R22.32-OFFLINE-VERIFIER-SUMMARY-V1"
 EXPECTED_FILES = {
     "ak-name.bin", "ak-public-area.tpmt", "ak-public.pem", "ak-qualified-name.bin",
     "creation-attestation.bin", "creation-attestation.sig", "creation-nonce.txt",
-    "custodian-challenge-nonce.txt", "ek-certificate.crt", "ek-lab-root.crt",
+    "custodian-challenge-nonce.txt", "custodian-public.pem", "custodian-anchor.json",
+    "custodian-anchor.sig", "custodian-challenge.json", "custodian-challenge.sig",
+    "ek-certificate.crt", "ek-lab-root.crt",
     "ek-public.pem", "ek-spki-sha256.txt", "nv-attestation.bin", "nv-attestation.sig",
     "nv-contents.bin", "nv-index.txt", "nv-nonce.txt", "nv-public.yaml",
     "pcr23-after.bin", "pcr23-before.bin", "pcr23-event-digest.txt",
@@ -116,6 +119,88 @@ def verify_signature(public_key: Path, message: Path, signature: Path, temp: Pat
          "-signature", str(raw_sig), str(message)])
 
 
+
+
+def verify_signed_json(public_key: Path, message_path: Path, signature_path: Path, label: str) -> dict:
+    key_text = run(["openssl", "pkey", "-pubin", "-in", str(public_key), "-text", "-noout"])
+    if "Public-Key: (2048 bit)" not in key_text:
+        raise VerificationError(f"{label}: custodian public key must be RSA-2048")
+    raw = message_path.read_bytes()
+    try:
+        value = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise VerificationError(f"{label}: signed JSON is malformed") from exc
+    canonical = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    if raw != canonical:
+        raise VerificationError(f"{label}: signed JSON is not canonical")
+    run(["openssl", "dgst", "-sha256", "-verify", str(public_key),
+         "-signature", str(signature_path), str(message_path)])
+    return value
+
+
+def validate_signed_challenge(bundle: Path, ek_spki_sha256: str) -> tuple[dict, dict, bool]:
+    public_key = bundle / "custodian-public.pem"
+    anchor = verify_signed_json(
+        public_key, bundle / "custodian-anchor.json", bundle / "custodian-anchor.sig", "custodian anchor"
+    )
+    challenge = verify_signed_json(
+        public_key, bundle / "custodian-challenge.json", bundle / "custodian-challenge.sig", "custodian challenge"
+    )
+    if set(anchor) != {"format", "device_ek_sha256", "storage_root_sha256", "epoch", "head_sha256"}:
+        raise VerificationError("custodian anchor has an unexpected schema")
+    if anchor["format"] != "ARIO-R22.31-ANCHOR-V1":
+        raise VerificationError("custodian anchor format mismatch")
+    if anchor["device_ek_sha256"] != ek_spki_sha256:
+        raise VerificationError("custodian anchor EK identity does not match the TPM EK")
+    for key in ("storage_root_sha256", "head_sha256"):
+        if not isinstance(anchor[key], str) or not re.fullmatch(r"[0-9a-f]{64}", anchor[key]):
+            raise VerificationError(f"custodian anchor {key} is malformed")
+    if type(anchor["epoch"]) is not int or anchor["epoch"] < 0:
+        raise VerificationError("custodian anchor epoch is invalid")
+
+    required = {
+        "format", "nonce", "device_ek_sha256", "previous_storage_root_sha256",
+        "previous_epoch", "next_epoch", "previous_head_sha256", "next_head_sha256",
+        "reason", "policy_id", "issued_at", "expires_at",
+    }
+    if set(challenge) != required:
+        raise VerificationError("custodian challenge has an unexpected schema")
+    if challenge["format"] != "ARIO-R22.33-ATTESTATION-CHALLENGE-V1":
+        raise VerificationError("custodian challenge format mismatch")
+    nonce = challenge["nonce"]
+    if not isinstance(nonce, str) or not re.fullmatch(r"[0-9a-f]{64}", nonce):
+        raise VerificationError("custodian challenge nonce is malformed")
+    if read_hex(bundle / "custodian-challenge-nonce.txt", "exported challenge nonce") != nonce:
+        raise VerificationError("exported challenge nonce does not match signed challenge")
+    if challenge["device_ek_sha256"] != ek_spki_sha256 or challenge["device_ek_sha256"] != anchor["device_ek_sha256"]:
+        raise VerificationError("signed challenge EK identity mismatch")
+    if challenge["previous_storage_root_sha256"] != anchor["storage_root_sha256"]:
+        raise VerificationError("challenge previous storage root does not match signed anchor")
+    if challenge["previous_head_sha256"] != anchor["head_sha256"]:
+        raise VerificationError("challenge previous head does not match signed anchor")
+    if challenge["previous_epoch"] != anchor["epoch"] or challenge["next_epoch"] != anchor["epoch"] + 1:
+        raise VerificationError("challenge epoch transition does not follow signed anchor")
+    if not isinstance(challenge["next_head_sha256"], str) or not re.fullmatch(r"[0-9a-f]{64}", challenge["next_head_sha256"]):
+        raise VerificationError("challenge next head is malformed")
+    if challenge["next_head_sha256"] == challenge["previous_head_sha256"]:
+        raise VerificationError("challenge does not advance the head")
+    if challenge["reason"] != "TPM_CLEAR_RECOVERY":
+        raise VerificationError("challenge reason is not the R22.33 recovery reason")
+    if challenge["policy_id"] != "R22.32_EK_AK_QUOTE_CERTIFYCREATION_V1":
+        raise VerificationError("challenge policy ID mismatch")
+    issued, expires = challenge["issued_at"], challenge["expires_at"]
+    if type(issued) is not int or type(expires) is not int or not 30 <= expires - issued <= 300:
+        raise VerificationError("challenge validity window is malformed")
+    now = int(time.time())
+    if not issued <= now <= expires:
+        raise VerificationError("signed custodian challenge is not currently valid")
+    synthetic_anchor = (
+        anchor["storage_root_sha256"] == sha256(b"ARIO-R22.33-CI-PREVIOUS-STORAGE-ROOT")
+        and anchor["head_sha256"] == sha256(b"ARIO-R22.33-CI-PREVIOUS-HEAD")
+    )
+    return anchor, challenge, synthetic_anchor
+
+
 class Reader:
     def __init__(self, data: bytes):
         self.data = data
@@ -191,6 +276,7 @@ def verify_bundle(bundle_path: Path) -> dict:
         ek_spki_sha256 = sha256(ek_pub_der.read_bytes())
         if read_hex(bundle / "ek-spki-sha256.txt", "EK SPKI fingerprint") != ek_spki_sha256:
             raise VerificationError("EK SPKI fingerprint mismatch")
+        anchor, challenge, synthetic_anchor = validate_signed_challenge(bundle, ek_spki_sha256)
 
         ak_public = bundle / "ak-public.pem"
         ak_der = temp / "ak-public.der"
@@ -304,14 +390,18 @@ def verify_bundle(bundle_path: Path) -> dict:
                 "nv_index_name_b64": __import__("base64").b64encode(nv_name).decode("ascii"),
                 "challenge_nonce": challenge_nonce,
             },
-            "custodian_challenge_signature": "NOT_PROVIDED",
-            "challenge_issue_order": "NOT_ESTABLISHED",
+            "custodian_challenge_signature": "PASS_EPHEMERAL_CI_CUSTODIAN_KEY",
+            "challenge_nonce": challenge["nonce"],
+            "challenge_reason": challenge["reason"],
+            "challenge_issue_order": "SIGNED_CHALLENGE_AND_NONCE_MATCH; external timestamp independence not established",
+            "previous_anchor_scope": "SYNTHETIC_CI_ANCHOR_NOT_PRE_CLEAR_PROOF" if synthetic_anchor else "SIGNED_ANCHOR",
             "transition_receipt": "NOT_EMITTED",
             "limitations": [
                 "software TPM evidence only",
                 "laboratory EK CA only; no OEM/manufacturer trust chain",
-                "nonce derivation checked, but no custodian-signed challenge was supplied",
-                "this verifier does not establish that the challenge was issued before evidence generation",
+                "custodian key is ephemeral and generated by the same CI runner; not independent custody",
+                "CI previous root/head are synthetic; this does not prove a TPM_Clear event or a pre-clear hardware state",
+                "challenge signature and nonce binding are verified, but no external trusted timestamp establishes issue ordering",
                 "no independent verifier-key custody or external rollback floor",
             ],
         }
