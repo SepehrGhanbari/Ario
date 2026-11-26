@@ -100,6 +100,9 @@ class BoundaryLab:
                 "rsassa",
             ]
         )
+        # tpm2_verifysignature can reload an external object from its context.
+        # Preserve policy sessions; release transient objects only (as in R22.29).
+        self.tpm.flush_all()
         return {
             "tag": tag,
             "message": str(message),
@@ -133,7 +136,7 @@ class BoundaryLab:
         tpm_ok = self.tpm.verify_with_tpm(Path(auth["message"]), signature)
         ssl_ok = verify_with_openssl(self.authority_public.parent / "signer.pem", Path(auth["message"]), signature)
         if not (tpm_ok and ssl_ok):
-            return False, "signature produced but independent verification failed"
+            raise LabError("signature produced but independent verification failed; probe inconclusive")
         return True, sha256_hex(read_bytes(signature))
 
     def record(
@@ -255,10 +258,12 @@ class BoundaryLab:
                 )
             else:
                 verified.append(False)
+        if any(code == 0 and not ok for code, ok in zip(codes, verified)):
+            raise LabError("concurrent command succeeded but signature verification failed")
         self.record(
             "actual-concurrent-signing",
             "BOTH_SIGNED" if codes == [0, 0] else f"CODES_{codes}",
-            counterexample=codes == [0, 0],
+            counterexample=codes == [0, 0] and all(verified),
             detail=json.dumps(
                 {
                     "returncodes": codes,
@@ -299,7 +304,7 @@ class BoundaryLab:
         try:
             self.tpm.tpm(["tpm2_contextsave", "-c", str(s6), "-o", str(blob)])
             self.tpm.tpm(["tpm2_flushcontext", str(s6)], check=False)
-        except LabError as exc:
+        except (LabError, FileNotFoundError) as exc:
             save_ok = False
             save_error = str(exc)
         if save_ok:
@@ -307,7 +312,7 @@ class BoundaryLab:
             load_ok = True
             try:
                 self.tpm.tpm(["tpm2_contextload", "-c", str(loaded), "-o", str(blob)])
-            except LabError as exc:
+            except (LabError, FileNotFoundError) as exc:
                 load_ok = False
                 load_error = str(exc)
             if load_ok:
