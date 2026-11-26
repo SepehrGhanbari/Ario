@@ -99,7 +99,7 @@ printf 'Ario conflicting commitment B — generation 1\n' > message-b.bin
 printf 'Ario commitment C — generation 2\n' > message-c.bin
 
 expect_fail "raw TPM sign without policy session" tpm2_sign -c signer.ctx -g sha256 -o raw.signature message-a.bin
-expect_fail "fixed TPM object duplication blocked" tpm2_duplicate -C primary.ctx -c signer.ctx -G null -r duplicate.private -s duplicate.seed
+expect_fail "fixed TPM object duplication blocked" tpm2_duplicate -C 0x81000001 -c signer.ctx -G null -r duplicate.private -s duplicate.seed
 
 # Authorize A only for the current NV counter and exact TPM2_Sign cpHash.
 make_authorization message-a.bin counter-1.bin a
@@ -111,7 +111,7 @@ tpm2_flushcontext a.session.ctx >/dev/null
 start_policy a counter-1.bin
 sign_authorized a message-a.bin
 pass "exact externally authorized TPM signature verified"
-# Same token is tied to counter zero; advance hardware NV counter.
+# Same token is tied to counter one; advance the TPM NV counter.
 tpm2_nvincrement -C o "$NV" >/dev/null
 tpm2_nvread -C o -s 8 -o counter-1.bin "$NV" >/dev/null
 tpm2_startauthsession --policy-session -S stale-counter.session >/dev/null
@@ -132,7 +132,7 @@ tpm2_nvdefine -C o -a "nt=counter|ownerread|ownerwrite" "$NV" >/dev/null
 tpm2_nvincrement -C o "$NV" >/dev/null
 tpm2_nvread -C o -s 8 -o counter-reset.bin "$NV" >/dev/null
 cmp -s counter-1.bin counter-reset.bin || fail "counter reset control not reproduced"
-start_policy a counter-0.bin
+start_policy a counter-1.bin
 sign_authorized a message-a.bin
 pass "RED owner NV undefine/recreate restored stale policy eligibility"
 
