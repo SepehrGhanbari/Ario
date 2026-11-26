@@ -1,0 +1,54 @@
+name: W1 synthetic provenance research only
+on:
+  pull_request:
+    paths:
+      - 'research/consensus/w1_adversarial_input_sensitivity_v1.py'
+      - 'research/consensus/test_w1_adversarial_input_sensitivity_v1.py'
+      - 'research/consensus/test_w1_trae_boundary_controls_v1.py'
+      - 'research/consensus/w1_custody_correlation_probe.py'
+      - 'research/consensus/w1_latent_graph_challenge_v0_1.py'
+      - 'research/consensus/test_w1_custody_axis_counterexample_v0_1.py'
+      - 'implementation/witness_provenance_experiment.py'
+      - '.gitattributes'
+      - '.github/workflows/w1-provenance-research.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  synthetic-tests:
+    name: W1 synthetic (${{ matrix.os }}, py${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-2022]
+        python: ['3.11', '3.13']
+    steps:
+      - name: Keep source checkout byte-exact on Windows and Linux
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Verify source pin and execute stdlib synthetic tests (no secrets)
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python -B -m unittest discover -s research/consensus -p test_w1_adversarial_input_sensitivity_v1.py -v
+      - name: Exercise Trae-reported custody and capture decision boundaries (synthetic only)
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python -B -m unittest discover -s research/consensus -p test_w1_trae_boundary_controls_v1.py -v
+      - name: Third pass custody correlation scaffold (research only)
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python -B -m unittest discover -s research/consensus -p w1_custody_correlation_probe.py -v
+      - name: Third pass masked latent-graph scaffold (research only)
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python -B -m unittest discover -s research/consensus -p w1_latent_graph_challenge_v0_1.py -v
+      - name: Third pass unreachable-edge counterexample (known xfail)
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python -B -m unittest discover -s research/consensus -p test_w1_custody_axis_counterexample_v0_1.py -v

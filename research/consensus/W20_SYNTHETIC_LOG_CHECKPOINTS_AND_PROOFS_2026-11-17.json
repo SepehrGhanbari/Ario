@@ -1,0 +1,181 @@
+{
+  "consistency_proof": [
+    "89f85fe9923b62e57a9d04eefc8c12d7c63226e1785084d733b9c9472c47739d",
+    "bf47f1306636693948129e53ce719655eac31e93dfa60c21fa0cdc9869e8d340",
+    "188466c58f62ed4342cea4030197fd22314b4f921c2eeaef1fadaa052141faff",
+    "497f8b67bf4c2529624f0f6762d618c65fb8c78e4a33869e491dbcd2ba3e6c81"
+  ],
+  "events": [
+    {
+      "action_authority": "NONE",
+      "declared_origin": "EXTERNAL_UNTRUSTED",
+      "kind": "INGEST",
+      "memory_truth": "UNKNOWN",
+      "payload_sha256": "d6f0a063b0d295197dab2e66488746e8fd26a7549f87efd7017fe0a4498691c9",
+      "schema": "ARIO_W20_SYNTHETIC_EVENT_V1",
+      "sequence": 0
+    },
+    {
+      "action_authority": "NONE",
+      "declared_origin": "EXTERNAL_UNTRUSTED",
+      "kind": "MEMORY_WRITE",
+      "memory_truth": "UNKNOWN",
+      "payload_sha256": "763114acf894eba54d12a6c0a4852531b9e03c96fac8ce0feaeca0f829e4d430",
+      "schema": "ARIO_W20_SYNTHETIC_EVENT_V1",
+      "sequence": 1
+    },
+    {
+      "action_authority": "NONE",
+      "declared_origin": "EXTERNAL_UNTRUSTED",
+      "kind": "MEMORY_RETRIEVE",
+      "memory_truth": "UNKNOWN",
+      "payload_sha256": "74ae18d96a4b831ec2860cc8e202bd6739c696ace44612006deec26705abfed5",
+      "schema": "ARIO_W20_SYNTHETIC_EVENT_V1",
+      "sequence": 2
+    },
+    {
+      "action_authority": "NONE",
+      "declared_origin": "EXTERNAL_UNTRUSTED",
+      "kind": "MEMORY_REWRITE",
+      "memory_truth": "UNKNOWN",
+      "payload_sha256": "af8cfe026bc8d0dbf23d95e960cfd7914d1de1b2b93e60ee51017995f3c9a8b6",
+      "schema": "ARIO_W20_SYNTHETIC_EVENT_V1",
+      "sequence": 3
+    },
+    {
+      "action_authority": "NONE",
+      "declared_origin": "TEST_OPERATOR_DECLARED",
+      "kind": "ACCESS_REVOKE",
+      "memory_truth": "UNKNOWN",
+      "payload_sha256": "325f2c6e66d582d4a1f90ab3353033d662b2678bb595215fcf16b54dace73deb",
+      "schema": "ARIO_W20_SYNTHETIC_EVENT_V1",
+      "sequence": 4
+    },
+    {
+      "action_authority": "NONE",
+      "declared_origin": "TEST_OPERATOR_DECLARED",
+      "kind": "REVIEW_HOLD",
+      "memory_truth": "UNKNOWN",
+      "payload_sha256": "6ee47a4dfe0f74decda3a9c7b7d171d04865f508bff95ea5742654aa088dddd2",
+      "schema": "ARIO_W20_SYNTHETIC_EVENT_V1",
+      "sequence": 5
+    },
+    {
+      "action_authority": "NONE",
+      "declared_origin": "EXTERNAL_UNTRUSTED",
+      "kind": "MEMORY_RETRIEVE",
+      "memory_truth": "UNKNOWN",
+      "payload_sha256": "c9f9747d9ffde748bb4741e2e762520cccfa649519d2cf9c02b0663a2fed341a",
+      "schema": "ARIO_W20_SYNTHETIC_EVENT_V1",
+      "sequence": 6
+    },
+    {
+      "action_authority": "NONE",
+      "declared_origin": "TEST_OPERATOR_DECLARED",
+      "kind": "AUDIT",
+      "memory_truth": "UNKNOWN",
+      "payload_sha256": "596ede1c2a0eb02b5f1c80900342cc251d5e75aa02808c1d8943fbf28899271b",
+      "schema": "ARIO_W20_SYNTHETIC_EVENT_V1",
+      "sequence": 7
+    }
+  ],
+  "events_are_synthetic_public_only": true,
+  "external_effects": 0,
+  "inclusions": [
+    {
+      "index": 0,
+      "proof": [
+        "dacb71a614ffb0528ebea0a109c5dd23afd1173aea8c81013ba61b740208f9cf",
+        "9082a88f5721fac1710ca015168e329fb79d9c54551478113063fd02a529c621",
+        "497f8b67bf4c2529624f0f6762d618c65fb8c78e4a33869e491dbcd2ba3e6c81"
+      ]
+    },
+    {
+      "index": 1,
+      "proof": [
+        "fa558426fb33a7bca3199a1228a5b8ba95c1f98691b10330661a66278fcbd42b",
+        "9082a88f5721fac1710ca015168e329fb79d9c54551478113063fd02a529c621",
+        "497f8b67bf4c2529624f0f6762d618c65fb8c78e4a33869e491dbcd2ba3e6c81"
+      ]
+    },
+    {
+      "index": 2,
+      "proof": [
+        "bf47f1306636693948129e53ce719655eac31e93dfa60c21fa0cdc9869e8d340",
+        "188466c58f62ed4342cea4030197fd22314b4f921c2eeaef1fadaa052141faff",
+        "497f8b67bf4c2529624f0f6762d618c65fb8c78e4a33869e491dbcd2ba3e6c81"
+      ]
+    },
+    {
+      "index": 3,
+      "proof": [
+        "89f85fe9923b62e57a9d04eefc8c12d7c63226e1785084d733b9c9472c47739d",
+        "188466c58f62ed4342cea4030197fd22314b4f921c2eeaef1fadaa052141faff",
+        "497f8b67bf4c2529624f0f6762d618c65fb8c78e4a33869e491dbcd2ba3e6c81"
+      ]
+    },
+    {
+      "index": 4,
+      "proof": [
+        "5c0def5b5f097d910ddf315700ff64b78f3193ae73ae0b2ddb34bd40f134fc9b",
+        "dabee6a0c4da8b9238dee40940f70bf3f18da258ea1cef8a95b4bfa77c4a78be",
+        "e6de5b59adb8c8230ef3d55f8cbaba2fa5907e667d1fe70588b507670ff6afa3"
+      ]
+    },
+    {
+      "index": 5,
+      "proof": [
+        "923a3df9900450f6460e560aedcfee4af9bcf4a356cf842b671ac9f525a59131",
+        "dabee6a0c4da8b9238dee40940f70bf3f18da258ea1cef8a95b4bfa77c4a78be",
+        "e6de5b59adb8c8230ef3d55f8cbaba2fa5907e667d1fe70588b507670ff6afa3"
+      ]
+    },
+    {
+      "index": 6,
+      "proof": [
+        "9c5c0caba181b751491cbbd89a55801228b30addef084df46339a7449f569cd8",
+        "55f5924379f2ac6f0cd8ebbfbb5082262265e2bc0ca805c1c7c5ea1ac8a34f54",
+        "e6de5b59adb8c8230ef3d55f8cbaba2fa5907e667d1fe70588b507670ff6afa3"
+      ]
+    },
+    {
+      "index": 7,
+      "proof": [
+        "d80e161a541aeede5f07f23fb914d17f7434d867939d36e9bcaaca0780f30433",
+        "55f5924379f2ac6f0cd8ebbfbb5082262265e2bc0ca805c1c7c5ea1ac8a34f54",
+        "e6de5b59adb8c8230ef3d55f8cbaba2fa5907e667d1fe70588b507670ff6afa3"
+      ]
+    }
+  ],
+  "log_key_held_by_separate_custodian": false,
+  "new_checkpoint": {
+    "body": {
+      "origin": "ario-w20-synthetic.test.invalid/research-log-v1",
+      "root_sha256": "fe85584d081e74fadc9fa050c7cf1e29c1bc02639407bff9bd4b78b35bdcb392",
+      "schema": "ARIO_W20_SYNTHETIC_CHECKPOINT_V1",
+      "size": 8,
+      "version": 1
+    },
+    "domain": "ARIO_W20_SYNTHETIC_CHECKPOINT_ED25519_V1",
+    "signature": "c18ad0c53b632b09fbecee86f522446feff922a49e69324f9898afe676fb027369a329232332f814509e6dde9a32515dfed1eb9ca482a87c765530b475e54f0d"
+  },
+  "old_checkpoint": {
+    "body": {
+      "origin": "ario-w20-synthetic.test.invalid/research-log-v1",
+      "root_sha256": "75083d7695c5844879981e3f066c1bddb7d77cebd4e3e9aa71e43aed0a0d3f21",
+      "schema": "ARIO_W20_SYNTHETIC_CHECKPOINT_V1",
+      "size": 3,
+      "version": 1
+    },
+    "domain": "ARIO_W20_SYNTHETIC_CHECKPOINT_ED25519_V1",
+    "signature": "37ea1120b8239fa56b5054a97b13ab8c8900853fe804f34d0738f30e6ca3b5260ee7cf7b0ba3c001b5daec74bdb634852db02143ce9d97c09a02e39f4fc12208"
+  },
+  "operational_authority": "NONE",
+  "origin_is_real_or_registered": false,
+  "private_signer_key_exported": false,
+  "public_key_hex": "9ae243409eef439687681a68a841bb9111054b69c4302586d1646914d1d087c1",
+  "schema": "ARIO_W20_NATIVE_LOG_LAB_FIXTURE_V1",
+  "signature_scope": "EPHEMERAL_ED25519_FAKE_LOG_ONLY",
+  "source_labels_are_attested": false,
+  "world_truth": "UNKNOWN"
+}

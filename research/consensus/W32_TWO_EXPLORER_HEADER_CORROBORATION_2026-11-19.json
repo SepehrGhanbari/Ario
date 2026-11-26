@@ -1,0 +1,94 @@
+{
+  "bitcoin_node_connected": false,
+  "calendar_posts": 0,
+  "explorer_operators_independently_authenticated": false,
+  "full_bitcoin_header_chain_validated": false,
+  "genesis": "NO_GO",
+  "mode": "PUBLIC_HEADER_GET_ONLY",
+  "new_timestamp_submissions": 0,
+  "production": "NO_GO",
+  "public_explorer_gets_max": 8,
+  "research_only": true,
+  "results": [
+    {
+      "bitcoin_consensus_verified_by_own_node": false,
+      "calendar": "https://alice.btc.calendar.opentimestamps.org",
+      "height": 976596,
+      "no_claim_of_operator_independence": true,
+      "proof_merkle_root_raw_hex": "60b6d11041b3015b89413f20f6d330e30d378cd417635cc6ae170d36ce53db50",
+      "public_api_checks": [
+        {
+          "derived_block_hash": "00000000000000000000a6c168915b99fd83334afdc40023901275ac3064ab2d",
+          "header_bits_hex": "17021673",
+          "header_hex": "00401220a6532cb79bfef3e42f9377c943a9cee5e9ea77cc3c3d0100000000000000000060b6d11041b3015b89413f20f6d330e30d378cd417635cc6ae170d36ce53db50f811ff6a731602174e9262c4",
+          "header_sha256": "93c4d439325f7755cf625138e4ade86bd0487d672996ac38fc6343ba0b60b37d",
+          "header_unix_time": 1795101176,
+          "merkle_root_raw_hex": "60b6d11041b3015b89413f20f6d330e30d378cd417635cc6ae170d36ce53db50",
+          "pow_target_satisfied": true,
+          "provider": "blockstream",
+          "reported_block_hash": "00000000000000000000a6c168915b99fd83334afdc40023901275ac3064ab2d",
+          "status": "RAW_HEADER_HASH_AND_POW_MATCHED"
+        },
+        {
+          "derived_block_hash": "00000000000000000000a6c168915b99fd83334afdc40023901275ac3064ab2d",
+          "header_bits_hex": "17021673",
+          "header_hex": "00401220a6532cb79bfef3e42f9377c943a9cee5e9ea77cc3c3d0100000000000000000060b6d11041b3015b89413f20f6d330e30d378cd417635cc6ae170d36ce53db50f811ff6a731602174e9262c4",
+          "header_sha256": "93c4d439325f7755cf625138e4ade86bd0487d672996ac38fc6343ba0b60b37d",
+          "header_unix_time": 1795101176,
+          "merkle_root_raw_hex": "60b6d11041b3015b89413f20f6d330e30d378cd417635cc6ae170d36ce53db50",
+          "pow_target_satisfied": true,
+          "provider": "mempool",
+          "reported_block_hash": "00000000000000000000a6c168915b99fd83334afdc40023901275ac3064ab2d",
+          "status": "RAW_HEADER_HASH_AND_POW_MATCHED"
+        }
+      ],
+      "result": "TWO_PUBLIC_APIS_HEADER_AND_OTS_MERKLE_MATCH",
+      "upgraded_ots_sha256": "5968fd87749621f96c42d1763bd41a8d457187cd55380d2e1ca7132a4518ac35"
+    },
+    {
+      "bitcoin_consensus_verified_by_own_node": false,
+      "calendar": "https://bob.btc.calendar.opentimestamps.org",
+      "height": 976598,
+      "no_claim_of_operator_independence": true,
+      "proof_merkle_root_raw_hex": "4a9f3838f37122649daae592dec249b353966ec8a0011d5da4fc60c2f3c495d0",
+      "public_api_checks": [
+        {
+          "derived_block_hash": "00000000000000000000cc5208897fe9ecf9e7ef72cf8b20140599a3d8e0c5b1",
+          "header_bits_hex": "17021673",
+          "header_hex": "00a05d274b53a2f0d6a6d2dacd0835d360f4142b59845682f4c8000000000000000000004a9f3838f37122649daae592dec249b353966ec8a0011d5da4fc60c2f3c495d07315ff6a7316021781f2260b",
+          "header_sha256": "a2a47b02480815e5d92ef7d93ee5559e468ca8de87cc94e8c7305bd1ea99148e",
+          "header_unix_time": 1795102067,
+          "merkle_root_raw_hex": "4a9f3838f37122649daae592dec249b353966ec8a0011d5da4fc60c2f3c495d0",
+          "pow_target_satisfied": true,
+          "provider": "blockstream",
+          "reported_block_hash": "00000000000000000000cc5208897fe9ecf9e7ef72cf8b20140599a3d8e0c5b1",
+          "status": "RAW_HEADER_HASH_AND_POW_MATCHED"
+        },
+        {
+          "derived_block_hash": "00000000000000000000cc5208897fe9ecf9e7ef72cf8b20140599a3d8e0c5b1",
+          "header_bits_hex": "17021673",
+          "header_hex": "00a05d274b53a2f0d6a6d2dacd0835d360f4142b59845682f4c8000000000000000000004a9f3838f37122649daae592dec249b353966ec8a0011d5da4fc60c2f3c495d07315ff6a7316021781f2260b",
+          "header_sha256": "a2a47b02480815e5d92ef7d93ee5559e468ca8de87cc94e8c7305bd1ea99148e",
+          "header_unix_time": 1795102067,
+          "merkle_root_raw_hex": "4a9f3838f37122649daae592dec249b353966ec8a0011d5da4fc60c2f3c495d0",
+          "pow_target_satisfied": true,
+          "provider": "mempool",
+          "reported_block_hash": "00000000000000000000cc5208897fe9ecf9e7ef72cf8b20140599a3d8e0c5b1",
+          "status": "RAW_HEADER_HASH_AND_POW_MATCHED"
+        }
+      ],
+      "result": "TWO_PUBLIC_APIS_HEADER_AND_OTS_MERKLE_MATCH",
+      "upgraded_ots_sha256": "886a46e7ffe9bc7dcb4d8a118bf98cc1805fa5df7f6002aa1fb15573648dc70a"
+    }
+  ],
+  "schema": "ARIO_W32_EXTERNAL_BITCOIN_HEADER_CORROBORATION_V1",
+  "trust_activation": "NO_GO",
+  "verified_w31_preimage_sha256": "2078bc80586d0e4b00afa48eb8dea31ab3d4749b4912c57a897e4d5e2fb436df",
+  "evidence_from_run": "https://github.com/SepehrGhanbari/Ario/actions/runs/44568749735",
+  "job_id": 135717658670,
+  "proof_source": "research/consensus/W32_TWO_READONLY_UPGRADED_OTS_RECEIPTS_2026-11-19.json",
+  "validation_claim": "Each upgraded OTS proof's embedded 32-byte Bitcoin merkle root matches the independently retrieved 80-byte block header from two public APIs, with correct SHA256d blockhash and header nBits PoW; NO full Bitcoin consensus header-chain validation was performed",
+  "independent_operator_custody": "NOT_ESTABLISHED",
+  "full_node_consensus_verification": "NOT_ESTABLISHED",
+  "no_ario_secrets_or_trust_activation": true
+}

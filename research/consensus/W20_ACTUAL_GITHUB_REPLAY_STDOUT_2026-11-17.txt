@@ -1,0 +1,9 @@
+# W20 exact observed result excerpt from actual one-time GitHub runner 44159334216, job 134308599911.
+# Source: https://github.com/SepehrGhanbari/Ario/actions/runs/44159334216
+# Checkout source: 5d3345dfb20bf1e17f7ce97f9cb3832d5c13f6be
+# This excerpt is NOT an outside human review, external witness signature or real-world proof of custody.
+2026-11-17T19:30:53.6641012Z Ran 6 tests in 0.210s
+2026-11-17T19:30:53.6641204Z OK
+2026-11-17T19:30:57.7032309Z W20_MUTATION_REPLAY_MATCHED_12_OF_13_WITH_EXPLICIT_REDUNDANT_SURVIVOR
+2026-11-17T19:30:57.7599903Z {"cross_admin_key_custody": "NOT_ESTABLISHED", "external_effects": 0, "freshest_world_checkpoint": "UNKNOWN", "human_approval": "NOT_ESTABLISHED", "memory_admitted": false, "operational_authority": "NONE", "real_ario_log_witnessed": "NOT_ESTABLISHED", "reason": "ALL_SUPPLIED_SYNTHETIC_LEAVES_INCLUDED_NOT_AUTHORITY", "source_truth": "UNKNOWN", "verdict": "HISTORICAL_CONSISTENT"}
+2026-11-17T19:30:57.7710420Z W20_EXTERNAL_MACHINE_READ_ONLY_REPLAY=PASS / TRUST=NO_GO / NO_PUBLICATION

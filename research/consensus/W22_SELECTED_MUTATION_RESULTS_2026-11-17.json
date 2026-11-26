@@ -1,0 +1,88 @@
+{
+  "detected": 11,
+  "mutations": [
+    {
+      "detected": true,
+      "first_failed_test": "FAIL: test_01_note_grammar_and_independent_verifier (test_w22_checkpoint_interop.W22.test_01_note_grammar_and_independent_verifier)",
+      "mutated_sha256": "994341bb9fb551cbf69a18742fd71cf6cb3370a0e4c43c44885f8e7ba9f1a719",
+      "mutation": "M01_SKIP_ED25519_VERIFY",
+      "test_process_returncode": 1
+    },
+    {
+      "detected": true,
+      "first_failed_test": "FAIL: test_01_note_grammar_and_independent_verifier (test_w22_checkpoint_interop.W22.test_01_note_grammar_and_independent_verifier)",
+      "mutated_sha256": "19363c3c70b1e175ebc63c8548b284a6c9f481439240b0d5120cc86ff2a0e4d2",
+      "mutation": "M02_SKIP_VKEY_KEYID_BINDING",
+      "test_process_returncode": 1
+    },
+    {
+      "detected": true,
+      "first_failed_test": "FAIL: test_06_signed_fork_and_malformed_bytes (test_w22_checkpoint_interop.W22.test_06_signed_fork_and_malformed_bytes) (mode='coordinated-data-tamper')",
+      "mutated_sha256": "a579df13de1879071de6b871c2fb43350fc8db3a821933bd117a9250a8ac831a",
+      "mutation": "M03_SKIP_MERKLE_ROOT_MATCH",
+      "test_process_returncode": 1
+    },
+    {
+      "detected": true,
+      "first_failed_test": "FAIL: test_06_signed_fork_and_malformed_bytes (test_w22_checkpoint_interop.W22.test_06_signed_fork_and_malformed_bytes) (mode='bad-tile')",
+      "mutated_sha256": "6503d04ecd9a94e458328e8ffc4830dee8f4ee3eb93128febefe70346001e48a",
+      "mutation": "M04_SKIP_LEAF_TILE_BINDING",
+      "test_process_returncode": 1
+    },
+    {
+      "detected": true,
+      "first_failed_test": "FAIL: test_04_rollback_and_two_old_limitation (test_w22_checkpoint_interop.W22.test_04_rollback_and_two_old_limitation)",
+      "mutated_sha256": "037dd8fd9c26d79e344edaa95f8989ecdb612b824bd6764b29e53a5bb061df84",
+      "mutation": "M05_ALLOW_HISTORY_ROLLBACK",
+      "test_process_returncode": 1
+    },
+    {
+      "detected": true,
+      "first_failed_test": "FAIL: test_06_signed_fork_and_malformed_bytes (test_w22_checkpoint_interop.W22.test_06_signed_fork_and_malformed_bytes) (mode='fork')",
+      "mutated_sha256": "c105f1d00303cc2fefce4442559dc1c751dee619278307268da38d1273c0a218",
+      "mutation": "M06_ALLOW_SAME_SIZE_FORK",
+      "test_process_returncode": 1
+    },
+    {
+      "detected": true,
+      "first_failed_test": "FAIL: test_07_redirect_target_was_not_contacted (test_w22_checkpoint_interop.W22.test_07_redirect_target_was_not_contacted)",
+      "mutated_sha256": "8c8ebaa577194cc74c47b7fed13a40c44ebe3232b19902bf2a7addc1d753619d",
+      "mutation": "M07_FOLLOW_HTTP_REDIRECTS",
+      "test_process_returncode": 1
+    },
+    {
+      "detected": true,
+      "first_failed_test": "FAIL: test_06_signed_fork_and_malformed_bytes (test_w22_checkpoint_interop.W22.test_06_signed_fork_and_malformed_bytes) (mode='bad-consistency')",
+      "mutated_sha256": "8d7f13cd706ddfc28c655f4f47ffeb4954ca2ae9e712db3d3a09a037aa3dd801",
+      "mutation": "M08_SKIP_COMPACT_CONSISTENCY",
+      "test_process_returncode": 1
+    },
+    {
+      "detected": true,
+      "first_failed_test": "FAIL: test_03_valid_partial_tiles_and_continuity (test_w22_checkpoint_interop.W22.test_03_valid_partial_tiles_and_continuity)",
+      "mutated_sha256": "324b92a8837b347b9cf992987727a377302d6208b80945062231328e4504ce4f",
+      "mutation": "M09_FAKE_ACTION_AUTHORITY",
+      "test_process_returncode": 1
+    },
+    {
+      "detected": true,
+      "first_failed_test": "FAIL: test_05_wrong_trust_inputs_hold (test_w22_checkpoint_interop.W22.test_05_wrong_trust_inputs_hold)",
+      "mutated_sha256": "0284f9c054cf485bfcbc5a8e7e1e1a8a72402172a045e332fb8dd8c2f41f16fd",
+      "mutation": "M10_DROP_HIGHWATER_REQUIRED",
+      "test_process_returncode": 1
+    },
+    {
+      "detected": true,
+      "first_failed_test": "FAIL: test_08_env_proxy_cannot_intercept_loopback (test_w22_checkpoint_interop.W22.test_08_env_proxy_cannot_intercept_loopback)",
+      "mutated_sha256": "3985f7b9155731e81904105cdd780bdae1248a27c90299bd7e42ba798fc3b68b",
+      "mutation": "M11_ALLOW_HTTP_ENV_PROXY",
+      "test_process_returncode": 1
+    }
+  ],
+  "not_independent_audit": true,
+  "schema": "ARIO_W22_SELECTED_SOURCE_MUTATIONS_V1",
+  "scope": "W22 Python monitor in temporary files, synthetic keys and localhost only, no external publication",
+  "selected": 11,
+  "source_git_blob_sha1": "e1718d31638a42522aed21372176c3f363c3e9f2",
+  "survivors": []
+}

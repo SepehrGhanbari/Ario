@@ -1,0 +1,19 @@
+test_01_note_grammar_and_independent_verifier (test_w22_checkpoint_interop.W22.test_01_note_grammar_and_independent_verifier) ... ok
+test_02_official_c2sp_vkey_example (test_w22_checkpoint_interop.W22.test_02_official_c2sp_vkey_example) ... ok
+test_03_valid_partial_tiles_and_continuity (test_w22_checkpoint_interop.W22.test_03_valid_partial_tiles_and_continuity) ... ok
+test_04_rollback_and_two_old_limitation (test_w22_checkpoint_interop.W22.test_04_rollback_and_two_old_limitation) ... ok
+test_05_wrong_trust_inputs_hold (test_w22_checkpoint_interop.W22.test_05_wrong_trust_inputs_hold) ... ok
+test_06_signed_fork_and_malformed_bytes (test_w22_checkpoint_interop.W22.test_06_signed_fork_and_malformed_bytes) ... ok
+test_07_redirect_target_was_not_contacted (test_w22_checkpoint_interop.W22.test_07_redirect_target_was_not_contacted) ... ok
+test_08_env_proxy_cannot_intercept_loopback (test_w22_checkpoint_interop.W22.test_08_env_proxy_cannot_intercept_loopback) ... ok
+test_09_offline_not_latest (test_w22_checkpoint_interop.W22.test_09_offline_not_latest) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 8.901s
+
+OK
+W22_SELECTED_MUTANTS=11/11_Detected (author-selected only)
+W22_GO_NOTE_ED25519_VERIFIED / HISTORICAL_ONLY / AUTHORITY=NONE / EXTERNAL_WITNESS=NOT_ESTABLISHED
+W22_GO_NOTE_ED25519_VERIFIED / HISTORICAL_ONLY / AUTHORITY=NONE / EXTERNAL_WITNESS=NOT_ESTABLISHED
+W22_GO_REJECTS_MALFORMED_SIZE_AND_VALIDATES_BOTH_C2SP_NOTES
+W22_REPLAY_PASS / HISTORICAL_ONLY / INDEPENDENT_ADMIN=NOT_ESTABLISHED / REAL_ARIO_LOG_WITNESS=NO / NO_AUTOMATION

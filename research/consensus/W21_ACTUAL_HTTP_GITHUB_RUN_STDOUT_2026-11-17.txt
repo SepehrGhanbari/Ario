@@ -1,0 +1,12 @@
+# W21 exact stdout from successful GitHub Actions run 44162876016, job 134321083174
+# Underlying checkout f26a479e6c1f893f05bc96fd49c8b06cecba206a; same GitHub repo administrator, not third-party review
+# Original URL: https://github.com/SepehrGhanbari/Ario/actions/runs/44162876016
+2026-11-17T19:50:32.3207803Z test_http_end_to_end_cases (test_w21_http_monitor.WebLab.test_http_end_to_end_cases) ... ok
+2026-11-17T19:50:32.3212041Z test_network_unavailability_and_nonlocal_url (test_w21_http_monitor.WebLab.test_network_unavailability_and_nonlocal_url) ... ok
+2026-11-17T19:50:32.3992484Z test_server_rejects_mutating_request (test_w21_http_monitor.WebLab.test_server_rejects_mutating_request) ... ok
+2026-11-17T19:50:32.3993650Z Ran 3 tests in 1.117s
+2026-11-17T19:50:32.3993852Z OK
+2026-11-17T19:50:32.4186406Z W21_HTTP_LOOPBACK_MULTIPROCESS_TESTS=PASS
+2026-11-17T19:50:32.7171255Z Ran 6 tests in 0.208s
+2026-11-17T19:50:32.7171467Z OK
+2026-11-17T19:50:32.7329915Z W21_COMPACT_PROOF_INTEROP_TESTS=PASS

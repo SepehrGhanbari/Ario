@@ -1,0 +1,68 @@
+{
+  "independent_test_author_oracle": false,
+  "killed": 9,
+  "mutants": [
+    {
+      "detected": true,
+      "failed_case_or_reason": "('scope', 'SIGNED_PACKET_AND_ANCHORED_SCOPE_MATCH_NOT_AUTHORITY', 'GRANT_NOT_BOUND_TO_PROPOSED_SCOPE')",
+      "mutant": "M01_DROP_GRANT_SCOPE",
+      "mutated_sha256": "e5f7d78355f353df1046d6f28d263b371488ea369623bf2fbf9ce71f49283bfc"
+    },
+    {
+      "detected": true,
+      "failed_case_or_reason": "('revoked', 'SIGNED_PACKET_AND_ANCHORED_SCOPE_MATCH_NOT_AUTHORITY', 'GRANT_REVOKED')",
+      "mutant": "M02_DROP_REVOKE",
+      "mutated_sha256": "b44006bb9db41a36873d3616d2093bca3e441b72ac169fdd2c005eee76f3df70"
+    },
+    {
+      "detected": true,
+      "failed_case_or_reason": "('stale_revocation', 'GRANT_REVOKED', 'STALE_OR_UNANCHORED_HEAD')",
+      "mutant": "M03_DROP_ANCHOR_HASH",
+      "mutated_sha256": "d9f77b39126f08aa1b8c8e6cb1f5fee23d321d85c94ceb57bd955bc67f9a009d"
+    },
+    {
+      "detected": true,
+      "failed_case_or_reason": "('expired', 'SIGNED_PACKET_AND_ANCHORED_SCOPE_MATCH_NOT_AUTHORITY', 'GRANT_EXPIRED_OR_NOT_YET')",
+      "mutant": "M04_IGNORE_GRANT_TIME",
+      "mutated_sha256": "84aabafcffe2c8f07710e1dbc23d764b54a59f93a91c3fc6c41b0657f874df14"
+    },
+    {
+      "detected": true,
+      "failed_case_or_reason": "('no_authority', 'GRANTED', 'NOT_ESTABLISHED')",
+      "mutant": "M05_RETURN_PERMISSION",
+      "mutated_sha256": "611c70c4db48151d7a7a3a7c9ed60381691e028f2bded657be6f460748308378"
+    },
+    {
+      "detected": true,
+      "failed_case_or_reason": "('tampered_grant', 'GRANT_NOT_BOUND_TO_PROPOSED_SCOPE', 'GRANT_SIGNATURE_OR_DOMAIN')",
+      "mutant": "M06_ALLOW_BAD_SIGNATURE",
+      "mutated_sha256": "84d424b3c8712b5c03e0d54212bf464dff0acf120f4bb1261ad7dfb02db898d9"
+    },
+    {
+      "detected": true,
+      "failed_case_or_reason": "('positive', 'DENY', 'ELIGIBLE_FOR_SEPARATE_GATE')",
+      "mutant": "M07_CROSS_SIGNER_KEY",
+      "mutated_sha256": "4b7b850ec1efd8c9ada06bc3aaa4514df0681ff014cc44bd8331164f20bd0426"
+    },
+    {
+      "detected": true,
+      "failed_case_or_reason": "('wrong_domain_grant', 'SIGNED_PACKET_AND_ANCHORED_SCOPE_MATCH_NOT_AUTHORITY', 'GRANT_SIGNATURE_OR_DOMAIN')",
+      "mutant": "M08_ACCEPT_OTHER_ROLE_DOMAIN",
+      "mutated_sha256": "7a9197b59a0b165fa2bc69caa1850b01786a424a551bc3a6e55b2f657ace0d38"
+    },
+    {
+      "detected": true,
+      "failed_case_or_reason": "('positive', 'DENY', 'ELIGIBLE_FOR_SEPARATE_GATE')",
+      "mutant": "M10_SKIP_ANCHOR_SIGNATURE",
+      "mutated_sha256": "ed15e78b54a71f55ff207f63e2c0d73c8a411381260fd1d7494837e92e118dc3"
+    }
+  ],
+  "native_os_uid_tests_rerun_per_mutant": false,
+  "pure_controls": 11,
+  "real_actions": 0,
+  "schema": "ARIO_W14_PURE_VERIFIER_MUTATIONS_V1",
+  "scope": "Only toy in-memory signed verifier, never real keys, OS custody, production code or main branch.",
+  "selected_mutants": 9,
+  "survived": 0,
+  "tested_source_git_blob": "9665854a2a8133cec73049d8d219800295a860f3"
+}

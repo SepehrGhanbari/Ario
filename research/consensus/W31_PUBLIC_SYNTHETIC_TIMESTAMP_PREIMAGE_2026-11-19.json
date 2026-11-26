@@ -1,0 +1,17 @@
+{
+  "schema": "ARIO_W31_EXTERNAL_TIMESTAMP_PUBLIC_SYNTHETIC_V1",
+  "research_date": "2026-11-19",
+  "origin": "ario-w22-research.invalid/synthetic-log",
+  "purpose": "ONE no-authority external timestamp experiment on public synthetic research metadata ONLY",
+  "payload_type": "PUBLIC_SYNTHETIC_DIGEST_PREIMAGE_NOT_PRIVATE_EVENTS",
+  "w22_signed_fixture_git_blob": "6aaf4b53e4f1e3e88556fcfbbbfddaef3445da8e",
+  "w30_verifier_git_blob": "a81bbd9d69e84cbd1989cb0e5ddd5405da7ed05b",
+  "synthetic_marker": "ARIO-W31-NO-GENESIS-NO-REAL-MEMORY-NO-SIGNING",
+  "no_actual_ario_log": true,
+  "no_personal_data": true,
+  "no_witness_cosignature": true,
+  "no_claim_of_independent_custody": true,
+  "genesis": "NO_GO",
+  "trust_activation": "NO_GO",
+  "production": "NO_GO"
+}

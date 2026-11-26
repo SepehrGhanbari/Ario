@@ -1,0 +1,38 @@
+{
+  "external_actions_executed": false,
+  "live_memory_mutated": false,
+  "note": "This is a synthetic end-to-end prototype status/cue path and intentionally contradictory stdout. No actual task dispatcher, production signer, or conversational Ario was invoked.",
+  "results": [
+    {
+      "consolidated_nodes": 1,
+      "hypothesis_veracity": "VERIFIED_EMPIRICAL",
+      "node_status": "ACCEPTED",
+      "prospective_status": "TRIGGERED",
+      "prospective_triggered_count": 1,
+      "scenario": "stdout_NOT_FOUND_but_exit_0",
+      "stdout": "NOT_FOUND: Target A",
+      "task_executed": false,
+      "tool_exit": 0,
+      "verified_memory_candidates": 1
+    },
+    {
+      "consolidated_nodes": 0,
+      "hypothesis_veracity": "UNSUPPORTED",
+      "node_status": "NONE",
+      "prospective_status": "PENDING",
+      "prospective_triggered_count": 0,
+      "scenario": "exit_1_nonpromotion_control",
+      "stdout": "ERROR: refused",
+      "task_executed": false,
+      "tool_exit": 1,
+      "verified_memory_candidates": 0
+    }
+  ],
+  "schema": "ARIO-W8-SYNTHETIC-THREE-MODULE-TRACE-v1",
+  "source_head": "07068bdfa36abb29a3ce8e927077df3ffe02b0cf",
+  "verified_git_blobs": {
+    "memory_consolidation": "b131bab9047d0c579e6a0dda6c0ee26861ef0100",
+    "prospective_memory": "3991f38f4d6ed1b51c0753bec54dd66c446d9e25",
+    "source_monitoring": "b3b500ebc8736aa5475d117f508a769a39b78d6d"
+  }
+}

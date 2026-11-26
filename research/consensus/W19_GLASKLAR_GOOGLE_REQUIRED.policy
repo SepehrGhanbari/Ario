@@ -1,0 +1,8 @@
+# W19 research only. Public keys from Sigsum services / TrustFabric official witness page.
+# POLICY GOAL: Require BOTH a Glasklar-operated test witness and Google TrustFabric dev witness.
+# No administrative key-custody attestation; dev witness intentionally non-production.
+log 4644af2abd40f4895a003bca350f9d5912ab301a49c77f13e5b6d905c20a5fe6 https://test.sigsum.org/barreleye
+witness poc.sigsum.org/nisse 1c25f8a44c635457e2e391d1efbca7d4c2951a0aef06225a881e46b98962ac6c
+witness transparency.dev/DEV:witness-little-garden 2b6eb0ec483503544cde4e8fc1ce6d1921db21dffccc186865f808f7625443cc
+group cross-operator all poc.sigsum.org/nisse transparency.dev/DEV:witness-little-garden
+quorum cross-operator

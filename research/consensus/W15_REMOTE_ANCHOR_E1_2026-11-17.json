@@ -1,0 +1,17 @@
+{
+  "anchor": {
+    "body": {
+      "epoch": 1,
+      "head_sha256": "87dd09cc70e3a4daf1809008cf28db407324105e59c22e98ec983509b34b483a",
+      "prev_anchor_sha256": "49599de3f64f3e7f37a29535b3ec8bd14ffd8ae4e8b83087884128540c511328",
+      "version": 1
+    },
+    "domain": "ARIO_W15_SYNTHETIC_ANCHOR",
+    "signature": "4fa25fb1aee8bfda51e971ed647de659f6405e5d596756839a2b1b7d2b8099d65dc31b9ca64abe44ccf940d356fbaea28232319f9f3406dbcabeb411b546e10b"
+  },
+  "anchor_packet_sha256": "5067e875c681c3760d4b66d5d210b8e9edc32a9f46ea3a4a61f08fb989bc79f8",
+  "epoch": 1,
+  "hosting_note": "Provider hosted; repo owner can edit. NOT independent custody.",
+  "schema": "ARIO_W15_GITHUB_HOSTED_WITNESS_V1",
+  "version": 1
+}

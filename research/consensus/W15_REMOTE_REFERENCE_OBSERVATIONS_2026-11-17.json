@@ -1,0 +1,103 @@
+{
+  "administrative_custody_independence": false,
+  "freshness_proof": "NOT_ESTABLISHED",
+  "git_blob_sha1": {
+    "fixture": "22f141ae808573c1a84d321b10eeaf10ceaa0937",
+    "probe": "9acc21953308a595a502801b6be1f703682722ae",
+    "remote_e0": "38759bf53e40940141c673717545836a4c69b7b0",
+    "remote_e1": "ae5dbc69867d8ad355002cb5c8bbf2badf17d9e2",
+    "tests": "021862adec1395fa1dde2c2d150bf0668db2b429"
+  },
+  "github_file_operator_control": "same repository owner can update and rewrite accessible reference",
+  "limitations": [
+    "GitHub HEAD selection is controlled by repository owner",
+    "signed old E0 remains valid and can be re-published",
+    "absence of remote latest must HOLD",
+    "no real human consent",
+    "no independent public-key custodian",
+    "no remote API access inside Python verifier itself"
+  ],
+  "nonreal_tool_effects": 0,
+  "original_unittest_methods_executed": 4,
+  "python_version": "3.13.5",
+  "remote_e1_fetched_via_github_connector": true,
+  "remote_e1_sha256": "011ff81c9bd0317c02292c3f7fbeb69435955698fc83567eedb7c3b87a828ae0",
+  "remote_git_provider": "github.com via first-party GitHub connector; external service not independently administered",
+  "result_not_production_authorization": true,
+  "scenarios": [
+    {
+      "external_actions": 0,
+      "grant_id": "G1",
+      "name": "OLD_LOCAL_FRESH_GITHUB_E1",
+      "operational_authority": "NONE",
+      "presented_snapshot": "E0",
+      "reason": "PRESENTED_STATE_BELOW_REMOTE_REFERENCE",
+      "reference_epoch": 1,
+      "verdict": "DENY"
+    },
+    {
+      "external_actions": 0,
+      "grant_id": "G1",
+      "name": "OLD_LOCAL_OLD_SIGNED_E0",
+      "operational_authority": "NONE",
+      "presented_snapshot": "E0",
+      "reason": "MATCHED_SIGNED_LAB_VIEW_NOT_WORLD_FRESHNESS",
+      "reference_epoch": 0,
+      "verdict": "DECLARED_ELIGIBLE_FOR_SEPARATE_GATE"
+    },
+    {
+      "external_actions": 0,
+      "grant_id": "G1",
+      "name": "FRESH_LOCAL_REVOKED_G1",
+      "operational_authority": "NONE",
+      "presented_snapshot": "E1",
+      "reason": "REVOKED_BY_PRESENTED_HEAD",
+      "reference_epoch": 1,
+      "verdict": "DENY"
+    },
+    {
+      "external_actions": 0,
+      "grant_id": "G2",
+      "name": "FRESH_LOCAL_UNREVOKED_G2",
+      "operational_authority": "NONE",
+      "presented_snapshot": "E1",
+      "reason": "MATCHED_SIGNED_LAB_VIEW_NOT_WORLD_FRESHNESS",
+      "reference_epoch": 1,
+      "verdict": "DECLARED_ELIGIBLE_FOR_SEPARATE_GATE"
+    },
+    {
+      "external_actions": 0,
+      "grant_id": "G1",
+      "name": "NETWORK_OR_REFERENCE_UNAVAILABLE",
+      "operational_authority": "NONE",
+      "presented_snapshot": "E0",
+      "reason": "REMOTE_REFERENCE_UNAVAILABLE",
+      "reference_epoch": null,
+      "verdict": "HOLD_UNCERTAIN"
+    },
+    {
+      "external_actions": 0,
+      "grant_id": "G1",
+      "name": "REFERENCE_BEHIND_LOCAL",
+      "operational_authority": "NONE",
+      "presented_snapshot": "E1",
+      "reason": "REMOTE_REFERENCE_BEHIND_PRESENTED_STATE",
+      "reference_epoch": 0,
+      "verdict": "HOLD_UNCERTAIN"
+    },
+    {
+      "external_actions": 0,
+      "grant_id": "G1",
+      "name": "CLIENT_REMEMBERS_E1_BUT_RECEIVES_E0",
+      "operational_authority": "NONE",
+      "presented_snapshot": "E0",
+      "reason": "REMOTE_BELOW_PREVIOUSLY_SEEN_EPOCH",
+      "reference_epoch": 0,
+      "verdict": "DENY"
+    }
+  ],
+  "schema": "ARIO_W15_REMOTE_REFERENCE_SYNTHETIC_OBSERVATIONS_V1",
+  "separate_operator_witness_confirmed": false,
+  "source_case_count": 7,
+  "source_fixture_trust_root": "SELF_DECLARED_TEST_PUBLIC_KEYS"
+}

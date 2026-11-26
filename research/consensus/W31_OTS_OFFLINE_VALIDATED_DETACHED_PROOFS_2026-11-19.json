@@ -1,0 +1,52 @@
+{
+  "checks": [
+    {
+      "bitcoin_attestations": 0,
+      "calendar": "https://alice.btc.calendar.opentimestamps.org",
+      "detached_ots_b64": "AE9wZW5UaW1lc3RhbXBzAABQcm9vZgC/ieLohOiSlAEIIHi8gFhtDksAr6SOuN6jGrPUdJtJEsV6iX5NXi+0Nt/wCB03t36qhw/XCPAQTx/jqNo6MVzu1l6V0P1x/QjwIG9oFNsGKo4/cepxKfSapto5t1mnM0iO+aAMe5zHh7ONCPEEav72s/AIiXOICee+Pd4Ag9/jDS75DI4uLWh0dHBzOi8vYWxpY2UuYnRjLmNhbGVuZGFyLm9wZW50aW1lc3RhbXBzLm9yZw==",
+      "detached_ots_bytes": 202,
+      "detached_ots_sha256": "676c0f99d485cb24f1d80354c38bc043dbe51dffe7f0bd6e1dc992d85fdb7ba4",
+      "offline_verify": "VALID_PENDING_TIMESTAMP_FORMAT_ONLY",
+      "pending_attestations": 1,
+      "pending_uri_matches_calendar": true,
+      "raw_calendar_timestamp_bytes": 137
+    },
+    {
+      "bitcoin_attestations": 0,
+      "calendar": "https://bob.btc.calendar.opentimestamps.org",
+      "detached_ots_b64": "AE9wZW5UaW1lc3RhbXBzAABQcm9vZgC/ieLohOiSlAEIIHi8gFhtDksAr6SOuN6jGrPUdJtJEsV6iX5NXi+0Nt/wCI/i7Gd1h3EUCPAQrSQyRPQqlmOTqYj3BkemewjxIIG2EuYNpSekgxNMfMLmPDiYqpFWMKeM1SvJyHKJaqpECPEEav72tPAIg2q575o5T20Ag9/jDS75DI4sK2h0dHBzOi8vYm9iLmJ0Yy5jYWxlbmRhci5vcGVudGltZXN0YW1wcy5vcmc=",
+      "detached_ots_bytes": 200,
+      "detached_ots_sha256": "7c6442facc66e3ab4cbf7b532ddccbd3fe5a15ce3f321e1b85f2b93d9dff999c",
+      "offline_verify": "VALID_PENDING_TIMESTAMP_FORMAT_ONLY",
+      "pending_attestations": 1,
+      "pending_uri_matches_calendar": true,
+      "raw_calendar_timestamp_bytes": 135
+    }
+  ],
+  "external_operator_key_pin": "NOT_ESTABLISHED",
+  "external_post_requests_in_this_verification": 0,
+  "independent_c2sp_keeper": "NOT_ESTABLISHED",
+  "preimage_sha256": "2078bc80586d0e4b00afa48eb8dea31ab3d4749b4912c57a897e4d5e2fb436df",
+  "production": "NO_GO",
+  "result": "2_OF_2_PARSABLE_PENDING_RECEIPTS",
+  "schema": "ARIO_W31_OFFLINE_OTS_FORMAT_VERIFICATION_V1",
+  "trust_activation": "NO_GO",
+  "verified_bitcoin_anchor": false,
+  "verified_cross_os": [
+    "ubuntu-latest",
+    "windows-2022"
+  ],
+  "run_url": "https://github.com/SepehrGhanbari/Ario/actions/runs/44532669602",
+  "jobs": {
+    "linux": 135589817210,
+    "windows": 135589817757
+  },
+  "source_verification_git_blob": "138c8b056dd3387f31f5a0facedf43b0f221b742",
+  "verified_with": "opentimestamps==0.5.0",
+  "bitcoin_anchor_status": "NOT_CONFIRMED_PENDING_ONLY",
+  "external_operator_identity_status": "NOT_ESTABLISHED",
+  "signed_c2sp_witness_status": "NOT_ESTABLISHED",
+  "human_source_review": "NOT_ESTABLISHED",
+  "no_network_timestamp_posts_during_validation": true,
+  "precise_claim": "These are parseable detached pending OpenTimestamps proofs binding a public synthetic Git blob digest, NOT a C2SP independent witness"
+}

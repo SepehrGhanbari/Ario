@@ -1,0 +1,103 @@
+{
+  "case_count": 14,
+  "case_kinds": {
+    "known_reproduction": 1,
+    "new_falsifier": 6,
+    "new_schema_falsifier": 1,
+    "positive_control": 5,
+    "type_control": 1
+  },
+  "cases": [
+    {
+      "case_id": "B01",
+      "kind": "known_reproduction",
+      "observed": "PROMOTED",
+      "test_predicate": "Unrelated success promoted unrelated claim"
+    },
+    {
+      "case_id": "B02",
+      "kind": "new_falsifier",
+      "observed": "PROMOTED_AND_FILTER_ADMITTED",
+      "test_predicate": "Semantically contradictory stdout still reaches strict working-memory gate"
+    },
+    {
+      "case_id": "B03",
+      "kind": "new_falsifier",
+      "observed": "PROMOTED",
+      "test_predicate": "Different target scopes not compared"
+    },
+    {
+      "case_id": "B04",
+      "kind": "new_falsifier",
+      "observed": "PROMOTED",
+      "test_predicate": "No substantive observation bytes required"
+    },
+    {
+      "case_id": "B05",
+      "kind": "new_falsifier",
+      "observed": "PROMOTED",
+      "test_predicate": "No mandatory independent expected lock/stdout digest or actual tool runner"
+    },
+    {
+      "case_id": "B06",
+      "kind": "new_falsifier",
+      "observed": "PROMOTED_WITH_DANGLING_PARENT",
+      "test_predicate": "Lineage completeness not validated"
+    },
+    {
+      "case_id": "B07",
+      "kind": "new_schema_falsifier",
+      "observed": "DESERIALIZED_AS_VERIFIED",
+      "test_predicate": "Raw SourceAttribution schema invariant accepts fake parent; does not establish registry insertion"
+    },
+    {
+      "case_id": "B08",
+      "kind": "new_falsifier",
+      "observed": "PRIOR_ATTRIBUTION_OVERWRITTEN",
+      "test_predicate": "Registry ID immutability not enforced"
+    },
+    {
+      "case_id": "B09",
+      "kind": "type_control",
+      "observed": "UNSUPPORTED",
+      "test_predicate": "Bool True does not count as exit code 0, although its type is accepted"
+    },
+    {
+      "case_id": "B10",
+      "kind": "positive_control",
+      "observed": "BLOCKED",
+      "test_predicate": "Nonallowlisted tool rejected"
+    },
+    {
+      "case_id": "B11",
+      "kind": "positive_control",
+      "observed": "BLOCKED",
+      "test_predicate": "Explicit mismatching expected digest rejected"
+    },
+    {
+      "case_id": "B12",
+      "kind": "positive_control",
+      "observed": "BLOCKED",
+      "test_predicate": "Nonzero exit evidence cannot promote"
+    },
+    {
+      "case_id": "B13",
+      "kind": "positive_control",
+      "observed": "BLOCKED",
+      "test_predicate": "External testimony alone cannot promote"
+    },
+    {
+      "case_id": "B14",
+      "kind": "positive_control",
+      "observed": "PROMOTED",
+      "test_predicate": "Matching synthetic support is permitted; does NOT prove externally assessed truth"
+    }
+  ],
+  "execution": "DIRECT_SOURCE_PINNED_CPYTHON_SYNTHETIC_ONLY",
+  "gold_author_independent": false,
+  "note": "An observed PROMOTED means this PR's current source-status contract emitted VERIFIED_EMPIRICAL for a supplied synthetic claim; it neither proves world truth nor production exploitability.",
+  "schema": "ARIO-W8-SYNTHETIC-PR210-RESULTS-v1",
+  "source_blob_sha1": "b3b500ebc8736aa5475d117f508a769a39b78d6d",
+  "source_pr_head": "07068bdfa36abb29a3ce8e927077df3ffe02b0cf",
+  "source_verified": true
+}

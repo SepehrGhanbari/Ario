@@ -1,0 +1,114 @@
+diff --git a/.gitattributes b/.gitattributes
+new file mode 100644
+index 0000000..f310cc0
+--- /dev/null
++++ b/.gitattributes
+@@ -0,0 +1,5 @@
++# Byte-exactness for the frozen TB-003 evaluator across platforms.
++# The W1 source pin verifies size + SHA-256 + Git blob of the checkout bytes;
++# any EOL normalisation (LF<->CRLF) breaks the pin. Force no text conversion so
++# Windows and Linux checkouts are byte-identical regardless of core.autocrlf.
++implementation/witness_provenance_experiment.py -text
+diff --git a/.github/workflows/w1-provenance-research.yml b/.github/workflows/w1-provenance-research.yml
+index 5912e26..90477fa 100644
+--- a/.github/workflows/w1-provenance-research.yml
++++ b/.github/workflows/w1-provenance-research.yml
+@@ -2,8 +2,11 @@ name: W1 synthetic provenance research only
+ on:
+   pull_request:
+     paths:
++      - 'implementation/witness_provenance_experiment.py'
+       - 'research/consensus/w1_adversarial_input_sensitivity_v1.py'
+       - 'research/consensus/test_w1_adversarial_input_sensitivity_v1.py'
++      - 'research/consensus/test_w1_oracle_gap_controls.py'
++      - '.gitattributes'
+       - '.github/workflows/w1-provenance-research.yml'
+   workflow_dispatch:
+ permissions:
+diff --git a/research/consensus/test_w1_oracle_gap_controls.py b/research/consensus/test_w1_oracle_gap_controls.py
+new file mode 100644
+index 0000000..0fd8cb4
+--- /dev/null
++++ b/research/consensus/test_w1_oracle_gap_controls.py
+@@ -0,0 +1,81 @@
++"""W1 oracle-gap controls (research-only, additive).
++
++Closes two coverage gaps found by adversarial mutation testing of the
++author-built W1 fixture. These do NOT modify the frozen TB-003 evaluator,
++the existing 16-trial oracle, or W1_SENSITIVITY_RESULTS_*.json.
++
++Gap 1: no fixture row exercises an *ambiguous* custody transfer (two strictly
++       sequenced routes from the initial custodian to the holder). A variant of
++       the evaluator that accepts ambiguity (`len(options) < 1`) passes all 15
++       existing tests + the 58 implementation tests, yet upgrades this case to
++       CONDITIONAL instead of UNKNOWN.
++Gap 2: no fixture row exercises a witness captured AFTER the modeled mutation
++       (`capture_sequence >= mutation_sequence`). A variant that deletes the
++       NOT_BEFORE_MUTATION branch passes all existing tests, yet upgrades this
++       case to CONDITIONAL instead of UNKNOWN.
++
++STATUS: RESEARCH_ONLY / DRAFT / HOLD / NO_MERGE / PRODUCTION=NO_GO.
++"""
++from __future__ import annotations
++import unittest
++
++try:  # discovery from research/consensus adds this directory to sys.path
++    import w1_adversarial_input_sensitivity_v1 as w
++except ModuleNotFoundError:  # pragma: no cover
++    import sys, pathlib
++    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
++    import w1_adversarial_input_sensitivity_v1 as w
++
++
++class TestW1OracleGapControls(unittest.TestCase):
++    @classmethod
++    def setUpClass(cls):
++        cls.engine = w.load_pinned_engine()
++        cls.sep = w.build_case(cls.engine)
++
++    def status(self, case):
++        return w.classify(self.engine, case)["classification"]
++
++    def _ambiguous_custody_transfer(self):
++        p = self.engine
++        detour = p.Node("holder-mid", "CUSTODIAN", "SYNTHETIC:W1:ONE-SCOPE",
++                        p.LAB, "FROZEN:holder-mid")
++        x1 = p.Edge("x-b1", "origin-b", "holder-mid", "TRANSFERRED_TO", p.LAB,
++                    "FROZEN:x-b1", subject_artifact_ref="artifact-b", sequence=5)
++        x2 = p.Edge("x-b2", "holder-mid", "holder-b", "TRANSFERRED_TO", p.LAB,
++                    "FROZEN:x-b2", subject_artifact_ref="artifact-b", sequence=6)
++        x3 = p.Edge("x-b3", "origin-b", "holder-b", "TRANSFERRED_TO", p.LAB,
++                    "FROZEN:x-b3", subject_artifact_ref="artifact-b", sequence=7)
++        return w.change_graph(self.sep, nodes=tuple(self.sep.graph.nodes) + (detour,),
++                              edges=tuple(self.sep.graph.edges) + (x1, x2, x3))
++
++    def test_gap1_ambiguous_custody_transfer_is_unknown(self):
++        """Two valid sequenced routes to the holder must not become a positive."""
++        case = self._ambiguous_custody_transfer()
++        self.assertEqual(self.status(case), "UNKNOWN")
++        r = self.engine.evaluate_provenance(case)
++        self.assertEqual(r.per_witness_custody[1].status, "UNKNOWN")
++
++    def test_gap2_capture_after_mutation_is_unknown(self):
++        """A capture not strictly before the modeled mutation cannot be CONDITIONAL."""
++        case = w.replace(self.sep, mutation_sequence=1)  # captures seq 1,2 are not < 1
++        self.assertEqual(self.status(case), "UNKNOWN")
++        self.assertEqual(self.engine.evaluate_provenance(case).capture_order.status,
++                         "NOT_BEFORE_MUTATION")
++
++    @unittest.expectedFailure
++    def test_documented_gap3_shared_custodian_across_witnesses(self):
++        """KNOWN MODELING GAP: a single custodian holding BOTH witnesses is not an
++        independence axis, so the evaluator still reports CONDITIONAL. This test
++        documents the desired stricter behaviour (DEPENDENT); it is intentionally
++        an expectedFailure and must not be silently removed."""
++        p = self.engine
++        edges = tuple(
++            w.replace(e, target="holder-a") if e.edge_id in ("hold-b", "xfer-b") else e
++            for e in self.sep.graph.edges)
++        shared_holder = w.change_graph(self.sep, edges=edges)
++        self.assertEqual(self.status(shared_holder), "DEPENDENT")
++
++
++if __name__ == "__main__":
++    unittest.main()

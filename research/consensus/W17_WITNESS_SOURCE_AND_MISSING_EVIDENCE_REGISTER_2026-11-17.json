@@ -1,0 +1,151 @@
+{
+  "schema": "ARIO_W17_EVIDENCE_AND_SOURCE_REGISTER_V1",
+  "as_of": "2026-11-17",
+  "purpose": "Read-only application/source review. Cannot register Ario, attest witness custody or grant any authority.",
+  "issue_refs": [
+    "https://github.com/SepehrGhanbari/Ario/issues/171",
+    "https://github.com/SepehrGhanbari/Ario/issues/259",
+    "https://github.com/SepehrGhanbari/Ario/issues/216"
+  ],
+  "official_log_application": {
+    "source": "https://witness-network.org/participate/",
+    "fields": [
+      {
+        "field": "origin_line",
+        "value": null,
+        "grade": "NOT_VERIFIED_FROM_AVAILABLE_ARIO_RECORD"
+      },
+      {
+        "field": "log_vkey",
+        "value": null,
+        "grade": "NOT_VERIFIED_FROM_AVAILABLE_ARIO_RECORD"
+      },
+      {
+        "field": "qpd",
+        "value": null,
+        "grade": "NOT_MEASURED_OR_OWNER_APPROVED"
+      },
+      {
+        "field": "requested_list",
+        "value": null,
+        "grade": "NOT_OWNER_SELECTED"
+      },
+      {
+        "field": "contact",
+        "value": null,
+        "grade": "NOT_VERIFIED_OR_AUTHORIZED_FOR_PUBLIC_APPLICATION"
+      }
+    ],
+    "notes": "Official site lists testing/staging; production is not currently available on the published participation page. These are log-applicant requirements, not witness-operator requirements."
+  },
+  "r17_internal_gate": {
+    "source": "https://github.com/SepehrGhanbari/Ario/issues/171",
+    "fields": [
+      {
+        "field": "operator_public_name",
+        "value": null,
+        "status": "NOT_VERIFIED_IN_AVAILABLE_PUBLIC_PROJECT_RECORD",
+        "explanation": "Project R17 evidence gate; not an official required public log-application field in the five-item summary"
+      },
+      {
+        "field": "real_log_origin",
+        "value": null,
+        "status": "NOT_VERIFIED_IN_AVAILABLE_PUBLIC_PROJECT_RECORD",
+        "explanation": "Official application: a unique stable origin line; also internal R17"
+      },
+      {
+        "field": "origin_control_evidence",
+        "value": null,
+        "status": "NOT_VERIFIED_IN_AVAILABLE_PUBLIC_PROJECT_RECORD",
+        "explanation": "Internal provenance/control demonstration, not proof from a URL alone"
+      },
+      {
+        "field": "dedicated_test_log_vkey",
+        "value": null,
+        "status": "NOT_VERIFIED_IN_AVAILABLE_PUBLIC_PROJECT_RECORD",
+        "explanation": "Official log public vkey plus internal custody and source assertion"
+      },
+      {
+        "field": "test_key_custody_evidence",
+        "value": null,
+        "status": "NOT_VERIFIED_IN_AVAILABLE_PUBLIC_PROJECT_RECORD",
+        "explanation": "Internal security gate beyond the public application field"
+      },
+      {
+        "field": "checkpoint_url",
+        "value": null,
+        "status": "NOT_VERIFIED_IN_AVAILABLE_PUBLIC_PROJECT_RECORD",
+        "explanation": "Internal readiness: verifiable checkpoint endpoint for Ario test log"
+      },
+      {
+        "field": "consistency_url",
+        "value": null,
+        "status": "NOT_VERIFIED_IN_AVAILABLE_PUBLIC_PROJECT_RECORD",
+        "explanation": "Internal readiness: real append-only proof interface"
+      },
+      {
+        "field": "public_operator_contact",
+        "value": null,
+        "status": "NOT_VERIFIED_IN_AVAILABLE_PUBLIC_PROJECT_RECORD",
+        "explanation": "Official application requires contact; internal R17 requests verified operator contact"
+      }
+    ],
+    "notes": "Eight extra Ario evidence/readiness gates reported earlier. They must not be misrepresented as eight mandatory official Witness Network log-application form fields."
+  },
+  "public_testing_list_snapshot": {
+    "source_url": "https://testing.witness-network.org/log-list.1",
+    "retrieved_via": "Firecrawl scrape, maxAge 0, rendered text; not a signed raw-content proof",
+    "as_of": "2026-11-17",
+    "recognized_header": "logs/v0",
+    "vkey_lines_observed": 17,
+    "qpd_lines_observed": 17,
+    "contact_lines_observed": 17,
+    "literal_ario_or_SepehrGhanbari_lines_observed": 0,
+    "interpretation": "No matching literal name in the retrieved public testing-list text; not proof that Ario has no enrollment under another origin, that the list is complete/current, or that an operator is independently controlled.",
+    "origin_identity": "NOT_ESTABLISHED",
+    "operator_custody": "NOT_ESTABLISHED"
+  },
+  "primary_sources": [
+    {
+      "url": "https://witness-network.org/participate/",
+      "kind": "OFFICIAL_PARTICIPATION_GUIDE",
+      "status": "DIRECT_WEB_PAGE_READ",
+      "claim_scope": "Log-application fields versus witness-operator guidelines"
+    },
+    {
+      "url": "https://witness-network.org/log-list-format/",
+      "kind": "OFFICIAL_LOG_LIST_FORMAT",
+      "status": "DIRECT_WEB_PAGE_READ",
+      "claim_scope": "logs/v0 and ordered vkey/origin(optional)/qpd/contact grammar"
+    },
+    {
+      "url": "https://witness-network.org/log-lists/",
+      "kind": "OFFICIAL_LOG_LIST_INDEX",
+      "status": "DIRECT_WEB_PAGE_READ",
+      "claim_scope": "Development/testing versus staging; production unavailable"
+    },
+    {
+      "url": "https://c2sp.org/tlog-witness@v1.1.0",
+      "kind": "PROTOCOL_PRIMARY_TEXT_V1.1.0",
+      "status": "LIVE_FIRECRAWL_SOURCE_READ",
+      "claim_scope": "Witness keeps per-log checkpoint state and validates append-only consistency; cosignature is about a configured log not an arbitrary claim"
+    },
+    {
+      "url": "https://theupdateframework.github.io/specification/latest/",
+      "kind": "PROTOCOL_PRIMARY_TEXT_TUF_1.0.37",
+      "status": "DIRECT_WEB_PAGE_READ",
+      "claim_scope": "Trusted client metadata, timestamp/freeze, rollback; update security not Ario human approval"
+    }
+  ],
+  "external_review": {
+    "independently_custodied_ario_witness": "NOT_ESTABLISHED",
+    "out_of_band_public_key_pin": "NOT_ESTABLISHED",
+    "origin_control_verified": "NOT_ESTABLISHED",
+    "authenticated_human_grant": "NOT_ESTABLISHED",
+    "latest_reference_worldwide": "UNKNOWN",
+    "independent_third_party_review_submitted": "NOT_ESTABLISHED",
+    "application_sent": false,
+    "ario_log_cosigned": false,
+    "production_approved": false
+  }
+}

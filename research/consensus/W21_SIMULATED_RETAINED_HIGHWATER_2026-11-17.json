@@ -1,0 +1,11 @@
+{
+  "body": {
+    "origin": "ario-w20-synthetic.test.invalid/research-log-v1",
+    "root_sha256": "fe85584d081e74fadc9fa050c7cf1e29c1bc02639407bff9bd4b78b35bdcb392",
+    "schema": "ARIO_W20_SYNTHETIC_CHECKPOINT_V1",
+    "size": 8,
+    "version": 1
+  },
+  "domain": "ARIO_W20_SYNTHETIC_CHECKPOINT_ED25519_V1",
+  "signature": "c18ad0c53b632b09fbecee86f522446feff922a49e69324f9898afe676fb027369a329232332f814509e6dde9a32515dfed1eb9ca482a87c765530b475e54f0d"
+}
