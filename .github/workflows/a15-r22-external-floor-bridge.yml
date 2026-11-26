@@ -45,6 +45,7 @@ jobs:
         working-directory: implementation/research/a15_r22_live_v1/external_floor_bridge
         run: |
           set -euo pipefail
+          go mod tidy
           go run . \
             --first-zip "$GITHUB_WORKSPACE/implementation/tests/fixtures/a15_r22_run_45823494521/A15-FIRST-ONLY.zip" \
             --second-zip "$GITHUB_WORKSPACE/implementation/tests/fixtures/a15_r22_run_45823494521/A15-SECOND-REVEAL-SYNTHETIC.zip" \
