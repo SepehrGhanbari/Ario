@@ -804,3 +804,12 @@ RESEARCH_ONLY / PASS_BOUNDED / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTIO
 - Pins Markovian's witness cosignature verifier key from its operator-published /about page. Local submit command verifies returned cosignature and current witness checkpoint, refuses stale/mismatched state, and never retries automatically.
 - Public bundle intentionally excludes private key and passphrase. Prepare/append commands do not make network requests. Submit is a separate explicit command and must only be run after Markovian confirms manual origin/key pinning.
 - No public checkpoint has yet been published; the static public bundle will be added only after the existing local encrypted research key produces it. No live witness request, Kladje request, merge, trust activation, or production change.
+
+
+## 2026-11-27 — MWTL-01 validation result (append-only)
+
+- Exact code head tested: \`3bab3f7f41cd00d5a06275035ded508efe7b3089\`.
+- Implementation Regression run \`45907666533\`: **2177 passed, 7 skipped, 2 xfailed, 379 subtests passed**.
+- Python 3.14 differential advisory and Windows differential advisory completed successfully.
+- Published TXT Restore Security run \`45907666523\`: all 10 jobs successful.
+- No live Markovian request, Kladje request, key export, public checkpoint publication, merge, or trust activation occurred. The only remaining signing step uses the existing encrypted research key locally on the desktop test PC.
