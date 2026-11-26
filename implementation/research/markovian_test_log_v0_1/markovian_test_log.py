@@ -685,8 +685,8 @@ def package_public_bundle(out: Path) -> Path:
     verify_bundle(out)
     archive_path = out.with_suffix(".zip")
     temp = archive_path.with_name(archive_path.name + ".tmp")
-    if archive_path.exists() or temp.exists():
-        raise Hold("HOLD_PUBLIC_ZIP_ALREADY_EXISTS")
+    if temp.exists():
+        raise Hold("HOLD_PUBLIC_ZIP_TEMP_EXISTS")
     allowed = ["capsule.json", "entries", "checkpoint", "vkey.txt", "manifest.json"]
     try:
         with zipfile.ZipFile(temp, "x", compression=zipfile.ZIP_DEFLATED) as zf:

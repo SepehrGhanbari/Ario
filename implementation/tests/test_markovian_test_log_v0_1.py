@@ -124,7 +124,7 @@ def test_append_refuses_a_different_private_key(tmp_path:Path):
 def test_bundle_detects_tampered_entries_and_checkpoint(tmp_path:Path):
     out=tmp_path/"bundle"; prepare_bundle(out,signer(18))
     entries=(out/"entries").read_bytes()
-    (out/"entries").write_bytes(entries.replace(b"alpha",b"ALPHA"))
+    (out/"entries").write_bytes(entries[:-2]+bytes([entries[-2]^1])+b"\n")
     with pytest.raises(Hold):
         verify_bundle(out)
     out2=tmp_path/"bundle2"; prepare_bundle(out2,signer(19))
