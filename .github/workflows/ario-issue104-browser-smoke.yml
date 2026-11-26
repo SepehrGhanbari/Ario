@@ -1,0 +1,60 @@
+name: Ario #104 Browser Smoke (Research Demo)
+
+on:
+  push:
+    branches:
+      - research/issue104-demo-completion-20261122
+    paths:
+      - docs/ario-explainer-demo-2026-11-08/**
+      - implementation/research/ario_issue104_browser_smoke.py
+      - implementation/tests/test_ario_issue104_demo_static_contract.py
+      - .github/workflows/ario-issue104-browser-smoke.yml
+
+permissions:
+  contents: read
+
+jobs:
+  static-demo-browser:
+    if: github.repository == 'SepehrGhanbari/Ario' && github.ref == 'refs/heads/research/issue104-demo-completion-20261122'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out pinned research candidate
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Python 3.13
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - name: Headless browser real DOM/interaction smoke in FA and EN
+        run: |
+          python -B implementation/research/ario_issue104_browser_smoke.py
+
+      - name: Real browser negative controls (disposable HTML only)
+        run: |
+          python -B - <<'PY'
+          import importlib.util
+          import tempfile
+          from pathlib import Path
+
+          spec = importlib.util.spec_from_file_location(
+              "smoke", "implementation/research/ario_issue104_browser_smoke.py")
+          smoke = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(smoke)
+          source = smoke.SOURCE.read_text(encoding="utf-8")
+          mutations = [
+              ('function showErase() { renderRev("erase"); }',
+               'function showErase() {}'),
+              ('function showRevise() { renderRev("revise"); }',
+               'function showRevise() {}'),
+          ]
+          with tempfile.TemporaryDirectory(prefix="ario-demo-mutants-") as directory:
+              for index, (original, replacement) in enumerate(mutations):
+                  assert source.count(original) == 1
+                  mutant = Path(directory) / f"mutant-{index}.html"
+                  mutant.write_text(source.replace(original, replacement), encoding="utf-8")
+                  smoke.SOURCE = mutant
+                  assert smoke.main() == 1, f"mutant {index} was not rejected by browser"
+                  print(f"ARIO_DEMO_MUTANT_REJECTED:{index}")
+          PY
