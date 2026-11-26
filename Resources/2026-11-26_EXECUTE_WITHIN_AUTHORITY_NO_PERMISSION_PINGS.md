@@ -5,9 +5,11 @@
 - Status: OWNER-DIRECTED OPERATING RULE; repository-wide agent guidance.
 - Canonical instruction: [AGENTS.md — Execute within authority](../AGENTS.md).
 
-## Owner's instruction
+## Owner's instruction — original wording
 
-> دیگه پیشنهاد رو برای من نیارین انجام بدین. هر پیشنهادی دارین، انجام بدین؛ فقط اگه واقعاً گیر بودین بیارین تا بگم انجام بدین. خستم کردین.
+> اینم بنویس برای سورس خودت و توی مخرن که دیگه پیشنهاد رو برای من نیارین انجام بدین هر پیشنهادی دارین لنگ پرامپت فقط اگه بودین بیارین بگم انجام بدین خستم کردین
+
+The operational interpretation below is: execute actions already within standing authority; bring the owner only a genuine blocker that requires owner input or authority.
 
 ## Operational meaning
 
