@@ -115,7 +115,7 @@ def selftest(archive, source):
                       "result": "PASS"}, sort_keys=True), flush=True)
 
 def run(archive, source, out):
-    KEYS, ORIGIN, note, consistency, H, normalizer = load_modules(source)
+    KEYS, ORIGIN, note, consistency, H, normalizer, decide = load_modules(source)
     out.mkdir(parents=True, exist_ok=True)
     rawzip = archive.read_bytes()
     if hashlib.sha256(rawzip).hexdigest() != ARCHIVE_SHA256:
