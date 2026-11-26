@@ -666,7 +666,8 @@ def main() -> int:
         print("REJECT " + exc.code)
         return 3
     except (OSError, ValueError, struct.error, subprocess.SubprocessError) as exc:
-        print("REJECT RAW_EVIDENCE_ERROR:" + type(exc).__name__)
+        detail = str(exc).replace("\\n", " ")[:240]
+        print("REJECT RAW_EVIDENCE_ERROR:" + type(exc).__name__ + ":" + detail)
         return 3
 
 
