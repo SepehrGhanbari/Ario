@@ -80,3 +80,15 @@ Within each run:
 The custom external-only 2-of-4 policy passed; the built-in Sigsum test2 4-of-5 policy remained `NOT_MET`. The external witnesses attest the tree head, not availability of A15 Broker rows. Remora is a test VM without HSM/redundancy; Stagemole is a best-effort test witness. This does not establish trusted time, global latestness, production-grade durable custody, full administrative independence, admission, trust activation, or production.
 
 No new relay publication, signing key, floor write, merge, trust activation, or production action occurred. Original A15 live-run reveal failure remains preserved.
+
+
+## Live witness inventory and custodian binding hardening — 2026-11-26
+
+The bridge now rejects incomplete or duplicate live witness inventories, requires the reported verified-cosignature count to equal the number of distinct valid witness identities, and binds the live custodian readback source to `https://remora.n621.de/status` in addition to exact size/root equality.
+
+- Source commit: `cc0b7863a2039cf8824ade2c2e79d681cdb3a56c`.
+- Read-only live bridge run [45842591119](https://github.com/SepehrGhanbari/Ario/actions/runs/45842591119): **PASS**.
+- M0 implementation regression run [45842591131](https://github.com/SepehrGhanbari/Ario/actions/runs/45842591131): **PASS**.
+- The current live observation remained tree size 282813/root `748c0c608c8f691fd7e9a9b9d98e920f9a529f3dbcaf180109e5bcacb597196b`; two distinct external witnesses verified, including Remora; A15-to-live consistency passed.
+
+This hardening does not change the evidence boundary: TEST_ONLY, custom external-only 2-of-4, built-in test2 4-of-5 NOT_MET, data availability NOT_PROVEN, global latest UNKNOWN, and trust/production NO_GO. No publication, key, floor write, merge, or trust activation occurred. PR #389 remains DRAFT and unmerged.
