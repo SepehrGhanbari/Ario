@@ -1087,9 +1087,61 @@ Related #379 A15 retained-range experiment covers a different set of three commi
 - Earlier intermediate CI failures were preserved in Actions history; the final tested head is green. Same-domain valid-prefix rollback remains an expected RED and still requires an independently retained authenticated floor.
 - No Sigsum call, new witness, external publication, real key, TPM, trust activation, production promotion, or merge.
 
+
+## 2026-11-26 — R22.31 owner-admin rollback disposition
+
+- Checked existing R22.22I external 2-of-4 test-witness floor and W36/W37 verifier before deciding whether it could be reused. It is a real prior external test-log observation, but it does not commit to the R22.31 journal or branch; reusing it as this journal's floor would be a false binding.
+- Owner reports that they are the only trusted administrator of the current Ario research environment. Recorded this as an owner-provided threat-model assumption, not an independently verified access-control fact.
+- Closed the same-domain valid-prefix rollback item as ACCEPTED_RISK / OUT_OF_SCOPE for the current owner-operated research prototype. The expected-RED regression remains so the limitation cannot be forgotten or misreported as a pass.
+- Explicitly left account/credential/device compromise, an undisclosed second administrator, and hostile-owner resistance NOT_CLOSED. Those require a genuinely out-of-band owner-held floor or independent custodian, not another same-domain file/process.
+- No new Sigsum publication, witness test, external call, key, merge, trust activation, production action, or main-branch change.
+
+
+## 2026-11-26 — superseding correction: second administrator reported; inventory incomplete
+
+- Owner explicitly corrected the prior assumption and stated that another administrator exists and can perform relevant privileged actions. The earlier sole-owner ACCEPTED_RISK / OUT_OF_SCOPE disposition is withdrawn and must not be relied on.
+- Verified through the connected GitHub identity: authenticated login is `SepehrGhanbari` (ID `104393545`); repository owner is `SepehrGhanbari`; this account has `admin`. The old `Mrxxir` account has only `read` permission. The connected user has no GitHub organization memberships.
+- Read both active repository rulesets. The explicit bypass actor in `Protect main` is only user ID `104393545`; the no-bypass baseline lists no bypass actors. This identifies the explicit bypass configuration, not the complete administrator roster.
+- The connected GitHub tool does not expose a collaborator/admin enumeration endpoint. A named-user permission check is available, but the additional administrator's login has not yet been identified. Therefore do not claim that Sepehr is the only repository admin.
+- Current threat-model disposition: **OPEN / NOT_ASSESSED** until the additional administrator is identified and their effective permissions are verified. No access removal, ruleset change, branch protection change, or other security mutation was performed.
+- Next evidence path: inspect repository Settings → Collaborators (direct page: `https://github.com/SepehrGhanbari/Ario/settings/access`) or provide the second administrator's GitHub login for a direct permission check. Then map access to repository settings, rulesets, Actions, secrets, deployments, and external recovery sources.
+
+
+## 2026-11-26 — final direct-access inventory correction (owner screenshot)
+
+**This entry supersedes the immediately preceding statement that a second administrator exists.** The earlier wording was a misinterpretation of the owner's question; the owner has now supplied the actual GitHub Settings → Collaborators screenshot.
+
+Observed directly in the screenshot for `SepehrGhanbari/Ario`:
+- Direct access: **0 collaborators**.
+- GitHub UI states: **"Only you can contribute to this repository."**
+- Manage access states no collaborators have been invited.
+
+Cross-checks from the connected GitHub account:
+- Repository owner: `SepehrGhanbari`; authenticated account has `admin`.
+- Authenticated account has no organization memberships.
+- The active `Protect main` ruleset lists only user ID `104393545` (SepehrGhanbari) as its explicit bypass actor; the second active no-bypass baseline lists no bypass actors.
+- The earlier `Mrxxir = read` permission result is not evidence of collaborator status; the repository is public, and the owner's Collaborators page explicitly shows zero direct collaborators.
+
+**Disposition for the question asked:** No second human collaborator/admin with direct repository access is present in the supplied current access view. The earlier "another administrator exists" note is withdrawn. No further search for a fictional second admin is warranted.
+
+**Remaining distinction:** this does not prove that the owner's account/device is uncompromised, nor does the Collaborators page enumerate GitHub App installation permissions, Actions credentials, deploy keys, or external service credentials. Those are separate machine/credential access paths, not evidence of another human repository administrator. The connected integration shows one GitHub App installation on the owner's user account; its effective repository permissions were not exposed in the returned installation metadata. No claim is made that this app is a second human admin.
+
+No collaborator removal, ruleset change, key rotation, new Sigsum test, merge, trust activation, or production action was performed. The R22.31 same-domain rollback behavior remains a distinct owner-account-compromise / credential-custody boundary; it must not be conflated with a nonexistent second direct collaborator.
+
+
+## 2026-11-26 — final disposition: no second human repository administrator
+
+The owner-provided current GitHub Settings → Collaborators screenshot shows **0 collaborators**, **"Only you can contribute to this repository"**, and no invited collaborators. This is consistent with the connected GitHub account being the repository owner/admin, having no organization memberships, and being the only explicit bypass actor in the active `Protect main` ruleset. The old `Mrxxir` account is not a collaborator; the repository is public and the earlier `read` result did not imply write access.
+
+**Decision:** the threat scenario "a second human repository administrator deliberately rewinds the Ario repository/journal" is **NOT APPLICABLE to the currently observed access configuration**. Stop treating a second human admin as an unresolved blocker; do not build a mock admin, repeat Sigsum, or add another same-domain process for this scenario.
+
+This is not a cryptographic rollback fix. The expected-RED valid-prefix rollback test remains as a documented boundary for a different threat: compromise of the owner's GitHub account/device or an automated credential/app with write authority. One GitHub App installation is visible on the owner's account, but its effective repository permissions were not exposed in the available installation metadata; it is not evidence of a second human administrator and remains a separate machine-credential audit item only if that threat is in scope.
+
+No collaborator removal, ruleset change, key rotation, new witness test, merge, trust activation, or production action was performed.
+
 ## 2026-11-26 — R22.32 TPM EK/AK binding, CertifyCreation and PCR Quote (RESEARCH_ONLY)
 
-- Stacked branch `research/r22-32-tpm-ek-ak-attestation-stacked-2026-11-26` on the latest R22.31 PR #411 head `39ebaf8c5f043471f09fa56eeedce673ee00085d`; the feature branch was updated with a merge commit and now has that base as an ancestor. No R22.31 files were changed.
+- Stacked branch `research/r22-32-tpm-ek-ak-attestation-stacked-2026-11-26` on the latest R22.31 PR #411 head `1dba8ae472d0a0c8d02ab575eb62878fa705f897`; the feature branch was updated with a merge commit and now has that base as an ancestor. No R22.31 files were changed.
 - Pre-rebase exact-head CI [run 45853404250](https://github.com/SepehrGhanbari/Ario/actions/runs/45853404250), source `7e91aabf4d6bd3763027fead94ee7188b82087e1`, SUCCESS: **24/24 PASS**. A fresh exact-head run after updating to the latest R22.31 parent is pending. Implementation Regression [run 45853404032](https://github.com/SepehrGhanbari/Ario/actions/runs/45853404032) also succeeded on that SHA.
 - Environment: Ubuntu 24.04.5; tpm2-tools 5.6-1build4; swtpm 0.7.3-0ubuntu5.24.04.1; OpenSSL 3.0.13.
 - Tested synthetic EK X.509 path validation and SPKI binding; wrong-root rejection; AK-to-EK MakeCredential/ActivateCredential; cross-simulator credential rejection; TPM Name recomputation from TPMT_PUBLIC and mutation rejection; nonce-bound TPM2_CertifyCreation with signature/object Name/creation-hash validation; PCR 23 recomputation and Quote signature/nonce/selection verification; wrong nonce, wrong AK, tampered signature, substituted storage object, and post-quote PCR-change rejection.
@@ -1138,6 +1190,13 @@ Related #379 A15 retained-range experiment covers a different set of three commi
 - This correction requires the TPM-reported NV Name to match the independently recomputed Name, accepts omission of the policy field only in conjunction with that match, adds a mismatched-reported-Name negative, and corrects the test assertion.
 - **Correction to prior workflow note:** the earlier statement that the branch-local workflow could not run was premature. It did trigger on the exact branch head; run 45857768346 is the evidence. The earlier NOT_RUN statement is superseded by these run results.
 
+
+## 2026-11-26 — R22.32 NV_Certify and authPolicy regression closure
+
+- Exact-head software-TPM run **45858729285** (job **140043831695**, head `a34473339a0ac6540e9e49d1ab6454ef27b38a12`) completed **30/30 PASS**, including NV_Certify and its content/challenge/signer negative controls. Summary artifact `r22-32-tpm-attestation-evidence`, ID **15137281473**.
+- Generic regression exposed a no-op test mutation: the synthetic NV YAML omitted `authorization policy`, so the non-empty-policy fixture never inserted a value. Corrected the test to insert a 32-byte non-empty policy before `size` and assert the mutation.
+- Final head `09e0c224b9e25a2a2958d2fc52f70b4e4e9e0ddb`: M0 **2111 PASS**; Windows and Python 3.14 differential advisories PASS; manifest/restore/generator matrix and self-audit readback PASS. Runs **45859336248** and **45859336333**.
+- The NV workflow artifact is a summary, not a portable raw-TPM evidence bundle. R22.33 still needs a verifier that consumes actual R22.32 evidence. No physical TPM, OEM trust, independent administrator, external rollback floor, real key, trust activation, production or merge is established.
 
 ## 2026-11-26 — R22.32 AK TPMT_PUBLIC identity extension
 
