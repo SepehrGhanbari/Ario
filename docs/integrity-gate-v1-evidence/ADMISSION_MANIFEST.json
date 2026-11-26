@@ -1,0 +1,75 @@
+{
+  "scope": "RESEARCH_ONLY",
+  "files": [
+    {
+      "path": "RUN_INTEGRITY_GATE.cmd",
+      "bytes": 146,
+      "sha256": "d1b4431e5950880dac72983aa80d1b14caea9150f366c53be446ef6f957597a2"
+    },
+    {
+      "path": "docs/ARIO_INTEGRITY_GATE_V1.md",
+      "bytes": 5246,
+      "sha256": "26264eaa7610d88e6cdc93c92ceefa2d2c50ed3a3963e4eda333f4c6c5922c2c"
+    },
+    {
+      "path": "docs/integrity-gate-v1-evidence/ADMISSION_TEST.log",
+      "bytes": 3777,
+      "sha256": "809287ec5741f91c6efdd254ba6e8e0df53836cb5e1554d2aa959ba9f199216f"
+    },
+    {
+      "path": "docs/integrity-gate-v1-evidence/ORIGINAL_HASHES.json",
+      "bytes": 723,
+      "sha256": "bdff9c771c9fdcbae022896d9d2fda137da2dc4b12d5e001414dd6c88a336f1b"
+    },
+    {
+      "path": "docs/integrity-gate-v1-evidence/PRIOR_REGRESSION.log",
+      "bytes": 4187,
+      "sha256": "005a3aaf9deafc4a54ac8166193fd7bb03b446ec0333c6f6b06f5424baa88f31"
+    },
+    {
+      "path": "docs/integrity-gate-v1-evidence/README.md",
+      "bytes": 1798,
+      "sha256": "3aeac6b7663a8dcae95b913e0c1a35a0917a0d4ae21d2d42316385696910ac33"
+    },
+    {
+      "path": "docs/integrity-gate-v1-evidence/README_FA.md",
+      "bytes": 5986,
+      "sha256": "710239385ef44d51961c5796be37eb4a3188b8c9734fd35f992f322befa93458"
+    },
+    {
+      "path": "docs/integrity-gate-v1-evidence/SHA256_MANIFEST.json",
+      "bytes": 1842,
+      "sha256": "59895626b9786b90fdb4bdce9f64429aeef79225dc759d086177757adc47cdbf"
+    },
+    {
+      "path": "docs/integrity-gate-v1-evidence/TEST_RESULTS.log",
+      "bytes": 3777,
+      "sha256": "e8bf55e3a9ff7660600e5cf52e07c27ad62d5ccd71616ada0e3dead163b76cb9"
+    },
+    {
+      "path": "docs/integrity-gate-v1-evidence/WINDOWS_RESTORE.public.json",
+      "bytes": 2660,
+      "sha256": "e195326582b363170362d038c37ad53d4102e92deceb09d6084b675293b674a7"
+    },
+    {
+      "path": "docs/integrity-gate-v1-evidence/WINDOWS_STARTUP.public.json",
+      "bytes": 1158,
+      "sha256": "d755c8547a751accd935f261339360de311cc0d7f887c54fe342f98e313922e3"
+    },
+    {
+      "path": "docs/integrity-gate-v1-evidence/live_probe.json",
+      "bytes": 421,
+      "sha256": "ada5cf3aa494cecbbbc686f0aa9dac77533769b9106e6de2b057743d449f9ed6"
+    },
+    {
+      "path": "scripts/ario_integrity_gate.py",
+      "bytes": 23502,
+      "sha256": "b89ccb4d715eb00a847a2d30a56c2ec285fedf9355d0cb8dc58b887c032d4c67"
+    },
+    {
+      "path": "scripts/test_ario_integrity_gate.py",
+      "bytes": 14902,
+      "sha256": "e4f932b9bfbe1c097d75c725f4656a5a46ab4af47519249e972ffac83e48f03d"
+    }
+  ]
+}

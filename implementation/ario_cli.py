@@ -9,12 +9,25 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Union, get_args, get_origin, get_type_hints
 
+from bounded_json import load_json_file_bounded
 from core.audit_engine import AuditEngine, AuditInput, parse_evidence_ancestry_findings
 from core.schema import Timestamp
 
 
 def decode_value(annotation: Any, value: Any, path: str = "$") -> Any:
     """Decode JSON into the typed M0 input schema; reject unknown/malformed data."""
+    if isinstance(annotation, str):
+        # CPython 3.10 get_type_hints() leaves a nested quoted forward reference
+        # as a bare name (tuple['LineageCompatibilityAuthorization', ...]).
+        # Falling through used to return the raw dict, and AuditEngine then
+        # crashed with AttributeError instead of a typed verdict.
+        from core import schema as m0_schema
+
+        resolved = getattr(m0_schema, annotation, None)
+        if not isinstance(resolved, type):
+            raise ValueError(f"{path}: unresolved schema type")
+        annotation = resolved
+
     origin = get_origin(annotation)
     args = get_args(annotation)
 
@@ -170,7 +183,7 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        payload = json.loads(Path(args.input).read_text(encoding="utf-8-sig"))
+        payload = load_json_file_bounded(args.input)
         result = execute_request(payload)
         serialized = json.dumps(result, ensure_ascii=False, sort_keys=True)
         if args.ledger:

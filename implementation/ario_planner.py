@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import argparse
+import http.client
+import email.message
 import json
 import os
+import re
 import socket
 import sys
 import urllib.error
@@ -14,6 +17,7 @@ from typing import Any
 
 from ario_agent import MAX_READ_BYTES, MAX_STEPS, AgentRequestError, _inside, execute_action
 from ario_workflow import parse_workflow, run_workflow
+from bounded_json import loads_bounded
 
 
 MAX_GOAL_CHARS = 2_000
@@ -296,6 +300,8 @@ def _parse_recommendation(payload: Any, observation: dict) -> dict:
         )
     implementation_path = payload["implementation_path"]
     test_path = payload["test_path"]
+    if not isinstance(implementation_path, str) or not isinstance(test_path, str):
+        raise AgentRequestError("recommendation paths must be strings")
     available = {item.get("path") for item in observation.get("planning_context", [])}
     allowed_pairs = {
         ("implementation/ario_planner.py", "implementation/tests/test_planner_runtime.py"),
@@ -405,6 +411,123 @@ def _build_deterministic_workflow(goal: str, recommendation: dict, root: Path) -
     return workflow
 
 
+def _validate_ollama_response_framing(response) -> int | None:
+    """Validate declared body framing before parsing, in addition to bounded read."""
+    headers = getattr(response, "headers", None)
+    # Production urllib responses expose email.message.Message. Synthetic
+    # legacy response doubles without real HTTP headers retain their old path.
+    if not isinstance(headers, email.message.Message):
+        return None
+    lengths = headers.get_all("Content-Length", [])
+    transfers = headers.get_all("Transfer-Encoding", [])
+    if transfers:
+        if lengths or len(transfers) != 1 or transfers[0].strip(" \t").lower() != "chunked":
+            raise AgentRequestError("Ollama response has ambiguous HTTP transfer framing")
+        if getattr(response, "chunked", True) is False:
+            raise AgentRequestError("Ollama response has unsupported HTTP chunk framing")
+        return None
+    if len(lengths) > 1:
+        raise AgentRequestError("Ollama response has duplicate Content-Length headers")
+    if not lengths:
+        return None
+    raw = lengths[0].strip(" \t")
+    if not re.fullmatch(r"[0-9]+", raw, flags=re.ASCII):
+        raise AgentRequestError("Ollama response has invalid Content-Length")
+    # Strip zeroes before conversion so long valid zero-padded values do not
+    # consume Python's max integer digit budget.
+    significant = raw.lstrip("0") or "0"
+    limit = str(MAX_RESPONSE_BYTES)
+    if len(significant) > len(limit) or (len(significant) == len(limit) and significant > limit):
+        raise AgentRequestError("Ollama response declared an oversized body")
+    return int(significant)
+
+
+# Restrict chunk extensions to the HTTP token/quoted-string syntax (RFC 9112).
+_HTTP_TOKEN = rb"[!#$%&'*+\-.^_`|~0-9A-Za-z]+"
+_HTTP_QUOTED = rb'"(?:[\t\x20-\x21\x23-\x5b\x5d-\x7e\x80-\xff]|\\[\t\x20-\x7e\x80-\xff])*"'
+_HTTP_CHUNK_LINE = re.compile(
+    rb"([0-9A-Fa-f]+)(?:[ \t]*;[ \t]*" + _HTTP_TOKEN
+    + rb"(?:[ \t]*=[ \t]*(?:" + _HTTP_TOKEN + rb"|" + _HTTP_QUOTED + rb"))?)*\Z"
+)
+_HTTP_TRAILER_LINE = re.compile(_HTTP_TOKEN + rb":[\t\x20-\x7e\x80-\xff]*\Z")
+_MAX_OLLAMA_CHUNKS = 5000
+_MAX_OLLAMA_TRAILER_BYTES = 64 * 1024
+_MAX_OLLAMA_TRAILER_FIELDS = 32
+_MAX_OLLAMA_CHUNK_LINE = 4096
+
+
+class _StrictOllamaHTTPResponse(http.client.HTTPResponse):
+    """Fail closed on malformed chunk framing before returning decoded body bytes."""
+
+    def begin(self):
+        super().begin()
+        if self.chunked or self.length is not None or "Content-Length" in self.headers:
+            return
+        # http.client can leave trailing field whitespace in a transfer coding.
+        # Recognize one unambiguous chunked field before getresponse() decides
+        # whether the connection can be reused.
+        values = self.headers.get_all("Transfer-Encoding", [])
+        if len(values) == 1 and values[0].strip(" \t").lower() == "chunked":
+            self.chunked = True
+            self.chunk_left = None
+            self.will_close = self._check_close()
+
+    def _invalid_chunk(self, reason: str) -> None:
+        self._close_conn()
+        raise http.client.HTTPException("invalid Ollama HTTP chunked response: " + reason)
+
+    def _read_next_chunk_size(self):
+        line = self.fp.readline(_MAX_OLLAMA_CHUNK_LINE + 1)
+        if len(line) > _MAX_OLLAMA_CHUNK_LINE or not line.endswith(b"\r\n"):
+            self._invalid_chunk("chunk-size line requires bounded CRLF")
+        match = _HTTP_CHUNK_LINE.fullmatch(line[:-2])
+        if match is None:
+            self._invalid_chunk("malformed chunk-size or extension")
+        count = getattr(self, "_ario_chunks_seen", 0) + 1
+        if count > _MAX_OLLAMA_CHUNKS:
+            self._invalid_chunk("too many chunks")
+        self._ario_chunks_seen = count
+        significant = match.group(1).lstrip(b"0") or b"0"
+        ceiling = format(MAX_RESPONSE_BYTES, "x").encode("ascii")
+        if (len(significant) > len(ceiling)
+                or (len(significant) == len(ceiling) and significant.lower() > ceiling)):
+            self._invalid_chunk("chunk size exceeds response budget")
+        return int(significant, 16)
+
+    def _read_and_discard_trailer(self):
+        total = 0
+        for _ in range(_MAX_OLLAMA_TRAILER_FIELDS + 1):
+            line = self.fp.readline(http.client._MAXLINE + 1)
+            total += len(line)
+            if (total > _MAX_OLLAMA_TRAILER_BYTES or len(line) > http.client._MAXLINE
+                    or not line.endswith(b"\r\n")):
+                self._invalid_chunk("trailer line exceeds limit or lacks CRLF")
+            if line == b"\r\n":
+                return
+            if _HTTP_TRAILER_LINE.fullmatch(line[:-2]) is None:
+                self._invalid_chunk("malformed trailer field")
+            if line.split(b":", 1)[0].lower() in {b"content-length", b"transfer-encoding"}:
+                self._invalid_chunk("forbidden framing field in trailer")
+        self._invalid_chunk("too many trailer fields")
+
+    def _get_chunk_left(self):
+        # CPython discards two unvalidated bytes between chunks; require CRLF.
+        if self.chunk_left == 0:
+            if self._safe_read(2) != b"\r\n":
+                self._invalid_chunk("missing chunk-data CRLF")
+            self.chunk_left = None
+        return super()._get_chunk_left()
+
+
+class _StrictOllamaHTTPConnection(http.client.HTTPConnection):
+    response_class = _StrictOllamaHTTPResponse
+
+
+class _StrictOllamaHTTPHandler(urllib.request.HTTPHandler):
+    def http_open(self, req):
+        return self.do_open(_StrictOllamaHTTPConnection, req)
+
+
 class _NoOllamaRedirects(urllib.request.HTTPRedirectHandler):
     """Keep local planning traffic at the validated endpoint, including retries."""
 
@@ -416,6 +539,7 @@ def _open_local_ollama(request: urllib.request.Request, *, timeout: int):
     """Use a request-local transport without proxy discovery or redirects."""
     opener = urllib.request.build_opener(
         urllib.request.ProxyHandler({}), _NoOllamaRedirects(),
+        _StrictOllamaHTTPHandler(),
     )
     return opener.open(request, timeout=timeout)
 
@@ -468,15 +592,22 @@ def request_plan(
         )
         try:
             with _open_local_ollama(request, timeout=timeout) as response:
+                expected_length = _validate_ollama_response_framing(response)
                 raw = response.read(MAX_RESPONSE_BYTES + 1)
-        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+                remaining = getattr(response, "length", None)
+        except (http.client.HTTPException, OSError) as exc:
             raise AgentRequestError(f"could not obtain a response from local Ollama: {exc}") from exc
         if len(raw) > MAX_RESPONSE_BYTES:
             raise AgentRequestError("Ollama response exceeded the 1 MB safety limit")
+        if expected_length is not None and len(raw) != expected_length:
+            raise AgentRequestError("Ollama response length differs from Content-Length")
+        # HTTPResponse.read(n) can return at EOF with declared body bytes outstanding.
+        if isinstance(remaining, int) and remaining > 0:
+            raise AgentRequestError("Ollama response ended before its declared Content-Length")
         try:
-            envelope = json.loads(raw.decode("utf-8"))
+            envelope = loads_bounded(raw.decode("utf-8"))
             content = envelope["message"]["content"]
-            proposed = json.loads(content)
+            proposed = loads_bounded(content)
         except (UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError) as exc:
             raise AgentRequestError("Ollama did not return a valid JSON recommendation") from exc
         try:

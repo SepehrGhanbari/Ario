@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://ario-research-independent.vercel.app/ario-demo.html">
-<meta name="description" content="Bilingual Ario interactive teaching demo with four fictional evidence exercises. Prewritten outcomes, not the M0 engine.">
+<meta name="description" content="Interactive bilingual Ario teaching demo with five fictional evidence scenarios. Prewritten educational outputs, not the M0 engine.">
 <title>Ario Explainer — Synthetic Teaching Demo</title>
 <style>
 :root{--ink:#22303c;--paper:#f6f4ee;--card:#ffffff;--line:#d9d3c5;--accent:#0e6b5c;--warn:#9c4a1e;--mut:#555f69;}
@@ -97,7 +97,7 @@ footer a{color:var(--accent)}
     <div id="evidence-output" class="evidence-result" role="status" aria-live="polite" aria-atomic="true"></div>
   </section>
 </main>
-<footer><div class="wrap"><div id="footer"></div><p><a href="/">Ario main site / بازگشت به سایت اصلی آریو</a></p></div></footer>
+<footer><div class="wrap" id="footer"></div><p class="wrap"><a href="/">Ario main site / بازگشت به سایت اصلی آریو</a></p></footer>
 <script>
 "use strict";
 var T = {
@@ -108,7 +108,7 @@ var T = {
     banner: "SYNTHETIC / FICTIONAL — این صفحه دموی آموزشی با داده‌ی کاملاً ساختگی است؛ موتور M0 آریو نیست و بازتاب هیچ رویداد واقعی نیست.",
     introH: "سه اصل آریو",
     legendH: "وضعیت‌های معرفتی",
-    scenH: "سه مثال تعاملی",
+    scenH: "پنج مثال تعاملی",
     revH: "اصلاح ≠ پاک‌کردن",
     revP: "در این مثال ساختگی، اصلاحِ یک ورودی اشتباه کنارِ متن قبلی با تاریخ و منشأ ثبت می‌شود؛ نه اینکه گذشته پاک شود. هر دو حالت را ببین:",
     eraseBtn: "حالت «پاک‌کردن»",
@@ -167,6 +167,34 @@ var T = {
           { l: "اصلاح تاریخ را نگه می‌دارد؛ حذف ردپا را پاک می‌کند", ok: true, f: "درست: REVISION ≠ ERASURE. بدون تاریخِ اصلاح، بعداً نمی‌دانستیم این اجازه چند بار و چرا تغییر کرده." },
           { l: "حذف امن‌تر است چون داده‌ی غلط پاک می‌شود", ok: false, f: "برعکس: پاک‌کردن، امکانِ ممیزیِ بعدی را از بین می‌برد. داده‌ی «غلط» بخشی از تاریخِ اثبات‌پذیر است." }
         ]
+      },
+      {
+        h: "۴) امضای ظاهری یا هشِ درست، حقیقت نیست",
+        steps: [
+          ["ادعا", "در گزارش ساختگی نوشته شده: «یک اتفاق قطعی رخ داده است.»"],
+          ["مدرک ظاهری", "فایلی با هش صحیح و تصویری شبیه گواهی امضاشده ارائه می‌شود."],
+          ["مرز شاهد", "هش فقط تطابق بایت‌های همان فایل را نشان می‌دهد؛ اصالت امضا، مستقل‌بودن صادرکننده و درستی خودِ ادعا هنوز اثبات نشده است."]
+        ],
+        q: "از سالم‌بودن هش چه نتیجه‌ای مجاز است؟",
+        opts: [
+          { l: "TRUE — چون هش سالم است", ok: false, f: "درستی هش، محتوای ادعا را به حقیقت تبدیل نمی‌کند؛ اصالت و منشأ هم جداگانه بررسی می‌شوند." },
+          { l: "UNKNOWN — فقط یک تطابق فنی مشاهده شده", ok: true, f: "درست: تطابق فنی می‌تواند ثبت شود، اما دربارهٔ خودِ ادعا هنوز UNKNOWN می‌ماند." },
+          { l: "APPROVED — ظاهر امضا کافی است", ok: false, f: "تصویر امضا به‌تنهایی اعتبار امضاکننده یا اختیار او را اثبات نمی‌کند." }
+        ]
+      },
+      {
+        h: "۵) «خوبم» یعنی چه؟",
+        steps: [
+          ["گفتهٔ شخص", "شخصی در مکالمهٔ ساختگی می‌گوید: «خوبم.»"],
+          ["برداشت عجولانه", "دستیار ادعا می‌کند: «پس می‌دانم دقیقاً چه احساسی داری و هیچ مشکلی وجود ندارد.»"],
+          ["محدودیت", "گفتهٔ ثبت‌شده محترم است، اما دستیار به تجربهٔ درونی فرد دسترسی مستقیم ندارد."]
+        ],
+        q: "کدام پاسخ هم محترمانه است و هم دقیق؟",
+        opts: [
+          { l: "کاملاً می‌دانم که واقعاً خوبی", ok: false, f: "تجربهٔ درونی دیگری را نمی‌توان از یک جمله با قطعیت دانست." },
+          { l: "شنیدم گفتی خوبی؛ اگر خواستی بیشتر بگو", ok: true, f: "درست: گفته را دقیق بازتاب می‌دهیم، بدون ذهن‌خوانی یا نتیجه‌گیری پزشکی." },
+          { l: "پس حتماً چیزی را پنهان می‌کنی", ok: false, f: "شکاکیت بی‌دلیل هم ذهن‌خوانی است؛ ندانستن را باید پذیرفت." }
+        ]
       }
     ],
     eraseView: [
@@ -198,7 +226,7 @@ var T = {
     banner: "SYNTHETIC / FICTIONAL — this page is a teaching demo with fully synthetic data; it is not the Ario M0 engine and reflects no real event.",
     introH: "Three Ario principles",
     legendH: "Epistemic states",
-    scenH: "Three interactive examples",
+    scenH: "Five interactive examples",
     revH: "Revision ≠ erasure",
     revP: "In this fictional example, a correction is recorded alongside the original entry, with date and provenance, rather than erasing the past. Compare both modes:",
     eraseBtn: "\"Erase\" mode",
@@ -257,6 +285,34 @@ var T = {
           { l: "Revision preserves history; erasure destroys the trail", ok: true, f: "Correct: REVISION ≠ ERASURE. Without correction history we could not audit how and why this permission changed." },
           { l: "Erasure is safer because wrong data is removed", ok: false, f: "The opposite: erasure removes the ability to audit later. \"Wrong\" data is part of the provable history." }
         ]
+      },
+      {
+        h: "4) A matching hash is not historical truth",
+        steps: [
+          ["CLAIM", "A fictional report declares that an event definitely happened."],
+          ["APPARENT EVIDENCE", "A matching file hash and an image resembling a signed certificate are shown."],
+          ["BOUNDARY", "The hash shows a byte match for that file; signer authenticity, issuer independence, and the underlying claim are not thereby proven."]
+        ],
+        q: "What can a matching hash legitimately establish?",
+        opts: [
+          { l: "TRUE — the hash matches", ok: false, f: "A matching hash does not make a substantive statement true; provenance and authenticity need separate evidence." },
+          { l: "UNKNOWN — only technical byte matching was observed", ok: true, f: "Correct: a technical match can be recorded, while the claim itself remains UNKNOWN." },
+          { l: "APPROVED — a signed-looking picture is enough", ok: false, f: "The appearance of a signature proves neither a signer's identity nor authority." }
+        ]
+      },
+      {
+        h: "5) Can an assistant know someone feels fine?",
+        steps: [
+          ["PERSON'S WORDS", "In a fictional conversation, a person says: \"I'm fine.\""],
+          ["OVERCLAIM", "The assistant replies: \"I know exactly how you feel and that nothing is wrong.\""],
+          ["BOUNDARY", "The person's words should be respected, but the assistant cannot directly inspect their inner experience."]
+        ],
+        q: "Which reply is both respectful and accurate?",
+        opts: [
+          { l: "I know for certain that you truly feel fine", ok: false, f: "Another person's inner experience cannot be determined with certainty from one sentence." },
+          { l: "I hear you said you're fine; you can say more if you want", ok: true, f: "Correct: reflect the stated words without mind-reading or clinical claims." },
+          { l: "You must be hiding something", ok: false, f: "Unsupported suspicion is also mind-reading. Uncertainty is allowed." }
+        ]
       }
     ],
     eraseView: [
@@ -286,7 +342,7 @@ var T = {
 var lang = "fa";
 var revMode = "revise";
 var evidenceMode = "accepted";
-var selectedAnswers = [null, null, null];
+var selectedAnswers = [null, null, null, null, null];
 
 function el(tag, cls) {
   var e = document.createElement(tag);

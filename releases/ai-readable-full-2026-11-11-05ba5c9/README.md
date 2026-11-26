@@ -10,6 +10,10 @@ TXT: ario-full.txt — 17,751,878 bytes; complete UTF-8 text and Base64 binary p
 File manifest: ario-manifest.json — 204 records; paths, modes, Git blob IDs and SHA256.
 Checksums: checksums.json — hashes of generated artifacts.
 Restore: RESTORE_FROM_TXT.py — byte-length framed recovery of all files from TXT.
+
+**Restore safety warning — documentation addendum (2026-11-22):** `RESTORE_FROM_TXT.py` is the **original historical consumer**, including copies already distributed in the 11 November ZIP. **Do not use it on untrusted TXT/ZIP files.** For unknown inputs, instead use [`RESTORE_FROM_TXT_HARDENED.py`](./RESTORE_FROM_TXT_HARDENED.py), which validates record framing, checks hashes and restores into a staging directory before no-replace publication. The [independent pinned-manifest verifier](./verify_pinned_manifest.py) additionally requires an **expected manifest SHA-256 obtained independently of the package**. A successful structural restore or matching in-band checksum **does not authenticate the publisher**. Hardened restore deliberately reports `RESTORE_STRUCTURAL_PASS_AUTHENTICITY_UNKNOWN`; the verifier's `PIN_CUSTODY_NOT_VERIFIED` limitation remains unless the externally supplied pin has independently trusted custody.
+
+**Historical preservation:** Original ZIP/TXT, original restorer, manifest, checksums and released DOI files remain unchanged. This README addendum does not republish, replace or re-sign them. See [publication decision (HOLD)](./RESTORE_PUBLICATION_DECISION_V0_1.md) for any future corrected-package release.
 Reproduce: make_export.py — run with the pinned git clone in sibling directory source.
 
 ZIP SHA256 d11269dc593f9cbb70e7d622a8acc31d0fe36d292a935225aca6b8f98d5c5d51
@@ -29,3 +33,7 @@ Earlier historical exports remain untouched.
 Direct-download links after branch merge:
 https://raw.githubusercontent.com/SepehrGhanbari/Ario/main/releases/ai-readable-full-2026-11-11-05ba5c9/ario-full.zip
 https://raw.githubusercontent.com/SepehrGhanbari/Ario/main/releases/ai-readable-full-2026-11-11-05ba5c9/ario-full.txt
+
+## Later verification convenience (2026-11-24)
+
+Use the [read-only verified-release launcher](../../docs/ARIO_VERIFIED_RELEASE.md) from a separately trusted checkout to download and automatically cross-check these three exact assets against the fixed publication commit. `UNKNOWN` and rejection are not success. This documentation addendum does not replace or re-sign any original archive, manifest or restorer. See [bounded validation evidence](../../docs/verification-coverage-evidence/README.md).

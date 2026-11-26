@@ -11,6 +11,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from bounded_json import loads_bounded
 from ledger_audit_bridge import verify_observation_manifest
 
 CONTRACT_VERSION = "EA-0.1"
@@ -149,7 +150,7 @@ def main(argv: list[str] | None = None) -> int:
                 outcome = _unknown("manifest byte limit exceeded")
             else:
                 try:
-                    manifest = json.loads(raw.decode("utf-8"))
+                    manifest = loads_bounded(raw.decode("utf-8"))
                 except (UnicodeDecodeError, json.JSONDecodeError):
                     outcome = _rejected("invalid manifest JSON/UTF-8")
                 else:
