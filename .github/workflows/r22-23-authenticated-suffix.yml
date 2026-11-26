@@ -1,0 +1,66 @@
+name: R22.23 authenticated bounded suffix (advisory)
+on:
+  push:
+    branches: [research/r22-23-authenticated-suffix-20261126]
+    paths:
+      - .github/workflows/r22-23-authenticated-suffix.yml
+      - implementation/research/r22_23_authenticated_suffix/*.go
+permissions:
+  contents: read
+jobs:
+  readback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - name: Recover original portable kit without artifact or publication
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --max-time 30 https://paste.rs/m18dx -o "$RUNNER_TEMP/pin.json"
+          python - <<'PY'
+          import base64,hashlib,json,os,pathlib,zipfile,io
+          p=pathlib.Path(os.environ['RUNNER_TEMP']); raw=(p/'pin.json').read_bytes()
+          assert hashlib.sha256(raw).hexdigest()=='c122dc2fcdbfc304ffe6db809dec2e7e14d3feced480918b7cbc2d6a3edd0f69'
+          assert raw.endswith(bytes([92,110]))
+          b=base64.b64decode(json.loads(raw[:-2])['kit_base64'],validate=True)
+          assert hashlib.sha256(b).hexdigest()=='304765d8d7f0da2d5e62443b7d1f48c00c8ff9bd324b8f8ed9c88c0ab7fffe24'
+          with zipfile.ZipFile(io.BytesIO(b)) as z:
+              assert z.testzip() is None
+              z.extractall(p/'kit')
+          PY
+          python -m pip install coincurve==21.0.0 websockets==15.0.1
+          go install sigsum.org/sigsum-go/cmd/sigsum-verify@v0.14.1
+          python "$RUNNER_TEMP/kit/r22_21_bootstrap_capsule/capsule.py" recover 5f678677cf26986b76c552a8bb0ecc97db74d12ae3b7212697eee34db5fe32d5 "$RUNNER_TEMP/first" | tee "$RUNNER_TEMP/bootstrap.jsonl"
+          F="$RUNNER_TEMP/first"
+          "$(go env GOPATH)/bin/sigsum-verify" -k "$F/historical-log.pub" -P sigsum-test1-2025 "$F/historical-first.proof" < "$F/historical-first-id.txt"
+          "$(go env GOPATH)/bin/sigsum-verify" -k "$F/sigsum.pub" -P sigsum-test1-2025 "$F/event-id.txt.proof" < "$F/event-id.txt"
+      - name: Authenticate bounded complete suffix from retained Merkle frontier
+        run: |
+          set -euo pipefail
+          S="$RUNNER_TEMP/suffix"; mkdir "$S"
+          cp implementation/research/r22_23_authenticated_suffix/*.go "$S/"
+          cp "$RUNNER_TEMP/kit/r22_10_blind_discovery/go.mod" "$S/"
+          cp "$RUNNER_TEMP/first/bootstrap.json" "$S/"
+          cd "$S"
+          go mod tidy
+          go test -count=1 -v ./... | tee "$RUNNER_TEMP/tests.log"
+          go run . | tee "$RUNNER_TEMP/suffix.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r22-23-authenticated-suffix
+          path: |
+            ${{ runner.temp }}/bootstrap.jsonl
+            ${{ runner.temp }}/tests.log
+            ${{ runner.temp }}/suffix.json
+          if-no-files-found: warn
+          retention-days: 30
