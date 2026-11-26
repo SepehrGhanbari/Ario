@@ -62,7 +62,16 @@ def test_partial_tail_refused_before_any_memory_or_guard_mutation(tmp_path, tail
     with pytest.raises(ConsolidationError, match="HOLD_INCOMPLETE_JSONL_LINE"):
         engine.ingest_ledger_file_with_coverage(p)
     assert engine.to_snapshot() == before
-    assert not engine.inspect_ledger_integrity(p).is_clean
+    report = engine.inspect_ledger_integrity(p)
+    assert not report.is_clean
+    assert report.valid_lines == 1
+    if tail == b'{"goal":':
+        # Unparseable crash tail keeps the historical line-numbered corrupt report.
+        assert report.corrupt_line_no == 2
+        assert report.diagnostic.startswith("CORRUPT_JSON_OR_TRUNCATED_TAIL")
+    else:
+        assert report.corrupt_line_no is None
+        assert report.diagnostic.startswith("HOLD_INCOMPLETE_JSONL_LINE")
     bridge = EpistemicLedgerBridge()
     with pytest.raises(BridgeError, match="HOLD_INCOMPLETE_JSONL_LINE"):
         bridge.ingest_agent_ledger(p)

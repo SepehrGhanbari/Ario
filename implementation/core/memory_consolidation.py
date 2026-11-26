@@ -423,10 +423,12 @@ class ConsolidationEngine:
                         return _held("HOLD_LEDGER_BYTES_TOO_LARGE", line_no)
                     if len(raw_line) > MAX_LEDGER_LINE_BYTES:
                         return _held("HOLD_LEDGER_LINE_TOO_LARGE", line_no)
-                    if not raw_line.endswith(b"\n"):
-                        return _held("HOLD_INCOMPLETE_JSONL_LINE", line_no)
+                    terminated = raw_line.endswith(b"\n")
                     clean = raw_line.strip(_JSON_WHITESPACE)
                     if not clean:
+                        # A blank tail with no LF is incomplete framing, not a record.
+                        if not terminated:
+                            return _held("HOLD_INCOMPLETE_JSONL_LINE", line_no)
                         continue
                     try:
                         markers += _json_structure_markers(
@@ -435,12 +437,12 @@ class ConsolidationEngine:
                         return _held(str(exc), line_no)
                     try:
                         event = _loads_ledger_line(clean.decode("utf-8"))
-                        if not isinstance(event, dict):
-                            return _held("HOLD_EVENT_MUST_BE_JSON_OBJECT", line_no)
-                        valid_lines += 1
                     except _UnsupportedLedgerJSON:
                         return _held("HOLD_LEDGER_JSON_UNSUPPORTED", line_no)
                     except Exception as exc:
+                        # Crash tails are usually unterminated *and* unparseable.
+                        # Keep the historical line number; do not collapse them
+                        # into a framing hold that clears corrupt_line_no.
                         snippet = clean[:80].decode("utf-8", errors="replace")
                         return LedgerIntegrityReport(
                             ledger_path=str(ledger_path), total_bytes=total_bytes,
@@ -448,6 +450,11 @@ class ConsolidationEngine:
                             corrupt_line_no=line_no, corrupt_line_snippet=snippet,
                             diagnostic=f"CORRUPT_JSON_OR_TRUNCATED_TAIL: {exc}",
                         )
+                    if not terminated:
+                        return _held("HOLD_INCOMPLETE_JSONL_LINE", line_no)
+                    if not isinstance(event, dict):
+                        return _held("HOLD_EVENT_MUST_BE_JSON_OBJECT", line_no)
+                    valid_lines += 1
                 end_fd = os.fstat(f.fileno())
         except OSError as exc:
             return _held(f"HOLD_LEDGER_UNREADABLE: {type(exc).__name__}", line_no + 1)
