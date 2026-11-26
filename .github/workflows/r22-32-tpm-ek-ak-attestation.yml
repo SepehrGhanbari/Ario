@@ -63,7 +63,7 @@ jobs:
           PY
       - name: Independently verify exported TPM evidence bundle
         env:
-          ARIO_R22_32_EVIDENCE_DIR: \${{ runner.temp }}/r22-32-raw-evidence
+          ARIO_R22_32_EVIDENCE_DIR: ${{ runner.temp }}/r22-32-raw-evidence
         run: |
           set -euo pipefail
           python3 implementation/research/r22_33_attested_transition/verify_r22_32_evidence_bundle.py \
@@ -72,7 +72,7 @@ jobs:
           cat "$RUNNER_TEMP/r22-32-offline-verification-summary.json"
       - name: Run offline verifier tamper matrix
         env:
-          ARIO_R22_32_EVIDENCE_DIR: \${{ runner.temp }}/r22-32-raw-evidence
+          ARIO_R22_32_EVIDENCE_DIR: ${{ runner.temp }}/r22-32-raw-evidence
         run: |
           set -euo pipefail
           python3 implementation/research/r22_33_attested_transition/test_verify_r22_32_evidence_bundle.py
