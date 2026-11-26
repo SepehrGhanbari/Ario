@@ -24,7 +24,7 @@ jobs:
       - name: Compile verifier and run EK/AK/Quote/Certify adversarial matrix
         run: |
           set -euo pipefail
-          python3 -m py_compile implementation/research/r22_32_tpm_ek_ak_attestation/verify_attestation.py implementation/research/r22_32_tpm_ek_ak_attestation/verify_tpm_public_name.py
+          python3 -m py_compile implementation/research/r22_32_tpm_ek_ak_attestation/verify_attestation.py implementation/research/r22_32_tpm_ek_ak_attestation/verify_nv_attestation.py implementation/research/r22_32_tpm_ek_ak_attestation/verify_tpm_public_name.py
           bash implementation/research/r22_32_tpm_ek_ak_attestation/run_swtpm_attestation.sh 2>&1 | tee "$RUNNER_TEMP/r22-32-tpm-attestation.log"
       - uses: actions/upload-artifact@v4
         if: always()
