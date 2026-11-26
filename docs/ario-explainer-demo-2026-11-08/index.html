@@ -82,6 +82,7 @@ footer a{color:var(--accent)}
       <button id="revReviseBtn" type="button"></button>
     </div>
     <div class="log" id="rev-view"></div>
+    <p id="rev-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
   </section>
   <section class="card" aria-labelledby="evidence-h">
     <h2 id="evidence-h"></h2>
@@ -204,6 +205,8 @@ var T = {
       { txt: "اجازه: فقط پیش‌نویس آماده شود.", meta: "REVISED — ۱۲ آبان ۱۴۰۵، پس از اصلاح کاربر · ورودی قبلی حفظ شد", struck: false }
     ],
     oldRecordLabel: "نسخهٔ قبلی — اصلاح‌شده و برای ممیزی حفظ شده",
+    revEraseStatus: "نمایش آموزشی حذف: سابقهٔ قبلی در این نما دیده نمی‌شود.",
+    revKeepStatus: "نمایش آموزشی اصلاح: سابقهٔ قبلی و اصلاح جدید هر دو حفظ شده‌اند.",
     evidenceH: "حالت جدید: آزمون اختلافِ شاهد",
     evidenceP: "آزمون دوحالته با داده‌های کاملاً ساختگی. فرض کنید ثبتِ مخالف دقیقاً دربارهٔ همان درخواست و همان زمان است. وضعیتِ پذیرش این ثبت را تغییر دهید و خروجی آموزشی را مقایسه کنید.",
     evidenceClaimLabel: "ادعا",
@@ -322,6 +325,8 @@ var T = {
       { txt: "Permission: prepare drafts only.", meta: "REVISED — Nov 3, after user correction · previous entry preserved", struck: false }
     ],
     oldRecordLabel: "Superseded version — retained for audit history",
+    revEraseStatus: "Teaching erase view: the previous record is hidden in this view.",
+    revKeepStatus: "Teaching revision view: the previous record and correction are both retained.",
     evidenceH: "New mode: disputed-evidence test",
     evidenceP: "Two-mode exercise with entirely fictional records. Assume the opposing record refers to exactly the same request and time. Change whether that evidence is accepted and compare the teaching output.",
     evidenceClaimLabel: "CLAIM",
@@ -469,6 +474,9 @@ function renderRev(mode) {
   document.getElementById("revReviseBtn").className = (mode === "revise") ? "active" : "";
   document.getElementById("revEraseBtn").setAttribute("aria-pressed", mode === "erase" ? "true" : "false");
   document.getElementById("revReviseBtn").setAttribute("aria-pressed", mode === "revise" ? "true" : "false");
+  var status = document.getElementById("rev-status");
+  var announcement = mode === "erase" ? t.revEraseStatus : t.revKeepStatus;
+  if (status.textContent !== announcement) status.textContent = announcement;
 }
 function showErase() { renderRev("erase"); }
 function showRevise() { renderRev("revise"); }
