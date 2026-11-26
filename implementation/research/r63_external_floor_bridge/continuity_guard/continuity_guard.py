@@ -261,6 +261,71 @@ class AnchorQuorum:
         init_count = sum(1 for _, _, flag in winners[0][1] if flag is True)
         return cp, tuple(raw for _, raw, _ in winners[0][1]), init_count
 
+
+def verify_identity_proof(raw, pinned, expected_nonce, expected_identity, expected_policy, expected_witness_pub):
+    """Verify a nonce-bound continuity proof using an out-of-band pinned roster.
+
+    The verifier deliberately does not discover or trust keys from the proof.
+    The caller must pin all four anchor keys and the witness identity/key
+    independently. Returns the verified checkpoint and the responding anchors.
+    """
+    try:
+        need(valid_hex(expected_nonce), "expected nonce")
+        need(type(expected_identity) is str and 1 <= len(expected_identity) <= 128, "expected identity")
+        need(valid_hex(expected_policy) and valid_hex(expected_witness_pub), "expected key/policy")
+        need(type(pinned) is dict and set(pinned) == set(ANCHORS), "exact pinned anchor roster")
+        need(all(valid_hex(v) for v in pinned.values()) and len(set(pinned.values())) == len(ANCHORS),
+             "pinned anchor keys must be distinct")
+        proof = decode(raw)
+        need(type(proof) is dict and set(proof) == {"body", "signature"}, "identity proof schema")
+        body = proof["body"]
+        required_body = {"identity", "policy", "witness_pub", "nonce", "checkpoint", "anchor_read_responses"}
+        need(type(body) is dict and set(body) == required_body, "identity proof body schema")
+        need(body["identity"] == expected_identity and body["policy"] == expected_policy
+             and body["witness_pub"] == expected_witness_pub and body["nonce"] == expected_nonce,
+             "identity proof scope or nonce")
+        verify(expected_witness_pub, b"R63-WITNESS-CONTINUITY", canon(body), proof["signature"])
+        responses = body["anchor_read_responses"]
+        need(type(responses) is list and Q <= len(responses) <= len(ANCHORS), "anchor read quorum")
+        names, checkpoints, initialized = set(), [], 0
+        required_read = {"anchor", "anchor_pub", "nonce", "status", "policy", "witness_pub",
+                         "checkpoint", "checkpoint_hash", "commit_signature", "initialized"}
+        for wire in responses:
+            need(type(wire) is str and 0 < len(wire) <= 32768, "anchor response wire")
+            obj = decode(wire.encode("ascii"))
+            need(type(obj) is dict and set(obj) == {"body", "signature"}, "anchor response schema")
+            read = obj["body"]
+            need(type(read) is dict and set(read) == required_read, "anchor read body schema")
+            name = read["anchor"]
+            need(type(name) is str and name in pinned and name not in names, "duplicate or unknown anchor")
+            names.add(name)
+            need(read["anchor_pub"] == pinned[name] and read["nonce"] == expected_nonce
+                 and read["status"] == "ENROLLED", "anchor identity, nonce or status")
+            need(read["policy"] == expected_policy and read["witness_pub"] == expected_witness_pub,
+                 "anchor policy scope")
+            checkpoint = validate_checkpoint(read["checkpoint"])
+            need(checkpoint["identity"] == expected_identity
+                 and checkpoint["policy_hash"] == expected_policy
+                 and checkpoint["witness_pub"] == expected_witness_pub, "checkpoint identity scope")
+            need(read["checkpoint_hash"] == cp_hash(checkpoint), "checkpoint hash mismatch")
+            verify(pinned[name], b"R63-ANCHOR-COMMIT", canon(checkpoint), read["commit_signature"])
+            verify(pinned[name], b"R63-ANCHOR-READ", canon(read), obj["signature"])
+            need(type(read["initialized"]) is bool, "initialized flag type")
+            initialized += int(read["initialized"] is True)
+            checkpoints.append(checkpoint)
+        need(len(names) >= Q and initialized >= Q, "anchor or initialization quorum")
+        checkpoint = checkpoints[0]
+        # The witness emits only the winning head's read responses. A third-party
+        # verifier independently rejects a mixed head, same-sequence fork or
+        # higher unquorummed response instead of trusting the witness's summary.
+        need(all(item == checkpoint for item in checkpoints), "anchor read heads disagree")
+        need(body["checkpoint"] == checkpoint, "witness/anchor checkpoint mismatch")
+        return checkpoint, tuple(sorted(names))
+    except ContinuityError:
+        raise
+    except Exception as exc:
+        raise ContinuityError("identity proof verification failed: " + type(exc).__name__) from exc
+
 class Witness:
     def __init__(self, identity, policy_hash, path, key, quorum):
         self.identity, self.policy, self.path = identity, policy_hash, Path(path)
