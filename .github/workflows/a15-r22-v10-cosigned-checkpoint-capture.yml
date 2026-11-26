@@ -1,0 +1,52 @@
+name: A15 v0.10 capture exact cosigned checkpoint (read-only)
+on:
+  push:
+    branches: [research/a15-v10-cosigned-checkpoint-handoff-main-20261126]
+    paths:
+      - .github/workflows/a15-r22-v10-cosigned-checkpoint-capture.yml
+      - implementation/research/a15_r22_checkpoint_handoff/**
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/a15-r22-v10-cosigned-checkpoint-capture.yml
+      - implementation/research/a15_r22_checkpoint_handoff/**
+permissions:
+  contents: read
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - name: Pin the historical Sigsum client source
+        run: |
+          set -euo pipefail
+          test "$(git hash-object implementation/research/r22_10_blind_discovery/go.mod)" = b49eeea0e7a303278b2316c68641ad505dfcd5c9
+          LAB="$RUNNER_TEMP/a15-v10"; mkdir -p "$LAB"
+          cp implementation/research/r22_10_blind_discovery/go.mod "$LAB/go.mod"
+          cp implementation/research/a15_r22_checkpoint_handoff/capture.go implementation/research/a15_r22_checkpoint_handoff/capture_test.go "$LAB/"
+          cd "$LAB"
+          go mod tidy
+          go test -count=1 -v ./...
+      - name: Capture current exact cosigned checkpoint and both retained-floor proofs
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/a15-v10"
+          go run . capture "$RUNNER_TEMP/a15-v10-bundle"
+          go run . verify "$RUNNER_TEMP/a15-v10-bundle"
+      - name: Cryptographic negative controls against captured real bytes
+        run: |
+          set -euo pipefail
+          python3 implementation/research/a15_r22_checkpoint_handoff/negative_audit.py "$RUNNER_TEMP/a15-v10-bundle" "$RUNNER_TEMP/a15-v10"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: A15-V10-EXACT-COSIGNED-CHECKPOINT
+          path: ${{ runner.temp }}/a15-v10-bundle/
+          if-no-files-found: error
+          retention-days: 30
