@@ -237,9 +237,9 @@ class CustodianStateTests(unittest.TestCase):
         first, _, _ = self.invoke(self.request(), suffix="duplicate-journal-first")
         self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
         raw = self.journal.read_bytes()
-        self.assertIn(b'"sequence":8,', raw)
+        self.assertIn(b'"sequence":8}', raw)
         self.journal.write_bytes(raw.replace(
-            b'"sequence":8,', b'"sequence":8,"sequence":8,', 1,
+            b'"sequence":8}', b'"sequence":8,"sequence":8}', 1,
         ))
         second_request = self.request(
             nonce="2" * 64, root=b"duplicate-journal-root", head=b"duplicate-journal-head",
