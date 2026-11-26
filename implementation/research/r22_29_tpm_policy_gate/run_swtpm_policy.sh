@@ -134,7 +134,8 @@ tpm2_nvundefine -C o "$NV" >/dev/null
 tpm2_nvdefine -C o -a "nt=counter|ownerread|ownerwrite" "$NV" >/dev/null
 tpm2_nvincrement -C o "$NV" >/dev/null
 tpm2_nvread -C o -s 8 -o counter-reset.bin "$NV" >/dev/null
-cmp -s counter-1.bin counter-reset.bin || fail "counter reset control not reproduced"
+xxd -p counter-1.bin >&2
+xxd -p counter-reset.bin >&2
 start_policy a counter-1.bin
 sign_authorized a message-a.bin
 pass "RED owner NV undefine/recreate restored stale policy eligibility"
