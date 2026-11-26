@@ -56,7 +56,8 @@ def verify_manifest(m, predecessor=None):
         if m["manifest_vkeys"]["keys"][0].split("+", 1)[0] not in valid:
             raise ValueError("v2 missing offline manifest-key signature")
         if predecessor is not None:
-            if m["previous_manifest_sha256"] != hashlib.sha256(canon(predecessor)).hexdigest():
+            pred_unsigned = {k:v for k,v in predecessor.items() if k not in ("signature", "signatures")}
+            if m["previous_manifest_sha256"] != hashlib.sha256(canon(pred_unsigned)).hexdigest():
                 raise ValueError("v2 previous-manifest digest mismatch")
     else:
         raise ValueError("unsupported trust-root version")
