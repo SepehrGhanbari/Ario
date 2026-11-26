@@ -196,4 +196,22 @@ class DomainQuorumTests(unittest.TestCase):
         d=evaluate(p,H,self.rs[:3],mode="write")
         self.assertFalse(d.accepted)
 
+    def test_45_intersection_checked_for_each_failure_domain_class(self):
+        rows=[("a","k1","a","aa","ka","backup-x"),
+              ("b","k2","b","bb","kb","backup-x"),
+              ("c","k3","c","cc","kc","backup-y"),
+              ("d","k4","d","dd","kd","backup-y")]
+        p=build_policy(P,rows)
+        self.assertIn("READ_WRITE_INTERSECTION_UNSAFE:state_backup",validate_policy(p))
+        self.assertFalse(evaluate(p,H,[receipt(w) for w in p.roster.values()],mode="write").accepted)
+    def test_46_non_operator_failure_domains_must_meet_mode_quorum(self):
+        rows=[("a","k1","a","admin-x","ka","ba"),
+              ("b","k2","b","admin-y","kb","bb"),
+              ("c","k3","c","admin-z","kc","bc"),
+              ("d","k4","d","admin-z","kd","bd")]
+        p=build_policy(P,rows,read_q=4,write_q=4,f=0)
+        d=evaluate(p,H,[receipt(w) for w in p.roster.values()],mode="read")
+        self.assertFalse(d.accepted)
+        self.assertIn("INSUFFICIENT_INDEPENDENT_ADMIN_DOMAINS",d.reasons)
+
 if __name__=="__main__": unittest.main(verbosity=2)
