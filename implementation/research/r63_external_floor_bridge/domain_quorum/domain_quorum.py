@@ -85,15 +85,18 @@ def validate_policy(policy: QuorumPolicy) -> tuple[str, ...]:
             value = w.domains.get(cls)
             if not value or value.upper() in {"UNKNOWN", "UNRESOLVED", "TBD"}:
                 errors.append(f"UNRESOLVED_DOMAIN:{wid}:{cls}")
-    operator_domains = {
-        w.domains.get("operator") for w in policy.roster.values()
-        if w.domains.get("operator")
-    }
-    if not quorum_intersection_holds(
-        len(operator_domains), policy.read_quorum, policy.write_quorum,
-        policy.max_faulty_domains
-    ):
-        errors.append("READ_WRITE_INTERSECTION_UNSAFE")
+    # Check intersection in every control/failure-domain projection, not just
+    # the number of witness keys or the operator-name projection.
+    for cls in policy.required_domain_classes:
+        domains = {
+            w.domains.get(cls) for w in policy.roster.values()
+            if w.domains.get(cls)
+        }
+        if not quorum_intersection_holds(
+            len(domains), policy.read_quorum, policy.write_quorum,
+            policy.max_faulty_domains
+        ):
+            errors.append(f"READ_WRITE_INTERSECTION_UNSAFE:{cls}")
     return tuple(errors)
 
 def evaluate(policy: QuorumPolicy, proposal_hash: str,
@@ -145,10 +148,9 @@ def evaluate(policy: QuorumPolicy, proposal_hash: str,
     mode_quorum = policy.read_quorum if mode == "read" else policy.write_quorum
     if witness_count < max(policy.min_witnesses, mode_quorum):
         reasons.append("INSUFFICIENT_WITNESSES")
-    if domain_counts.get("operator", 0) < mode_quorum:
-        reasons.append("INSUFFICIENT_INDEPENDENT_OPERATOR_DOMAINS")
     for cls, count in domain_counts.items():
-        if cls != "operator" and count < policy.min_distinct_domains:
+        required = max(policy.min_distinct_domains, mode_quorum)
+        if count < required:
             reasons.append(f"INSUFFICIENT_INDEPENDENT_{cls.upper()}_DOMAINS")
     if reasons:
         return Decision(False, "HOLD_DOMAIN_QUORUM", witness_count,
