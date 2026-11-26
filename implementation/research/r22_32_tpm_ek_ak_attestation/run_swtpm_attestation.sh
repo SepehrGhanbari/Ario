@@ -139,6 +139,12 @@ CERT_EK_FP="$(pub_fingerprint "$TMP/ek-from-cert.pem")"
 [[ "$EK_FP" == "$CERT_EK_FP" ]] || fail "EK certificate SPKI does not match TPM EK public key"
 pass "EK certificate SubjectPublicKeyInfo matches TPM EK public key"
 
+# One-time activation secret: only its SHA-256 is put in the signed challenge.
+# The TPM must return the exact secret from ActivateCredential; the raw verifier
+# checks the returned bytes against the challenge commitment.
+openssl rand -out "$CRED_SECRET" 32
+ACTIVATION_SECRET_SHA256="$(sha256sum "$CRED_SECRET" | awk '{print $1}')"
+
 # In the R22.33 end-to-end path, issue a real custodian-signed challenge only
 # after the TPM-generated EK identity is known, then derive every TPM nonce
 # from that challenge before creating the attestation evidence.
@@ -184,7 +190,8 @@ PY
     --public-key "$CI_CUSTODIAN_PUBLIC" --private-key "$CI_CUSTODIAN_PRIVATE" \
     --journal "$CI_CUSTODIAN_DIR/journal.jsonl" --lock "$CI_CUSTODIAN_DIR/lock" \
     --output "$CI_CHALLENGE_JSON" --signature "$CI_CHALLENGE_SIG" \
-    --next-head-sha256 "$NEXT_HEAD" --ttl-seconds 300
+    --next-head-sha256 "$NEXT_HEAD" \
+    --ak-activation-secret-sha256 "$ACTIVATION_SECRET_SHA256" --ttl-seconds 300
   CHALLENGE_NONCE="$(python3 - "$CI_CHALLENGE_JSON" <<'PY'
 import json, sys
 print(json.loads(open(sys.argv[1], encoding="utf-8").read())["nonce"])
@@ -208,7 +215,6 @@ import sys
 print(Path(sys.argv[1]).read_bytes().hex())
 PY
 )"
-openssl rand -out "$CRED_SECRET" 32
 # MakeCredential uses LoadExternal internally. The EK is persistent in the
 # simulator, leaving transient slots for the AK and temporary external EK.
 tpm2_makecredential -G rsa -u "$EK_PUB" -s "$CRED_SECRET" -n "$AK_NAME_HEX" -o "$CRED_BLOB"
@@ -218,7 +224,8 @@ tpm2_activatecredential -c "$AK_CTX" -C "$EK_CTX" -i "$CRED_BLOB" \
   -o "$ACTIVATED_SECRET" -P "session:$SESSION" >/dev/null
 tpm2_flushcontext "$SESSION" >/dev/null
 cmp -s "$CRED_SECRET" "$ACTIVATED_SECRET" || fail "credential activation secret mismatch"
-pass "MakeCredential/ActivateCredential binds AK to the EK TPM"
+cp "$ACTIVATED_SECRET" "$TMP/ak-activation-result.bin"
+pass "MakeCredential/ActivateCredential binds AK to the EK TPM; result retained for offline verification"
 AK_HANDLE="0x81010010"
 tpm2_evictcontrol -C o -c "$AK_CTX" "$AK_HANDLE" >/dev/null
 tpm2_flushcontext -t >/dev/null
@@ -576,6 +583,7 @@ if [[ -n "$EVIDENCE_DIR" ]]; then
   if [[ -n "$CHALLENGE_NONCE" ]]; then
     printf '%s\n' "$CHALLENGE_NONCE" >"$EVIDENCE_DIR/custodian-challenge-nonce.txt"
   fi
+  cp "$TMP/ak-activation-result.bin" "$EVIDENCE_DIR/ak-activation-result.bin"
   if [[ -n "$CI_CUSTODIAN_PRIVATE_KEY_PATH" ]]; then
     cp "$CI_CUSTODIAN_PUBLIC" "$EVIDENCE_DIR/custodian-public.pem"
     cp "$CI_ANCHOR_JSON" "$EVIDENCE_DIR/custodian-anchor.json"
