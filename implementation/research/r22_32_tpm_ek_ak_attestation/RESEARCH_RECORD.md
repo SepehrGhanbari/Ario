@@ -123,3 +123,12 @@ This remains software-TPM interoperability evidence, not proof of physical-devic
 - The generic regression workflow **45857768351** reported **1 failed, 2107 passed, 8 skipped, 273 subtests passed**. The sole failure was a test's expected wording (`Qualified Name`) differing from the verifier's actual `qualifiedSigner` rejection; the wrong-signer case itself was rejected correctly.
 - This correction requires the TPM-reported NV Name to match the independently recomputed Name, accepts omission of the policy field only in conjunction with that match, adds a mismatched-reported-Name negative, and corrects the test assertion.
 - **Correction to prior workflow note:** the earlier statement that the branch-local workflow could not run was premature. It did trigger on the exact branch head; run 45857768346 is the evidence. The earlier NOT_RUN statement is superseded by these run results.
+
+
+### 2026-11-26 — R22.32 NV_Certify end-to-end pass and authPolicy fixture correction
+
+- The later exact-head software-TPM run **45858729285** (job **140043831695**, head `a34473339a0ac6540e9e49d1ab6454ef27b38a12`) completed **30/30 PASS**. It includes the NV public Name check, NV_Certify attestation, content/challenge/signer negative controls, and the preceding EK/AK, CertifyCreation and PCR Quote checks. Artifact: `r22-32-tpm-attestation-evidence` (ID **15137281473**; summary evidence only, not a portable raw-TPM bundle). This supersedes the earlier pending-NV_Certify note above.
+- A later generic regression on head `20131a2dc50a6ee7844b34b65f64695f3ced2ff5` exposed one test-fixture defect: `public_yaml()` omitted the authorization-policy line, so the non-empty-policy test's `.replace()` was a no-op. The verifier's non-empty-policy rejection was not disproven; the test never supplied that input.
+- Corrected the test to insert a non-empty 32-byte `authorization policy` before the `size` field and assert that the field is present before invoking the parser.
+- Final generic regression head `09e0c224b9e25a2a2958d2fc52f70b4e4e9e0ddb`: M0 **2111 PASS**; Windows and Python 3.14 differential advisories PASS; manifest/restore/generator matrix PASS; self-audit readback PASS. Run **45859336248** (M0/differential) and **45859336333** (matrix).
+- Scope remains software TPM and synthetic CA only. No physical TPM, OEM trust, independent administrator, external rollback floor, real key, trust activation, production or merge is established.
