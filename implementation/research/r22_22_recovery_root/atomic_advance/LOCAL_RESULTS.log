@@ -1,0 +1,20 @@
+01_publisher_call HOLD_WRONG_UID PASS
+02_publisher_read True PASS
+03_publisher_write True PASS
+04_publisher_delete True PASS
+05_wrong_expected HOLD_CAS_MISMATCH PASS
+06_mutated_evidence HOLD_EVIDENCE_OR_STORE PASS
+07_old_as_successor HOLD_EVIDENCE_OR_STORE PASS
+08_crash_before_replace 75 PASS
+09_retry_after_before ADVANCED_RESEARCH_ONLY PASS
+10_stale_cas_replay HOLD_CAS_MISMATCH PASS
+11_same_state_retry HOLD_ALREADY_RETAINED PASS
+12_no_evidence_for_seq10 HOLD_EVIDENCE_OR_STORE PASS
+13_crash_after_replace 76 PASS
+14_retry_after_commit HOLD_ALREADY_RETAINED PASS
+15_concurrent_one_advance 1 PASS
+16_concurrent_seven_hold 7 PASS
+17_missing_floor HOLD_EVIDENCE_OR_STORE PASS
+18_corrupt_floor HOLD_INVALID_FLOOR PASS
+19_common_root_rollback_RED ADVANCED_RESEARCH_ONLY PASS
+19/19 EXPECTED CONTROLS PASS; COMMON_ROOT_ROLLBACK=RED; SEQ10=UNKNOWN; TRUST=NO_GO; PRODUCTION=NO_GO

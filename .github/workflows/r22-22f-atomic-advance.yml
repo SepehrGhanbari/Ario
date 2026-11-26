@@ -1,0 +1,59 @@
+name: R22.22F atomic retained advance (advisory)
+on:
+  push:
+    branches: [research/r22-22-independent-recovery-root-20261125]
+    paths:
+      - .github/workflows/r22-22f-atomic-advance.yml
+      - implementation/research/r22_22_recovery_root/atomic_advance/advance.py
+permissions:
+  contents: read
+  actions: read
+jobs:
+  advance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - name: Verify exact existing archived evidence with official Sigsum verifier
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          A="$RUNNER_TEMP/first.zip"; B="$RUNNER_TEMP/second.zip"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15047051021/zip" > "$A"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15045299282/zip" > "$B"
+          echo "2bedc6d0cc85857cfaed3ceafeb5d7700d78923057e661d9c5675d6925e6262b  $A" | sha256sum -c -
+          echo "717fbcf540cba37e7d5c6c83f3740fe301ece42fdc983fe4e9af484a37d56d27  $B" | sha256sum -c -
+          unzip -q "$A" -d "$RUNNER_TEMP/first"
+          unzip -q "$B" -d "$RUNNER_TEMP/second"
+          go install sigsum.org/sigsum-go/cmd/sigsum-verify@v0.14.1
+          V="$(go env GOPATH)/bin/sigsum-verify"
+          F="$RUNNER_TEMP/first"; S="$RUNNER_TEMP/second"
+          {
+            "$V" -k "$F/sigsum.pub" -P sigsum-test1-2025 "$F/event-id.txt.proof" < "$F/event-id.txt"
+            "$V" -k "$F/sigsum.pub" -P sigsum-test1-2025 "$S/event-id.txt.proof" < "$S/event-id.txt"
+            "$V" -k "$F/historical-log.pub" -P sigsum-test1-2025 "$F/historical-first.proof" < "$F/historical-first-id.txt"
+            "$V" -k "$F/historical-log.pub" -P sigsum-test1-2025 "$S/historical-second.proof" < "$S/historical-second-id.txt"
+            echo FOUR_ARCHIVED_SIGSUM_PROOFS_PASS
+          } 2>&1 | tee "$RUNNER_TEMP/proof.log"
+      - name: Exercise separate UID CAS and actual crash/restart
+        run: |
+          set -euo pipefail
+          test "$(git hash-object implementation/research/r22_22_recovery_root/atomic_advance/advance.py)" = a1a7017b57258e350b76d23cfbb66b7d568f7574
+          sudo /usr/bin/python3 implementation/research/r22_22_recovery_root/atomic_advance/advance.py test "$RUNNER_TEMP/first.zip" "$RUNNER_TEMP/second.zip" | tee "$RUNNER_TEMP/advance.log"
+          cmp "$RUNNER_TEMP/advance.log" implementation/research/r22_22_recovery_root/atomic_advance/LOCAL_RESULTS.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r22-22f-atomic-advance
+          path: |
+            ${{ runner.temp }}/proof.log
+            ${{ runner.temp }}/advance.log
+          if-no-files-found: warn
+          retention-days: 30
