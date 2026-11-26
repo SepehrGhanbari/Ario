@@ -36,6 +36,12 @@ jobs:
           set -euo pipefail
           test "$(git -C pinned-r22-22i rev-parse HEAD)" = 2139914a255aa58b3706eaa401dc744fa82e8d56
           test "$(git -C pinned-r22-22i rev-parse HEAD:implementation/research/r22_22_recovery_root/independent_witness_floor/EXTERNAL_FLOOR_2026-11-26_142338.json)" = 07b1172fd77cf53d9dba9b4e06215d33f42705cb
+      - name: Re-verify live external 2-of-4 witness floor and Remora readback
+        working-directory: pinned-r22-22i/implementation/research/r22_22_recovery_root/independent_witness_floor
+        run: |
+          set -euo pipefail
+          go mod tidy
+          go run . | tee "$RUNNER_TEMP/r22-22i-live.json"
       - name: Install official Sigsum verifier
         run: |
           set -euo pipefail
@@ -49,4 +55,5 @@ jobs:
           go run . \
             --first-zip "$GITHUB_WORKSPACE/implementation/tests/fixtures/a15_r22_run_45823494521/A15-FIRST-ONLY.zip" \
             --second-zip "$GITHUB_WORKSPACE/implementation/tests/fixtures/a15_r22_run_45823494521/A15-SECOND-REVEAL-SYNTHETIC.zip" \
-            --external-floor-json "$GITHUB_WORKSPACE/pinned-r22-22i/implementation/research/r22_22_recovery_root/independent_witness_floor/EXTERNAL_FLOOR_2026-11-26_142338.json"
+            --external-floor-json "$GITHUB_WORKSPACE/pinned-r22-22i/implementation/research/r22_22_recovery_root/independent_witness_floor/EXTERNAL_FLOOR_2026-11-26_142338.json" \
+            --live-floor-json "$RUNNER_TEMP/r22-22i-live.json"

@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"sort"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -74,6 +75,30 @@ type externalFloorRecord struct {
 	PublicationPerformed bool `json:"publication_performed"`
 	TrustActivation string `json:"trust_activation"`
 	Production string `json:"production"`
+}
+
+type liveFloorRecord struct {
+	Result string `json:"result"`
+	Policy string `json:"policy"`
+	BuiltInTest2Diagnostic string `json:"built_in_test2_diagnostic"`
+	ExternalWitnesses []struct {
+		Name string `json:"Name"`
+		CosignatureValid bool `json:"CosignatureValid"`
+	} `json:"external_witnesses"`
+	VerifiedExternalCosignatures int `json:"verified_external_cosignatures"`
+	HeadSize uint64 `json:"head_size"`
+	HeadRoot string `json:"head_root"`
+	RetainedFloorSize uint64 `json:"retained_floor_size"`
+	RetainedFloorRoot string `json:"retained_floor_root"`
+	CustodianReadbackSize uint64 `json:"custodian_readback_size"`
+	CustodianReadbackRoot string `json:"custodian_readback_root"`
+	CustodianReadbackMatchesSignedHead bool `json:"custodian_readback_matches_signed_head"`
+	DataAvailability string `json:"data_availability"`
+	GlobalLatest string `json:"global_latest"`
+	NetworkTier string `json:"network_tier"`
+	TrustActivation string `json:"trust_activation"`
+	Production string `json:"production"`
+	Admission bool `json:"admission"`
 }
 
 func fail(format string, args ...any) {
@@ -163,8 +188,9 @@ func main() {
 	firstPath := flag.String("first-zip", "", "pinned original A15 first-checkpoint artifact")
 	secondPath := flag.String("second-zip", "", "pinned original A15 second-checkpoint artifact")
 	floorPath := flag.String("external-floor-json", "", "pinned R22.22I external floor record")
+	liveFloorPath := flag.String("live-floor-json", "", "fresh R22.22I live witness-floor result")
 	flag.Parse()
-	if *firstPath == "" || *secondPath == "" || *floorPath == "" { fail("missing input paths") }
+	if *firstPath == "" || *secondPath == "" || *floorPath == "" || *liveFloorPath == "" { fail("missing input paths") }
 
 	first := readZip(*firstPath, firstZipSHA, []string{"checkpoint.json","bootstrap.json","event-id.txt.proof","event-id.txt","event.json","log-key.pub","nostr.pub","sigsum.pub"})
 	second := readZip(*secondPath, secondZipSHA, []string{"checkpoint.json","event-id.txt.proof","event-id.txt","event.json","matched-state/custodian.floor.json","matched-state/custodian.sqlite3","rollback-state/custodian.floor.json","rollback-state/custodian.sqlite3"})
@@ -213,8 +239,32 @@ func main() {
 	if p2.Size >= floor.ExternalFloor.TreeSize { fail("external floor is not newer than A15 checkpoint") }
 	fmt.Println("PINNED_R22_22I_EXTERNAL_FLOOR_AND_TWO_WITNESSES PASS")
 
+	rawLive, err := os.ReadFile(*liveFloorPath)
+	if err != nil || len(rawLive) == 0 || len(rawLive) > 1<<20 { fail("live R22.22I result bounds/read: %v", err) }
+	var live liveFloorRecord
+	if err := json.Unmarshal(rawLive, &live); err != nil { fail("live R22.22I JSON: %v", err) }
+	if live.Result != "EXTERNAL_TEST_WITNESS_COSIGNATURE_QUORUM_PASS" ||
+		live.Policy != "custom external-only 2-of-4 over the four test2 external public keys" ||
+		!strings.HasPrefix(live.BuiltInTest2Diagnostic, "NOT_MET") ||
+		live.VerifiedExternalCosignatures < 2 { fail("live external witness policy/quorum mismatch") }
+	if live.RetainedFloorSize != 282812 || live.RetainedFloorRoot != "77a9fa7f729892730a46fb7219bbe44859bc7a99fac28ff413be5ad6b0f03629" {
+		fail("live R22.22I retained-floor pin mismatch")
+	}
+	if live.HeadSize < floor.ExternalFloor.TreeSize { fail("live head below pinned external floor") }
+	if live.CustodianReadbackMatchesSignedHead != true || live.CustodianReadbackSize != live.HeadSize ||
+		live.CustodianReadbackRoot != live.HeadRoot { fail("live Remora readback mismatch") }
+	if live.DataAvailability != "NOT_PROVEN_BY_WITNESSES" || live.GlobalLatest != "UNKNOWN" ||
+		live.NetworkTier != "TEST_ONLY" || live.TrustActivation != "NO_GO" ||
+		live.Production != "NO_GO" || live.Admission { fail("live floor limitation/policy flags changed") }
+	liveWitnesses := map[string]bool{}
+	for _, witness := range live.ExternalWitnesses {
+		if witness.CosignatureValid { liveWitnesses[witness.Name] = true }
+	}
+	if len(liveWitnesses) < 2 || !liveWitnesses["remora.n621.de"] { fail("live 2-of-4 quorum lacks independent Remora witness") }
+
 	oldHead := types.TreeHead{Size: p2.Size, RootHash: mustHash(p2.Root)}
 	newHead := types.TreeHead{Size: floor.ExternalFloor.TreeSize, RootHash: mustHash(floor.ExternalFloor.RootHash)}
+	liveHead := types.TreeHead{Size: live.HeadSize, RootHash: mustHash(live.HeadRoot)}
 	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 	defer cancel()
 	httpClient := &http.Client{Timeout: 15*time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return errors.New("redirect refused") }}
@@ -222,8 +272,23 @@ func main() {
 	proof, err := cli.GetConsistencyProof(ctx, requests.ConsistencyProof{OldSize: oldHead.Size, NewSize: newHead.Size})
 	if err != nil { fail("fetch Sigsum consistency proof %d->%d: %v", oldHead.Size, newHead.Size, err) }
 	if err := proof.Verify(&oldHead, &newHead); err != nil { fail("A15 head is not a prefix of external witness floor: %v", err) }
-	fmt.Println("A15_HEAD_TO_EXTERNAL_WITNESS_FLOOR_CONSISTENCY PASS")
+	fmt.Println("A15_HEAD_TO_PINNED_EXTERNAL_FLOOR_CONSISTENCY PASS")
 
+	if liveHead.Size == newHead.Size {
+		if liveHead.RootHash != newHead.RootHash { fail("live head conflicts with pinned external floor at same size") }
+	} else {
+		liveFloorProof, err := cli.GetConsistencyProof(ctx, requests.ConsistencyProof{OldSize: newHead.Size, NewSize: liveHead.Size})
+		if err != nil { fail("fetch pinned-to-live consistency proof: %v", err) }
+		if err := liveFloorProof.Verify(&newHead, &liveHead); err != nil { fail("pinned external floor is not a prefix of live head: %v", err) }
+	}
+	liveA15Proof, err := cli.GetConsistencyProof(ctx, requests.ConsistencyProof{OldSize: oldHead.Size, NewSize: liveHead.Size})
+	if err != nil { fail("fetch A15-to-live consistency proof: %v", err) }
+	if err := liveA15Proof.Verify(&oldHead, &liveHead); err != nil { fail("A15 head is not a prefix of live external witness head: %v", err) }
+	fmt.Println("A15_HEAD_TO_LIVE_EXTERNAL_WITNESS_FLOOR_CONSISTENCY PASS")
+
+	liveNames := make([]string, 0, len(liveWitnesses))
+	for name := range liveWitnesses { liveNames = append(liveNames, name) }
+	sort.Strings(liveNames)
 	out := map[string]any{
 		"schema": "ARIO_A15_R22_EXTERNAL_WITNESS_BRIDGE_V1",
 		"status": "PASS_A15_PREFIX_OF_EXTERNALLY_WITNESSED_FLOOR",
@@ -233,6 +298,12 @@ func main() {
 		"consistency_proof": "VERIFIED",
 		"witnesses": []string{"remora.n621.de", "witness.stagemole.eu"},
 		"witness_run": floor.SourceWorkflowRun,
+		"live_external_floor": map[string]any{"tree_size": liveHead.Size, "root_hash": live.HeadRoot},
+		"live_external_witness_quorum": live.VerifiedExternalCosignatures,
+		"live_external_witnesses": liveNames,
+		"live_remora_status_readback": "EXACT_SIZE_AND_ROOT_MATCH",
+		"pinned_floor_to_live_head_consistency": "VERIFIED",
+		"a15_to_live_head_consistency": "VERIFIED",
 		"remora_status_readback": "EXACT_SIZE_AND_ROOT_MATCH",
 		"limitations": []string{"TEST_ONLY witness network", "custom external-only 2-of-4 research policy; built-in test2 4-of-5 NOT_MET", "Remora test VM has no HSM or redundancy", "Stagemole is a best-effort test witness", "data availability NOT_PROVEN", "global_latest UNKNOWN", "no evidence admission, trust activation, or production"},
 	}
