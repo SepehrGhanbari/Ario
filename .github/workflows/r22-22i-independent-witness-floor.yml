@@ -1,0 +1,45 @@
+name: R22.22I external independent witness floor (read-only)
+on:
+  push:
+    branches: [research/r22-22-independent-recovery-root-20261125]
+    paths:
+      - .github/workflows/r22-22i-independent-witness-floor.yml
+      - implementation/research/r22_22_recovery_root/independent_witness_floor/**
+permissions:
+  contents: read
+jobs:
+  external-witness-floor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - name: Fetch pinned dependencies
+        run: |
+          set -euo pipefail
+          cd implementation/research/r22_22_recovery_root/independent_witness_floor
+          go mod tidy
+      - name: Test quorum arithmetic and rollback controls
+        run: |
+          set -euo pipefail
+          cd implementation/research/r22_22_recovery_root/independent_witness_floor
+          go test -v ./... | tee "$RUNNER_TEMP/unit.log"
+      - name: Read-only live verification against independent test witnesses
+        run: |
+          set -euo pipefail
+          cd implementation/research/r22_22_recovery_root/independent_witness_floor
+          go run . | tee "$RUNNER_TEMP/live.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r22-22i-independent-witness-floor
+          path: |
+            ${{ runner.temp }}/unit.log
+            ${{ runner.temp }}/live.json
+          if-no-files-found: warn
+          retention-days: 30
