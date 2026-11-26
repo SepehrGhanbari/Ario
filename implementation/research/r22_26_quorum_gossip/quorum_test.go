@@ -114,3 +114,19 @@ func TestPublisherKeeperCollusionNotInputs(t *testing.T){
  r:=Read(f.p,nonce,[]Reply{f.reply(0,newHistory),f.reply(1,newHistory),f.reply(2,newHistory)},&prior)
  expect(t,r,"REVIEWABLE_ONLY");if r.Floor!=prior{t.Fatal(r)}
 }
+
+func TestTwoOfThreeOneEquivocatorCanCertifyTwoForks(t *testing.T){
+ f:=makeFixture(3,2,1)
+ a:=[]string{oldHistory[0],hash("branch-a")}
+ b:=[]string{oldHistory[0],hash("branch-b")}
+ // w1 equivocates; w0 and w2 each sign just one branch.
+ x:=Read(f.p,nonce,[]Reply{f.reply(0,a),f.reply(1,a)},nil)
+ y:=Read(f.p,nonce,[]Reply{f.reply(1,b),f.reply(2,b)},nil)
+ expect(t,x,"REVIEWABLE_ONLY");expect(t,y,"REVIEWABLE_ONLY")
+ if x.Floor.Generation!=y.Floor.Generation||x.Floor.Hash==y.Floor.Hash{t.Fatal("expected conflicting quorum heads")}
+ expect(t,Read(f.p,nonce,[]Reply{f.reply(0,a),f.reply(1,b),f.reply(2,b)},nil),"HOLD_WITNESS_DISAGREEMENT")
+}
+func TestOldEpochRepliesCannotAuthorizeNewPolicy(t *testing.T){
+ old,next:=makeFixture(3,3,1),makeFixture(3,3,2)
+ expect(t,Read(next.p,nonce,[]Reply{old.reply(0,newHistory),old.reply(1,newHistory),old.reply(2,newHistory)},nil),"HOLD_REPLY")
+}
