@@ -146,4 +146,4 @@ expect_fail "old signed policy rejected after NV counter undefine/redefine" tpm2
 tpm2_flushcontext redeclared.session >/dev/null
 pass "TPM NV anti-rollback survives owner index deletion/recreation"
 
-printf 'R22_29_TPM_POLICY_SIMULATOR_COMPLETE RESEARCH_ONLY HOLD REAL_HARDWARE_NOT_TESTED ROOT_OWNER_CAN_RESET_NV\n'
+printf 'R22_29_TPM_POLICY_SIMULATOR_COMPLETE RESEARCH_ONLY HOLD REAL_HARDWARE_NOT_TESTED TPM_CLEAR_AND_PLATFORM_BOUNDARIES_UNTESTED\n'
