@@ -8,6 +8,7 @@ import hashlib
 import json
 import re
 import subprocess
+import struct
 import sys
 import tempfile
 import time
@@ -19,6 +20,10 @@ sys.path.insert(0, str(R31_DIR))
 import custodian_state_legacy as legacy  # noqa: E402
 
 POLICY_ID = "R22.32_EK_AK_QUOTE_CERTIFYCREATION_V1"
+NV_INDEX_HANDLE = 0x01500020
+NV_NAME_ALG = 0x000B
+NV_ATTRIBUTES = 0x20060006
+NV_DATA_SIZE = 32
 CHALLENGE_FORMAT = "ARIO-R22.33-ATTESTATION-CHALLENGE-V1"
 RECEIPT_FORMAT = "ARIO-R22.33-TPM-VERIFIER-RECEIPT-V1"
 PIN_FORMAT = "ARIO-R22.33-VERIFIER-PIN-V1"
@@ -45,7 +50,11 @@ RECEIPT_FIELDS = {
     "storage_public_area_tpmt_b64", "storage_root_sha256", "previous_storage_root_sha256",
     "previous_epoch", "next_epoch", "previous_head_sha256", "next_head_sha256",
     "ak_name_b64", "ak_name_sha256", "ak_public_spki_der_b64", "ak_public_sha256",
-    "ak_public_area_tpmt_b64",
+    "ak_public_area_tpmt_b64", "ak_qualified_name_b64", "ak_qualified_name_sha256",
+    "nv_index_handle", "nv_name_alg", "nv_attributes", "nv_data_size",
+    "nv_auth_policy_b64", "nv_index_name_b64", "nv_contents_b64",
+    "nv_offset", "nv_nonce", "nv_qualified_signer_b64",
+    "nv_attestation_sha256", "nv_signature_sha256",
     "quote_attestation_sha256", "quote_signature_sha256",
     "creation_attestation_sha256", "creation_signature_sha256",
     "pcr_selection", "pcr_digest_sha256", "evidence_manifest",
@@ -59,6 +68,9 @@ MANIFEST_FIELDS = {
     "creation_attestation_sha256",
     "creation_signature_sha256", "quote_attestation_sha256",
     "quote_signature_sha256", "pcr_value_sha256", "creation_hash_sha256",
+    "ak_qualified_name_sha256", "nv_index_name_sha256", "nv_public_area_sha256",
+    "nv_contents_sha256", "nv_qualified_signer_sha256", "nv_nonce_sha256",
+    "nv_attestation_sha256", "nv_signature_sha256",
 }
 
 
@@ -181,6 +193,11 @@ def validate_time_window(issued: Any, expires: Any, now: int, code: str) -> None
         fail(code + "_TTL_TOO_LONG")
 
 
+def derived_nv_nonce(challenge_nonce: str) -> str:
+    material = b"ARIO-R22.33-NV-ATTESTATION-NONCE-V1\\x00" + bytes.fromhex(challenge_nonce)
+    return sha256(material)
+
+
 def derived_transition_nonce(challenge_nonce: str, receipt_sha256: str) -> str:
     material = (
         b"ARIO-R22.33-TRANSITION-NONCE-V1\x00"
@@ -275,7 +292,8 @@ def validate_receipt(receipt: Any, signature_b64: Any, challenge: dict[str, Any]
                   "ak_public_sha256", "quote_attestation_sha256",
                   "quote_signature_sha256", "creation_attestation_sha256",
                   "creation_signature_sha256", "pcr_digest_sha256",
-                  "evidence_bundle_sha256"):
+                  "nv_nonce", "nv_attestation_sha256", "nv_signature_sha256",
+                  "ak_qualified_name_sha256", "evidence_bundle_sha256"):
         validate_hash(receipt.get(field), "ATTESTATION_" + field.upper() + "_INVALID")
 
     ek_spki = decode_b64(receipt.get("ek_spki_der_b64"), "ATTESTATION_EK_SPKI_INVALID")
@@ -307,6 +325,54 @@ def validate_receipt(receipt: Any, signature_b64: Any, challenge: dict[str, Any]
     if not ak_public or sha256(ak_public) != receipt["ak_public_sha256"]:
         fail("ATTESTATION_AK_PUBLIC_HASH_MISMATCH")
 
+    ak_qualified_name = decode_b64(
+        receipt.get("ak_qualified_name_b64"), "ATTESTATION_AK_QUALIFIED_NAME_INVALID"
+    )
+    if len(ak_qualified_name) < 34 or sha256(ak_qualified_name) != receipt["ak_qualified_name_sha256"]:
+        fail("ATTESTATION_AK_QUALIFIED_NAME_MISMATCH")
+
+    if receipt.get("nv_index_handle") != NV_INDEX_HANDLE:
+        fail("ATTESTATION_NV_INDEX_HANDLE_INVALID")
+    if receipt.get("nv_name_alg") != NV_NAME_ALG:
+        fail("ATTESTATION_NV_NAME_ALG_INVALID")
+    if receipt.get("nv_attributes") != NV_ATTRIBUTES:
+        fail("ATTESTATION_NV_ATTRIBUTES_INVALID")
+    if receipt.get("nv_data_size") != NV_DATA_SIZE:
+        fail("ATTESTATION_NV_DATA_SIZE_INVALID")
+    if receipt.get("nv_offset") != 0:
+        fail("ATTESTATION_NV_OFFSET_INVALID")
+
+    nv_auth_policy = decode_b64(
+        receipt.get("nv_auth_policy_b64"), "ATTESTATION_NV_AUTH_POLICY_INVALID"
+    )
+    if nv_auth_policy:
+        fail("ATTESTATION_NV_AUTH_POLICY_NOT_EMPTY")
+    nv_public_area = (
+        struct.pack(">IHI", NV_INDEX_HANDLE, NV_NAME_ALG, NV_ATTRIBUTES)
+        + b"\\x00\\x00"
+        + struct.pack(">H", NV_DATA_SIZE)
+    )
+    expected_nv_name = struct.pack(">H", NV_NAME_ALG) + hashlib.sha256(nv_public_area).digest()
+    nv_index_name = decode_b64(
+        receipt.get("nv_index_name_b64"), "ATTESTATION_NV_INDEX_NAME_INVALID"
+    )
+    if nv_index_name != expected_nv_name:
+        fail("ATTESTATION_NV_INDEX_NAME_MISMATCH")
+
+    nv_contents = decode_b64(
+        receipt.get("nv_contents_b64"), "ATTESTATION_NV_CONTENTS_INVALID"
+    )
+    if len(nv_contents) != NV_DATA_SIZE or nv_contents != bytes.fromhex(receipt["storage_root_sha256"]):
+        fail("ATTESTATION_NV_CONTENTS_STORAGE_ROOT_MISMATCH")
+
+    nv_qualified_signer = decode_b64(
+        receipt.get("nv_qualified_signer_b64"), "ATTESTATION_NV_QUALIFIED_SIGNER_INVALID"
+    )
+    if nv_qualified_signer != ak_qualified_name:
+        fail("ATTESTATION_NV_SIGNER_AK_QUALIFIED_NAME_MISMATCH")
+    if receipt.get("nv_nonce") != derived_nv_nonce(challenge["nonce"]):
+        fail("ATTESTATION_NV_NONCE_NOT_CHALLENGE_DERIVED")
+
     manifest = require_exact_keys(receipt.get("evidence_manifest"), MANIFEST_FIELDS,
                                   "ATTESTATION_EVIDENCE_MANIFEST_SCHEMA_INVALID")
     for key, value in manifest.items():
@@ -323,6 +389,14 @@ def validate_receipt(receipt: Any, signature_b64: Any, challenge: dict[str, Any]
         "quote_attestation_sha256": receipt["quote_attestation_sha256"],
         "quote_signature_sha256": receipt["quote_signature_sha256"],
         "pcr_value_sha256": receipt["pcr_digest_sha256"],
+        "ak_qualified_name_sha256": receipt["ak_qualified_name_sha256"],
+        "nv_index_name_sha256": sha256(nv_index_name),
+        "nv_public_area_sha256": sha256(nv_public_area),
+        "nv_contents_sha256": sha256(nv_contents),
+        "nv_qualified_signer_sha256": sha256(nv_qualified_signer),
+        "nv_nonce_sha256": sha256(bytes.fromhex(receipt["nv_nonce"])),
+        "nv_attestation_sha256": receipt["nv_attestation_sha256"],
+        "nv_signature_sha256": receipt["nv_signature_sha256"],
     }
     for key, value in expected_manifest_values.items():
         if manifest[key] != value:
