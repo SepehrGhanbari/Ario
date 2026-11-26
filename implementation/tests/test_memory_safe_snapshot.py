@@ -292,3 +292,49 @@ def test_parser_rejects_invalid_numeric_and_cross_reference_data():
             ConsolidationEngine.from_snapshot(
                 candidate, expected_sha256=digest(candidate)
             )
+
+
+def test_writer_enforces_reader_structure_budget(tmp_path, monkeypatch):
+    import core.memory_snapshot as codec
+    engine, _ = populated_engine()
+    target = tmp_path / "memory.json"
+    pin = write_snapshot(engine, target)
+    previous = target.read_bytes()
+    monkeypatch.setattr(codec, "MAX_SNAPSHOT_MARKERS", 1)
+    with pytest.raises(ConsolidationError, match="HOLD_SNAPSHOT_STRUCTURE_LIMIT"):
+        engine.to_snapshot()
+    with pytest.raises(ConsolidationError, match="HOLD_SNAPSHOT_STRUCTURE_LIMIT"):
+        write_snapshot(engine, target)
+    assert target.read_bytes() == previous
+    assert digest(previous) == pin
+
+
+def test_restore_from_batch_generator_cannot_replace_existing_history():
+    engine, events = populated_engine()
+    previous = engine.to_snapshot()
+    empty = ConsolidationEngine().to_snapshot()
+
+    def reentrant():
+        yield events[0]
+        engine.restore_snapshot(empty, expected_sha256=digest(empty))
+
+    with pytest.raises(ConsolidationError, match="HOLD_REENTRANT_SNAPSHOT_RESTORE"):
+        engine.ingest_event_stream(reentrant())
+    assert engine.to_snapshot() == previous
+    assert engine.ingest_event_stream(events) == 0
+
+
+def test_restore_during_active_batch_is_rejected(monkeypatch):
+    engine, _ = populated_engine()
+    previous = engine.to_snapshot()
+    empty = ConsolidationEngine().to_snapshot()
+    original = ConsolidationEngine._process_raw_event
+
+    def reentrant(self, event_hash, event):
+        original(self, event_hash, event)
+        self.restore_snapshot(empty, expected_sha256=digest(empty))
+
+    monkeypatch.setattr(ConsolidationEngine, "_process_raw_event", reentrant)
+    with pytest.raises(ConsolidationError, match="HOLD_REENTRANT_SNAPSHOT_RESTORE"):
+        engine.ingest_event_stream([event_row("new", "claim")])
+    assert engine.to_snapshot() == previous

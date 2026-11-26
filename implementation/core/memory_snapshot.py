@@ -471,7 +471,8 @@ def encode_engine_snapshot(engine: ConsolidationEngine) -> bytes:
     encoded = _canonical_json(document)
     # Reuse the exact restore validator so the writer cannot emit a snapshot
     # that the recovery path itself would refuse.
-    _decode_document(type(engine), document)
+    validated, _ = _validated_document(encoded, hashlib.sha256(encoded).hexdigest())
+    _decode_document(type(engine), validated)
     return encoded
 
 
@@ -496,6 +497,12 @@ def restore_engine_snapshot(
     replacement["_batch_running"] = False
     replacement.pop("_local", None)
     with lock:
+        local = engine.__dict__.get("_local")
+        if engine._batch_running or getattr(local, "materializing", False):
+            _reject("HOLD_REENTRANT_SNAPSHOT_RESTORE")
+        # Preserve the process-local thread state for other pending callers.
+        if local is not None:
+            replacement["_local"] = local
         engine.__dict__ = replacement
 
 
