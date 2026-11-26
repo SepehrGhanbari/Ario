@@ -50,7 +50,7 @@ Therefore the external-floor behavior is a live operational claim, **not yet sou
 
 ## Limitations
 
-The test harness is synthetic. It does not cryptographically verify Ed25519/ML-DSA, authenticate operator identity, inspect cloud-account control planes, validate HSM/backup boundaries, test physical restore, or establish any real operator's willingness. Failure-domain labels must be verified from primary operator evidence and pinned by an independent policy custodian. A common administrator who can alter the roster or its evidence defeats this model. No witness was contacted or configured and no log entry was published.
+The test harness is synthetic. It does not cryptographically verify Ed25519/ML-DSA, authenticate operator identity, inspect cloud-account control planes, validate HSM/backup boundaries, test physical restore, or establish any real operator's willingness. Failure-domain labels must be verified from primary operator evidence and pinned by an independent policy custodian. A common administrator who can alter the roster or its evidence defeats this model. A research inquiry was sent to Markovian; no witness was configured or authorized to sign an Ario log, and no Ario log entry was published.
 
 Next: obtain written operator answers, document independently controlled failure domains, then run only an operator-authorized low-volume synthetic test. If fewer than three distinct admin/key-custody/state-backup domains can be evidenced, HOLD.
 
