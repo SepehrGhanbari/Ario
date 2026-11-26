@@ -1116,3 +1116,10 @@ Related #379 A15 retained-range experiment covers a different set of three commi
 - **Local validation:** The new parser was exercised against a synthetic TPMS_ATTEST_NV positive fixture plus wrong-content and wrong-challenge negatives. This is parser-only, not TPM execution.
 - **CI status at commit preparation:** NOT_RUN for the new exact-source software-TPM harness. Do not report PASS until the dedicated workflow result and artifact are read back.
 - **Known boundary:** The owner can overwrite NV contents and obtain a fresh valid attestation. This authenticates a current TPM-held claim; it does not prove the claim's external measurement provenance, immutability, rollback resistance, or independent custody.
+
+### 2026-11-26 — R22.32 NV attestation validation correction
+
+- Moved the alternate-root fixture creation before the wrong-content negative control; the negative control now uses an existing 32-byte file.
+- Added an explicit `expect_reject` wrapper that requires a verifier `REJECT` line, preventing unrelated errors (such as a missing fixture) from being counted as a valid negative.
+- Added `implementation/tests/test_r22_32_nv_attestation.py` for NV public Name recomputation, written-state and handle checks, exact field acceptance, challenge/content/signer/offset/trailing-byte negatives, and Bash syntax/order checks.
+- Exact TPM simulator execution remains **NOT_RUN**: the R22.32 workflow file is branch-local and absent from `main`; no current-head TPM workflow run exists. The generic Implementation Regression workflow will run the new parser tests.

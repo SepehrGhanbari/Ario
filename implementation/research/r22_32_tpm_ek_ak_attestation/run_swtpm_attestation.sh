@@ -201,6 +201,20 @@ ROOT_NAME_SHA256="$(sha256sum "$SRK_NAME" | awk '{print $1}')"
 printf 'TPM_STORAGE_PRIMARY_NAME_SHA256=%s\n' "$ROOT_NAME_SHA256"
 pass "storage primary Name and Qualified Name captured from TPM"
 
+expect_reject() {
+  local label="$1"
+  shift
+  if "$@" >"$TMP/negative.out" 2>&1; then
+    cat "$TMP/negative.out"
+    fail "$label (unexpected success)"
+  fi
+  if ! grep -q '^REJECT ' "$TMP/negative.out"; then
+    cat "$TMP/negative.out"
+    fail "$label (no explicit REJECT result)"
+  fi
+  pass "$label"
+}
+
 # Bind the exact 32-byte storage-root claim to a TPM NV index. This proves
 # what the TPM stored and signed at this moment; it does not prove the claim
 # was correctly measured from a filesystem or make the NV index immutable.
@@ -233,22 +247,25 @@ python3 "$ROOT/verify_nv_attestation.py" --attest "$NV_ATTEST" \
 pass "TPM2_NV_Certify signature, fresh challenge, index Name and exact storage-root bytes verified"
 cp "$NV_ATTEST" "$TMP/original-nv-attest.bin"
 
-expect_fail "NV attestation rejected with a different challenge" \
+expect_reject "NV attestation rejected with a different challenge" \
   python3 "$ROOT/verify_nv_attestation.py" --attest "$NV_ATTEST" \
     --nonce "$(openssl rand -hex 32)" --ak-qualified-name "$AK_QN" \
     --nv-public-yaml "$NV_PUBLIC" --nv-index "$NV_INDEX" \
     --expected-contents "$ROOT_COMMITMENT"
-expect_fail "NV attestation rejects a substituted root commitment" \
+ALT_ROOT_COMMITMENT="$TMP/alternate-root.bin"
+openssl rand -out "$ALT_ROOT_COMMITMENT" 32
+
+expect_reject "NV attestation rejects a substituted root commitment" \
   python3 "$ROOT/verify_nv_attestation.py" --attest "$NV_ATTEST" \
     --nonce "$NV_NONCE" --ak-qualified-name "$AK_QN" \
     --nv-public-yaml "$NV_PUBLIC" --nv-index "$NV_INDEX" \
     --expected-contents "$TMP/alternate-root.bin"
-expect_fail "NV attestation rejects a substituted NV index handle" \
+expect_reject "NV attestation rejects a substituted NV index handle" \
   python3 "$ROOT/verify_nv_attestation.py" --attest "$NV_ATTEST" \
     --nonce "$NV_NONCE" --ak-qualified-name "$AK_QN" \
     --nv-public-yaml "$NV_PUBLIC" --nv-index "0x01500021" \
     --expected-contents "$ROOT_COMMITMENT"
-expect_fail "NV attestation rejects a different AK Qualified Name" \
+expect_reject "NV attestation rejects a different AK Qualified Name" \
   python3 "$ROOT/verify_nv_attestation.py" --attest "$NV_ATTEST" \
     --nonce "$NV_NONCE" --ak-qualified-name "$AK2_QN" \
     --nv-public-yaml "$NV_PUBLIC" --nv-index "$NV_INDEX" \
@@ -257,8 +274,6 @@ expect_fail "NV attestation rejects a different AK Qualified Name" \
 # Expected mutability boundary: the same TPM owner can overwrite the NV value
 # and obtain a fresh, valid attestation. This is deliberately not called
 # rollback resistance or independent custody.
-ALT_ROOT_COMMITMENT="$TMP/alternate-root.bin"
-openssl rand -out "$ALT_ROOT_COMMITMENT" 32
 ALT_NV_READBACK="$TMP/alternate-nv-readback.bin"
 ALT_NV_PUBLIC="$TMP/alternate-nv-public.yaml"
 ALT_NV_ATTEST="$TMP/alternate-nv-attest.bin"
@@ -280,12 +295,12 @@ python3 "$ROOT/verify_nv_attestation.py" --attest "$ALT_NV_ATTEST" \
   --expected-contents "$ALT_ROOT_COMMITMENT"
 pass "TPM owner can rewrite NV contents and obtain a fresh valid attestation (expected limitation)"
 
-expect_fail "old NV attestation rejected against rewritten contents" \
+expect_reject "old NV attestation rejected against rewritten contents" \
   python3 "$ROOT/verify_nv_attestation.py" --attest "$NV_ATTEST" \
     --nonce "$NV_NONCE" --ak-qualified-name "$AK_QN" \
     --nv-public-yaml "$ALT_NV_PUBLIC" --nv-index "$NV_INDEX" \
     --expected-contents "$ALT_ROOT_COMMITMENT"
-expect_fail "new NV attestation rejected against the prior root commitment" \
+expect_reject "new NV attestation rejected against the prior root commitment" \
   python3 "$ROOT/verify_nv_attestation.py" --attest "$ALT_NV_ATTEST" \
     --nonce "$ALT_NV_NONCE" --ak-qualified-name "$AK_QN" \
     --nv-public-yaml "$ALT_NV_PUBLIC" --nv-index "$NV_INDEX" \

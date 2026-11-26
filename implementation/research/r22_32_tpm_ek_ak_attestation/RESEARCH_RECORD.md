@@ -102,3 +102,10 @@ This remains software-TPM interoperability evidence, not proof of physical-devic
 **Source references:** tpm2-tools documents `tpm2_nvcertify` as attesting NV index contents and identifies the NV index/owner hierarchy authorization options: https://tpm2-tools.readthedocs.io/en/stable/man/tpm2_nvcertify.1/ . The TPM 2.0 specification defines `TPMS_NV_CERTIFY_INFO` as index Name, offset and NV contents: https://trustedcomputinggroup.org/wp-content/uploads/Trusted-Platform-Module-2.0-Library-Part-2-Structures_Version-185_pub.pdf . TPM Names for NV indices are derived from the NV public area; the Name changes when dynamic attributes such as TPMA_NV_WRITTEN change: https://trustedcomputinggroup.org/wp-content/uploads/Trusted-Platform-Module-2.0-Library-Part-1-Architecture_Version-185_pub.pdf .
 
 **Initial execution status:** parser-only synthetic validation passed positive exact-content, wrong-content and wrong-challenge cases locally. Exact software-TPM CI is pending for the new commit. No physical TPM, OEM certificate, real key, external custodian, anti-rollback guarantee, trust activation, production or merge is claimed.
+
+### 2026-11-26 — R22.32 NV attestation validation correction
+
+- Moved the alternate-root fixture creation before the wrong-content negative control; the negative control now uses an existing 32-byte file.
+- Added an explicit `expect_reject` wrapper that requires a verifier `REJECT` line, preventing unrelated errors (such as a missing fixture) from being counted as a valid negative.
+- Added `implementation/tests/test_r22_32_nv_attestation.py` for NV public Name recomputation, written-state and handle checks, exact field acceptance, challenge/content/signer/offset/trailing-byte negatives, and Bash syntax/order checks.
+- Exact TPM simulator execution remains **NOT_RUN**: the R22.32 workflow file is branch-local and absent from `main`; no current-head TPM workflow run exists. The generic Implementation Regression workflow will run the new parser tests.
