@@ -584,10 +584,6 @@ def main() -> int:
 
         if receipt["issued_at"] >= receipt["expires_at"]:
             reject("VERIFIER_RECEIPT_WINDOW_EXPIRED")
-        signature = run_checked(
-            ["openssl", "dgst", "-sha256", "-sign", str(args.verifier_private_key)],
-            "VERIFIER_RECEIPT_SIGNING_FAILED",
-        ) if False else b""
         with tempfile.NamedTemporaryFile(prefix="ario-r22-33-receipt-", delete=True) as payload:
             payload.write(canonical(receipt))
             payload.flush()
