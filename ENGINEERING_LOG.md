@@ -1198,11 +1198,66 @@ No collaborator removal, ruleset change, key rotation, new witness test, merge, 
 - Final head `09e0c224b9e25a2a2958d2fc52f70b4e4e9e0ddb`: M0 **2111 PASS**; Windows and Python 3.14 differential advisories PASS; manifest/restore/generator matrix and self-audit readback PASS. Runs **45859336248** and **45859336333**.
 - The NV workflow artifact is a summary, not a portable raw-TPM evidence bundle. R22.33 still needs a verifier that consumes actual R22.32 evidence. No physical TPM, OEM trust, independent administrator, external rollback floor, real key, trust activation, production or merge is established.
 
-
 ## 2026-11-26 — R22.32 AK TPMT_PUBLIC identity extension
 
-- Added TPM readback of the persistent RSA AK TPMT_PUBLIC and Qualified Name.
-- Independently recomputed the AK Name and checked fixedTPM, fixedParent, sensitiveDataOrigin, restricted and signEncrypt attributes.
-- Dedicated workflow [run 45858737039](https://github.com/SepehrGhanbari/Ario/actions/runs/45858737039), source head `1fda8008beaa6355344f90404fb45531a9f0fd73`: **36 PASS lines**.
-- Exact-head Repository Implementation Regression [run 45859727760](https://github.com/SepehrGhanbari/Ario/actions/runs/45859727760), advisory self-audit [run 45859727982](https://github.com/SepehrGhanbari/Ario/actions/runs/45859727982), and Published TXT Restore Security [run 45859727974](https://github.com/SepehrGhanbari/Ario/actions/runs/45859727974): all SUCCESS.
+- Added TPM readback of the persistent AK TPMT_PUBLIC and Qualified Name.
+- Independently recomputed the AK Name and checked fixedTPM, fixedParent, sensitiveDataOrigin, restricted and signEncrypt attributes for the RSA AK.
+- Dedicated workflow [run 45857398519](https://github.com/SepehrGhanbari/Ario/actions/runs/45857398519), source head `6050263e6075415d5261b876c61a2d9cf5c8a30f`: **26/26 PASS**.
+- Environment: Ubuntu 24.04; tpm2-tools 5.6-1build4; swtpm 0.7.3-0ubuntu5.24.04.1; OpenSSL 3.0.13.
+- Evidence artifact [ID 15135289752](https://github.com/SepehrGhanbari/Ario/actions/runs/45857398519/artifacts/15135289752).
 - No physical TPM, OEM EK chain, independent custodian, trust activation, production or merge.
+
+
+## 2026-11-26 — R22.33 proof-carrying attested custodian transition (RESEARCH_ONLY)
+
+- Identified the exact R22.31/R22.32 integration gap: R22.31 accepted a caller-supplied storage-root hash, while R22.32 generated TPM Name and signed attestation evidence without feeding it into the custodian transition.
+- Preserved the original R22.31 implementation as `custodian_state_legacy.py`; changed the default `custodian_state.py` entrypoint to require a custodian-signed, expiring challenge and a receipt signed by a verifier key pinned in a custodian-signed pin file.
+- Added challenge issuance from the replayed current state under the custodian lock; the challenge binds EK identity, previous root, epoch/head, proposed next head, reason, policy and expiry.
+- Added strict verifier receipt validation. The gate derives EK identity from SPKI DER, derives storage root from the raw TPM Name, and independently recomputes both storage and AK Names from their TPMT_PUBLIC bytes. It checks SHA-256 NameAlg, storage-object attributes, and restricted RSA AK signing attributes.
+- Added a derived transition nonce from the signed challenge nonce and canonical verifier-receipt hash. This binds R22.31 idempotency/replay handling to the exact attestation receipt.
+- Added an outer custodian-signed bundle containing challenge, verifier receipt, normalized transition request and inner custodian receipt. The inner legacy receipt intentionally retains CALLER_SUPPLIED_UNATTESTED; only the outer signed bundle carries the verifier-backed provenance.
+- Dedicated R22.33 CI [run 45857631971](https://github.com/SepehrGhanbari/Ario/actions/runs/45857631971), source commit `c79a656d52297959fb1cf3b27b503aca4500884e`: **25/25 PASS**. The preserved R22.31 regression suite passed **18/18** in the same run. Evidence artifact [ID 15136158735](https://github.com/SepehrGhanbari/Ario/actions/runs/45857631971/artifacts/15136158735).
+- Exact-source Implementation Regression [run 45857631880](https://github.com/SepehrGhanbari/Ario/actions/runs/45857631880): SUCCESS.
+- R22.32 software-TPM extension [run 45857398519](https://github.com/SepehrGhanbari/Ario/actions/runs/45857398519): **26/26 PASS**, including AK TPMT_PUBLIC Name and restricted-signing attribute verification; evidence artifact [ID 15135289752](https://github.com/SepehrGhanbari/Ario/actions/runs/45857398519/artifacts/15135289752).
+- Explicit limits: R22.33 test receipts use synthetic verifier keys and evidence digests. The actual R22.32 raw evidence has not yet been consumed by a separate verifier to produce the signed receipt. Verifier implementation, separately administered verifier key, physical TPM, OEM EK chain, independent custodian and external rollback floor remain NOT_ESTABLISHED. No merge, trust activation, Genesis or production.
+
+
+## 2026-11-26 — R22.32/R22.33 TPM object usage-profile enforcement
+
+- Independent audit found a concrete policy gap: both the R22.32 TPMT_PUBLIC verifier and R22.33 custodian-side verifier required fixed identity bits but did not reject contradictory key-usage attributes. A restricted AK could carry the decrypt bit, and a storage primary could carry the signing bit, while still passing the required-bit check.
+- Tightened the profiles: storage primary requires ECC + fixedTPM/fixedParent/sensitiveDataOrigin/restricted/decrypt and forbids sign; AK requires RSA + fixedTPM/fixedParent/sensitiveDataOrigin/restricted/sign and forbids decrypt. Other optional attributes remain allowed.
+- Added synthetic R22.33 negative controls that recompute the TPM Name after mutation, so the expected failure specifically exercises usage-policy enforcement. Added live swtpm negative controls to the R22.32 harness for each forbidden bit.
+- Exact-head R22.32/R22.33 CI and artifacts pending. No real TPM, real key, independent administrator, external floor, trust activation, production promotion, or merge.
+
+
+## 2026-11-26 — R22.32 raw evidence export and challenge-derived nonces
+
+- Added optional public-only evidence export with deterministic SHA-256 manifest; private keys, TPM state, transient contexts and activation secrets are excluded.
+- Added optional 256-bit challenge nonce input and domain-separated NV_Certify, CertifyCreation and PCR Quote nonces.
+- R22.32 dedicated CI [run 45860968609](https://github.com/SepehrGhanbari/Ario/actions/runs/45860968609), source `f282106823536c0cc3b40c74c1782459e35fce1b`: **41 PASS assertions** including independent cross-stage nonce derivation check.
+- Raw evidence artifact [ID 15138756624](https://github.com/SepehrGhanbari/Ario/actions/runs/45860968609/artifacts/15138756624).
+- The per-run nonce is a CI test vector, not a custodian-signed challenge. End-to-end challenge issuance and verifier receipt production remain NOT_ESTABLISHED.
+
+
+### R22.33 NV_Certify receipt binding and final exact-head verification — 2026-11-26
+
+- Extended the verifier-signed receipt schema to require the NV index handle, NameAlg, attributes, dataSize, empty authPolicy, recomputed NV index Name, exact 32-byte contents, offset zero, AK Qualified Name signer, NV_Certify attestation/signature digests and evidence-manifest bindings.
+- The custodian gate independently recomputes the NV index Name using the same zero-length authPolicy wire encoding as the R22.32 verifier. It requires NV contents to equal the SHA-256 storage-root value derived from the exact storage TPM Name.
+- Required domain-separated nonce derivation from the signed custodian challenge for NV_Certify, CertifyCreation and PCR Quote; the transition nonce remains bound to the exact canonical verifier receipt.
+- R22.33 exact-head CI [run 45861166209](https://github.com/SepehrGhanbari/Ario/actions/runs/45861166209), source `d19af7e6380a54677fb6f927fbd66cb30bbdc862`: **40/40 R22.33 tests**, plus **18/18** preserved R22.31 tests. Evidence artifact [ID 15137653237](https://github.com/SepehrGhanbari/Ario/actions/runs/45861166209/artifacts/15137653237).
+- Exact-head Implementation Regression [run 45861166197](https://github.com/SepehrGhanbari/Ario/actions/runs/45861166197): SUCCESS.
+- R22.32 software-TPM workflow [run 45860968609](https://github.com/SepehrGhanbari/Ario/actions/runs/45860968609): **41 PASS assertions**, including raw public evidence export and cross-stage nonce derivation verification. Artifact [ID 15138756624](https://github.com/SepehrGhanbari/Ario/actions/runs/45860968609/artifacts/15138756624).
+- Explicit limit: the R22.32 workflow's nonce is a per-run CI test vector, not a custodian-signed challenge. No separate verifier has yet consumed the exported raw bundle and signed the R22.33 receipt. No OEM EK trust, physical TPM, independent verifier custody, external rollback floor, trust activation, Genesis, production or merge.
+
+
+## 2026-11-26 — R22.33 raw TPM evidence → signed custodian transition: exact-head PASS
+
+- Closed the R22.31/R22.32 integration gap with a raw-evidence verifier. The R22.32 harness now issues a signed custodian challenge after EK creation and before AK attestation; it binds the EK identity, prior root/epoch/head, next head, nonce and one-time activation-secret hash.
+- Added challenge-bound MakeCredential/ActivateCredential result evidence. The verifier checks the 32-byte activation result against the signed challenge commitment; it also independently checks AK/storage TPMT_PUBLIC Names and profiles, EK SPKI/certificate chain to the synthetic lab root, NV_Certify, CertifyCreation, Quote signatures, NV Name/content, domain-separated nonces and PCR 23 recomputation.
+- The verifier signs an exact-schema receipt. A custodian-signed pin binds the verifier SPKI. The strict default R22.33 gate verifies the signed challenge, pin, receipt, evidence manifest and cross-field bindings before committing through the preserved R22.31 monotonic state machine.
+- The transition nonce is derived from the challenge nonce and canonical verifier receipt hash. The outer custodian-signed bundle carries the verifier receipt and normalized request; its provenance is `PINNED_VERIFIER_SIGNED_TPM_ATTESTATION`. The inner legacy receipt keeps its historical `CALLER_SUPPLIED_UNATTESTED` label. The outer bundle, not that legacy label, is the authoritative proof-carrying result.
+- Exact-head R22.33 CI [run 45864860441](https://github.com/SepehrGhanbari/Ario/actions/runs/45864860441), commit `0d487622bca8f2094f51f8770303145acfaaef83`: **52/52 tests PASS**, including offline raw-bundle tamper tests and the verifier/gate path; preserved R22.31 state-machine tests **18/18 PASS**. E2E marker: `R22_33_RAW_TPM_EVIDENCE_TO_CUSTODIAN_TRANSITION PASS`.
+- Implementation Regression [run 45864860471](https://github.com/SepehrGhanbari/Ario/actions/runs/45864860471): SUCCESS.
+- Evidence artifact [ID 15139537522](https://github.com/SepehrGhanbari/Ario/actions/runs/45864860441/artifacts/15139537522) contains public TPM evidence, verifier receipt/signature, attested request, custodian receipt/signature and signed transition bundle; no custodian or verifier private keys were uploaded.
+- Dedicated R22.32 workflow [run 45863806014](https://github.com/SepehrGhanbari/Ario/actions/runs/45863806014): **42 PASS assertions**, including the signed challenge and AK/EK activation result. Artifact [ID 15138639655](https://github.com/SepehrGhanbari/Ario/actions/runs/45863806014/artifacts/15138639655).
+- Limits remain explicit: swtpm only; synthetic EK lab CA, not OEM; custodian/verifier keys are generated on the same runner; no independent key custody, physical TPM, hardware AK non-extractability, independent external rollback floor, firmware/Secure Boot/event-log proof, Genesis, trust activation, production or merge. NV owner rewrite/re-attestation remains an observed limitation. The exported activation result is a one-use synthetic CI secret; a production verifier must keep its challenge secret private.

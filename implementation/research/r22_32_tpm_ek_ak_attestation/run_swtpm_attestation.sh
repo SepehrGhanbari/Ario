@@ -21,6 +21,32 @@ trap cleanup EXIT
 pass() { printf 'PASS %s\n' "$1"; }
 fail() { printf 'FAIL %s\n' "$1"; exit 1; }
 
+CHALLENGE_NONCE="$(printenv ARIO_R22_33_CHALLENGE_NONCE 2>/dev/null || true)"
+CI_CUSTODIAN_PRIVATE_KEY_PATH="$(printenv ARIO_R22_33_CI_CUSTODIAN_PRIVATE_KEY_PATH 2>/dev/null || true)"
+CI_CUSTODIAN_DIR="$TMP/r22-33-ci-custodian"
+CI_CHALLENGE_JSON="$CI_CUSTODIAN_DIR/challenge.json"
+CI_CHALLENGE_SIG="$CI_CUSTODIAN_DIR/challenge.sig"
+CI_ANCHOR_JSON="$CI_CUSTODIAN_DIR/anchor.json"
+CI_ANCHOR_SIG="$CI_CUSTODIAN_DIR/anchor.sig"
+CI_CUSTODIAN_PRIVATE="$CI_CUSTODIAN_DIR/custodian.key"
+CI_CUSTODIAN_PUBLIC="$CI_CUSTODIAN_DIR/custodian.pub"
+if [[ -n "$CHALLENGE_NONCE" && ! "$CHALLENGE_NONCE" =~ ^[0-9a-f]{64}$ ]]; then
+  fail "ARIO_R22_33_CHALLENGE_NONCE must be 64 lowercase hex characters"
+fi
+
+derive_challenge_nonce() {
+  local domain="$1"
+  python3 - "$CHALLENGE_NONCE" "$domain" <<'PY'
+import hashlib
+import sys
+nonce = bytes.fromhex(sys.argv[1])
+domain = sys.argv[2]
+tag = f"ARIO-R22.33-{domain}-NONCE-V1".encode("ascii") + b"\x00"
+print(hashlib.sha256(tag + nonce).hexdigest())
+PY
+}
+
+
 expect_fail() {
   local label="$1"
   shift
@@ -67,7 +93,6 @@ AK_CTX="$TMP/ak.ctx"
 AK_PUB="$TMP/ak.pem"
 AK_NAME="$TMP/ak.name"
 AK_QN="$TMP/ak.qualified-name"
-AK_TPMT="$TMP/ak.tpmt"
 CRED_SECRET="$TMP/credential.secret"
 CRED_BLOB="$TMP/credential.blob"
 ACTIVATED_SECRET="$TMP/activated.secret"
@@ -114,6 +139,72 @@ CERT_EK_FP="$(pub_fingerprint "$TMP/ek-from-cert.pem")"
 [[ "$EK_FP" == "$CERT_EK_FP" ]] || fail "EK certificate SPKI does not match TPM EK public key"
 pass "EK certificate SubjectPublicKeyInfo matches TPM EK public key"
 
+# One-time activation secret: only its SHA-256 is put in the signed challenge.
+# The TPM must return the exact secret from ActivateCredential; the raw verifier
+# checks the returned bytes against the challenge commitment.
+openssl rand -out "$CRED_SECRET" 32
+ACTIVATION_SECRET_SHA256="$(sha256sum "$CRED_SECRET" | awk '{print $1}')"
+
+# In the R22.33 end-to-end path, issue a real custodian-signed challenge only
+# after the TPM-generated EK identity is known, then derive every TPM nonce
+# from that challenge before creating the attestation evidence.
+if [[ -n "$CI_CUSTODIAN_PRIVATE_KEY_PATH" ]]; then
+  mkdir -p "$CI_CUSTODIAN_DIR" "$(dirname "$CI_CUSTODIAN_PRIVATE_KEY_PATH")"
+  openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 \
+    -out "$CI_CUSTODIAN_PRIVATE" >/dev/null 2>&1
+  openssl pkey -in "$CI_CUSTODIAN_PRIVATE" -pubout -out "$CI_CUSTODIAN_PUBLIC" >/dev/null 2>&1
+  PREVIOUS_ROOT="$(python3 - <<'PY'
+import hashlib
+print(hashlib.sha256(b"ARIO-R22.33-CI-PREVIOUS-STORAGE-ROOT").hexdigest())
+PY
+)"
+  PREVIOUS_HEAD="$(python3 - <<'PY'
+import hashlib
+print(hashlib.sha256(b"ARIO-R22.33-CI-PREVIOUS-HEAD").hexdigest())
+PY
+)"
+  GITHUB_SHA_VALUE="$(printenv GITHUB_SHA 2>/dev/null || printf 'ARIO-R22.33-CI-NEXT-HEAD')"
+  NEXT_HEAD="$(python3 - "$GITHUB_SHA_VALUE" <<'PY'
+import hashlib, sys
+print(hashlib.sha256(sys.argv[1].encode("utf-8")).hexdigest())
+PY
+)"
+  python3 - "$EK_FP" "$PREVIOUS_ROOT" "$PREVIOUS_HEAD" "$CI_ANCHOR_JSON" <<'PY'
+import json, sys
+from pathlib import Path
+anchor = {
+    "format": "ARIO-R22.31-ANCHOR-V1",
+    "device_ek_sha256": sys.argv[1],
+    "storage_root_sha256": sys.argv[2],
+    "epoch": 7,
+    "head_sha256": sys.argv[3],
+}
+Path(sys.argv[4]).write_bytes(
+    (json.dumps(anchor, sort_keys=True, separators=(",", ":"), ensure_ascii=False) + "\n").encode("utf-8")
+)
+PY
+  openssl dgst -sha256 -sign "$CI_CUSTODIAN_PRIVATE" \
+    -out "$CI_ANCHOR_SIG" "$CI_ANCHOR_JSON"
+  python3 "$ROOT/../r22_33_attested_transition/issue_challenge.py" \
+    --anchor "$CI_ANCHOR_JSON" --anchor-signature "$CI_ANCHOR_SIG" \
+    --public-key "$CI_CUSTODIAN_PUBLIC" --private-key "$CI_CUSTODIAN_PRIVATE" \
+    --journal "$CI_CUSTODIAN_DIR/journal.jsonl" --lock "$CI_CUSTODIAN_DIR/lock" \
+    --output "$CI_CHALLENGE_JSON" --signature "$CI_CHALLENGE_SIG" \
+    --next-head-sha256 "$NEXT_HEAD" \
+    --ak-activation-secret-sha256 "$ACTIVATION_SECRET_SHA256" --ttl-seconds 300
+  CHALLENGE_NONCE="$(python3 - "$CI_CHALLENGE_JSON" <<'PY'
+import json, sys
+print(json.loads(open(sys.argv[1], encoding="utf-8").read())["nonce"])
+PY
+)"
+  cp "$CI_CUSTODIAN_PRIVATE" "$CI_CUSTODIAN_PRIVATE_KEY_PATH"
+  chmod 600 "$CI_CUSTODIAN_PRIVATE_KEY_PATH"
+  pass "fresh custodian-signed R22.33 challenge issued for this TPM EK"
+fi
+if [[ -z "$CHALLENGE_NONCE" ]]; then
+  CHALLENGE_NONCE="$(openssl rand -hex 32)"
+fi
+
 # AK is not assumed to have a manufacturer X.509 certificate. Credential
 # activation proves the AK is associated with the TPM holding this EK.
 tpm2_createak -C "$EK_CTX" -c "$AK_CTX" -G rsa -g sha256 -s rsassa \
@@ -124,7 +215,6 @@ import sys
 print(Path(sys.argv[1]).read_bytes().hex())
 PY
 )"
-openssl rand -out "$CRED_SECRET" 32
 # MakeCredential uses LoadExternal internally. The EK is persistent in the
 # simulator, leaving transient slots for the AK and temporary external EK.
 tpm2_makecredential -G rsa -u "$EK_PUB" -s "$CRED_SECRET" -n "$AK_NAME_HEX" -o "$CRED_BLOB"
@@ -134,17 +224,35 @@ tpm2_activatecredential -c "$AK_CTX" -C "$EK_CTX" -i "$CRED_BLOB" \
   -o "$ACTIVATED_SECRET" -P "session:$SESSION" >/dev/null
 tpm2_flushcontext "$SESSION" >/dev/null
 cmp -s "$CRED_SECRET" "$ACTIVATED_SECRET" || fail "credential activation secret mismatch"
-pass "MakeCredential/ActivateCredential binds AK to the EK TPM"
+cp "$ACTIVATED_SECRET" "$TMP/ak-activation-result.bin"
+pass "MakeCredential/ActivateCredential binds AK to the EK TPM; result retained for offline verification"
 AK_HANDLE="0x81010010"
 tpm2_evictcontrol -C o -c "$AK_CTX" "$AK_HANDLE" >/dev/null
 tpm2_flushcontext -t >/dev/null
 AK_CTX="$AK_HANDLE"
 pass "AK persisted under its test handle; transient objects released"
+AK_TPMT="$TMP/ak.tpmt"
 tpm2_readpublic -c "$AK_CTX" -n "$AK_NAME" -q "$AK_QN" \
   -o "$AK_TPMT" -f tpmt >/dev/null
 python3 "$ROOT/verify_tpm_public_name.py" --public-tpmt "$AK_TPMT" \
   --name "$AK_NAME" --require-ak
 pass "AK Name independently recomputed from TPMT_PUBLIC with restricted signing attributes"
+
+# A restricted signing AK must not also be a decrypt-capable object. Recompute
+# the Name after mutation so this specifically tests the usage-profile guard.
+python3 - "$AK_TPMT" "$TMP/ak-decrypt.tpmt" "$TMP/ak-decrypt.name" <<'PY'
+import hashlib, sys
+from pathlib import Path
+raw = bytearray(Path(sys.argv[1]).read_bytes())
+attrs = int.from_bytes(raw[4:8], "big") | (1 << 17)
+raw[4:8] = attrs.to_bytes(4, "big")
+Path(sys.argv[2]).write_bytes(raw)
+Path(sys.argv[3]).write_bytes(raw[2:4] + hashlib.sha256(raw).digest())
+PY
+expect_fail "AK profile rejects decrypt usage even with recomputed Name" \
+  python3 "$ROOT/verify_tpm_public_name.py" --public-tpmt "$TMP/ak-decrypt.tpmt" \
+    --name "$TMP/ak-decrypt.name" --require-ak
+
 
 # Second software TPM: a credential created for TPM 1 must not activate with
 # a different EK and AK on TPM 2.
@@ -206,6 +314,22 @@ expect_fail "TPM Name verifier rejects a modified TPMT_PUBLIC" \
 ROOT_NAME_SHA256="$(sha256sum "$SRK_NAME" | awk '{print $1}')"
 printf 'TPM_STORAGE_PRIMARY_NAME_SHA256=%s\n' "$ROOT_NAME_SHA256"
 pass "storage primary Name and Qualified Name captured from TPM"
+# A storage primary is a restricted decryption object, never a signer.
+python3 - "$SRK_TPMT" "$TMP/storage-sign.tpmt" "$TMP/storage-sign.name" <<'PY'
+import hashlib, sys
+from pathlib import Path
+raw = bytearray(Path(sys.argv[1]).read_bytes())
+attrs = int.from_bytes(raw[4:8], "big") | (1 << 18)
+raw[4:8] = attrs.to_bytes(4, "big")
+Path(sys.argv[2]).write_bytes(raw)
+Path(sys.argv[3]).write_bytes(raw[2:4] + hashlib.sha256(raw).digest())
+PY
+expect_fail "storage profile rejects sign usage even with recomputed Name" \
+  python3 "$ROOT/verify_tpm_public_name.py" --public-tpmt "$TMP/storage-sign.tpmt" \
+    --name "$TMP/storage-sign.name" --require-storage-primary
+
+# TPM2_Certify proves the exact storage object is loaded and binds it to a
+# fresh verifier challenge. The verifier checks the signature and decoded fields.
 
 expect_reject() {
   local label="$1"
@@ -234,7 +358,7 @@ NV_READBACK="$TMP/nv-readback.bin"
 NV_ATTEST="$TMP/nv-attest.bin"
 NV_SIG="$TMP/nv-attest.sig"
 NV_TICKET="$TMP/nv-attest.ticket"
-NV_NONCE="$(openssl rand -hex 32)"
+if [[ -n "$CHALLENGE_NONCE" ]]; then NV_NONCE="$(derive_challenge_nonce NV-ATTESTATION)"; else NV_NONCE="$(openssl rand -hex 32)"; fi
 
 tpm2_nvdefine -C o -s 32 -a "ownerread|ownerwrite|authread|authwrite" "$NV_INDEX" >/dev/null
 tpm2_nvwrite -C o -i "$ROOT_COMMITMENT" "$NV_INDEX" >/dev/null
@@ -319,7 +443,7 @@ expect_reject "new NV attestation rejected against the prior root commitment" \
 
 # TPM2_Certify proves the exact storage object is loaded and binds it to a
 # fresh verifier challenge. The verifier checks the signature and decoded fields.
-CERTIFY_NONCE="$(openssl rand -hex 32)"
+if [[ -n "$CHALLENGE_NONCE" ]]; then CERTIFY_NONCE="$(derive_challenge_nonce CERTIFY-CREATION)"; else CERTIFY_NONCE="$(openssl rand -hex 32)"; fi
 CERTIFY_ATTEST="$TMP/storage-primary.attest"
 CERTIFY_SIG="$TMP/storage-primary.sig"
 CERTIFY_VERIFY_TICKET="$TMP/storage-primary.verify-ticket"
@@ -381,7 +505,7 @@ if after != expected:
 print("PASS PCR 23 independently recomputed from its prior value and event digest")
 PY
 
-QUOTE_NONCE="$(openssl rand -hex 32)"
+if [[ -n "$CHALLENGE_NONCE" ]]; then QUOTE_NONCE="$(derive_challenge_nonce PCR-QUOTE)"; else QUOTE_NONCE="$(openssl rand -hex 32)"; fi
 QUOTE_MSG="$TMP/pcr.quote"
 QUOTE_SIG="$TMP/pcr.quote.sig"
 tpm2_quote -c "$AK_CTX" -l sha256:23 -q "$QUOTE_NONCE" \
@@ -422,5 +546,69 @@ tpm2_pcrread -o "$PCR_CHANGED" sha256:23 >/dev/null
 expect_fail "quote rejected after PCR 23 changes after attestation" \
   tpm2_checkquote -u "$AK_PUB" -m "$QUOTE_MSG" -s "$QUOTE_SIG" \
     -f "$PCR_CHANGED" -l sha256:23 -g sha256 -q "$QUOTE_NONCE"
+
+EVIDENCE_DIR="$(printenv ARIO_R22_32_EVIDENCE_DIR 2>/dev/null || true)"
+if [[ -n "$EVIDENCE_DIR" ]]; then
+  mkdir -p "$EVIDENCE_DIR"
+  cp "$CA_CERT" "$EVIDENCE_DIR/ek-lab-root.crt"
+  cp "$EK_CERT" "$EVIDENCE_DIR/ek-certificate.crt"
+  cp "$EK_PUB" "$EVIDENCE_DIR/ek-public.pem"
+  cp "$AK_PUB" "$EVIDENCE_DIR/ak-public.pem"
+  cp "$AK_NAME" "$EVIDENCE_DIR/ak-name.bin"
+  cp "$AK_QN" "$EVIDENCE_DIR/ak-qualified-name.bin"
+  cp "$AK_TPMT" "$EVIDENCE_DIR/ak-public-area.tpmt"
+  cp "$SRK_NAME" "$EVIDENCE_DIR/storage-name.bin"
+  cp "$SRK_QN" "$EVIDENCE_DIR/storage-qualified-name.bin"
+  cp "$SRK_TPMT" "$EVIDENCE_DIR/storage-public-area.tpmt"
+  cp "$SRK_CREATION_DATA" "$EVIDENCE_DIR/storage-creation-data.bin"
+  cp "$SRK_CREATION_HASH" "$EVIDENCE_DIR/storage-creation-hash.bin"
+  cp "$ROOT_COMMITMENT" "$EVIDENCE_DIR/storage-root-commitment.bin"
+  cp "$NV_PUBLIC" "$EVIDENCE_DIR/nv-public.yaml"
+  cp "$NV_READBACK" "$EVIDENCE_DIR/nv-contents.bin"
+  cp "$NV_ATTEST" "$EVIDENCE_DIR/nv-attestation.bin"
+  cp "$NV_SIG" "$EVIDENCE_DIR/nv-attestation.sig"
+  cp "$CERTIFY_ATTEST" "$EVIDENCE_DIR/creation-attestation.bin"
+  cp "$CERTIFY_SIG" "$EVIDENCE_DIR/creation-attestation.sig"
+  cp "$PCR_BEFORE" "$EVIDENCE_DIR/pcr23-before.bin"
+  cp "$PCR_AFTER" "$EVIDENCE_DIR/pcr23-after.bin"
+  cp "$QUOTE_MSG" "$EVIDENCE_DIR/quote-attestation.bin"
+  cp "$QUOTE_SIG" "$EVIDENCE_DIR/quote-attestation.sig"
+  printf '%s\n' "$NV_INDEX" >"$EVIDENCE_DIR/nv-index.txt"
+  printf '%s\n' "$NV_NONCE" >"$EVIDENCE_DIR/nv-nonce.txt"
+  printf '%s\n' "$CERTIFY_NONCE" >"$EVIDENCE_DIR/creation-nonce.txt"
+  printf '%s\n' "$QUOTE_NONCE" >"$EVIDENCE_DIR/quote-nonce.txt"
+  printf '%s\n' "$MEASUREMENT_HASH" >"$EVIDENCE_DIR/pcr23-event-digest.txt"
+  printf '%s\n' "$EK_FP" >"$EVIDENCE_DIR/ek-spki-sha256.txt"
+  printf '%s\n' "$ROOT_NAME_SHA256" >"$EVIDENCE_DIR/storage-root-sha256.txt"
+  if [[ -n "$CHALLENGE_NONCE" ]]; then
+    printf '%s\n' "$CHALLENGE_NONCE" >"$EVIDENCE_DIR/custodian-challenge-nonce.txt"
+  fi
+  cp "$TMP/ak-activation-result.bin" "$EVIDENCE_DIR/ak-activation-result.bin"
+  if [[ -n "$CI_CUSTODIAN_PRIVATE_KEY_PATH" ]]; then
+    cp "$CI_CUSTODIAN_PUBLIC" "$EVIDENCE_DIR/custodian-public.pem"
+    cp "$CI_ANCHOR_JSON" "$EVIDENCE_DIR/custodian-anchor.json"
+    cp "$CI_ANCHOR_SIG" "$EVIDENCE_DIR/custodian-anchor.sig"
+    cp "$CI_CHALLENGE_JSON" "$EVIDENCE_DIR/custodian-challenge.json"
+    cp "$CI_CHALLENGE_SIG" "$EVIDENCE_DIR/custodian-challenge.sig"
+    case "$(realpath "$CI_CUSTODIAN_PRIVATE_KEY_PATH")" in
+      "$(realpath "$EVIDENCE_DIR")"/*) fail "custodian private key must never be placed in the public evidence bundle" ;;
+    esac
+  fi
+  python3 - "$EVIDENCE_DIR" <<'PY'
+import hashlib, json, sys
+from pathlib import Path
+root = Path(sys.argv[1])
+files = sorted(p for p in root.iterdir() if p.is_file() and p.name != "evidence-manifest.json")
+manifest = {
+    "format": "ARIO-R22.32-SWTPM-EVIDENCE-MANIFEST-V1",
+    "files": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in files},
+}
+(root / "evidence-manifest.json").write_text(
+    json.dumps(manifest, sort_keys=True, separators=(",", ":")) + "\n",
+    encoding="utf-8",
+)
+print("PASS raw public TPM evidence bundle exported with SHA-256 manifest")
+PY
+fi
 
 printf 'R22_32_TPM_ATTESTATION_COMPLETE RESEARCH_ONLY SOFTWARE_TPM SYNTHETIC_EK_CA NO_MANUFACTURER_TRUST NO_PHYSICAL_TPM NO_INDEPENDENT_CUSTODY\n'
