@@ -1,6 +1,8 @@
 package main
-import "testing"
+import (
+ "testing"
  "encoding/hex"
+)
 func policyQuorum(_ bool, external int)bool{return external>=2}
 func TestExternalOnlyPolicyRequiresTwoIndependentWitnesses(t *testing.T){
  for _,tc:=range []struct{group bool;external int;want bool}{{true,0,false},{true,1,false},{true,2,true},{true,3,true},{false,1,false},{false,2,true},{false,4,true}}{
