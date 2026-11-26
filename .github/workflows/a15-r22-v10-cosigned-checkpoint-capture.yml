@@ -5,6 +5,11 @@ on:
     paths:
       - .github/workflows/a15-r22-v10-cosigned-checkpoint-capture.yml
       - implementation/research/a15_r22_checkpoint_handoff/**
+  pull_request:
+    branches: [research/a15-r22-v09-delayed-readback-20261125]
+    paths:
+      - .github/workflows/a15-r22-v10-cosigned-checkpoint-capture.yml
+      - implementation/research/a15_r22_checkpoint_handoff/**
 permissions:
   contents: read
 jobs:
