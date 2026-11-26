@@ -22,38 +22,27 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          ref: 2139914a255aa58b3706eaa401dc744fa82e8d56
-          path: pinned-r22-22i
-          persist-credentials: false
       - uses: actions/setup-go@v5
         with:
           go-version: '1.25'
           cache: false
-      - name: Verify pinned external-floor source
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install pinned verification tools
         run: |
-          set -euo pipefail
-          test "$(git -C pinned-r22-22i rev-parse HEAD)" = 2139914a255aa58b3706eaa401dc744fa82e8d56
-          test "$(git -C pinned-r22-22i rev-parse HEAD:implementation/research/r22_22_recovery_root/independent_witness_floor/EXTERNAL_FLOOR_2026-11-26_142338.json)" = 07b1172fd77cf53d9dba9b4e06215d33f42705cb
-      - name: Re-verify live external 2-of-4 witness floor and Remora readback
-        working-directory: pinned-r22-22i/implementation/research/r22_22_recovery_root/independent_witness_floor
-        run: |
-          set -euo pipefail
-          go mod tidy
-          go run . | tee "$RUNNER_TEMP/r22-22i-live.json"
-      - name: Install official Sigsum verifier
-        run: |
-          set -euo pipefail
+          python -m pip install coincurve==21.0.0
           go install sigsum.org/sigsum-go/cmd/sigsum-verify@v0.14.1
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
-      - name: Verify A15 proofs are covered by the externally witnessed R22.22 floor
+      - name: Direct external signature and binding checks
         working-directory: implementation/research/a15_r22_live_v1/external_floor_bridge
         run: |
           set -euo pipefail
           go mod tidy
-          go run . \
-            --first-zip "$GITHUB_WORKSPACE/implementation/tests/fixtures/a15_r22_run_45823494521/A15-FIRST-ONLY.zip" \
-            --second-zip "$GITHUB_WORKSPACE/implementation/tests/fixtures/a15_r22_run_45823494521/A15-SECOND-REVEAL-SYNTHETIC.zip" \
-            --external-floor-json "$GITHUB_WORKSPACE/pinned-r22-22i/implementation/research/r22_22_recovery_root/independent_witness_floor/EXTERNAL_FLOOR_2026-11-26_142338.json" \
-            --live-floor-json "$RUNNER_TEMP/r22-22i-live.json"
+          go test -v .
+          go run . --first-zip "$GITHUB_WORKSPACE/implementation/tests/fixtures/a15_r22_run_45823494521/A15-FIRST-ONLY.zip" --second-zip "$GITHUB_WORKSPACE/implementation/tests/fixtures/a15_r22_run_45823494521/A15-SECOND-REVEAL-SYNTHETIC.zip" --evidence-dir "$RUNNER_TEMP/a15-verified-signed-head"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: a15-direct-external-signed-head
+          path: ${{ runner.temp }}/a15-verified-signed-head
+          if-no-files-found: error

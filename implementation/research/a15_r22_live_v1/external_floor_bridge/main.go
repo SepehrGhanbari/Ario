@@ -15,6 +15,8 @@ import (
 	"os"
 	"os/exec"
 	"sort"
+	"bufio"
+	"encoding/base64"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -23,6 +25,7 @@ import (
 	"sigsum.org/sigsum-go/pkg/client"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/requests"
+	"sigsum.org/sigsum-go/pkg/policy"
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
@@ -47,59 +50,6 @@ type proofFields struct {
 	Size uint64
 	Root string
 	Index uint64
-}
-
-type externalFloorRecord struct {
-	Schema string `json:"schema"`
-	SourceWorkflowRun int64 `json:"source_workflow_run"`
-	SigsumLog string `json:"sigsum_log"`
-	LogKeyHash string `json:"log_key_hash"`
-	ExternalFloor struct {
-		TreeSize uint64 `json:"tree_size"`
-		RootHash string `json:"root_hash"`
-	} `json:"external_floor"`
-	CustodianReadback struct {
-		TreeSize uint64 `json:"tree_size"`
-		RootHash string `json:"root_hash"`
-		Matches bool `json:"matches_cosigned_head"`
-	} `json:"custodian_readback"`
-	ExternalWitnesses []struct {
-		Name string `json:"name"`
-		SignatureValid bool `json:"signature_valid"`
-	} `json:"verified_external_cosigners"`
-	CustomPolicy string `json:"custom_research_policy"`
-	BuiltinPolicy string `json:"builtin_sigsum_test2_2025"`
-	DataAvailability string `json:"data_availability"`
-	GlobalLatest string `json:"global_latest"`
-	Admission bool `json:"admission"`
-	PublicationPerformed bool `json:"publication_performed"`
-	TrustActivation string `json:"trust_activation"`
-	Production string `json:"production"`
-}
-
-type liveFloorRecord struct {
-	Result string `json:"result"`
-	Policy string `json:"policy"`
-	BuiltInTest2Diagnostic string `json:"built_in_test2_diagnostic"`
-	ExternalWitnesses []struct {
-		Name string `json:"Name"`
-		CosignatureValid bool `json:"CosignatureValid"`
-	} `json:"external_witnesses"`
-	VerifiedExternalCosignatures int `json:"verified_external_cosignatures"`
-	HeadSize uint64 `json:"head_size"`
-	HeadRoot string `json:"head_root"`
-	RetainedFloorSize uint64 `json:"retained_floor_size"`
-	RetainedFloorRoot string `json:"retained_floor_root"`
-	CustodianReadbackSource string `json:"custodian_readback_source"`
-	CustodianReadbackSize uint64 `json:"custodian_readback_size"`
-	CustodianReadbackRoot string `json:"custodian_readback_root"`
-	CustodianReadbackMatchesSignedHead bool `json:"custodian_readback_matches_signed_head"`
-	DataAvailability string `json:"data_availability"`
-	GlobalLatest string `json:"global_latest"`
-	NetworkTier string `json:"network_tier"`
-	TrustActivation string `json:"trust_activation"`
-	Production string `json:"production"`
-	Admission bool `json:"admission"`
 }
 
 func fail(format string, args ...any) {
@@ -165,16 +115,16 @@ func parseProof(raw []byte) proofFields {
 	return proofFields{Log: fields["log"], Leaf: leaf[0], Size: size, Root: fields["root_hash"], Index: index}
 }
 
-func verifyOfficial(proof, eventID, pubkey []byte, temp string, label string) {
+func verifyOfficial(proof, eventID, pubkey []byte, temp string, label string, policyPath string) {
 	proofPath := filepath.Join(temp, label+".proof")
 	pubPath := filepath.Join(temp, label+".pub")
 	if err := os.WriteFile(proofPath, proof, 0600); err != nil { fail("write proof: %v", err) }
 	if err := os.WriteFile(pubPath, pubkey, 0600); err != nil { fail("write key: %v", err) }
-	cmd := exec.Command("sigsum-verify", "-k", pubPath, "-P", "sigsum-test1-2025", proofPath)
+	cmd := exec.Command("sigsum-verify", "-k", pubPath, "-p", policyPath, proofPath)
 	cmd.Stdin = bytes.NewReader(eventID)
 	output, err := cmd.CombinedOutput()
 	if err != nil { fail("official Sigsum verifier rejected %s proof: %v: %s", label, err, strings.TrimSpace(string(output))) }
-	fmt.Printf("%s_OFFICIAL_SIGSUM_VERIFY PASS\n", strings.ToUpper(label))
+	fmt.Printf("%s_OFFICIAL_EXTERNAL_QUORUM_VERIFY PASS\n", strings.ToUpper(label))
 }
 
 func mustHash(value string) crypto.Hash {
@@ -185,14 +135,102 @@ func mustHash(value string) crypto.Hash {
 	return h
 }
 
-func main() {
-	firstPath := flag.String("first-zip", "", "pinned original A15 first-checkpoint artifact")
-	secondPath := flag.String("second-zip", "", "pinned original A15 second-checkpoint artifact")
-	floorPath := flag.String("external-floor-json", "", "pinned R22.22I external floor record")
-	liveFloorPath := flag.String("live-floor-json", "", "fresh R22.22I live witness-floor result")
-	flag.Parse()
-	if *firstPath == "" || *secondPath == "" || *floorPath == "" || *liveFloorPath == "" { fail("missing input paths") }
 
+const logPubHex = "4644af2abd40f4895a003bca350f9d5912ab301a49c77f13e5b6d905c20a5fe6"
+
+var witnessKeys = map[string]string{
+ "geomys": "b20196b937a30d19f0cb7dfa2d5388bc8ddde9cc3df4c24fcf63db27a573d3f2",
+ "remora": "ebcdeb78e7fdb2ef9227b2c1ef11e94600b55b4d6d9a57877e31ee89e59adc36",
+ "stagemole": "4a921b7caef58ae670cdc11ef4184f1c058f7b9259a9107a969f69fa54aa496f",
+ "tillitis": "5c35281928e9da396beede5f22a2251a589e6ac6de52a4de85de8634ffccaf6d",
+}
+
+func externalPolicy() string {
+ return "log "+logPubHex+"\n"+
+ "witness geomys "+witnessKeys["geomys"]+"\n"+
+ "witness remora "+witnessKeys["remora"]+"\n"+
+ "witness stagemole "+witnessKeys["stagemole"]+"\n"+
+ "witness tillitis "+witnessKeys["tillitis"]+"\n"+
+ "group external 2 geomys remora stagemole tillitis\n"+
+ "group required 2 remora external\n"+
+ "quorum required\n"
+}
+
+func authenticate(head *types.CosignedTreeHead) ([]string,error) {
+ logPub,e:=crypto.PublicKeyFromHex(logPubHex);if e!=nil{return nil,e}
+ kh:=crypto.HashBytes(logPub[:]);if hex.EncodeToString(kh[:])!=logID{return nil,errors.New("log pin mismatch")}
+ p,e:=policy.ParseConfig(strings.NewReader(externalPolicy()));if e!=nil{return nil,e}
+ if e=p.VerifyCosignedTreeHead(&kh,head);e!=nil{return nil,e}
+ var names []string
+ for name,key:=range witnessKeys {
+  pub,e:=crypto.PublicKeyFromHex(key);if e!=nil{return nil,e}
+  sig,ok:=head.Cosignatures[crypto.HashBytes(pub[:])]
+  if ok&&sig.Verify(&pub,types.SigsumCheckpointOrigin(&logPub),&head.TreeHead){names=append(names,name)}
+ }
+ sort.Strings(names)
+ return names,nil
+}
+
+func archiveHead(raw []byte) (types.CosignedTreeHead,error) {
+ var head types.CosignedTreeHead
+ blocks:=bytes.Split(raw,[]byte("\n\n"))
+ if len(blocks)!=3{return head,errors.New("proof block count")}
+ // Parse actual signed tree head and cosignatures, not a JSON report.
+ e:=head.FromASCII(bytes.NewReader(append(append([]byte{},blocks[1]...),'\n')))
+ return head,e
+}
+
+func verifyBinding(first,second map[string][]byte,temp string) error {
+ // Reuse the existing A15 event verifier on the exact bytes passed to Sigsum.
+ for _,pair:=range []struct{name string;data map[string][]byte}{{"first",first},{"second",second}} {
+  d:=filepath.Join(temp,pair.name);if e:=os.Mkdir(d,0700);e!=nil{return e}
+  for _,k:=range []string{"event.json","checkpoint.json","event-id.txt"} {
+   if e:=os.WriteFile(filepath.Join(d,k),pair.data[k],0600);e!=nil{return e}
+  }
+ }
+ if e:=os.WriteFile(filepath.Join(temp,"first","nostr.pub"),first["nostr.pub"],0600);e!=nil{return e}
+ script, e:=filepath.Abs("bind_checkpoints.py");if e!=nil{return e}
+ cmd:=exec.Command("python",script,temp)
+ out,e:=cmd.CombinedOutput();if e!=nil{return fmt.Errorf("checkpoint binding: %w: %s",e,out)}
+ fmt.Print(string(out));return nil
+}
+
+func consistent(ctx context.Context,cli *client.Client,old,new types.TreeHead) error {
+ if old.Size>new.Size{return errors.New("rollback")}
+ if old.Size==new.Size {if old.RootHash!=new.RootHash{return errors.New("same-size fork")};return nil}
+ p,e:=cli.GetConsistencyProof(ctx,requests.ConsistencyProof{OldSize:old.Size,NewSize:new.Size})
+ if e!=nil{return e};return p.Verify(&old,&new)
+}
+
+func readRemora(ctx context.Context,hc *http.Client) (uint64,crypto.Hash,[]byte,error) {
+ var root crypto.Hash
+ req,e:=http.NewRequestWithContext(ctx,http.MethodGet,"https://remora.n621.de/status",nil);if e!=nil{return 0,root,nil,e}
+ req.Header.Set("Cache-Control","no-cache, no-store")
+ resp,e:=hc.Do(req);if e!=nil{return 0,root,nil,e};defer resp.Body.Close()
+ if resp.StatusCode!=200{return 0,root,nil,fmt.Errorf("Remora HTTP %d",resp.StatusCode)}
+ raw,e:=io.ReadAll(io.LimitReader(resp.Body,(1<<20)+1));if e!=nil||len(raw)>1<<20{return 0,root,nil,errors.New("Remora read bounds")}
+ sc:=bufio.NewScanner(bytes.NewReader(raw));found:=false;var size uint64
+ for sc.Scan(){
+  if strings.TrimSpace(sc.Text())!="- sigsum.org/v1/tree/"+logID{continue}
+  if found||!sc.Scan(){return 0,root,nil,errors.New("duplicate or incomplete Remora record")}
+  line:=strings.TrimSpace(sc.Text())
+  if !strings.HasPrefix(line,"(size ")||!strings.HasSuffix(line,")"){return 0,root,nil,errors.New("Remora format")}
+  fields:=strings.SplitN(strings.TrimSuffix(strings.TrimPrefix(line,"(size "),")"),", root ",2)
+  if len(fields)!=2{return 0,root,nil,errors.New("Remora fields")}
+  size,e=strconv.ParseUint(fields[0],10,64);if e!=nil{return 0,root,nil,e}
+  b,e:=base64.StdEncoding.DecodeString(fields[1]);if e!=nil||len(b)!=32{return 0,root,nil,errors.New("Remora root")}
+  copy(root[:],b);found=true
+ }
+ if sc.Err()!=nil||!found{return 0,root,nil,errors.New("Remora entry unavailable")}
+ return size,root,raw,nil
+}
+
+func main() {
+ firstPath:=flag.String("first-zip","","pinned first archive")
+ secondPath:=flag.String("second-zip","","pinned second archive")
+ evidence:=flag.String("evidence-dir","","directory for actual signed head and readback")
+ flag.Parse()
+ if *firstPath==""||*secondPath==""||*evidence==""{fail("missing inputs")}
 	first := readZip(*firstPath, firstZipSHA, []string{"checkpoint.json","bootstrap.json","event-id.txt.proof","event-id.txt","event.json","log-key.pub","nostr.pub","sigsum.pub"})
 	second := readZip(*secondPath, secondZipSHA, []string{"checkpoint.json","event-id.txt.proof","event-id.txt","event.json","matched-state/custodian.floor.json","matched-state/custodian.sqlite3","rollback-state/custodian.floor.json","rollback-state/custodian.sqlite3"})
 	fmt.Println("A15_ARCHIVE_DIGESTS_AND_MANIFESTS PASS")
@@ -218,111 +256,36 @@ func main() {
 	if bootstrap.FirstChecksum != hex.EncodeToString(sum2[:]) { fail("bootstrap event-ID checksum mismatch") }
 	fmt.Println("A15_TWO_CHECKPOINT_PROOFS_AND_BOOTSTRAP_BINDING PASS")
 
-	temp, err := os.MkdirTemp("", "ario-a15-external-floor-")
-	if err != nil { fail("temporary directory: %v", err) }
-	defer os.RemoveAll(temp)
-	verifyOfficial(first["event-id.txt.proof"], first["event-id.txt"], first["log-key.pub"], temp, "first")
-	verifyOfficial(second["event-id.txt.proof"], second["event-id.txt"], first["log-key.pub"], temp, "second")
-
-	rawFloor, err := os.ReadFile(*floorPath)
-	if err != nil { fail("read external floor record: %v", err) }
-	var floor externalFloorRecord
-	if err := json.Unmarshal(rawFloor, &floor); err != nil { fail("external floor JSON: %v", err) }
-	if floor.Schema != "ario.r22.22i.external-floor.v1" || floor.SourceWorkflowRun != 45838457364 { fail("wrong external floor record identity") }
-	if floor.SigsumLog != logURL || floor.LogKeyHash != logID { fail("A15 and R22.22I do not name the same Sigsum log") }
-	if floor.ExternalFloor.TreeSize != externalSize || floor.ExternalFloor.RootHash != externalRoot { fail("external floor coordinates mismatch") }
-	if !floor.CustodianReadback.Matches || floor.CustodianReadback.TreeSize != externalSize || floor.CustodianReadback.RootHash != externalRoot { fail("Remora readback does not match external signed head") }
-	if floor.CustomPolicy != "2-of-4 external-only; Glasklar excluded" || floor.BuiltinPolicy != "NOT_MET" { fail("external witness policy disposition mismatch") }
-	if floor.Admission || floor.PublicationPerformed || floor.TrustActivation != "NO_GO" || floor.Production != "NO_GO" || floor.DataAvailability != "NOT_PROVEN" || floor.GlobalLatest != "UNKNOWN" { fail("external floor limitations/status changed") }
-	valid := map[string]bool{}
-	for _, w := range floor.ExternalWitnesses { if w.SignatureValid { valid[w.Name] = true } }
-	if len(valid) != 2 || !valid["remora.n621.de"] || !valid["witness.stagemole.eu"] { fail("expected two distinct external witness cosigners not present in pinned record") }
-	if p2.Size >= floor.ExternalFloor.TreeSize { fail("external floor is not newer than A15 checkpoint") }
-	fmt.Println("PINNED_R22_22I_EXTERNAL_FLOOR_AND_TWO_WITNESSES PASS")
-
-	rawLive, err := os.ReadFile(*liveFloorPath)
-	if err != nil || len(rawLive) == 0 || len(rawLive) > 1<<20 { fail("live R22.22I result bounds/read: %v", err) }
-	var live liveFloorRecord
-	if err := json.Unmarshal(rawLive, &live); err != nil { fail("live R22.22I JSON: %v", err) }
-	if live.Result != "EXTERNAL_TEST_WITNESS_COSIGNATURE_QUORUM_PASS" ||
-		live.Policy != "custom external-only 2-of-4 over the four test2 external public keys" ||
-		!strings.HasPrefix(live.BuiltInTest2Diagnostic, "NOT_MET") ||
-		live.VerifiedExternalCosignatures < 2 { fail("live external witness policy/quorum mismatch") }
-	if live.RetainedFloorSize != 282812 || live.RetainedFloorRoot != "77a9fa7f729892730a46fb7219bbe44859bc7a99fac28ff413be5ad6b0f03629" {
-		fail("live R22.22I retained-floor pin mismatch")
-	}
-	if live.HeadSize < floor.ExternalFloor.TreeSize { fail("live head below pinned external floor") }
-	if live.CustodianReadbackSource != "https://remora.n621.de/status" ||
-		live.CustodianReadbackMatchesSignedHead != true || live.CustodianReadbackSize != live.HeadSize ||
-		live.CustodianReadbackRoot != live.HeadRoot { fail("live Remora readback mismatch") }
-	if live.DataAvailability != "NOT_PROVEN_BY_WITNESSES" || live.GlobalLatest != "UNKNOWN" ||
-		live.NetworkTier != "TEST_ONLY" || live.TrustActivation != "NO_GO" ||
-		live.Production != "NO_GO" || live.Admission { fail("live floor limitation/policy flags changed") }
-	if len(live.ExternalWitnesses) != 4 { fail("live external witness inventory mismatch") }
-	liveWitnesses := map[string]bool{}
-	seenLiveWitnesses := map[string]bool{}
-	validLiveWitnessCount := 0
-	for _, witness := range live.ExternalWitnesses {
-		if witness.Name == "" || seenLiveWitnesses[witness.Name] { fail("duplicate/empty live witness name") }
-		seenLiveWitnesses[witness.Name] = true
-		if witness.CosignatureValid {
-			liveWitnesses[witness.Name] = true
-			validLiveWitnessCount++
-		}
-	}
-	if validLiveWitnessCount != live.VerifiedExternalCosignatures || len(liveWitnesses) != validLiveWitnessCount ||
-		validLiveWitnessCount < 2 || !liveWitnesses["remora.n621.de"] {
-		fail("live 2-of-4 quorum lacks distinct witnesses or Remora custodian signature")
-	}
-
-	oldHead := types.TreeHead{Size: p2.Size, RootHash: mustHash(p2.Root)}
-	newHead := types.TreeHead{Size: floor.ExternalFloor.TreeSize, RootHash: mustHash(floor.ExternalFloor.RootHash)}
-	liveHead := types.TreeHead{Size: live.HeadSize, RootHash: mustHash(live.HeadRoot)}
-	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
-	defer cancel()
-	httpClient := &http.Client{Timeout: 15*time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return errors.New("redirect refused") }}
-	cli := client.New(client.Config{URL: logURL, HTTPClient: httpClient})
-	proof, err := cli.GetConsistencyProof(ctx, requests.ConsistencyProof{OldSize: oldHead.Size, NewSize: newHead.Size})
-	if err != nil { fail("fetch Sigsum consistency proof %d->%d: %v", oldHead.Size, newHead.Size, err) }
-	if err := proof.Verify(&oldHead, &newHead); err != nil { fail("A15 head is not a prefix of external witness floor: %v", err) }
-	fmt.Println("A15_HEAD_TO_PINNED_EXTERNAL_FLOOR_CONSISTENCY PASS")
-
-	if liveHead.Size == newHead.Size {
-		if liveHead.RootHash != newHead.RootHash { fail("live head conflicts with pinned external floor at same size") }
-	} else {
-		liveFloorProof, err := cli.GetConsistencyProof(ctx, requests.ConsistencyProof{OldSize: newHead.Size, NewSize: liveHead.Size})
-		if err != nil { fail("fetch pinned-to-live consistency proof: %v", err) }
-		if err := liveFloorProof.Verify(&newHead, &liveHead); err != nil { fail("pinned external floor is not a prefix of live head: %v", err) }
-	}
-	liveA15Proof, err := cli.GetConsistencyProof(ctx, requests.ConsistencyProof{OldSize: oldHead.Size, NewSize: liveHead.Size})
-	if err != nil { fail("fetch A15-to-live consistency proof: %v", err) }
-	if err := liveA15Proof.Verify(&oldHead, &liveHead); err != nil { fail("A15 head is not a prefix of live external witness head: %v", err) }
-	fmt.Println("A15_HEAD_TO_LIVE_EXTERNAL_WITNESS_FLOOR_CONSISTENCY PASS")
-
-	liveNames := make([]string, 0, len(liveWitnesses))
-	for name := range liveWitnesses { liveNames = append(liveNames, name) }
-	sort.Strings(liveNames)
-	out := map[string]any{
-		"schema": "ARIO_A15_R22_EXTERNAL_WITNESS_BRIDGE_V1",
-		"status": "PASS_A15_PREFIX_OF_EXTERNALLY_WITNESSED_FLOOR",
-		"same_sigsum_log_id": logID,
-		"a15_head": map[string]any{"tree_size": p2.Size, "root_hash": p2.Root, "leaf_index": p2.Index},
-		"external_floor": map[string]any{"tree_size": floor.ExternalFloor.TreeSize, "root_hash": floor.ExternalFloor.RootHash},
-		"consistency_proof": "VERIFIED",
-		"witnesses": []string{"remora.n621.de", "witness.stagemole.eu"},
-		"witness_run": floor.SourceWorkflowRun,
-		"live_external_floor": map[string]any{"tree_size": liveHead.Size, "root_hash": live.HeadRoot},
-		"live_external_witness_quorum": live.VerifiedExternalCosignatures,
-		"live_external_witnesses": liveNames,
-		"live_remora_status_readback": "EXACT_SIZE_AND_ROOT_MATCH",
-		"pinned_floor_to_live_head_consistency": "VERIFIED",
-		"a15_to_live_head_consistency": "VERIFIED",
-		"remora_status_readback": "EXACT_SIZE_AND_ROOT_MATCH",
-		"limitations": []string{"TEST_ONLY witness network", "custom external-only 2-of-4 research policy; built-in test2 4-of-5 NOT_MET", "Remora test VM has no HSM or redundancy", "Stagemole is a best-effort test witness", "data availability NOT_PROVEN", "global_latest UNKNOWN", "no evidence admission, trust activation, or production"},
-	}
-	encoded, err := json.Marshal(out)
-	if err != nil { fail("encode result: %v", err) }
-	fmt.Println(string(encoded))
+ temp,e:=os.MkdirTemp("","ario-bridge-v2-");if e!=nil{fail("temp: %v",e)};defer os.RemoveAll(temp)
+ if e=verifyBinding(first,second,temp);e!=nil{fail("%v",e)}
+ policyPath:=filepath.Join(temp,"external.policy")
+ if e=os.WriteFile(policyPath,[]byte(externalPolicy()),0600);e!=nil{fail("policy: %v",e)}
+ verifyOfficial(first["event-id.txt.proof"],first["event-id.txt"],first["log-key.pub"],temp,"first",policyPath)
+ verifyOfficial(second["event-id.txt.proof"],second["event-id.txt"],first["log-key.pub"],temp,"second",policyPath)
+ h1,e:=archiveHead(first["event-id.txt.proof"]);if e!=nil{fail("first head: %v",e)}
+ h2,e:=archiveHead(second["event-id.txt.proof"]);if e!=nil{fail("second head: %v",e)}
+ if h1.Size!=p1.Size||h1.RootHash!=mustHash(p1.Root)||h2.Size!=p2.Size||h2.RootHash!=mustHash(p2.Root){fail("proof head coordinates")}
+ n1,e:=authenticate(&h1);if e!=nil{fail("first cosignatures: %v",e)}
+ n2,e:=authenticate(&h2);if e!=nil{fail("second cosignatures: %v",e)}
+ fmt.Println("ARCHIVED_EXTERNAL_SIGNATURES_PASS",n1,n2)
+ ctx,cancel:=context.WithTimeout(context.Background(),90*time.Second);defer cancel()
+ hc:=&http.Client{Timeout:15*time.Second,CheckRedirect:func(*http.Request,[]*http.Request)error{return errors.New("redirect refused")}}
+ cli:=client.New(client.Config{URL:logURL,HTTPClient:hc})
+ historical:=types.TreeHead{Size:externalSize,RootHash:mustHash(externalRoot)}
+ if e=consistent(ctx,cli,h1.TreeHead,h2.TreeHead);e!=nil{fail("seq1-to-seq2 consistency: %v",e)}
+ if e=consistent(ctx,cli,h2.TreeHead,historical);e!=nil{fail("historical coordinates consistency: %v",e)}
+ // Do not infer historical witness signatures from the unsigned R22.22I JSON.
+ head,e:=cli.GetTreeHead(ctx);if e!=nil{fail("live signed head: %v",e)}
+ names,e:=authenticate(&head);if e!=nil{fail("live signature quorum: %v",e)}
+ if e=consistent(ctx,cli,historical,head.TreeHead);e!=nil{fail("historical-to-live consistency: %v",e)}
+ if e=consistent(ctx,cli,h2.TreeHead,head.TreeHead);e!=nil{fail("seq2-to-live consistency: %v",e)}
+ size,root,raw,e:=readRemora(ctx,hc);if e!=nil||size!=head.Size||root!=head.RootHash{fail("Remora readback: %v",e)}
+ if e=os.MkdirAll(*evidence,0700);e!=nil{fail("evidence directory: %v",e)}
+ var headBytes bytes.Buffer;if e=head.ToASCII(&headBytes);e!=nil{fail("serialize actual signed head: %v",e)}
+ if e=os.WriteFile(filepath.Join(*evidence,"live-head.ascii"),headBytes.Bytes(),0600);e!=nil{fail("save head: %v",e)}
+ if e=os.WriteFile(filepath.Join(*evidence,"remora-status.txt"),raw,0600);e!=nil{fail("save readback: %v",e)}
+ out:=map[string]any{"schema":"ARIO_A15_R22_EXTERNAL_WITNESS_BRIDGE_V2","status":"PASS_DIRECT_ARCHIVED_AND_LIVE_EXTERNAL_SIGNATURES","archive_first_witnesses":n1,"archive_second_witnesses":n2,"live_witnesses":names,"live_size":head.Size,"live_root":hex.EncodeToString(head.RootHash[:]),"historical_floor_signature_bytes":"NOT_RETAINED","historical_floor_consistency":"VERIFIED","seq1_seq2_consistency":"VERIFIED","remora_readback":"EXACT_MATCH_UNSIGNED_STATUS","network":"TEST_ONLY","global_latest":"UNKNOWN","payload_custody":"NOT_ESTABLISHED","production":"NO_GO"}
+ enc,e:=json.Marshal(out);if e!=nil{fail("encode: %v",e)};fmt.Println(string(enc))
 }
 
 func mustDecodeHex(value string) []byte {
