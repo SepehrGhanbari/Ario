@@ -13,8 +13,10 @@ from __future__ import annotations
 import copy
 import dataclasses
 import hashlib
+import threading
 from datetime import datetime, timezone
 from enum import Enum
+from functools import wraps
 from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 
 
@@ -78,6 +80,14 @@ def _is_valid_sha256(val: str) -> bool:
         and len(val) == 64
         and all(c in "0123456789abcdef" for c in val.lower())
     )
+
+
+def _synchronized(method):
+    @wraps(method)
+    def wrapped(self, *args, **kwargs):
+        with self._lock:
+            return method(self, *args, **kwargs)
+    return wrapped
 
 
 @dataclasses.dataclass(frozen=True)
@@ -204,15 +214,20 @@ class SourceMonitoringGuard:
 
     def __init__(self, allowlisted_tools: Optional[Set[str]] = None) -> None:
         # An explicit empty set is deny-all, not a request to restore defaults.
+        self._lock = threading.RLock()
         self._allowlisted_tools = set(ALLOWLISTED_TOOLS) if allowlisted_tools is None else set(allowlisted_tools)
         self._attributions: Dict[str, SourceAttribution] = {}
         # In-memory audit snapshots: NOT a persistent append-only journal.
         self._revisions: Dict[str, List[SourceAttribution]] = {}
+        # Recovery preserves historical labels but never imports verification authority.
+        self._active_verified_ids: Set[str] = set()
 
     @property
+    @_synchronized
     def attributions(self) -> Dict[str, SourceAttribution]:
         return copy.deepcopy(self._attributions)
 
+    @_synchronized
     def attribution_history(self, attribution_id: str) -> Tuple[SourceAttribution, ...]:
         """Read-only snapshots, including a disallowed promotion's recorded state."""
         return tuple(copy.deepcopy(self._revisions.get(attribution_id, [])))
@@ -226,6 +241,7 @@ class SourceMonitoringGuard:
             value["provenance"].pop("recorded_at", None)
         return value
 
+    @_synchronized
     def _register(self, attr: SourceAttribution) -> SourceAttribution:
         """Never replace an existing identity with different claim/source data."""
         old = self._attributions.get(attr.attribution_id)
@@ -240,6 +256,7 @@ class SourceMonitoringGuard:
         self._revisions[stored.attribution_id] = [copy.deepcopy(stored)]
         return copy.deepcopy(stored)
 
+    @_synchronized
     def _revise(self, attr: SourceAttribution) -> SourceAttribution:
         if attr.attribution_id not in self._attributions:
             raise SourceMonitoringError("HOLD_UNREGISTERED_REVISION")
@@ -248,8 +265,11 @@ class SourceMonitoringGuard:
         if stored != self._attributions[attr.attribution_id]:
             self._attributions[attr.attribution_id] = stored
             self._revisions[attr.attribution_id].append(copy.deepcopy(stored))
+        if stored.veracity_state != VeracityState.VERIFIED_EMPIRICAL:
+            self._active_verified_ids.discard(attr.attribution_id)
         return copy.deepcopy(self._attributions[attr.attribution_id])
 
+    @_synchronized
     def create_hypothesis(
         self,
         assertion: str,
@@ -270,6 +290,7 @@ class SourceMonitoringGuard:
         )
         return self._register(attr)
 
+    @_synchronized
     def create_external_testimony(
         self,
         assertion: str,
@@ -289,6 +310,7 @@ class SourceMonitoringGuard:
         )
         return self._register(attr)
 
+    @_synchronized
     def record_unverified_ledger_report(
         self,
         assertion: str,
@@ -315,6 +337,7 @@ class SourceMonitoringGuard:
         # and in-memory revision history; do not bypass its existing contract.
         return self._register(attr)
 
+    @_synchronized
     def record_empirical_observation(
         self,
         assertion: str,
@@ -418,8 +441,13 @@ class SourceMonitoringGuard:
             provenance=prov,
             parent_attribution_ids=tuple(parent_attribution_ids),
         )
-        return self._register(attr)
+        was_registered = attr_id in self._attributions
+        registered = self._register(attr)
+        if not was_registered and registered.veracity_state == VeracityState.VERIFIED_EMPIRICAL:
+            self._active_verified_ids.add(attr_id)
+        return registered
 
+    @_synchronized
     def detect_circular_dependency(self, start_id: str) -> bool:
         """Detect if an attribution graph contains a self-citation cycle."""
         visited: Set[str] = set()
@@ -448,6 +476,7 @@ class SourceMonitoringGuard:
                 stack.discard(node_id)
         return False
 
+    @_synchronized
     def evaluate_claim_promotion(
         self,
         claim_id: str,
@@ -508,6 +537,7 @@ class SourceMonitoringGuard:
             if (
                 node.source_type == SourceType.EMPIRICAL_OBSERVATION
                 and node.veracity_state == VeracityState.VERIFIED_EMPIRICAL
+                and node.attribution_id in self._active_verified_ids
                 and node.assertion == claim.assertion
             ):
                 has_verified_empirical = True
@@ -532,8 +562,11 @@ class SourceMonitoringGuard:
             veracity_state=VeracityState.VERIFIED_EMPIRICAL,
             parent_attribution_ids=temp_parents,
         )
-        return self._revise(promoted)
+        result = self._revise(promoted)
+        self._active_verified_ids.add(claim_id)
+        return result
 
+    @_synchronized
     def filter_working_memory_candidates(
         self,
         attribution_ids: Sequence[str],
@@ -554,7 +587,10 @@ class SourceMonitoringGuard:
                 continue
 
             # Invariant: Never inject unsupported claims when verified is required
-            if require_verified and node.veracity_state != VeracityState.VERIFIED_EMPIRICAL:
+            if require_verified and (
+                node.veracity_state != VeracityState.VERIFIED_EMPIRICAL
+                or aid not in self._active_verified_ids
+            ):
                 continue
 
             # Check for circularity

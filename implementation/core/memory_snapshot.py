@@ -506,13 +506,7 @@ def restore_engine_snapshot(
         engine.__dict__ = replacement
 
 
-def write_snapshot(engine: ConsolidationEngine, path: str | os.PathLike[str]) -> str:
-    """Atomically replace *path* with a data-only snapshot; return its SHA-256.
-
-    The returned digest is integrity metadata, not an authenticity or freshness
-    claim. Retain it independently and supply it to recovery explicitly.
-    """
-    payload = encode_engine_snapshot(engine)
+def _write_atomic_payload(payload: bytes, path: str | os.PathLike[str]) -> str:
     digest = hashlib.sha256(payload).hexdigest()
     target = Path(path)
     if not target.name:
@@ -538,6 +532,15 @@ def write_snapshot(engine: ConsolidationEngine, path: str | os.PathLike[str]) ->
             pass
         raise SnapshotRecoveryError("HOLD_SNAPSHOT_WRITE_FAILED") from exc
     return digest
+
+
+def write_snapshot(engine: ConsolidationEngine, path: str | os.PathLike[str]) -> str:
+    """Atomically replace *path* with a data-only snapshot; return its SHA-256.
+
+    The returned digest is integrity metadata, not an authenticity or freshness
+    claim. Retain it independently and supply it to recovery explicitly.
+    """
+    return _write_atomic_payload(encode_engine_snapshot(engine), path)
 
 
 def _fsync_directory(directory: Path) -> None:
@@ -583,3 +586,164 @@ def restore_snapshot_file(
     if len(raw) > MAX_SNAPSHOT_BYTES:
         _reject("HOLD_SNAPSHOT_BYTES_TOO_LARGE")
     engine.restore_snapshot(raw, expected_sha256=expected_sha256)
+
+
+COGNITIVE_RECOVERY_FORMAT = "ario.cognitive-memory-source-history"
+COGNITIVE_RECOVERY_SCHEMA_VERSION = 1
+_COGNITIVE_RECOVERY_KEYS = {"format", "schema_version", "engine", "source_monitoring"}
+
+
+def _decode_cognitive_recovery_document(
+    engine_type: Type[ConsolidationEngine],
+    guard_type: Type[Any],
+    document: Any,
+    *,
+    allowlisted_tools: set[str],
+) -> tuple[ConsolidationEngine, Any]:
+    from .source_monitoring import SourceMonitoringGuard
+    from .source_monitoring_snapshot import decode_source_monitoring_data
+
+    if guard_type is not SourceMonitoringGuard:
+        _reject("HOLD_INVALID_SOURCE_MONITORING_TYPE")
+    top = _require_object(document, "ROOT", _COGNITIVE_RECOVERY_KEYS)
+    if top["format"] != COGNITIVE_RECOVERY_FORMAT:
+        _reject("HOLD_UNSUPPORTED_SNAPSHOT_FORMAT")
+    if type(top["schema_version"]) is not int:
+        _reject("HOLD_INVALID_SNAPSHOT_VERSION")
+    if top["schema_version"] != COGNITIVE_RECOVERY_SCHEMA_VERSION:
+        _reject("HOLD_UNSUPPORTED_SNAPSHOT_VERSION")
+    engine_document = {
+        "format": SNAPSHOT_FORMAT,
+        "schema_version": SNAPSHOT_SCHEMA_VERSION,
+        "engine": top["engine"],
+    }
+    engine_candidate = _decode_document(engine_type, engine_document)
+    guard_candidate = decode_source_monitoring_data(
+        top["source_monitoring"], allowlisted_tools=allowlisted_tools
+    )
+    return engine_candidate, guard_candidate
+
+
+def encode_cognitive_memory_snapshot(
+    engine: ConsolidationEngine,
+    source_guard: Any,
+) -> bytes:
+    """Encode engine state and source history from one lock-consistent view."""
+    from .source_monitoring import SourceMonitoringGuard
+    from .source_monitoring_snapshot import encode_source_monitoring_data
+
+    if not isinstance(engine, ConsolidationEngine) or type(source_guard) is not SourceMonitoringGuard:
+        _reject("HOLD_INVALID_COGNITIVE_RECOVERY_STATE")
+    locks = sorted((engine._batch_lock, source_guard._lock), key=id)
+    with locks[0], locks[1]:
+        if engine._batch_running:
+            _reject("HOLD_SNAPSHOT_DURING_BATCH")
+        engine_document = _engine_to_document(engine)
+        document = {
+            "format": COGNITIVE_RECOVERY_FORMAT,
+            "schema_version": COGNITIVE_RECOVERY_SCHEMA_VERSION,
+            "engine": engine_document["engine"],
+            "source_monitoring": encode_source_monitoring_data(source_guard),
+        }
+        encoded = _canonical_json(document)
+        _check_json_budget(encoded)
+        parsed, _ = _validated_document(encoded, hashlib.sha256(encoded).hexdigest())
+        _decode_cognitive_recovery_document(
+            type(engine), type(source_guard), parsed,
+            allowlisted_tools=set(source_guard._allowlisted_tools),
+        )
+        return encoded
+
+
+def decode_cognitive_memory_snapshot(
+    engine_type: Type[ConsolidationEngine],
+    snapshot: bytes,
+    *,
+    expected_sha256: str,
+    allowlisted_tools: set[str],
+) -> tuple[ConsolidationEngine, Any]:
+    """Validate a combined snapshot and return new, inactive candidates."""
+    from .source_monitoring import SourceMonitoringGuard
+
+    if type(allowlisted_tools) is not set:
+        _reject("HOLD_INVALID_SOURCE_TOOL_ALLOWLIST")
+    document, _ = _validated_document(snapshot, expected_sha256)
+    return _decode_cognitive_recovery_document(
+        engine_type, SourceMonitoringGuard, document,
+        allowlisted_tools=allowlisted_tools,
+    )
+
+
+def restore_cognitive_memory_snapshot(
+    engine: ConsolidationEngine,
+    source_guard: Any,
+    snapshot: bytes,
+    *,
+    expected_sha256: str,
+) -> None:
+    """Install both validated candidates while holding both state locks."""
+    from .source_monitoring import SourceMonitoringGuard
+
+    if not isinstance(engine, ConsolidationEngine) or type(source_guard) is not SourceMonitoringGuard:
+        _reject("HOLD_INVALID_COGNITIVE_RECOVERY_STATE")
+    with source_guard._lock:
+        caller_allowlist = set(source_guard._allowlisted_tools)
+    engine_candidate, guard_candidate = decode_cognitive_memory_snapshot(
+        type(engine), snapshot,
+        expected_sha256=expected_sha256,
+        allowlisted_tools=caller_allowlist,
+    )
+    engine_replacement = engine_candidate.__dict__.copy()
+    engine_replacement["_batch_lock"] = engine._batch_lock
+    engine_replacement["_batch_running"] = False
+    engine_replacement.pop("_local", None)
+    locks = sorted((engine._batch_lock, source_guard._lock), key=id)
+    with locks[0], locks[1]:
+        local = engine.__dict__.get("_local")
+        if engine._batch_running or getattr(local, "materializing", False):
+            _reject("HOLD_REENTRANT_SNAPSHOT_RESTORE")
+        if local is not None:
+            engine_replacement["_local"] = local
+        guard_replacement = guard_candidate.__dict__.copy()
+        guard_replacement["_lock"] = source_guard._lock
+        guard_replacement["_allowlisted_tools"] = source_guard._allowlisted_tools
+        guard_replacement["_active_verified_ids"] = set()
+        engine.__dict__ = engine_replacement
+        source_guard.__dict__ = guard_replacement
+
+
+def write_cognitive_memory_snapshot(
+    engine: ConsolidationEngine,
+    source_guard: Any,
+    path: str | os.PathLike[str],
+) -> str:
+    """Atomically persist a combined snapshot and return its retained digest."""
+    return _write_atomic_payload(encode_cognitive_memory_snapshot(engine, source_guard), path)
+
+
+def restore_cognitive_memory_snapshot_file(
+    engine: ConsolidationEngine,
+    source_guard: Any,
+    path: str | os.PathLike[str],
+    *,
+    expected_sha256: str,
+) -> None:
+    """Read a bounded regular file, then atomically install both state objects."""
+    target = Path(path)
+    try:
+        metadata = target.stat()
+        if not stat.S_ISREG(metadata.st_mode):
+            _reject("HOLD_SNAPSHOT_NOT_REGULAR_FILE")
+        if metadata.st_size > MAX_SNAPSHOT_BYTES:
+            _reject("HOLD_SNAPSHOT_BYTES_TOO_LARGE")
+        with target.open("rb") as stream:
+            raw = stream.read(MAX_SNAPSHOT_BYTES + 1)
+    except SnapshotRecoveryError:
+        raise
+    except OSError as exc:
+        raise SnapshotRecoveryError("HOLD_SNAPSHOT_READ_FAILED") from exc
+    if len(raw) > MAX_SNAPSHOT_BYTES:
+        _reject("HOLD_SNAPSHOT_BYTES_TOO_LARGE")
+    restore_cognitive_memory_snapshot(
+        engine, source_guard, raw, expected_sha256=expected_sha256
+    )
