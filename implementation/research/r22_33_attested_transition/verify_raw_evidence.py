@@ -381,6 +381,11 @@ def verify_bundle(root: Path, challenge: dict[str, Any], now: int) -> tuple[dict
     if len(ak_qualified_name) != 34 or ak_qualified_name[:2] != b"\x00\x0b":
         reject("AK_QUALIFIED_NAME_FORMAT_INVALID")
 
+    activation_result = (root / "ak-activation-result.bin").read_bytes()
+    activation_result_sha256 = sha256(activation_result)
+    if len(activation_result) != 32 or activation_result_sha256 != challenge["ak_activation_secret_sha256"]:
+        reject("AK_EK_ACTIVATION_RESULT_DOES_NOT_MATCH_SIGNED_CHALLENGE")
+
     storage_public_area = (root / "storage-public-area.tpmt").read_bytes()
     storage_name = (root / "storage-name.bin").read_bytes()
     gate.validate_tpm_public_area(storage_public_area, storage_name, "storage")
@@ -497,6 +502,7 @@ def verify_bundle(root: Path, challenge: dict[str, Any], now: int) -> tuple[dict
         "pcr_value_sha256": pcr_digest_sha256,
         "creation_hash_sha256": sha256(creation_hash),
         "ak_qualified_name_sha256": sha256(ak_qualified_name),
+        "ak_activation_result_sha256": activation_result_sha256,
         "nv_index_name_sha256": sha256(nv_index_name),
         "nv_public_area_sha256": sha256(nv_public_area),
         "nv_contents_sha256": sha256(nv_contents),
@@ -530,6 +536,8 @@ def verify_bundle(root: Path, challenge: dict[str, Any], now: int) -> tuple[dict
         "ak_public_area_tpmt_b64": b64(ak_public_area),
         "ak_qualified_name_b64": b64(ak_qualified_name),
         "ak_qualified_name_sha256": sha256(ak_qualified_name),
+        "ak_activation_secret_sha256": challenge["ak_activation_secret_sha256"],
+        "ak_activation_result_sha256": activation_result_sha256,
         "nv_index_handle": nv_index_handle,
         "nv_name_alg": NV_NAME_ALG,
         "nv_attributes": nv_attributes,
@@ -566,6 +574,7 @@ def verify_bundle(root: Path, challenge: dict[str, Any], now: int) -> tuple[dict
         "ek_spki": ek_spki,
         "ak_spki": ak_spki,
         "ak_public_area": ak_public_area,
+        "ak_activation_result": activation_result,
         "storage_public_area": storage_public_area,
         "storage_name": storage_name,
         "nv_index_name": nv_index_name,
