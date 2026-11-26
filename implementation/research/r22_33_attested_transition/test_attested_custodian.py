@@ -112,6 +112,7 @@ class AttestedCustodianTests(unittest.TestCase):
         self.next_head = digest(b"next-head")
         self.challenge_path = self.root / "challenge.json"
         self.challenge_sig_path = self.root / "challenge.sig"
+        self.activation_secret_sha256 = digest(b"synthetic one-time AK activation secret")
         result = subprocess.run([
             sys.executable, str(ISSUER),
             "--anchor", str(self.anchor_path),
@@ -123,6 +124,7 @@ class AttestedCustodianTests(unittest.TestCase):
             "--output", str(self.challenge_path),
             "--signature", str(self.challenge_sig_path),
             "--next-head-sha256", self.next_head,
+            "--ak-activation-secret-sha256", self.activation_secret_sha256,
         ], text=True, capture_output=True, check=False)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.challenge = json.loads(self.challenge_path.read_text())
@@ -171,6 +173,7 @@ class AttestedCustodianTests(unittest.TestCase):
             "storage_public_area_sha256": digest(storage_public_area),
             "ak_public_area_sha256": digest(ak_public_area),
             "ak_qualified_name_sha256": digest(ak_qualified_name),
+            "ak_activation_result_sha256": self.challenge["ak_activation_secret_sha256"],
             "nv_index_name_sha256": digest(nv_index_name),
             "nv_public_area_sha256": digest(nv_public_area),
             "nv_contents_sha256": digest(nv_contents),
@@ -210,6 +213,8 @@ class AttestedCustodianTests(unittest.TestCase):
             "ak_public_sha256": digest(self.ak_spki),
             "ak_qualified_name_b64": b64(ak_qualified_name),
             "ak_qualified_name_sha256": digest(ak_qualified_name),
+            "ak_activation_secret_sha256": self.challenge["ak_activation_secret_sha256"],
+            "ak_activation_result_sha256": self.challenge["ak_activation_secret_sha256"],
             "nv_index_handle": nv_index_handle,
             "nv_name_alg": nv_name_alg,
             "nv_attributes": nv_attributes,
@@ -627,6 +632,17 @@ class AttestedCustodianTests(unittest.TestCase):
         result, *_ = self.invoke(request, suffix="nv-offset-float")
         self.assert_rejected_without_commit(result, "REJECT ATTESTATION_NV_OFFSET_INVALID")
 
+    def test_ak_ek_activation_result_must_match_the_signed_challenge(self):
+        def mutate(receipt):
+            receipt["ak_activation_result_sha256"] = "0" * 64
+            receipt["evidence_manifest"]["ak_activation_result_sha256"] = "0" * 64
+            receipt["evidence_bundle_sha256"] = digest(canonical(receipt["evidence_manifest"]))
+        request = self.make_request(receipt=self.make_receipt(change=mutate))
+        result, *_ = self.invoke(request, suffix="ak-ek-activation-result-mismatch")
+        self.assert_rejected_without_commit(
+            result, "REJECT ATTESTATION_AK_EK_ACTIVATION_RESULT_MISMATCH"
+        )
+
     def test_expired_attestation_receipt_is_rejected(self):
         def mutate(receipt):
             receipt["issued_at"] = int(time.time()) - 400
@@ -725,6 +741,7 @@ class ChallengeIssuerTests(unittest.TestCase):
                 "--output", str(challenge_path),
                 "--signature", str(signature_path),
                 "--next-head-sha256", next_head,
+                "--ak-activation-secret-sha256", digest(b"issuer test activation secret"),
                 "--ttl-seconds", "90",
             ], text=True, capture_output=True, check=False)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
