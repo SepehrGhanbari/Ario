@@ -276,6 +276,13 @@ func Recover(ctx context.Context, scope, keyID string, public ed25519.PublicKey,
 	}
 	if err := verifyReceipt(latest, scope, keyID, public); err != nil { return out, err }
 	if prior != nil {
+		if prior.Generation == 0 || prior.Generation > uint64(len(chain)) {
+			return out, fmt.Errorf("%w: caller floor is beyond witnessed chain", ErrHold)
+		}
+		priorHash, err := receiptHash(chain[prior.Generation-1])
+		if err != nil || priorHash != prior.ReceiptSHA256 {
+			return out, fmt.Errorf("%w: witnessed chain forks below caller's retained floor", ErrHold)
+		}
 		if latest.Generation < prior.Generation ||
 			(latest.Generation == prior.Generation && latestHash != prior.ReceiptSHA256) {
 			return out, fmt.Errorf("%w: below caller's retained floor", ErrHold)
