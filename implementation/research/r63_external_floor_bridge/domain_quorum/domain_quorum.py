@@ -5,6 +5,7 @@ signature, freshness, persistence, continuity or external-custody verification.
 """
 from __future__ import annotations
 from dataclasses import dataclass
+from itertools import combinations
 from typing import Iterable, Mapping, Sequence
 
 REQUIRED_DOMAINS = ("operator", "admin", "key_custody", "state_backup")
@@ -43,6 +44,15 @@ class QuorumPolicy:
     expected_sequence: int = 11
 
 @dataclass(frozen=True)
+class QuorumDomainProfile:
+    witness_count: int
+    threshold: int
+    minimum_domains_per_quorum: int
+    minimum_domain_intersection: int
+    minimum_quorum_example: tuple[str, ...]
+    intersection_example: tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...]]
+
+@dataclass(frozen=True)
 class Decision:
     accepted: bool
     status: str
@@ -59,6 +69,36 @@ def quorum_intersection_holds(n_domains: int, read_q: int, write_q: int,
     if read_q > n_domains or write_q > n_domains:
         return False
     return read_q + write_q > n_domains + max_faulty_domains
+
+def weighted_quorum_domain_profile(witness_domains: Mapping[str, str],
+                                   threshold: int) -> QuorumDomainProfile:
+    """Audit a key-weighted quorum after collapsing keys to failure domains.
+
+    Returns the minimum number of domains in any threshold-sized quorum and
+    the minimum domain intersection between any two threshold-sized quorums.
+    This is policy arithmetic only; it does not verify the supplied mapping.
+    """
+    ids = tuple(sorted(witness_domains))
+    if not ids or len(ids) > 12 or threshold < 1 or threshold > len(ids):
+        raise ValueError("invalid witness roster or threshold")
+    subsets = [tuple(c) for c in combinations(ids, threshold)]
+    domain_sets = [frozenset(witness_domains[w] for w in subset) for subset in subsets]
+    minimum_domains = min(len(s) for s in domain_sets)
+    q_index = next(i for i, s in enumerate(domain_sets) if len(s) == minimum_domains)
+    minimum_intersection = len(ids) + 1
+    pair = (0, 0)
+    for i, left in enumerate(domain_sets):
+        for j in range(i, len(domain_sets)):
+            size = len(left & domain_sets[j])
+            if size < minimum_intersection:
+                minimum_intersection = size
+                pair = (i, j)
+    left_ids, right_ids = subsets[pair[0]], subsets[pair[1]]
+    shared = tuple(sorted(domain_sets[pair[0]] & domain_sets[pair[1]]))
+    return QuorumDomainProfile(
+        len(ids), threshold, minimum_domains, minimum_intersection,
+        subsets[q_index], (left_ids, right_ids, shared)
+    )
 
 def validate_policy(policy: QuorumPolicy) -> tuple[str, ...]:
     errors = []
