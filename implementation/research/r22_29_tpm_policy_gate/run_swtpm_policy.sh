@@ -53,8 +53,12 @@ tpm2_create -C 0x81000001 -G ecc -g sha256 -L key-auth.policy \
   -a "fixedtpm|fixedparent|sensitivedataorigin|sign|noda" \
   -u signer.public -r signer.private >/dev/null
 tpm2_load -C 0x81000001 -u signer.public -r signer.private -c signer.ctx >/dev/null
+tpm2_evictcontrol -C o -c signer.ctx 0x81000002 >/dev/null
+tpm2_flushcontext -t >/dev/null
 tpm2_loadexternal -C o -G rsa -u policy-authority.public.pem -c policy-authority.ctx -n policy-authority.name >/dev/null
-tpm2_readpublic -c signer.ctx -f tss -o signer.public >/dev/null
+tpm2_evictcontrol -C o -c policy-authority.ctx 0x81000003 >/dev/null
+tpm2_flushcontext -t >/dev/null
+tpm2_readpublic -c 0x81000002 -f tss -o signer.public >/dev/null
 tpm2_print -t TPM2B_PUBLIC signer.public > signer-public.yaml
 grep -Eiq 'fixedtpm' signer-public.yaml || fail "fixedTPM attribute missing"
 grep -Eiq 'fixedparent' signer-public.yaml || fail "fixedParent attribute missing"
@@ -67,14 +71,14 @@ pass "TPM monotonic NV counter initialized"
 
 make_authorization(){
   local message="$1" counter="$2" tag="$3"
-  tpm2_sign --cphash "$tag.cphash" -c signer.ctx -g sha256 "$message" >/dev/null
+  tpm2_sign --cphash "$tag.cphash" -c 0x81000002 -g sha256 "$message" >/dev/null
   tpm2_startauthsession -S "$tag.trial.ctx" >/dev/null
   tpm2_policycommandcode -S "$tag.trial.ctx" TPM2_CC_Sign >/dev/null
   tpm2_policynv -S "$tag.trial.ctx" -C o "$NV" eq -i "$counter" >/dev/null
   tpm2_policycphash -S "$tag.trial.ctx" -L "$tag.approved.policy" --cphash "$tag.cphash" >/dev/null
   tpm2_flushcontext "$tag.trial.ctx" >/dev/null
   openssl dgst -sha256 -sign policy-authority.private.pem -out "$tag.approved.sig" "$tag.approved.policy" >/dev/null 2>&1
-  tpm2_verifysignature -c policy-authority.ctx -g sha256 -m "$tag.approved.policy" \
+  tpm2_verifysignature -c 0x81000003 -g sha256 -m "$tag.approved.policy" \
     -s "$tag.approved.sig" -t "$tag.ticket" -f rsassa >/dev/null
 }
 start_policy(){
@@ -88,9 +92,9 @@ start_policy(){
 }
 sign_authorized(){
   local tag="$1" message="$2"
-  tpm2_sign -c signer.ctx -g sha256 -o "$tag.signature" \
+  tpm2_sign -c 0x81000002 -g sha256 -o "$tag.signature" \
     -p "session:$tag.session.ctx" "$message" >/dev/null
-  tpm2_verifysignature -c signer.ctx -g sha256 -m "$message" -s "$tag.signature" >/dev/null
+  tpm2_verifysignature -c 0x81000002 -g sha256 -m "$message" -s "$tag.signature" >/dev/null
   tpm2_flushcontext "$tag.session.ctx" >/dev/null
 }
 
@@ -99,7 +103,7 @@ printf 'Ario conflicting commitment B — generation 1\n' > message-b.bin
 printf 'Ario commitment C — generation 2\n' > message-c.bin
 
 expect_fail "raw TPM sign without policy session" tpm2_sign -c signer.ctx -g sha256 -o raw.signature message-a.bin
-expect_fail "fixed TPM object duplication blocked" tpm2_duplicate -C 0x81000001 -c signer.ctx -G null -r duplicate.private -s duplicate.seed
+expect_fail "fixed TPM object duplication blocked" tpm2_duplicate -C 0x81000001 -c 0x81000002 -G null -r duplicate.private -s duplicate.seed
 
 # Authorize A only for the current NV counter and exact TPM2_Sign cpHash.
 make_authorization message-a.bin counter-1.bin a
