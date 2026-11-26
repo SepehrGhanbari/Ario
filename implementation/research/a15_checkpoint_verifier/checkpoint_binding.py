@@ -23,7 +23,7 @@ class AdapterHold(ValueError):
     """Fail-closed result: no checkpoint should be published."""
 
 
-def canonical(value):
+def canonical_ascii(value):
     """Canonical ASCII JSON for the new envelope (not the Broker's row JSON)."""
     return json.dumps(
         value, ensure_ascii=True, sort_keys=True, separators=(",", ":"),
@@ -62,7 +62,7 @@ def check(ok, why):
     if not ok: raise ValueError(why)
 def sha(raw): return hashlib.sha256(raw).hexdigest()
 def checksum(raw): return sha(hashlib.sha256(raw).digest())
-def canonical(obj): return (canonical(obj)+"\n").encode("ascii")
+def canonical(obj): return (canonical_ascii(obj)+"\n").encode("ascii")
 def parse_json(raw, limit=16384):
     check(type(raw) is bytes and 0 < len(raw) <= limit, "bounded input")
     x=_parse_json(raw)
@@ -74,7 +74,7 @@ def parse_checkpoint(raw):
     check(set(x)==ENVELOPE_KEYS,"checkpoint envelope")
     p=x["payload"]
     check(type(p) is dict and set(p)==PAYLOAD_KEYS,"checkpoint payload")
-    check(x["payload_sha256"]==sha(canonical(p).encode("ascii")),"payload digest")
+    check(x["payload_sha256"]==sha(canonical_ascii(p).encode("ascii")),"payload digest")
     check(p["format"]==FORMAT and p["domain"]==DOMAIN and p["broker_source"]==SOURCE,"source/domain")
     check(type(p["journal_scope"]) is str and re.fullmatch("A15_SYNTH_[0-9A-F]{32}",p["journal_scope"]),"synthetic scope")
     h=p["broker_head"]
