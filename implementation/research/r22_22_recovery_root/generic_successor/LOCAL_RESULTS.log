@@ -1,17 +1,29 @@
-01_real_archived_proofs_and_link PASS
-02_old_replay PASS
-03_reverse PASS
-04_bad_nostr_sig PASS
-05_old_proof_substitution PASS
-06_tampered_merkle PASS
-07_repacked_unpinned_candidate PASS
-08_synthetic_8_to_10_semantics PASS
-09_synthetic_8_to_11_semantics PASS
-10_wrong_predecessor PASS
-11_wrong_scope PASS
-12_wrong_previous_ledger PASS
-13_wrong_previous_envelope PASS
-14_wrong_prior_anchor PASS
-15_wrong_signer PASS
-16_no_authority PASS
-16/16 EXPECTED CONTROLS PASS; SYNTHETIC_8_TO_10_SEMANTICS_ONLY; NO_ADMISSION
+{"admission": false, "global_latest": "UNKNOWN", "ledger_sha256": "2f4dc31993e113e884ebdc0befd6b7e7a21b28282093b32e35f68531bcf0faa0", "new_index": 281663, "new_seq": 8, "old_index": 281662, "old_seq": 6, "prepare": "LINKED_SUCCESSOR_RESEARCH_ONLY", "sampled_tree_root": "6fc23c04551978f621c024464fe87d56de2166d03abed480f853b9fa49057ded", "sampled_tree_size": 282806}
+01_publisher_cannot_commit PASS
+02_publisher_read_write_delete_denied PASS
+03_wrong_expected_hash PASS
+04_wrong_floor_bytes PASS
+05_forged_prepared_object PASS
+06_expired_validation PASS
+07_pending_conflict PASS
+08_floor_symlink PASS
+09_lock_symlink PASS
+10_exact_validated_advance PASS
+11_exact_candidate_bytes_retained PASS
+12_retry_is_idempotent_hold PASS
+13_crash_before_replace_exit PASS
+14_crash_before_keeps_old_floor PASS
+15_crash_before_pending_exact PASS
+16_retry_recovers_pending PASS
+17_recovered_pending_floor PASS
+18_crash_after_replace_exit PASS
+19_crash_after_floor_is_new PASS
+20_retry_after_commit PASS
+21_concurrent_one_advance PASS
+22_concurrent_seven_idempotent_holds PASS
+23_concurrent_final_bytes PASS
+24_root_rollback_initial_advance PASS
+25_same_root_rollback_replay PASS
+26_candidate_path_changed_after_prepare PASS
+27_snapshot_committed_exact_bytes PASS
+27/27 EXPECTED CONTROLS PASS; SAME_ROOT_ROLLBACK=RED; GLOBAL_LATEST=UNKNOWN; TRUST=NO_GO; PRODUCTION=NO_GO

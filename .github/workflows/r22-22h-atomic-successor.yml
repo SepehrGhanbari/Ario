@@ -1,0 +1,70 @@
+name: R22.22H atomic verified successor (advisory)
+on:
+  push:
+    branches: [research/r22-22-independent-recovery-root-20261125]
+    paths:
+      - .github/workflows/r22-22h-atomic-successor.yml
+      - implementation/research/r22_22_recovery_root/generic_successor/**
+permissions:
+  contents: read
+  actions: read
+jobs:
+  atomic-successor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - name: Fetch exact retained anchor and unpinned candidate (read only)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15047051021/zip" > "$RUNNER_TEMP/anchor.zip"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15045299282/zip" > "$RUNNER_TEMP/candidate.zip"
+          echo "2bedc6d0cc85857cfaed3ceafeb5d7700d78923057e661d9c5675d6925e6262b  $RUNNER_TEMP/anchor.zip" | sha256sum -c -
+          sha256sum "$RUNNER_TEMP/candidate.zip" | tee "$RUNNER_TEMP/candidate.sha256"
+          python -m pip install --target "$RUNNER_TEMP/pydeps" coincurve==21.0.0
+          go install sigsum.org/sigsum-go/cmd/sigsum-verify@v0.14.1
+      - name: Build pinned-policy live Sigsum consistency verifier
+        run: |
+          set -euo pipefail
+          BASE=implementation/research/r22_22_recovery_root
+          test "$(git hash-object "$BASE/generic_successor/main.go")" = 0fae7bef890b13f18616aa8dfa258a13c905ab45
+          test "$(git hash-object "$BASE/generic_successor/go.mod")" = b49eeea0e7a303278b2316c68641ad505dfcd5c9
+          mkdir "$RUNNER_TEMP/live-go"
+          cp "$BASE/generic_successor/main.go" "$BASE/generic_successor/go.mod" "$RUNNER_TEMP/live-go/"
+          (cd "$RUNNER_TEMP/live-go"; go mod tidy; go build -o "$RUNNER_TEMP/live" .)
+      - name: Validate exact successor snapshot and atomically exercise CAS
+        run: |
+          set -euo pipefail
+          BASE=implementation/research/r22_22_recovery_root
+          G="$BASE/generic_successor"
+          H="$G/atomic_successor.py"
+          test "$(git hash-object "$H")" = 8e51ee8f4601341bb1000a069cefe26d0d1f782f
+          test "$(git hash-object "$G/successor.py")" = 6ca081e0aec9a748dcf9318ce1bc0d3f51caed14
+          test "$(git hash-object "$G/event_codec.py")" = 95a79184d33a81ffd75b2188f5041d7cef345868
+          sudo env PYTHONPATH="$RUNNER_TEMP/pydeps" "$(command -v python)" "$H" test "$RUNNER_TEMP/anchor.zip" "$RUNNER_TEMP/candidate.zip" "$(go env GOPATH)/bin/sigsum-verify" "$RUNNER_TEMP/live" | tee "$RUNNER_TEMP/atomic.log"
+          sed -n '/^01_publisher/,$p' "$RUNNER_TEMP/atomic.log" > "$RUNNER_TEMP/controls.log"
+          cmp "$RUNNER_TEMP/controls.log" "$G/LOCAL_CONTROL_RESULTS.log"
+          grep -F '27/27 EXPECTED CONTROLS PASS; SAME_ROOT_ROLLBACK=RED; GLOBAL_LATEST=UNKNOWN; TRUST=NO_GO; PRODUCTION=NO_GO' "$RUNNER_TEMP/atomic.log"
+          sed -n '1p' "$RUNNER_TEMP/atomic.log" > "$RUNNER_TEMP/live-result.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r22-22h-atomic-successor
+          path: |
+            ${{ runner.temp }}/atomic.log
+            ${{ runner.temp }}/controls.log
+            ${{ runner.temp }}/live-result.json
+            ${{ runner.temp }}/candidate.sha256
+          if-no-files-found: warn
+          retention-days: 30
