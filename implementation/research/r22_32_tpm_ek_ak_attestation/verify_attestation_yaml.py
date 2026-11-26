@@ -14,7 +14,7 @@ from pathlib import Path
 
 
 def scalar(document: str, key: str) -> str:
-    pattern = re.compile(rf"(?m)^\\s*{re.escape(key)}:\\s*(.*?)\\s*$")
+    pattern = re.compile(rf"(?m)^\s*{re.escape(key)}:\s*(.*?)\s*$")
     match = pattern.search(document)
     if not match:
         raise ValueError(f"missing field: {key}")
