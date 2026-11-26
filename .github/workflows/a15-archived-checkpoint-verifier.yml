@@ -1,0 +1,38 @@
+name: A15 archived checkpoint verification (synthetic)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'implementation/research/a15_checkpoint_verifier/**'
+      - 'implementation/tests/fixtures/a15_r22_run_45823494521/**'
+      - '.github/workflows/a15-archived-checkpoint-verifier.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install pinned verification tools
+        run: |
+          python -m pip install coincurve==21.0.0
+          go install sigsum.org/sigsum-go/cmd/sigsum-verify@v0.14.1
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - name: Verify archived checkpoints without live network queries
+        working-directory: implementation/research/a15_checkpoint_verifier
+        run: |
+          set -euo pipefail
+          go mod tidy
+          go test -v .
+          go run . --first-zip ../../tests/fixtures/a15_r22_run_45823494521/A15-FIRST-ONLY.zip --second-zip ../../tests/fixtures/a15_r22_run_45823494521/A15-SECOND-REVEAL-SYNTHETIC.zip
