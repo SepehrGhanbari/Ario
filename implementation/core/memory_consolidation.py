@@ -896,6 +896,12 @@ class ConsolidationEngine:
             return False
 
         node_id = self.compute_node_id(concept, assertion, version=self.node_id_version)
+        # A legacy delimiter collision (or a collision in a truncated digest)
+        # must never attach a different claim's source hash to this node.
+        # Keep the existing identifier and abort the entire incoming batch.
+        previous = self._nodes.get(node_id)
+        if previous is not None and (previous.concept, previous.assertion) != (concept, assertion):
+            raise ConsolidationError("HOLD_SEMANTIC_NODE_ID_COLLISION")
         if self.node_id_version == "v2":
             self._index_legacy_alias(self._legacy_aliases, concept, assertion, node_id)
 
