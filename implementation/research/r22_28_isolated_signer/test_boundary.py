@@ -26,7 +26,10 @@ s=socket.socket(socket.AF_UNIX);s.settimeout(4);s.connect(sys.argv[1])
 s.sendall(sys.stdin.buffer.read());s.shutdown(socket.SHUT_WR)
 out=b''
 while True:
- b=s.recv(8192)
+ try:b=s.recv(8192)
+ except ConnectionResetError:
+  if not out:sys.exit(5)
+  raise
  if not b:break
  out+=b
 sys.stdout.buffer.write(out)
@@ -58,6 +61,9 @@ with tempfile.TemporaryDirectory(prefix="r22-28-",dir="/tmp") as tmp:
     def rpc(q,uid=P):
         b=raw(q) if isinstance(q,dict) else q
         r=proc([sys.executable,"-c",CLIENT,sock],uid,input=b)
+        if uid!=P and r.returncode==5 and not r.stdout:
+            print('UNAUTHORIZED_PEER_TRANSPORT_RESET_NO_RECEIPT',flush=True)
+            return {'Status':'HOLD','Receipt':None}
         if r.returncode!=0: raise RuntimeError(r.stderr)
         return json.loads(r.stdout)
     def request(prev,label):
