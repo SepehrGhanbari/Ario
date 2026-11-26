@@ -1057,11 +1057,29 @@ Related #379 A15 retained-range experiment covers a different set of three commi
 - Source/validation commit at log update time: pending final dedicated CI result. Tracking issue #410.
 - Final exact-source regression [run 45848502455](https://github.com/SepehrGhanbari/Ario/actions/runs/45848502455), source 540bd4f4962c7e0db94215373b871bcf40de59b2, SUCCESS: 8/8 tests on CPython 3.13.18 / OpenSSL 3.0.13. The eighth test extracted the exact embedded R22.30 gate and reproduced two distinct epoch-8 approvals from the same unchanged epoch-7 anchor. Seven v2 controls passed: one-winner state advancement, exact idempotent receipt, post-commit crash recovery, nonce conflict, tamper detection and concurrent single-winner behavior. The final source/documentation record is appended; earlier failed attempts remain visible and are not counted as passes. Storage-root provenance remains caller-supplied/unattested; same-runner key/journal remain non-independent.
 
+## 2026-11-26 — R22.31 valid-prefix journal rollback boundary
+
+- Re-read the exact R22.31 source, tests, README and evidence record before changing anything; reused open PR #411 rather than creating a duplicate experiment.
+- Tightened the README claim: byte-level record tampering and incomplete-final-record truncation are rejected; deletion of complete tail records / rollback to a valid earlier prefix is not detectable without an external retained floor.
+- Added `test_expected_red_valid_prefix_rollback_is_not_detected_without_external_floor`. It commits 7→8, removes the complete journal, then demonstrates that a distinct 7→8 request is accepted again from the unchanged signed epoch-7 anchor. This is an expected RED counterexample, not a security PASS.
+- Fixed the existing R22.31 workflow artifact path so the test log is actually uploaded.
+- Dedicated CI [run 45853039157](https://github.com/SepehrGhanbari/Ario/actions/runs/45853039157), exact head `19d78881138451a0b75404f96a0d78a8d3155034`, SUCCESS: 9 tests passed on CPython 3.13.18 / OpenSSL 3.0.13; artifact ID `15133349967` (543 bytes) uploaded.
+- Boundary remains explicit: this local prototype cannot prove rollback resistance against its own administrator. A genuine fix requires an authenticated, independently retained floor outside the runner's administrative domain; another same-domain file or synthetic local witness would not close it. No real key, TPM, trust activation, production, merge or prior evidence rewrite.
+
+
+## 2026-11-26 — R22.31 CLI path-alias data-loss fix
+
+- Re-read the current R22.31 source, tests, README and evidence record; reused existing PR #411 and its branch. No Sigsum or witness re-test was started.
+- Found a concrete destructive case: `--response` could alias `--journal`, causing the process to append a durable record and then replace the journal with the receipt. Other aliases could overwrite the signed anchor or response bytes.
+- Added a pre-I/O path distinctness guard for all nine CLI paths. It detects normalized/symlink aliases with `Path.resolve(strict=False)` and existing hard-link aliases with `os.path.samefile`. The guard is explicitly not a defense against a hostile concurrent filesystem race.
+- Added three regressions: response-to-journal, response-signature-to-anchor, and response/response-signature collision. All reject before mutation.
+- Dedicated CI [run 45853154583](https://github.com/SepehrGhanbari/Ario/actions/runs/45853154583), exact head `3eea8bcd642762912c4a3d4b00c1169275d4d0ad`, SUCCESS: 12/12 tests on CPython 3.13.18 / OpenSSL 3.0.13. The count includes the exact-source R22.30 reproduction and expected-RED valid-prefix rollback control; these are reproduced weaknesses, not security passes.
+- No Sigsum call, external witness, real key, TPM, trust activation, production promotion, or merge.
 
 ## 2026-11-26 — R22.32 TPM EK/AK binding, CertifyCreation and PCR Quote (RESEARCH_ONLY)
 
-- Stacked branch `research/r22-32-tpm-ek-ak-attestation-stacked-2026-11-26` on the latest R22.31 PR #411 head `19d78881138451a0b75404f96a0d78a8d3155034`; compare confirms 5 files ahead, 0 behind. No R22.31 files were changed.
-- Dedicated exact-head CI [run 45853404250](https://github.com/SepehrGhanbari/Ario/actions/runs/45853404250), source `7e91aabf4d6bd3763027fead94ee7188b82087e1`, SUCCESS: **24/24 PASS**. Implementation Regression [run 45853404032](https://github.com/SepehrGhanbari/Ario/actions/runs/45853404032) also succeeded on that SHA.
+- Stacked branch `research/r22-32-tpm-ek-ak-attestation-stacked-2026-11-26` on the latest R22.31 PR #411 head `f83e8b3948045a426b89ac22404148f85cea9ccc`; the feature branch was updated with a merge commit and now has that base as an ancestor. No R22.31 files were changed.
+- Pre-rebase exact-head CI [run 45853404250](https://github.com/SepehrGhanbari/Ario/actions/runs/45853404250), source `7e91aabf4d6bd3763027fead94ee7188b82087e1`, SUCCESS: **24/24 PASS**. A fresh exact-head run after updating to the latest R22.31 parent is pending. Implementation Regression [run 45853404032](https://github.com/SepehrGhanbari/Ario/actions/runs/45853404032) also succeeded on that SHA.
 - Environment: Ubuntu 24.04.5; tpm2-tools 5.6-1build4; swtpm 0.7.3-0ubuntu5.24.04.1; OpenSSL 3.0.13.
 - Tested synthetic EK X.509 path validation and SPKI binding; wrong-root rejection; AK-to-EK MakeCredential/ActivateCredential; cross-simulator credential rejection; TPM Name recomputation from TPMT_PUBLIC and mutation rejection; nonce-bound TPM2_CertifyCreation with signature/object Name/creation-hash validation; PCR 23 recomputation and Quote signature/nonce/selection verification; wrong nonce, wrong AK, tampered signature, substituted storage object, and post-quote PCR-change rejection.
 - Tool-version correction: Ubuntu's tpm2-tools 5.6 `tpm2_certify` does not expose qualifyingData, and `tpm2_print` cannot render the Creation attestation type. The harness uses TPM2_CertifyCreation with a fresh challenge and a direct binary TPMS_ATTEST parser. This is not claimed equivalent to TPM2_Certify; the storage object's Qualified Name is captured but is not claimed to be signed in the Creation attestation.

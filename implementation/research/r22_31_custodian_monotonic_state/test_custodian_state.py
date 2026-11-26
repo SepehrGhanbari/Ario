@@ -67,10 +67,11 @@ class CustodianStateTests(unittest.TestCase):
             "nonce": nonce,
         }
 
-    def invoke(self, request, *, extra=(), suffix="default"):
+    def invoke(self, request, *, extra=(), suffix="default",
+               response_path_override=None, response_sig_path_override=None):
         req_path = self.root / f"request-{suffix}.json"
-        response = self.root / f"response-{suffix}.json"
-        response_sig = self.root / f"response-{suffix}.sig"
+        response = Path(response_path_override) if response_path_override is not None else self.root / f"response-{suffix}.json"
+        response_sig = Path(response_sig_path_override) if response_sig_path_override is not None else self.root / f"response-{suffix}.sig"
         req_path.write_bytes(canonical(request))
         cmd = [
             sys.executable, str(GATE),
@@ -185,6 +186,39 @@ class CustodianStateTests(unittest.TestCase):
         second, _, _ = self.invoke(second_request, suffix="after-tamper")
         self.assertEqual(second.returncode, 3)
         self.assertIn("REJECT JOURNAL_RECORD_HASH_MISMATCH", second.stdout)
+
+
+    def test_response_path_aliasing_journal_is_rejected_before_commit(self):
+        result, _, _ = self.invoke(
+            self.request(), suffix="journal-alias",
+            response_path_override=self.journal,
+        )
+        self.assertEqual(result.returncode, 3, result.stdout + result.stderr)
+        self.assertIn("REJECT PATH_ALIAS:journal:response", result.stdout)
+        self.assertFalse(self.journal.exists())
+
+    def test_response_signature_path_aliasing_anchor_is_rejected(self):
+        anchor_before = self.anchor_path.read_bytes()
+        result, _, _ = self.invoke(
+            self.request(), suffix="anchor-alias",
+            response_sig_path_override=self.anchor_path,
+        )
+        self.assertEqual(result.returncode, 3, result.stdout + result.stderr)
+        self.assertIn("REJECT PATH_ALIAS:anchor:response_signature", result.stdout)
+        self.assertEqual(self.anchor_path.read_bytes(), anchor_before)
+        self.assertFalse(self.journal.exists())
+
+    def test_response_and_signature_outputs_must_be_distinct(self):
+        same_output = self.root / "same-output.bin"
+        result, _, _ = self.invoke(
+            self.request(), suffix="same-output",
+            response_path_override=same_output,
+            response_sig_path_override=same_output,
+        )
+        self.assertEqual(result.returncode, 3, result.stdout + result.stderr)
+        self.assertIn("REJECT PATH_ALIAS:response:response_signature", result.stdout)
+        self.assertFalse(self.journal.exists())
+        self.assertFalse(same_output.exists())
 
     def test_concurrent_distinct_requests_only_one_epoch_transition_wins(self):
         processes = []

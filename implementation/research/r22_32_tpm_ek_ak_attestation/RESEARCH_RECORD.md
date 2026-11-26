@@ -2,7 +2,7 @@
 
 **RESEARCH_ONLY / SOFTWARE_TPM / SYNTHETIC_LAB_CA / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTION / NO_MERGE.**
 
-Parent: R22.31 PR #411, exact head `19d78881138451a0b75404f96a0d78a8d3155034`.
+Parent: R22.31 PR #411, exact head `f83e8b3948045a426b89ac22404148f85cea9ccc`.
 
 ## Research question
 
@@ -70,7 +70,7 @@ The script reads PCR values after the quote and checks them against the quote di
 
 ## Execution status
 
-Dedicated exact-head CI [run 45853404250](https://github.com/SepehrGhanbari/Ario/actions/runs/45853404250), source commit `7e91aabf4d6bd3763027fead94ee7188b82087e1`, **SUCCESS: 24/24 PASS**.
+Pre-rebase exact-head CI [run 45853404250](https://github.com/SepehrGhanbari/Ario/actions/runs/45853404250), source commit `7e91aabf4d6bd3763027fead94ee7188b82087e1`, **SUCCESS: 24/24 PASS**. A fresh exact-head run after updating to the latest R22.31 parent is pending.
 
 Environment: tpm2-tools 5.6-1build4, swtpm 0.7.3-0ubuntu5.24.04.1, OpenSSL 3.0.13, Ubuntu 24.04.5. Repository Implementation Regression [run 45853404032](https://github.com/SepehrGhanbari/Ario/actions/runs/45853404032) also succeeded on the same source SHA.
 
