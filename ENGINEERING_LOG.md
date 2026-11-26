@@ -1075,3 +1075,14 @@ Related #379 A15 retained-range experiment covers a different set of three commi
 - Added three regressions: response-to-journal, response-signature-to-anchor, and response/response-signature collision. All reject before mutation.
 - Dedicated CI [run 45853154583](https://github.com/SepehrGhanbari/Ario/actions/runs/45853154583), exact head `3eea8bcd642762912c4a3d4b00c1169275d4d0ad`, SUCCESS: 12/12 tests on CPython 3.13.18 / OpenSSL 3.0.13. The count includes the exact-source R22.30 reproduction and expected-RED valid-prefix rollback control; these are reproduced weaknesses, not security passes.
 - No Sigsum call, external witness, real key, TPM, trust activation, production promotion, or merge.
+
+
+## 2026-11-26 — R22.31 strict JSON ledger parsing and sequence typing
+
+- Re-read the current branch source and test harness; retained the existing PR #411 and made no main-branch changes.
+- Found that duplicate JSON object keys were silently accepted, journal JSONL records were not required to be canonical after parsing, and a float `8.0` could compare equal to integer sequence `8`.
+- Added duplicate-key rejection for anchors, requests and journal records; canonical-byte enforcement for signed anchors; canonical single-line JSONL enforcement for journal records; and explicit integer-only sequence validation.
+- Added six regressions: duplicate key in anchor, request and journal; noncanonical signed anchor and journal record; and float sequence with a recomputed valid record hash.
+- Dedicated CI [run 45854444069](https://github.com/SepehrGhanbari/Ario/actions/runs/45854444069), exact head `0229727e6b297a1fd13e598f79940c32c2524ca0`, SUCCESS: 18/18 tests on CPython 3.13.18 / OpenSSL 3.0.13. Artifact ID `15135810639` (702 bytes).
+- Earlier intermediate CI failures were preserved in Actions history; the final tested head is green. Same-domain valid-prefix rollback remains an expected RED and still requires an independently retained authenticated floor.
+- No Sigsum call, new witness, external publication, real key, TPM, trust activation, production promotion, or merge.
