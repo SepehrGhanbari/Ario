@@ -42,9 +42,10 @@ PIN_FIELDS = {"format", "attestation_verifier_spki_sha256", "policy_id"}
 RECEIPT_FIELDS = {
     "format", "decision", "challenge_sha256", "challenge_nonce",
     "device_ek_sha256", "ek_spki_der_b64", "storage_name_b64",
-    "storage_root_sha256", "previous_storage_root_sha256",
+    "storage_public_area_tpmt_b64", "storage_root_sha256", "previous_storage_root_sha256",
     "previous_epoch", "next_epoch", "previous_head_sha256", "next_head_sha256",
     "ak_name_b64", "ak_name_sha256", "ak_public_spki_der_b64", "ak_public_sha256",
+    "ak_public_area_tpmt_b64",
     "quote_attestation_sha256", "quote_signature_sha256",
     "creation_attestation_sha256", "creation_signature_sha256",
     "pcr_selection", "pcr_digest_sha256", "evidence_manifest",
@@ -54,7 +55,8 @@ RECEIPT_FIELDS = {
 MANIFEST_FIELDS = {
     "ek_certificate_sha256", "ek_spki_sha256",
     "ak_name_sha256", "ak_public_sha256",
-    "storage_name_sha256", "creation_attestation_sha256",
+    "storage_name_sha256", "storage_public_area_sha256", "ak_public_area_sha256",
+    "creation_attestation_sha256",
     "creation_signature_sha256", "quote_attestation_sha256",
     "quote_signature_sha256", "pcr_value_sha256", "creation_hash_sha256",
 }
@@ -97,6 +99,45 @@ def spki_der(public_key: Path) -> bytes:
     if proc.returncode != 0 or not proc.stdout:
         fail("PUBLIC_KEY_PARSE_FAILED")
     return proc.stdout
+
+def private_spki_der(private_key: Path) -> bytes:
+    proc = subprocess.run(
+        ["openssl", "pkey", "-in", str(private_key), "-pubout", "-outform", "DER"],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+    )
+    if proc.returncode != 0 or not proc.stdout:
+        fail("PRIVATE_KEY_PARSE_FAILED")
+    return proc.stdout
+
+
+def validate_custodian_keypair(public_key: Path, private_key: Path) -> None:
+    if spki_der(public_key) != private_spki_der(private_key):
+        fail("CUSTODIAN_KEYPAIR_MISMATCH")
+
+
+def validate_tpm_public_area(public_area: bytes, name: bytes, object_kind: str) -> None:
+    if len(public_area) < 8:
+        fail("ATTESTATION_" + object_kind.upper() + "_TPMT_TRUNCATED")
+    public_type = int.from_bytes(public_area[0:2], "big")
+    name_alg = int.from_bytes(public_area[2:4], "big")
+    attributes = int.from_bytes(public_area[4:8], "big")
+    if name_alg != 0x000B:
+        fail("ATTESTATION_" + object_kind.upper() + "_NAME_ALG_INVALID")
+    if object_kind == "storage":
+        if public_type != 0x0023:
+            fail("ATTESTATION_STORAGE_PUBLIC_TYPE_INVALID")
+        required = (1 << 1) | (1 << 4) | (1 << 5)
+    elif object_kind == "ak":
+        if public_type != 0x0001:
+            fail("ATTESTATION_AK_PUBLIC_TYPE_INVALID")
+        required = (1 << 1) | (1 << 4) | (1 << 5) | (1 << 16) | (1 << 18)
+    else:
+        fail("ATTESTATION_PUBLIC_KIND_INVALID")
+    if attributes & required != required:
+        fail("ATTESTATION_" + object_kind.upper() + "_ATTRIBUTES_INVALID")
+    expected_name = public_area[2:4] + hashlib.sha256(public_area).digest()
+    if name != expected_name:
+        fail("ATTESTATION_" + object_kind.upper() + "_TPM_NAME_MISMATCH")
 
 
 def verify_signature_bytes(public_key: Path, payload: bytes, signature: bytes) -> bool:
@@ -226,15 +267,21 @@ def validate_receipt(receipt: Any, signature_b64: Any, challenge: dict[str, Any]
         fail("ATTESTATION_EK_IDENTITY_MISMATCH")
 
     storage_name = decode_b64(receipt.get("storage_name_b64"), "ATTESTATION_STORAGE_NAME_INVALID")
+    storage_public_area = decode_b64(
+        receipt.get("storage_public_area_tpmt_b64"), "ATTESTATION_STORAGE_TPMT_INVALID"
+    )
     if len(storage_name) != 34 or storage_name[:2] != b"\x00\x0b":
         fail("ATTESTATION_STORAGE_NAME_FORMAT_INVALID")
+    validate_tpm_public_area(storage_public_area, storage_name, "storage")
     if sha256(storage_name) != receipt["storage_root_sha256"]:
         fail("ATTESTATION_STORAGE_ROOT_DERIVATION_MISMATCH")
     if receipt["previous_storage_root_sha256"] != challenge["previous_storage_root_sha256"]:
         fail("ATTESTATION_PREVIOUS_STORAGE_ROOT_MISMATCH")
 
     ak_name = decode_b64(receipt.get("ak_name_b64"), "ATTESTATION_AK_NAME_INVALID")
-    if len(ak_name) != 34 or ak_name[:2] != b"\x00\x0b" or sha256(ak_name) != receipt["ak_name_sha256"]:
+    ak_public_area = decode_b64(receipt.get("ak_public_area_tpmt_b64"), "ATTESTATION_AK_TPMT_INVALID")
+    validate_tpm_public_area(ak_public_area, ak_name, "ak")
+    if sha256(ak_name) != receipt["ak_name_sha256"]:
         fail("ATTESTATION_AK_NAME_MISMATCH")
     ak_public = decode_b64(receipt.get("ak_public_spki_der_b64"), "ATTESTATION_AK_PUBLIC_INVALID")
     if not ak_public or sha256(ak_public) != receipt["ak_public_sha256"]:
@@ -249,6 +296,8 @@ def validate_receipt(receipt: Any, signature_b64: Any, challenge: dict[str, Any]
         "ak_name_sha256": receipt["ak_name_sha256"],
         "ak_public_sha256": receipt["ak_public_sha256"],
         "storage_name_sha256": receipt["storage_root_sha256"],
+        "storage_public_area_sha256": sha256(storage_public_area),
+        "ak_public_area_sha256": sha256(ak_public_area),
         "creation_attestation_sha256": receipt["creation_attestation_sha256"],
         "creation_signature_sha256": receipt["creation_signature_sha256"],
         "quote_attestation_sha256": receipt["quote_attestation_sha256"],
@@ -290,6 +339,7 @@ def main() -> int:
     try:
         if args.test_delay_after_lock_ms < 0 or args.test_delay_after_lock_ms > 2000:
             fail("TEST_DELAY_OUT_OF_RANGE")
+        validate_custodian_keypair(args.public_key, args.private_key)
         reject_path_aliases([
             ("anchor", args.anchor), ("anchor_signature", args.anchor_signature),
             ("public_key", args.public_key), ("private_key", args.private_key),
