@@ -190,8 +190,10 @@ sudo -u ario-custodian -- openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bit
   -out "$CUSTODIAN_HOME/custodian.key" >/dev/null 2>&1
 pass "custodian private key generated under custodian UID"
 sudo -u ario-custodian -- openssl pkey -in "$CUSTODIAN_HOME/custodian.key" -pubout \
-  -out "$SHARED/custodian.pub" >/dev/null 2>&1
-chmod 644 "$SHARED/custodian.pub"
+  -out "$CUSTODIAN_HOME/custodian.pub" >/dev/null 2>&1
+sudo cp "$CUSTODIAN_HOME/custodian.pub" "$SHARED/custodian.pub"
+sudo chmod 644 "$SHARED/custodian.pub"
+pass "custodian public key exported read-only to publisher"
 
 cat > "$SHARED/custodian_gate.py" <<'PY'
 #!/usr/bin/env python3
