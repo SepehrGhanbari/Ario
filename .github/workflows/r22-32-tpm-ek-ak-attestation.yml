@@ -21,6 +21,10 @@ jobs:
           set -euo pipefail
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends tpm2-tools swtpm swtpm-tools openssl
+      - name: Generate per-run challenge nonce test vector
+        run: |
+          set -euo pipefail
+          echo "ARIO_R22_33_CHALLENGE_NONCE=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
       - name: Compile verifier and run EK/AK/Quote/Certify adversarial matrix
         env:
           ARIO_R22_32_EVIDENCE_DIR: ${{ runner.temp }}/r22-32-raw-evidence
@@ -29,6 +33,28 @@ jobs:
           python3 -m py_compile implementation/research/r22_32_tpm_ek_ak_attestation/verify_attestation.py implementation/research/r22_32_tpm_ek_ak_attestation/verify_nv_attestation.py \
             implementation/research/r22_32_tpm_ek_ak_attestation/verify_tpm_public_name.py
           bash implementation/research/r22_32_tpm_ek_ak_attestation/run_swtpm_attestation.sh 2>&1 | tee "$RUNNER_TEMP/r22-32-tpm-attestation.log"
+      - name: Verify R22.33 domain-separated challenge nonce derivation
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib
+          import os
+          from pathlib import Path
+          root = Path(os.environ["RUNNER_TEMP"]) / "r22-32-raw-evidence"
+          challenge = bytes.fromhex((root / "custodian-challenge-nonce.txt").read_text().strip())
+          checks = {
+              "NV-ATTESTATION": "nv-nonce.txt",
+              "CERTIFY-CREATION": "creation-nonce.txt",
+              "PCR-QUOTE": "quote-nonce.txt",
+          }
+          for domain, filename in checks.items():
+              tag = f"ARIO-R22.33-{domain}-NONCE-V1".encode("ascii") + b"\x00"
+              expected = hashlib.sha256(tag + challenge).hexdigest()
+              actual = (root / filename).read_text().strip()
+              if actual != expected:
+                  raise SystemExit(f"REJECT nonce derivation mismatch: {domain}")
+          print("PASS NV_Certify, CertifyCreation and PCR Quote nonces bind to the per-run challenge nonce")
+          PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:
