@@ -795,3 +795,12 @@ RESEARCH_ONLY / PASS_BOUNDED / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTIO
 
 - Extracted only the reviewed paired-answer eligibility correction from #351 (source 9900bc63b7ae3bc8c32a87bc9b95aeec40e530d4). The main reader accepts content records with a user field but no Ario reply, then previously treated them as answers: false recall/currentness metadata, potential KeyError on reveal and false ambiguity. Restrict recall and selfcheck to validated paired user/Ario rows; preserve content records and existing reveal API unchanged. No other #351 boundary or custody research integrated.
 - Two existing synthetic regression cases adapted to the current main API. Existing log preserved as exact prefix; no private archive, model, trust or runtime integration. Exact-head CI pending.
+
+
+## 2026-11-27 — MCR-01 memory cold-recovery bridge v0.1 (RESEARCH_ONLY / MODEL_ONLY / HOLD)
+
+- Added isolated research module implementation/research/memory_cold_recovery_v0_1/ and focused tests implementation/tests/test_memory_cold_recovery_v0_1.py; no core memory, runtime, signer, TPM, historical evidence, or governance files changed.
+- Binds the existing data-only cognitive-memory + SourceMonitoringGuard snapshot to a synthetic JSONL ledger and versioned generation/parent checkpoint. Cold recovery returns fresh candidates only after archive byte digests, ledger coverage, snapshot schema, checkpoint chain, model witness receipt, and (when requested) nonce-bound model readback verify.
+- Test witness/readback signatures are disposable Ed25519 model fixtures, NOT C2SP/Sigsum wire format and NOT actual Kladje evidence. The archive is a local test double. Kladje's published IPng configuration permits only /add-checkpoint; a separate independently administered readback/monitor is still required to prove latestness.
+- Explicit expected-RED test reproduces undetectable joint rollback of archive, witness and monitor for a fresh client with no prior floor. No actual independent custody, external content store, live witness, global freshness, or production recovery is established.
+- Intended validation: focused pytest, then existing Implementation Regression Linux/Windows/Python 3.14 CI on the exact research PR head. Preserve all failures; no merge or trust activation.
