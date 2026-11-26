@@ -47,7 +47,7 @@ class EvidenceBundleIntegrationTests(unittest.TestCase):
         result = verify_bundle(SOURCE)
         self.assertEqual(result["status"], "VERIFIED")
         self.assertEqual(result["checks"]["nv_certify_signature"], "PASS_RSASSA_SHA256")
-        self.assertEqual(result["challenge_issue_order"], "NOT_ESTABLISHED")
+        self.assertIn("external timestamp independence not established", result["challenge_issue_order"])
         self.assertEqual(result["transition_receipt"], "NOT_EMITTED")
 
     def test_rejects_nv_signature_tampering_after_manifest_refresh(self) -> None:
