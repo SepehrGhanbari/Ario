@@ -1,0 +1,34 @@
+name: R22.30 TPM clear and custodian recovery model
+on:
+  push:
+    branches: [research/r22-30-tpm-clear-custody-20261126]
+    paths:
+      - .github/workflows/r22-30-tpm-clear-custody.yml
+      - implementation/research/r22_30_tpm_clear_custody/**
+permissions:
+  contents: read
+jobs:
+  clear-custody:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install TPM simulator and tools
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tpm2-tools swtpm swtpm-tools openssl
+      - name: Run TPM_Clear, identity and custodian recovery controls
+        working-directory: implementation/research/r22_30_tpm_clear_custody
+        run: |
+          set -euo pipefail
+          bash run_swtpm_clear_custody.sh 2>&1 | tee "$RUNNER_TEMP/r22-30-tpm-clear-custody.log"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r22-30-tpm-clear-custody-evidence
+          path: ${{ runner.temp }}/r22-30-tpm-clear-custody.log
+          if-no-files-found: warn
+          retention-days: 30
