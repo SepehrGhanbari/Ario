@@ -78,14 +78,15 @@ func cloneReceipt(r Receipt)Receipt{return r}
 
 func TestRecoverAfterPublisherAndBothRelayCopiesRollback(t *testing.T){
 	f:=newFixture(t)
-	// Simulate all publisher-controlled copies and their adjacent digests being
-	// replaced by generation 1. Recovery never reads those locations.
-	oldPublisherBlob:=f.cust.objects[f.chain[0].CheckpointSHA256]
-	oldPublisherDigest:=digest(oldPublisherBlob)
-	if oldPublisherDigest!=f.chain[0].CheckpointSHA256{t.Fatal("fixture")}
+	// Model publisher and both relays restoring identical old bytes and
+	// adjacent digests. Recovery has no dependency on these mirrors.
+	old:=append([]byte(nil),f.cust.objects[f.chain[0].CheckpointSHA256]...)
+	type mirror struct{blob []byte;digest string}
+	mirrors:=[]mirror{{old,digest(old)},{append([]byte(nil),old...),digest(old)},{append([]byte(nil),old...),digest(old)}}
+	for _,m:=range mirrors{if digest(m.blob)!=m.digest||m.digest!=f.chain[0].CheckpointSHA256{t.Fatal("rollback fixture mismatch")}}
 	got,e:=f.recover(t,nil);if e!=nil{t.Fatal(e)}
 	if got.Receipt.Generation!=3||got.Checkpoint.Cursor!=30||got.Complete{t.Fatalf("unexpected recovery: %+v",got)}
-	if got.ReceiptSHA256==""||got.CheckpointSHA256!=f.chain[2].CheckpointSHA256{t.Fatal("missing independent anchors")}
+	if got.ReceiptSHA256==""||got.CheckpointSHA256!=f.chain[2].CheckpointSHA256{t.Fatal("recovery followed publisher/relay rollback instead of keeper head")}
 }
 func TestDeletedPublisherAndRelayCopiesDoNotAffectCustodyRecovery(t *testing.T){
 	f:=newFixture(t)
