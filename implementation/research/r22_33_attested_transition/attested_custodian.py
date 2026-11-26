@@ -41,7 +41,7 @@ REQUEST_FIELDS = BASE_FIELDS | {
 CHALLENGE_FIELDS = {
     "format", "nonce", "device_ek_sha256", "previous_storage_root_sha256",
     "previous_epoch", "next_epoch", "previous_head_sha256", "next_head_sha256",
-    "reason", "policy_id", "issued_at", "expires_at",
+    "ak_activation_secret_sha256", "reason", "policy_id", "issued_at", "expires_at",
 }
 PIN_FIELDS = {"format", "attestation_verifier_spki_sha256", "policy_id"}
 RECEIPT_FIELDS = {
@@ -51,6 +51,7 @@ RECEIPT_FIELDS = {
     "previous_epoch", "next_epoch", "previous_head_sha256", "next_head_sha256",
     "ak_name_b64", "ak_name_sha256", "ak_public_spki_der_b64", "ak_public_sha256",
     "ak_public_area_tpmt_b64", "ak_qualified_name_b64", "ak_qualified_name_sha256",
+    "ak_activation_secret_sha256", "ak_activation_result_sha256",
     "ek_certificate_sha256", "creation_hash_sha256", "raw_evidence_manifest_sha256",
     "nv_index_handle", "nv_name_alg", "nv_attributes", "nv_data_size",
     "nv_auth_policy_b64", "nv_index_name_b64", "nv_contents_b64",
@@ -69,8 +70,8 @@ MANIFEST_FIELDS = {
     "creation_attestation_sha256",
     "creation_signature_sha256", "quote_attestation_sha256",
     "quote_signature_sha256", "pcr_value_sha256", "creation_hash_sha256",
-    "ak_qualified_name_sha256", "nv_index_name_sha256", "nv_public_area_sha256",
-    "nv_contents_sha256", "nv_qualified_signer_sha256", "nv_nonce_sha256",
+    "ak_qualified_name_sha256", "ak_activation_result_sha256",
+    "nv_index_name_sha256", "nv_public_area_sha256", "nv_contents_sha256", "nv_qualified_signer_sha256", "nv_nonce_sha256",
     "nv_attestation_sha256", "nv_signature_sha256", "raw_evidence_manifest_sha256",
 }
 
@@ -252,7 +253,7 @@ def validate_challenge(challenge: Any, signature_b64: Any, public_key: Path, now
         fail("CHALLENGE_REASON_INVALID")
     validate_hash(challenge.get("nonce"), "CHALLENGE_NONCE_INVALID")
     for field in ("device_ek_sha256", "previous_storage_root_sha256",
-                  "previous_head_sha256", "next_head_sha256"):
+                  "previous_head_sha256", "next_head_sha256", "ak_activation_secret_sha256"):
         validate_hash(challenge.get(field), "CHALLENGE_" + field.upper() + "_INVALID")
     previous = challenge.get("previous_epoch")
     following = challenge.get("next_epoch")
@@ -302,6 +303,10 @@ def validate_receipt(receipt: Any, signature_b64: Any, challenge: dict[str, Any]
         fail("ATTESTATION_CHALLENGE_HASH_MISMATCH")
     if receipt.get("challenge_nonce") != challenge["nonce"]:
         fail("ATTESTATION_CHALLENGE_NONCE_MISMATCH")
+    if receipt.get("ak_activation_secret_sha256") != challenge["ak_activation_secret_sha256"]:
+        fail("ATTESTATION_AK_ACTIVATION_CHALLENGE_MISMATCH")
+    if receipt.get("ak_activation_result_sha256") != challenge["ak_activation_secret_sha256"]:
+        fail("ATTESTATION_AK_EK_ACTIVATION_RESULT_MISMATCH")
 
     for field in ("device_ek_sha256", "storage_root_sha256",
                   "previous_storage_root_sha256", "ak_name_sha256",
@@ -310,7 +315,8 @@ def validate_receipt(receipt: Any, signature_b64: Any, challenge: dict[str, Any]
                   "creation_signature_sha256", "pcr_digest_sha256",
                   "nv_nonce", "creation_nonce", "quote_nonce",
                   "nv_attestation_sha256", "nv_signature_sha256",
-                  "ak_qualified_name_sha256", "ek_certificate_sha256",
+                  "ak_qualified_name_sha256", "ak_activation_secret_sha256",
+                  "ak_activation_result_sha256", "ek_certificate_sha256",
                   "creation_hash_sha256", "raw_evidence_manifest_sha256",
                   "evidence_bundle_sha256"):
         validate_hash(receipt.get(field), "ATTESTATION_" + field.upper() + "_INVALID")
@@ -414,6 +420,7 @@ def validate_receipt(receipt: Any, signature_b64: Any, challenge: dict[str, Any]
         "quote_signature_sha256": receipt["quote_signature_sha256"],
         "pcr_value_sha256": receipt["pcr_digest_sha256"],
         "ak_qualified_name_sha256": receipt["ak_qualified_name_sha256"],
+        "ak_activation_result_sha256": receipt["ak_activation_result_sha256"],
         "nv_index_name_sha256": sha256(nv_index_name),
         "nv_public_area_sha256": sha256(nv_public_area),
         "nv_contents_sha256": sha256(nv_contents),
