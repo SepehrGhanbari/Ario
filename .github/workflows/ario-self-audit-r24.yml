@@ -1,0 +1,26 @@
+name: Ario Self-Audit R2.4 adversarial verifier
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/ario_self_audit_r24.py'
+      - 'scripts/test_ario_self_audit_r24.py'
+      - '.github/workflows/ario-self-audit-r24.yml'
+      - 'docs/ARIO_SELF_AUDIT_R2_4.md'
+      - 'docs/self-audit-r2-4-evidence/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  adversarial-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Run bounded adversarial tests
+        working-directory: scripts
+        run: python -B -m unittest -v test_ario_self_audit_r24
