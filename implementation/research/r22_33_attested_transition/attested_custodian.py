@@ -372,7 +372,7 @@ def main() -> int:
 
         custodian_receipt_raw = args.response.read_bytes()
         custodian_signature = args.response_signature.read_bytes()
-        if not legacy.openssl_verify(args.public_key, custodian_receipt_raw, args.response_signature):
+        if not legacy.openssl_verify(args.public_key, custodian_receipt_raw, args.response_signature.read_bytes()):
             fail("CUSTODIAN_RECEIPT_SIGNATURE_INVALID")
         custodian_receipt, _ = legacy.read_json(args.response)
         if custodian_receipt.get("request_sha256") != sha256(legacy.canonical(base_request)):
