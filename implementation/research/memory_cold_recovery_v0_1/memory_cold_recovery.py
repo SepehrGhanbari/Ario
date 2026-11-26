@@ -98,7 +98,9 @@ def parse_checkpoint(raw:bytes,expected_sha256:str)->dict[str,Any]:
     value=parse_canonical_json(raw,max_bytes=MAX_CHECKPOINT_BYTES)
     expected={"format","schema_version","scope","generation","previous_checkpoint_sha256","snapshot_sha256","snapshot_bytes","ledger_sha256","ledger_bytes","ledger_record_count","ledger_unique_hash_count","node_count","attribution_count"}
     if type(value) is not dict or set(value)!=expected: raise RecoveryHold("HOLD_CHECKPOINT_SCHEMA")
-    if value["format"]!=CHECKPOINT_FORMAT or value["schema_version"]!=CHECKPOINT_SCHEMA: raise RecoveryHold("HOLD_CHECKPOINT_VERSION")
+    if (value["format"]!=CHECKPOINT_FORMAT or type(value["schema_version"]) is not int
+            or isinstance(value["schema_version"],bool) or value["schema_version"]!=CHECKPOINT_SCHEMA):
+        raise RecoveryHold("HOLD_CHECKPOINT_VERSION")
     if value["scope"]!=SCOPE: raise RecoveryHold("HOLD_CHECKPOINT_SCOPE")
     if type(value["generation"]) is not int or isinstance(value["generation"],bool) or value["generation"]<1: raise RecoveryHold("HOLD_CHECKPOINT_GENERATION")
     for field in ("previous_checkpoint_sha256","snapshot_sha256","ledger_sha256"):
@@ -113,13 +115,15 @@ def parse_checkpoint(raw:bytes,expected_sha256:str)->dict[str,Any]:
 class ContentAddressedArchive:
     """Create-only byte store used by the lab; not a deployed independent custodian."""
     def __init__(self,root:str|os.PathLike[str])->None:
-        self.root=Path(root); self.root.mkdir(parents=True,exist_ok=True)
+        self.root=Path(root)
+        if self.root.is_symlink(): raise RecoveryHold("HOLD_ARCHIVE_ROOT_NOT_DIRECTORY")
+        self.root.mkdir(parents=True,exist_ok=True)
         if self.root.is_symlink() or not self.root.is_dir(): raise RecoveryHold("HOLD_ARCHIVE_ROOT_NOT_DIRECTORY")
     def _path(self,digest:str)->Path:
         if not _valid_hash(digest): raise RecoveryHold("HOLD_ARCHIVE_OBJECT_HASH")
         return self.root/digest
     def put(self,raw:bytes)->str:
-        if type(raw) is not bytes or not raw or len(raw)>MAX_SNAPSHOT_BYTES: raise RecoveryHold("HOLD_ARCHIVE_OBJECT_SIZE")
+        if type(raw) is not bytes or len(raw)>MAX_SNAPSHOT_BYTES: raise RecoveryHold("HOLD_ARCHIVE_OBJECT_SIZE")
         digest=sha256(raw); target=self._path(digest)
         try:
             with target.open("xb") as stream:
@@ -131,9 +135,10 @@ class ContentAddressedArchive:
     def get(self,digest:str)->bytes:
         target=self._path(digest)
         try:
+            if target.is_symlink(): raise RecoveryHold("HOLD_ARCHIVE_OBJECT_NOT_REGULAR")
             metadata=target.stat()
-            if target.is_symlink() or not stat.S_ISREG(metadata.st_mode): raise RecoveryHold("HOLD_ARCHIVE_OBJECT_NOT_REGULAR")
-            if metadata.st_size<=0 or metadata.st_size>MAX_SNAPSHOT_BYTES: raise RecoveryHold("HOLD_ARCHIVE_OBJECT_SIZE")
+            if not stat.S_ISREG(metadata.st_mode): raise RecoveryHold("HOLD_ARCHIVE_OBJECT_NOT_REGULAR")
+            if metadata.st_size>MAX_SNAPSHOT_BYTES: raise RecoveryHold("HOLD_ARCHIVE_OBJECT_SIZE")
             raw=target.read_bytes()
         except RecoveryHold: raise
         except FileNotFoundError as exc: raise RecoveryHold("HOLD_EXTERNAL_OBJECT_MISSING") from exc
@@ -166,6 +171,8 @@ def _verify_signed_envelope(raw:bytes,public_key:bytes,*,domain:bytes,expected_b
     if type(envelope["signature"]) is not str: raise RecoveryHold("HOLD_SIGNATURE_ENCODING")
     try:
         signature=base64.b64decode(envelope["signature"],validate=True)
+        if base64.b64encode(signature).decode("ascii")!=envelope["signature"]:
+            raise RecoveryHold("HOLD_SIGNATURE_NONCANONICAL")
         Ed25519PublicKey.from_public_bytes(public_key).verify(signature,domain+canonical_json(body))
     except (ValueError,InvalidSignature) as exc: raise RecoveryHold("HOLD_EXTERNAL_SIGNATURE_INVALID") from exc
     return body
@@ -205,6 +212,7 @@ def _verify_chain(archive:ContentAddressedArchive,checkpoint_sha256:str,current:
         if parent["scope"]!=checkpoint["scope"] or parent["generation"]!=generation-1: raise RecoveryHold("HOLD_CHECKPOINT_CHAIN_GAP_OR_SCOPE")
         digest,checkpoint=previous,parent
     if prior_floor is not None:
+        if not isinstance(prior_floor,PriorFloor): raise RecoveryHold("HOLD_PRIOR_FLOOR_SCHEMA")
         if (type(prior_floor.generation) is not int or isinstance(prior_floor.generation,bool) or prior_floor.generation<1 or not _valid_hash(prior_floor.checkpoint_sha256)):
             raise RecoveryHold("HOLD_PRIOR_FLOOR_SCHEMA")
         if prior_floor.checkpoint_sha256 not in chain: raise RecoveryHold("HOLD_PRIOR_FLOOR_NOT_ANCESTOR")

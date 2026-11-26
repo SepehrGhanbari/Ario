@@ -9,7 +9,7 @@ from core.memory_snapshot import encode_cognitive_memory_snapshot
 from core.source_monitoring import SourceMonitoringGuard
 from research.memory_cold_recovery_v0_1.memory_cold_recovery import (
     ContentAddressedArchive, PriorFloor, RecoveryHold, SCOPE, ZERO_HASH,
-    _READBACK_DOMAIN, _WITNESS_DOMAIN, build_checkpoint, canonical_json, recover_cold,
+    _READBACK_DOMAIN, _WITNESS_DOMAIN, build_checkpoint, canonical_json, parse_checkpoint, recover_cold,
 )
 
 def public_bytes(key):
@@ -179,3 +179,26 @@ def test_known_red_joint_rollback_of_archive_witness_and_monitor_is_undetectable
     assert recovered.checkpoint["generation"]==1
     assert recovered.status=="RECOVERED_CURRENT_MODEL"
     # This passing assertion records the attack's success, not a security pass.
+
+
+def test_empty_ledger_is_a_valid_bounded_memory_state(tmp_path:Path):
+    archive=ContentAddressedArchive(tmp_path/"archive")
+    witness=Ed25519PrivateKey.generate()
+    engine=ConsolidationEngine(node_id_version="v2")
+    guard=SourceMonitoringGuard(allowlisted_tools={"run_tests"})
+    snapshot=encode_cognitive_memory_snapshot(engine,guard)
+    ledger=b""
+    cp_sha,cp,receipt=publish_generation(archive,engine,guard,snapshot,ledger,1,ZERO_HASH,witness)
+    result=recover_cold(archive,receipt,public_bytes(witness),allowlisted_tools={"run_tests"},require_current=False)
+    assert result.ledger==b""
+    assert result.engine.nodes=={}
+    assert result.source_guard.attributions=={}
+
+def test_boolean_schema_version_is_not_accepted_as_integer_one():
+    raw=build_checkpoint(b"synthetic snapshot",b"",generation=1,previous_checkpoint_sha256=ZERO_HASH,
+                         node_count=0,attribution_count=0)
+    document=json.loads(raw)
+    document["schema_version"]=True
+    malformed=canonical_json(document)
+    with pytest.raises(RecoveryHold,match="HOLD_CHECKPOINT_VERSION"):
+        parse_checkpoint(malformed,hashlib.sha256(malformed).hexdigest())
