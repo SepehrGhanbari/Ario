@@ -97,7 +97,7 @@ def _request_local(payload: dict[str, Any], *, local_port: int = 11434) -> dict[
         _hold("HOLD_OVERSIZE_LOOPBACK_REPLY")
     try:
         result = json.loads(body.decode("utf-8"))
-    except ValueError:
+    except (ValueError, RecursionError):
         _hold("HOLD_INVALID_LOOPBACK_JSON")
     if type(result) is not dict:
         _hold("HOLD_INVALID_LOOPBACK_RESULT")

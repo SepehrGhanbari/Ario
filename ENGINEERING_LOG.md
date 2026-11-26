@@ -851,3 +851,13 @@ RESEARCH_ONLY / DRAFT / HOLD / NO_AUTOMATIC_MERGE / NO_REAL_KEYS / NO_TRUST_ACTI
 
 - Follow-up CI isolated one remaining assertion issue: the syntax cleanup also removed the legacy `include_historical_quote=True` argument from the specific test whose purpose is to assert that this obsolete parameter raises `TypeError`. Restored that argument in that test only. The dedicated removed-parameter type test already covers the string-valued case.
 - The previous test run otherwise reported 1825 passed / 7 skipped / 429 subtests and only this one assertion failure; rerun exact-head CI is required.
+
+## 2026-11-26 — RIO-01 R2.1: reconcile exact-head CodeRabbit 5 findings
+
+- Reviewed second CodeRabbit full review on PR #351 exact head `a5a5d47896e3f1ce2c31ad34e85137fd387752e7` (2026-11-25T17:48:21Z), containing 5 actionable findings. This is automated reviewer feedback, not independent human authorization.
+- **F1 real bypass verified by code inspection:** `HistoricalV153View.__init__` previously cleared `_sealed` before opening/rejecting the archive. Calling `view.__init__(path, expected_sha256="")` after successful initial creation raised a HOLD while leaving the initialized object assignable. Corrected to reject repeated initialization *before touching* seal, `HOLD_VIEW_ALREADY_INITIALIZED`. Tests cover invalid and valid second calls and retained digest/assignment protections.
+- **F2:** deep JSON list structures could raise a raw `RecursionError` while freezing; freeze now translates it to a constant `HOLD_RECORD_DEPTH`, with forced-exception synthetic regression.
+- **F3:** local Ollama probe JSON recursion now becomes `HOLD_INVALID_LOOPBACK_JSON`, preventing raw traceback. Mock nested invalid JSON regression added; no real Ollama called.
+- **F4/F5 documentation:** review packet distinguishes historical F1/F2 reproductions at immutable old commit `73501f5c415d5e69009c5ec2e9dc70832dbcf7c0` versus current R2 expectation; repaired escaped Markdown code backticks in R1 README. Original historical findings retained, not erased.
+- Remaining boundary remains `RESEARCH_ONLY / DRAFT / HOLD`: `object.__setattr__`, same-process Python introspection and escaped-HTML reentry are not mitigated by R2.1. The corrections do not touch active memory, private archives, keys, signer, production, or trust activation.
+- Exact-head cross-platform CI: PENDING at this commit; do not claim passing tests before results.

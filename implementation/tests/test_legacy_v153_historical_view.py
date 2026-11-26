@@ -343,6 +343,33 @@ class TestLegacyHistoricalView(unittest.TestCase):
         self.assertEqual(got["disposition"], "UNKNOWN_NO_EXACT_QUESTION_MATCH")
         self.assertIsNone(got["rendered_html"])
 
+    def test_failed_second_init_cannot_unseal_pinned_view(self):
+        view = self.view()
+        original = view.inspect()
+        with self.assertRaisesRegex(HistoricalViewHold, "^HOLD_VIEW_ALREADY_INITIALIZED$"):
+            view.__init__(self.path, expected_sha256="")
+        self.assertEqual(view.inspect(), original)
+        with self.assertRaisesRegex(HistoricalViewHold, "^HOLD_VIEW_IMMUTABLE$"):
+            view._rows = ()
+        with self.assertRaisesRegex(HistoricalViewHold, "^HOLD_VIEW_IMMUTABLE$"):
+            view._digest = "0" * 64
+
+    def test_valid_second_init_is_also_refused(self):
+        view = self.view()
+        with self.assertRaisesRegex(HistoricalViewHold, "^HOLD_VIEW_ALREADY_INITIALIZED$"):
+            view.__init__(self.path, expected_sha256=self.digest)
+        self.assertEqual(view.recall("What is Ario?")["source_line"], 1)
+
+    def test_freeze_depth_failure_is_bounded_hold(self):
+        from unittest.mock import patch
+        with patch(
+            "core.legacy_v153_historical_view._freeze_json",
+            side_effect=RecursionError("SYNTHETIC_PRIVATE_DEPTH"),
+        ):
+            with self.assertRaisesRegex(HistoricalViewHold, "^HOLD_RECORD_DEPTH$") as caught:
+                self.view()
+        self.assertNotIn("SYNTHETIC_PRIVATE_DEPTH", str(caught.exception))
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

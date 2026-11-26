@@ -235,6 +235,10 @@ class HistoricalV153View:
         object.__delattr__(self, name)
 
     def __init__(self, archive_path: str | Path, *, expected_sha256: str):
+        # Reject direct __init__ replay before touching the seal. Otherwise a
+        # failing second read would leave a previously sealed view writable.
+        if hasattr(self, "_sealed"):
+            _fail("HOLD_VIEW_ALREADY_INITIALIZED")
         object.__setattr__(self, "_sealed", False)
         raw, digest, drift = _read_pinned(Path(archive_path), expected_sha256)
         try:
@@ -287,7 +291,10 @@ class HistoricalV153View:
                 shapes["CONTENT_RECORD"] += 1
             else:
                 _fail("HOLD_UNKNOWN_RECORD_SHAPE")
-            rows.append(_freeze_json(row))
+            try:
+                rows.append(_freeze_json(row))
+            except RecursionError:
+                _fail("HOLD_RECORD_DEPTH")
         self._rows = tuple(rows)
         self._digest = digest
         self._time_drift = drift

@@ -195,6 +195,19 @@ class TestSyntheticNoToolsOllamaProbe(unittest.TestCase):
         self.assertEqual(data["files_written_by_probe"], 0)
         self.assertEqual(data["ollama_service_internal_writes"], "NOT_AUDITED")
 
+    @patch("urllib.request.build_opener")
+    def test_deeply_nested_loopback_json_fails_with_constant_hold(self, build_opener):
+        secret = "SYNTHETIC_PRIVATE_NESTED_JSON_DO_NOT_ECHO"
+        body = b'{"unexpected":' + b'[' * 1800 + secret.encode("ascii") + b']' * 1800 + b'}'
+        self.assertLess(len(body), MAX_HTTP_BYTES)
+        response = build_opener.return_value.open.return_value.__enter__.return_value
+        response.status = 200
+        response.headers = {}
+        response.read.return_value = body
+        with self.assertRaisesRegex(ProbeHold, "^HOLD_INVALID_LOOPBACK_JSON$") as caught:
+            run_fixed_probes()
+        self.assertNotIn(secret, str(caught.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -29,7 +29,7 @@ HTML escaping prevents markup interpretation in this renderer, **not** semantic 
 ## Independent reviewer tasks (do not claim completion merely for writing this request)
 
 1. Independently check all diff paths and their contents, pin PR HEAD and comparison base, verify source byte paths against the exact commit, read the test cases.
-2. Reproduce RIO-F1 and RIO-F2 with **synthetic data only**, and explain required attacker capability for each (same-process code versus untrusted archive text versus remote user).
+2. Reproduce the **historical** RIO-F1 and RIO-F2 defects on pinned pre-fix commit `73501f5c415d5e69009c5ec2e9dc70832dbcf7c0` using **synthetic data only** and its original `test_historical_qa_consumer_bypass_r1.py`. On the **current R2 head**, verify old `include_historical_quote=True`/`reveal=True` APIs fail, nested records resist normal mutation, and `__init__` replay cannot unseal the view. Explicitly test the remaining same-process introspection boundary; do not represent the old RED reproducers as current failures.
 3. Threat-model the caller boundary: Can raw archival text reach system/tool roles or a memory write without passing the display-only sink? This is a **required HOLD** until an enforced gate exists in any real integration.
 4. Audit HTML rendering and Unicode controls, user-supplied model/tool JSON, redirect/port/proxy defenses and bounded response parsing; challenge what the automated tests actually establish.
 5. Distinguish the R1 fictional local-model results from verified source authenticity, epistemic truth, execution sandboxing, real agent recall and production authorization.
