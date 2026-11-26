@@ -1,0 +1,945 @@
+{
+  "catalog_bytes": 69230306,
+  "catalog_files": 79,
+  "directory": "[REDACTED_LOCAL_DIRECTORY]",
+  "exit_code": 0,
+  "github_mapping": {
+    "checked_files": 79,
+    "commit": "d12d511e0ae1a19560a13dadaafb77a700fd20ef",
+    "mapped_files": 54,
+    "qualification": "Git SHA-1 blob ID and size match only; no GitHub file SHA-256 comparison. No-match is not corruption; files may exist only in Zenodo or other commits.",
+    "status": "OBSERVED_GIT_BLOB_MAPPING",
+    "tree": "d101d77191f4df34538c8385538655fc053e4616",
+    "unknown_files": 0
+  },
+  "qualification": "RESEARCH_ONLY; two HTTPS observations from Zenodo, not independent publisher identity, permission to execute, or atomic snapshot. GitHub mapping is separate and may be UNKNOWN.",
+  "records": [
+    {
+      "doi": "10.5281/zenodo.23259916",
+      "files": [
+        {
+          "file": "Preliminary Design and Exploratory Evaluation.pdf",
+          "github_blob_id": "620481a6780d78b96f923f418eaeb9b5c56e158d",
+          "github_paths_same_size_and_blob_id": [
+            "papers/zenodo-published-research/23259916/Ario_Preliminary_Design_and_Exploratory_Evaluation_Published.pdf"
+          ],
+          "metadata_md5": "4bdcc44d638e53d723e9e966f7396d38",
+          "sha256": "030bf2e2f383c73e2dad28762c4850daf73ecfcda5fb453e5cc28e325724de32",
+          "size": 186953,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        }
+      ],
+      "record": "23259916",
+      "status": "ALL_RECORD_FILES_MATCH_ZENODO_HTTPS"
+    },
+    {
+      "doi": "10.5281/zenodo.23326995",
+      "files": [
+        {
+          "file": "Being_With_the_Other_EN_v0_2.pdf",
+          "github_blob_id": "43e1d9c8288d6ad9e73203108d0b1e59467889e1",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.2/Being_With_the_Other_EN_v0_2.pdf"
+          ],
+          "metadata_md5": "7ecd7680d8ce0b3c4ba01cd9070a5861",
+          "sha256": "0edf1add2be0d821c463bbea8a6316bdd6cd93802bd1d04270861cd36c45c232",
+          "size": 419598,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_Bilingual_Zenodo_v0_2.zip",
+          "github_blob_id": "b0805bcecf4e2da638cc560caa9e91130d976b2e",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.2/Being_With_the_Other_Bilingual_Zenodo_v0_2.zip"
+          ],
+          "metadata_md5": "9df3eeb3cc919d1e5bddb8733db14eb3",
+          "sha256": "1d07dd378e9baf708c3627000cc550e0ada794f39ebee7757872c0e3255c5438",
+          "size": 822384,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_FA_v0_2.pdf",
+          "github_blob_id": "c5729d4493208330c7b65d99e7125934c82f7dc9",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.2/Being_With_the_Other_FA_v0_2.pdf"
+          ],
+          "metadata_md5": "d36aabe0ff0f3004d781df5df1d8c5c0",
+          "sha256": "ac340a041f0dee90bfc617f0c34a9bcc41f56966413638c044c0e49810ae6584",
+          "size": 526491,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        }
+      ],
+      "record": "23326995",
+      "status": "ALL_RECORD_FILES_MATCH_ZENODO_HTTPS"
+    },
+    {
+      "doi": "10.5281/zenodo.23375350",
+      "files": [
+        {
+          "file": "zenodo_v0_3_metadata.json",
+          "github_blob_id": "3cca3f1013372f99bc2fbee92228205fa662056e",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.3/zenodo_v0_3_metadata.json"
+          ],
+          "metadata_md5": "19bbf45c79c87478cd5883ddfde75ecc",
+          "sha256": "adfadcc219032a11ee4035afb37345a0683121ed835eee6a30d2672ccf7ca66b",
+          "size": 2003,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_EN_v0_3_Public.md",
+          "github_blob_id": "05eb3f09027bc8abaae4386c0c6562f3784c9659",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.3/Being_With_the_Other_EN_v0_3_Public.md"
+          ],
+          "metadata_md5": "0f8ac829d00e171282f5985dc43dd060",
+          "sha256": "8ea7a378544d36359560852518c5ef0b27da56856009d4f93ce61846c8c819a3",
+          "size": 121546,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_FA_v0_3_Public.pdf",
+          "github_blob_id": "89eeedb30298578bc4cd4c19b4b8f5979f4d9907",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.3/Being_With_the_Other_FA_v0_3_Public.pdf"
+          ],
+          "metadata_md5": "f073d040fd41965568ed3ca3c1535e4c",
+          "sha256": "86c5af49b0e656e1bd50020ae1466648d731474532249af9aa26547fce67da55",
+          "size": 595349,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_FA_v0_3_Public.docx",
+          "github_blob_id": "a644095fbc20bd56f0870f0899b9c616b5b935a9",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.3/Being_With_the_Other_FA_v0_3_Public.docx"
+          ],
+          "metadata_md5": "889eb34fe24e9db83b5e5bc411380984",
+          "sha256": "93a90d9ef7aba0eaaeb7c215e976875559abfd819472dfb3182043e522f5c251",
+          "size": 97398,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "README_book_v0_3.md",
+          "github_blob_id": "ea063824962acb1542d5f5febf0933fb3ed6573c",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.3/README_book_v0_3.md"
+          ],
+          "metadata_md5": "305988f71f745ed222239980900174c2",
+          "sha256": "e43e8e323d8e525850b089db91b6b8a67227c880f0c1ad9742b3e91507ac0b31",
+          "size": 4772,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "ZENODO_v0_3_DEPOSIT_GUIDE.md",
+          "github_blob_id": "bd840dfc08c54ef22941e89c271b53c23a2c0fdd",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.3/ZENODO_v0_3_DEPOSIT_GUIDE.md"
+          ],
+          "metadata_md5": "8208a2e6191c5c42574d3ac001515836",
+          "sha256": "eaeb842ecd9e9a1e5e0babdec6b4eda7bd950544e1a806e14516223315d43a58",
+          "size": 3132,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_EN_v0_3_Public.pdf",
+          "github_blob_id": "9ec24b91ca06dcdb2d1215c4f6844dd84a6e0199",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.3/Being_With_the_Other_EN_v0_3_Public.pdf"
+          ],
+          "metadata_md5": "6ebbea31dc1078858030b96dd901cc90",
+          "sha256": "8e8c692b73bb0e50fda569482ef4a74f3f7f15277499ec3cdb1a1697262fa058",
+          "size": 408085,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_EN_v0_3_Public.docx",
+          "github_blob_id": "39fbaf30ebf7fda53ae34e3505bb74500a036514",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.3/Being_With_the_Other_EN_v0_3_Public.docx"
+          ],
+          "metadata_md5": "f0835ffefafb9a9b3e922e71b773f724",
+          "sha256": "0eb08747ccaeb52047d0ad07c2f0e09a2032e576e0b2048d1ace0b9d9bbed878",
+          "size": 95383,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "CHECKSUMS_v0_3.sha256",
+          "github_blob_id": "a93deb03df9e03e781954b137fe5546c9daa4a6e",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.3/CHECKSUMS_v0_3.sha256"
+          ],
+          "metadata_md5": "303cc23d0b0cb884a83e92c4a463c467",
+          "sha256": "a68289d6e9b69fcd44e1a650be7d7c195458cd12e63329d44d355857281e033b",
+          "size": 909,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_FA_v0_3_Public.md",
+          "github_blob_id": "407da6d477d90215fcbccce5dd5395624a125401",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.3/Being_With_the_Other_FA_v0_3_Public.md"
+          ],
+          "metadata_md5": "af9c584460129c6dd72d02af149f770a",
+          "sha256": "1d1517742f328528445fff0d26315ac01cd3c23fa127f5fe42214ffb4d913366",
+          "size": 194906,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        }
+      ],
+      "record": "23375350",
+      "status": "ALL_RECORD_FILES_MATCH_ZENODO_HTTPS"
+    },
+    {
+      "doi": "10.5281/zenodo.23375401",
+      "files": [
+        {
+          "file": "Being_With_the_Other_FA_v0_3_Public.md",
+          "github_blob_id": "407da6d477d90215fcbccce5dd5395624a125401",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.3/Being_With_the_Other_FA_v0_3_Public.md"
+          ],
+          "metadata_md5": "af9c584460129c6dd72d02af149f770a",
+          "sha256": "1d1517742f328528445fff0d26315ac01cd3c23fa127f5fe42214ffb4d913366",
+          "size": 194906,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_FA_v0_3_Public.pdf",
+          "github_blob_id": "89eeedb30298578bc4cd4c19b4b8f5979f4d9907",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.3/Being_With_the_Other_FA_v0_3_Public.pdf"
+          ],
+          "metadata_md5": "f073d040fd41965568ed3ca3c1535e4c",
+          "sha256": "86c5af49b0e656e1bd50020ae1466648d731474532249af9aa26547fce67da55",
+          "size": 595349,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "CHECKSUMS_v0_3.sha256",
+          "github_blob_id": "a93deb03df9e03e781954b137fe5546c9daa4a6e",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.3/CHECKSUMS_v0_3.sha256"
+          ],
+          "metadata_md5": "303cc23d0b0cb884a83e92c4a463c467",
+          "sha256": "a68289d6e9b69fcd44e1a650be7d7c195458cd12e63329d44d355857281e033b",
+          "size": 909,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_EN_v0_3_Public.docx",
+          "github_blob_id": "39fbaf30ebf7fda53ae34e3505bb74500a036514",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.3/Being_With_the_Other_EN_v0_3_Public.docx"
+          ],
+          "metadata_md5": "f0835ffefafb9a9b3e922e71b773f724",
+          "sha256": "0eb08747ccaeb52047d0ad07c2f0e09a2032e576e0b2048d1ace0b9d9bbed878",
+          "size": 95383,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_EN_v0_3_Public.md",
+          "github_blob_id": "05eb3f09027bc8abaae4386c0c6562f3784c9659",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.3/Being_With_the_Other_EN_v0_3_Public.md"
+          ],
+          "metadata_md5": "0f8ac829d00e171282f5985dc43dd060",
+          "sha256": "8ea7a378544d36359560852518c5ef0b27da56856009d4f93ce61846c8c819a3",
+          "size": 121546,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_FA_v0_3_Public.docx",
+          "github_blob_id": "a644095fbc20bd56f0870f0899b9c616b5b935a9",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.3/Being_With_the_Other_FA_v0_3_Public.docx"
+          ],
+          "metadata_md5": "889eb34fe24e9db83b5e5bc411380984",
+          "sha256": "93a90d9ef7aba0eaaeb7c215e976875559abfd819472dfb3182043e522f5c251",
+          "size": 97398,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "README_book_v0_3.md",
+          "github_blob_id": "ea063824962acb1542d5f5febf0933fb3ed6573c",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.3/README_book_v0_3.md"
+          ],
+          "metadata_md5": "305988f71f745ed222239980900174c2",
+          "sha256": "e43e8e323d8e525850b089db91b6b8a67227c880f0c1ad9742b3e91507ac0b31",
+          "size": 4772,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "ZENODO_v0_3_DEPOSIT_GUIDE.md",
+          "github_blob_id": "bd840dfc08c54ef22941e89c271b53c23a2c0fdd",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.3/ZENODO_v0_3_DEPOSIT_GUIDE.md"
+          ],
+          "metadata_md5": "8208a2e6191c5c42574d3ac001515836",
+          "sha256": "eaeb842ecd9e9a1e5e0babdec6b4eda7bd950544e1a806e14516223315d43a58",
+          "size": 3132,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_EN_v0_3_Public.pdf",
+          "github_blob_id": "9ec24b91ca06dcdb2d1215c4f6844dd84a6e0199",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.3/Being_With_the_Other_EN_v0_3_Public.pdf"
+          ],
+          "metadata_md5": "6ebbea31dc1078858030b96dd901cc90",
+          "sha256": "8e8c692b73bb0e50fda569482ef4a74f3f7f15277499ec3cdb1a1697262fa058",
+          "size": 408085,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "zenodo_v0_3_metadata.json",
+          "github_blob_id": "3cca3f1013372f99bc2fbee92228205fa662056e",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.3/zenodo_v0_3_metadata.json"
+          ],
+          "metadata_md5": "19bbf45c79c87478cd5883ddfde75ecc",
+          "sha256": "adfadcc219032a11ee4035afb37345a0683121ed835eee6a30d2672ccf7ca66b",
+          "size": 2003,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        }
+      ],
+      "record": "23375401",
+      "status": "ALL_RECORD_FILES_MATCH_ZENODO_HTTPS"
+    },
+    {
+      "doi": "10.5281/zenodo.23376521",
+      "files": [
+        {
+          "file": "CITATION_book_v0_4.cff",
+          "github_blob_id": "f15404195248b1dd59d9d099ebfe3bd361ca252e",
+          "github_paths_same_size_and_blob_id": [],
+          "metadata_md5": "6c466fd98054afc26e62591a02695e7f",
+          "sha256": "819474ce18584e14936fe12ce9e058247ca34b3342882985b3406d71aba06787",
+          "size": 759,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_EN_v0_4_Public.md",
+          "github_blob_id": "15bf8bb7b471016566186a98e25f077fcdf50574",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.4/Being_With_the_Other_EN_v0_4_Public.md"
+          ],
+          "metadata_md5": "5fc89138d44e0ef11cda7bea9fd93270",
+          "sha256": "1a5923495e48aafa4deac0cc53fdc5fae5fc4cbc9200c02b330acc4ff97fac70",
+          "size": 128484,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_EN_v0_4_Public.pdf",
+          "github_blob_id": "a333bffc92df5939a6e59d3c5a115e4351964843",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.4/Being_With_the_Other_EN_v0_4_Public.pdf"
+          ],
+          "metadata_md5": "55b88670ff97b1ff4c677a225ffd7a7e",
+          "sha256": "a367b84755aac383c70d7428f745a1c063cab7c292244191112087dedc041995",
+          "size": 448005,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_EN_v0_4_Public.docx",
+          "github_blob_id": "bf08f5f074ecba2309761b0d257053c66466741b",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.4/Being_With_the_Other_EN_v0_4_Public.docx"
+          ],
+          "metadata_md5": "d89f6165a7a691d784981b9bae978963",
+          "sha256": "94fcba22502361160ec1cbc27a0942574577370c8f6148b81dbcb8608c5781dc",
+          "size": 99561,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_FA_v0_4_Public.docx",
+          "github_blob_id": "b675595b1eb37f91047a3efdba317a59828b1b48",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.4/Being_With_the_Other_FA_v0_4_Public.docx"
+          ],
+          "metadata_md5": "4880405d2f9dffc15c10a378d37b2287",
+          "sha256": "8ea1860a0b900c0b5c601ddabd73892b9b066f8f335d91c389f201b02ed50376",
+          "size": 102029,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_FA_v0_4_Public.md",
+          "github_blob_id": "75f27b4e585211f6ce3c1a51962a817ab3239d6b",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.4/Being_With_the_Other_FA_v0_4_Public.md"
+          ],
+          "metadata_md5": "660f192bfef1329ae307418bca07dff7",
+          "sha256": "837b9bebebb319bfada6febef0583e6f2d5a1fbaac08a26a5f87ee40a18c2b56",
+          "size": 189922,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "CHANGELOG_book_v0_4.md",
+          "github_blob_id": "2bcb972c41788e009e17a57346b0230e7427cee6",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.4/CHANGELOG.md"
+          ],
+          "metadata_md5": "5816e3ff66907bf2e95eba4a440bf8b8",
+          "sha256": "2cac2e98b04c792a318b53ad779156499004d279f164f44aba82cc692c98e0fa",
+          "size": 1956,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_FA_v0_4_Public.pdf",
+          "github_blob_id": "703e20112163483e15021f45ca37a290bca9fe59",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.4/Being_With_the_Other_FA_v0_4_Public.pdf"
+          ],
+          "metadata_md5": "abdf45573b98afca6d9ec261e2beb14a",
+          "sha256": "cad4d87fd36f4c4fb084783458543bbf6d22102599f10f8fcd172693bcd5f464",
+          "size": 683329,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "CHECKSUMS_v0_4.sha256",
+          "github_blob_id": "95d7a259a5219c8e4b9259b61f69c65504d9d6c3",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.4/CHECKSUMS.sha256"
+          ],
+          "metadata_md5": "aef7fea70f3fb8bf423324074dd9bbae",
+          "sha256": "4a0842408812408c344fe2b00de8436a50e7084a38f66a3a0e6358211a8cb3ff",
+          "size": 636,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "README_book_v0_4.md",
+          "github_blob_id": "d41e6e25dbb262ec910500fbed050aefe56ba02d",
+          "github_paths_same_size_and_blob_id": [],
+          "metadata_md5": "9e872846e1f0c9ab0b8cdb2ccaaa5d08",
+          "sha256": "65231ea8e2c7000b17aab2ca9e8bdc76ab4e8d0ecf2a18bdfa53cbaa666c3ee5",
+          "size": 5018,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "zenodo_v0_4_draft_metadata.json",
+          "github_blob_id": "7703cf04c533701c9dcf3abfb595f55211ca46fd",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.4/zenodo_v0_4_draft_metadata.json"
+          ],
+          "metadata_md5": "6752c595ef3d610b78f9815ce3e37ca9",
+          "sha256": "85863af92ac979f3e3134e974e27ef80df7c91bf47ade3d66d4ec8a0ad0b2712",
+          "size": 955,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        }
+      ],
+      "record": "23376521",
+      "status": "ALL_RECORD_FILES_MATCH_ZENODO_HTTPS"
+    },
+    {
+      "doi": "10.5281/zenodo.23376577",
+      "files": [
+        {
+          "file": "Being_With_the_Other_FA_v0_4_Public.pdf",
+          "github_blob_id": "703e20112163483e15021f45ca37a290bca9fe59",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.4/Being_With_the_Other_FA_v0_4_Public.pdf"
+          ],
+          "metadata_md5": "abdf45573b98afca6d9ec261e2beb14a",
+          "sha256": "cad4d87fd36f4c4fb084783458543bbf6d22102599f10f8fcd172693bcd5f464",
+          "size": 683329,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "zenodo_v0_4_draft_metadata.json",
+          "github_blob_id": "7703cf04c533701c9dcf3abfb595f55211ca46fd",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.4/zenodo_v0_4_draft_metadata.json"
+          ],
+          "metadata_md5": "6752c595ef3d610b78f9815ce3e37ca9",
+          "sha256": "85863af92ac979f3e3134e974e27ef80df7c91bf47ade3d66d4ec8a0ad0b2712",
+          "size": 955,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "CITATION_book_v0_4.cff",
+          "github_blob_id": "f15404195248b1dd59d9d099ebfe3bd361ca252e",
+          "github_paths_same_size_and_blob_id": [],
+          "metadata_md5": "6c466fd98054afc26e62591a02695e7f",
+          "sha256": "819474ce18584e14936fe12ce9e058247ca34b3342882985b3406d71aba06787",
+          "size": 759,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_EN_v0_4_Public.md",
+          "github_blob_id": "15bf8bb7b471016566186a98e25f077fcdf50574",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.4/Being_With_the_Other_EN_v0_4_Public.md"
+          ],
+          "metadata_md5": "5fc89138d44e0ef11cda7bea9fd93270",
+          "sha256": "1a5923495e48aafa4deac0cc53fdc5fae5fc4cbc9200c02b330acc4ff97fac70",
+          "size": 128484,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_FA_v0_4_Public.docx",
+          "github_blob_id": "b675595b1eb37f91047a3efdba317a59828b1b48",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.4/Being_With_the_Other_FA_v0_4_Public.docx"
+          ],
+          "metadata_md5": "4880405d2f9dffc15c10a378d37b2287",
+          "sha256": "8ea1860a0b900c0b5c601ddabd73892b9b066f8f335d91c389f201b02ed50376",
+          "size": 102029,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_EN_v0_4_Public.docx",
+          "github_blob_id": "bf08f5f074ecba2309761b0d257053c66466741b",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.4/Being_With_the_Other_EN_v0_4_Public.docx"
+          ],
+          "metadata_md5": "d89f6165a7a691d784981b9bae978963",
+          "sha256": "94fcba22502361160ec1cbc27a0942574577370c8f6148b81dbcb8608c5781dc",
+          "size": 99561,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_FA_v0_4_Public.md",
+          "github_blob_id": "75f27b4e585211f6ce3c1a51962a817ab3239d6b",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.4/Being_With_the_Other_FA_v0_4_Public.md"
+          ],
+          "metadata_md5": "660f192bfef1329ae307418bca07dff7",
+          "sha256": "837b9bebebb319bfada6febef0583e6f2d5a1fbaac08a26a5f87ee40a18c2b56",
+          "size": 189922,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_EN_v0_4_Public.pdf",
+          "github_blob_id": "a333bffc92df5939a6e59d3c5a115e4351964843",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.4/Being_With_the_Other_EN_v0_4_Public.pdf"
+          ],
+          "metadata_md5": "55b88670ff97b1ff4c677a225ffd7a7e",
+          "sha256": "a367b84755aac383c70d7428f745a1c063cab7c292244191112087dedc041995",
+          "size": 448005,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "CHANGELOG_book_v0_4.md",
+          "github_blob_id": "2bcb972c41788e009e17a57346b0230e7427cee6",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.4/CHANGELOG.md"
+          ],
+          "metadata_md5": "5816e3ff66907bf2e95eba4a440bf8b8",
+          "sha256": "2cac2e98b04c792a318b53ad779156499004d279f164f44aba82cc692c98e0fa",
+          "size": 1956,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "CHECKSUMS_v0_4.sha256",
+          "github_blob_id": "95d7a259a5219c8e4b9259b61f69c65504d9d6c3",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v0.4/CHECKSUMS.sha256"
+          ],
+          "metadata_md5": "aef7fea70f3fb8bf423324074dd9bbae",
+          "sha256": "4a0842408812408c344fe2b00de8436a50e7084a38f66a3a0e6358211a8cb3ff",
+          "size": 636,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "README_book_v0_4.md",
+          "github_blob_id": "d41e6e25dbb262ec910500fbed050aefe56ba02d",
+          "github_paths_same_size_and_blob_id": [],
+          "metadata_md5": "9e872846e1f0c9ab0b8cdb2ccaaa5d08",
+          "sha256": "65231ea8e2c7000b17aab2ca9e8bdc76ab4e8d0ecf2a18bdfa53cbaa666c3ee5",
+          "size": 5018,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        }
+      ],
+      "record": "23376577",
+      "status": "ALL_RECORD_FILES_MATCH_ZENODO_HTTPS"
+    },
+    {
+      "doi": "10.5281/zenodo.23441596",
+      "files": [
+        {
+          "file": "Ario_Zenodo_Public_Companion_2026-10-17.zip",
+          "github_blob_id": "5c47b24e79474a7f96de73d87166087dad43a5e3",
+          "github_paths_same_size_and_blob_id": [],
+          "metadata_md5": "b1dd3a9bbbe32a04172fba02be38b697",
+          "sha256": "e1ed35416423577d64fef3d02a02e762eb987bb2d4e869f5c03c1670a5488b7e",
+          "size": 1076548,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        }
+      ],
+      "record": "23441596",
+      "status": "ALL_RECORD_FILES_MATCH_ZENODO_HTTPS"
+    },
+    {
+      "doi": "10.5281/zenodo.23600820",
+      "files": [
+        {
+          "file": "Ario_Being_With_the_Other_Bilingual_Zenodo_READY_2026-10-23.zip",
+          "github_blob_id": "3e915f229e9d2d4de67b1664fce36ef22b0fd974",
+          "github_paths_same_size_and_blob_id": [],
+          "metadata_md5": "d6cb621782e21ed9ead6281976b74452",
+          "sha256": "03f15f9e384af86b86182195970654d1a11decb94a5489ea896a0e160a34c527",
+          "size": 410564,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        }
+      ],
+      "record": "23600820",
+      "status": "ALL_RECORD_FILES_MATCH_ZENODO_HTTPS"
+    },
+    {
+      "doi": "10.5281/zenodo.23651704",
+      "files": [
+        {
+          "file": "Ario-Read-Light-For-Models.txt",
+          "github_blob_id": "9b0eb4daa25146fc74c31661db3c92e562777b34",
+          "github_paths_same_size_and_blob_id": [
+            "docs/ai-readable-snapshots/Ario_READ.txt",
+            "releases/zenodo-23651704/Ario-Read-Light-For-Models.txt",
+            "website/Ario-Read-Light-For-Models.txt"
+          ],
+          "metadata_md5": "c804f2c4b57065429063c97851df7098",
+          "sha256": "63f170645e67131025e1d3b8d6e9002a8f3312741ecfce121b886f8d085bd68b",
+          "size": 2857981,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Ario-Full-Archive.txt",
+          "github_blob_id": "98c607d9d25b605df71ee68f9ac22409462e55c8",
+          "github_paths_same_size_and_blob_id": [],
+          "metadata_md5": "4b1a8009dde3806fa512e3198e1d48fa",
+          "sha256": "5cb0b2c829798f5104b4e283bedf14fd84203bea305b08bdb2bfe6b368e02497",
+          "size": 8598644,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        }
+      ],
+      "record": "23651704",
+      "status": "ALL_RECORD_FILES_MATCH_ZENODO_HTTPS"
+    },
+    {
+      "doi": "10.5281/zenodo.23771218",
+      "files": [
+        {
+          "file": "Being_With_the_Other_V5_Illustrated_FA_2026-10-29 (1).pdf",
+          "github_blob_id": "1705c3a92dbd9430c827c2f851f7c29787e2492b",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v6/zenodo-published-originals/Being_With_the_Other_Zenodo_Record_23771218_FA_Original.pdf"
+          ],
+          "metadata_md5": "15d35bfefd6e65bc5bfdc386ee104b67",
+          "sha256": "b9a1098fe20731ced5bc2ae4387a855af1d126a130e18eb537a22f95df08f495",
+          "size": 7547136,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_V5_Illustrated_EN_2026-10-29 (1).pdf",
+          "github_blob_id": "1f1696cb483e6764072c57ace1fb9b651a19b60e",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v6/zenodo-published-originals/Being_With_the_Other_Zenodo_Record_23771218_EN_Original.pdf"
+          ],
+          "metadata_md5": "3e1d6b4426a6f0497867e2f08dea8ce7",
+          "sha256": "85f0f4ff5ec5d36c59773e2a7bf5dbcab85d52aee16a92d8848e1a4b226059f1",
+          "size": 7336488,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        }
+      ],
+      "record": "23771218",
+      "status": "ALL_RECORD_FILES_MATCH_ZENODO_HTTPS"
+    },
+    {
+      "doi": "10.5281/zenodo.24041161",
+      "files": [
+        {
+          "file": "Ario_SSRN_Experimental_Preprint_v2.pdf",
+          "github_blob_id": "d47adb2ea29ca9b613dc902dc8bce7e262d48111",
+          "github_paths_same_size_and_blob_id": [
+            "papers/zenodo-published-research/24041161/Independence_Is_Not_Multiplicity_Published.pdf"
+          ],
+          "metadata_md5": "b76d489122667c3bba4f0481c674bf40",
+          "sha256": "2398144dfae874761f1f5358ea7b9493f6f199f6af48019b36a12ffacbb3db9a",
+          "size": 235614,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        }
+      ],
+      "record": "24041161",
+      "status": "ALL_RECORD_FILES_MATCH_ZENODO_HTTPS"
+    },
+    {
+      "doi": "10.5281/zenodo.24054535",
+      "files": [
+        {
+          "file": "Ario_Provenance_Aware_Auditing_v0_1.pdf",
+          "github_blob_id": "88ded8bc81485b018863a9ff300de25c5dd342b1",
+          "github_paths_same_size_and_blob_id": [
+            "papers/zenodo-published-research/24054535/Ario_Provenance_Aware_Auditing_of_AI_Claims_Published.pdf"
+          ],
+          "metadata_md5": "99e456f58c37c7061e80055b273a7ea7",
+          "sha256": "4650895c429b4419cae9db7f5245256a96c2f27ec222367ff53dcf0f49380c0f",
+          "size": 102518,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        }
+      ],
+      "record": "24054535",
+      "status": "ALL_RECORD_FILES_MATCH_ZENODO_HTTPS"
+    },
+    {
+      "doi": "10.5281/zenodo.24136175",
+      "files": [
+        {
+          "file": "fa.pdf",
+          "github_blob_id": "96e7468e8ee082ac8f87a4c1fa96301170d49c0b",
+          "github_paths_same_size_and_blob_id": [
+            "papers/creation-without-sovereignty/2026-11-11/published/fa.pdf"
+          ],
+          "metadata_md5": "d217afe0f88a90d03f2d8a17503d7a45",
+          "sha256": "1b63e6ae1a0f9c84978b5b36759f197eb150f9046ce98d08675fedae137d8f5c",
+          "size": 212341,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "notes.zip",
+          "github_blob_id": "252b62cc8e9225a3f8c8bd1491367a5dccac9d40",
+          "github_paths_same_size_and_blob_id": [],
+          "metadata_md5": "c258621088952e02794d987db2f36a6b",
+          "sha256": "f2796dacdaafa4716426416b7d7d125df7d0a0b76413df91529509aaef6e4e1d",
+          "size": 27203,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "en.pdf",
+          "github_blob_id": "e60bd7388569ce72f38a9be2425e7e0b150ae223",
+          "github_paths_same_size_and_blob_id": [
+            "papers/creation-without-sovereignty/2026-11-11/published/en.pdf"
+          ],
+          "metadata_md5": "0107eb9bf48a57d078f869a4fb1a1985",
+          "sha256": "b268dbc5476040d7b84db7253dc468a8342341c62a533ba0ab7d14f17820169c",
+          "size": 229470,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        }
+      ],
+      "record": "24136175",
+      "status": "ALL_RECORD_FILES_MATCH_ZENODO_HTTPS"
+    },
+    {
+      "doi": "10.5281/zenodo.24230572",
+      "files": [
+        {
+          "file": "Ario-Latest (1).zip",
+          "github_blob_id": "adc864af7c44153d3ae3841e7cda0061ff913fd6",
+          "github_paths_same_size_and_blob_id": [
+            "releases/complete-research-2026-11-14-a39ac06e/Ario-Research-Complete-2026-11-14.zip"
+          ],
+          "metadata_md5": "46a3933ba9c4f9dd948a02dda6d98f30",
+          "sha256": "400d4b1e2dd9ec86a498f78c22ce8db961e2bae0d427bb2f5857f08b06a1a05a",
+          "size": 16873717,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Ario-Latest (1).txt",
+          "github_blob_id": "d7d951ed6c1c3047b1459981fc4f3b5774b6ed8e",
+          "github_paths_same_size_and_blob_id": [
+            "releases/complete-research-2026-11-14-a39ac06e/Ario-Research-Complete-2026-11-14.txt"
+          ],
+          "metadata_md5": "40f072c39f31b451c095df2eb5db5196",
+          "sha256": "96a6a140f4caf28afd13f1ca8a349ba8efded9b45a3bc1c27d9a38fa33b65fb2",
+          "size": 3861208,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "SHA256SUMS.txt",
+          "github_blob_id": "48c0af36428f0aabf0eddf50d1f94d2f2a37e8f0",
+          "github_paths_same_size_and_blob_id": [
+            "releases/complete-research-2026-11-14-a39ac06e/SHA256SUMS.txt"
+          ],
+          "metadata_md5": "5aeb050614e3253ffbfadf46dc216ccc",
+          "sha256": "dc86f91ec87ab297a5baeff063d2f21f144e1195a9d8f430e36708555fbbe46f",
+          "size": 208,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "SOURCE_MANIFEST.json",
+          "github_blob_id": "0f508a4c92b8c37fdb3ae680a78a24ec5bac66d2",
+          "github_paths_same_size_and_blob_id": [
+            "releases/complete-research-2026-11-14-a39ac06e/SOURCE_MANIFEST.json"
+          ],
+          "metadata_md5": "ba1ec6d2c0d06de4512542a730fa86fb",
+          "sha256": "379658ce13074c324699a00518fbd55dc9bc3ff87ff06157e0416c8224060288",
+          "size": 107330,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        }
+      ],
+      "record": "24230572",
+      "status": "ALL_RECORD_FILES_MATCH_ZENODO_HTTPS"
+    },
+    {
+      "doi": "10.5281/zenodo.24343618",
+      "files": [
+        {
+          "file": "LICENSE_BOOK_CC_BY_4_0.md",
+          "github_blob_id": "3e3cebe2805dfa40cffe6f75f3f98f3231941567",
+          "github_paths_same_size_and_blob_id": [],
+          "metadata_md5": "70efc19163865294fe1cd461d1023174",
+          "sha256": "2b66add5e2227f1d7b49435b248cd2052e6d5e413e2a37fa38b8211a8e75fa50",
+          "size": 2541,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_de_FULL_DRAFT_V7_1_2026-11-18.pdf",
+          "github_blob_id": "f30d33f7e9cb141f13d1d30128ee0d83c0f0c068",
+          "github_paths_same_size_and_blob_id": [],
+          "metadata_md5": "eb4fa13b82e4b35127540a4d8ee01daa",
+          "sha256": "46e26103d18c77a8cac93410e99c2caf40a8f0be92d7fb5f6802e4cf31b1afc5",
+          "size": 456658,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_hi_FULL_DRAFT_V7_1_2026-11-18.pdf",
+          "github_blob_id": "c9fb6aa6d998df9949823181ab1c4bf44a9043b6",
+          "github_paths_same_size_and_blob_id": [],
+          "metadata_md5": "bbc00fead8fffe3f88fd7bb38ca6b48d",
+          "sha256": "1160105e1630bbc8c52f3ea930692f2d717a4fd647cbb0229ab97ebf1914c628",
+          "size": 426259,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_ru_FULL_DRAFT_V7_1_2026-11-18.pdf",
+          "github_blob_id": "997c2de2ab3386369fafef6b49f3101454904bcd",
+          "github_paths_same_size_and_blob_id": [],
+          "metadata_md5": "f1b29c779bc94861aa66224158b29881",
+          "sha256": "7da614313ef95d388d7e83c095b8b3a19d8a886a8bb52e2b5dbb497247f90f11",
+          "size": 456981,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_id_FULL_DRAFT_V7_1_2026-11-18.pdf",
+          "github_blob_id": "debc632ab52a8a2970ff586d71f35f2388812afc",
+          "github_paths_same_size_and_blob_id": [],
+          "metadata_md5": "cc7c0d3c157e31e3abdb3bde598960f4",
+          "sha256": "3d3e9bf3c7461d924fb89999c7ecdea5267c26be1f8599fff370409ad4e00ab2",
+          "size": 417503,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_tr_FULL_DRAFT_V7_1_2026-11-18.pdf",
+          "github_blob_id": "c1faa65eb460a4a21378de25532d134d393105dc",
+          "github_paths_same_size_and_blob_id": [],
+          "metadata_md5": "3774a40cabdb49f76b5f405f4b424319",
+          "sha256": "d90d93fa502062356f7771181006ca49caa25bb94e618fa40f92989deffa28f3",
+          "size": 395771,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_zh_FULL_DRAFT_V7_1_2026-11-18.pdf",
+          "github_blob_id": "49bd8f43c863fd310f82a45a8e8f9f5ccb85365b",
+          "github_paths_same_size_and_blob_id": [],
+          "metadata_md5": "595c22725d903aba6650fd4d9ba9c60f",
+          "sha256": "84b8e8a047f6593439e8c0192c12a642d2df4b1356cb7a025deefca0446045df",
+          "size": 867787,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_en_FULL_DRAFT_V7_1_2026-11-18.pdf",
+          "github_blob_id": "e76e6c08b28e9c33f1b436e25792aba900e24d44",
+          "github_paths_same_size_and_blob_id": [],
+          "metadata_md5": "a142ee640fa3f4643eb0180a02d4c91d",
+          "sha256": "c17bf3083ffcb959798b4b1423b1f76a2860948b8d0eec6d6404ba6461891cad",
+          "size": 400432,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "README_FA.md",
+          "github_blob_id": "6906037dcf2c7c2fbc5eabcbc2501dfc523a607b",
+          "github_paths_same_size_and_blob_id": [],
+          "metadata_md5": "f716151698a916317a8bedac0b0c4d86",
+          "sha256": "a219fcb20ed4bddc6b3f73716210fabdb78e139c92f60dfa72eb17fc18e89073",
+          "size": 5361,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_es_FULL_DRAFT_V7_1_2026-11-18.pdf",
+          "github_blob_id": "11f8b77bc8d83746ae15bb087b5933a335523e5f",
+          "github_paths_same_size_and_blob_id": [],
+          "metadata_md5": "1f4d070e381c82e9f309668950dfb826",
+          "sha256": "913763521ca7282a69198bf8048a23f03c8813afa20f822d0fd8223a3e994ba0",
+          "size": 426409,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_pt_FULL_DRAFT_V7_1_2026-11-18.pdf",
+          "github_blob_id": "b459a89bc7ff852df57114a329eb03d19aadce35",
+          "github_paths_same_size_and_blob_id": [],
+          "metadata_md5": "4eaa52e4a38f2da95246f335625582e7",
+          "sha256": "025a44cf73b6fe065bf054eeef170950df298ffe5c2f7c7bc7711b49306d0824",
+          "size": 418447,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "QA_COVERAGE.json",
+          "github_blob_id": "00955fac10a50a9b9b096ca8aba5dff8eb239c8d",
+          "github_paths_same_size_and_blob_id": [
+            "papers/being-with-the-other/v7.1/zenodo-24343618/QA_COVERAGE.json"
+          ],
+          "metadata_md5": "dfb32170e57ab58ff469d89249cd71ad",
+          "sha256": "46dee4c227bb63460f6d25fb7b76989514971012566a36fa6dd1b886847ef155",
+          "size": 7315,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_ar_FULL_DRAFT_V7_1_2026-11-18.pdf",
+          "github_blob_id": "dd60c8c964e5b3d23b41e987aaba2078fa4284d4",
+          "github_paths_same_size_and_blob_id": [],
+          "metadata_md5": "e9a9310bb692c08f5b3229248fb2a364",
+          "sha256": "58098ac94548fd2971d466f7dc6f806c743fb20080538e334db9e54becfc631c",
+          "size": 418403,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "SHA256SUMS.txt",
+          "github_blob_id": "a65ba426d321c829d8c434f3e8fbf8ff911f8b27",
+          "github_paths_same_size_and_blob_id": [],
+          "metadata_md5": "b5fb079dbe7d831e3ecc344086de4485",
+          "sha256": "23bc4821c8bb12de5f3d07217684bba8ab4a8c240f2e1b24f4d89f03348113c7",
+          "size": 1560,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "README_EN.md",
+          "github_blob_id": "f987d09c9979567692825b887313adb065fb7b06",
+          "github_paths_same_size_and_blob_id": [],
+          "metadata_md5": "80c270040487407b1eddb8cf5a77c7b9",
+          "sha256": "a785a61e21e797dcdfd92588297206cacebada290bca663d8610c6c743a34f96",
+          "size": 1827,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_fr_FULL_DRAFT_V7_1_2026-11-18.pdf",
+          "github_blob_id": "18460eb2bc312b7d07b25bc4cc4fd41f321ec68c",
+          "github_paths_same_size_and_blob_id": [],
+          "metadata_md5": "f71573bfd19519d5ac17f5cfe50d9eab",
+          "sha256": "330d4358036cc913999b0f291217d63df3d934e51451f1720e280f97ffdff834",
+          "size": 447705,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_ja_FULL_DRAFT_V7_1_2026-11-18.pdf",
+          "github_blob_id": "c026622a1e0d9a3881ebc65ac45b62db51b10adb",
+          "github_paths_same_size_and_blob_id": [],
+          "metadata_md5": "c7ed53556d11acc0c89b52c68a092626",
+          "sha256": "52082292945aca5e6c2d62653ea63bd2e29654ed488ccb7127dfa310d51d552b",
+          "size": 890605,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        },
+        {
+          "file": "Being_With_the_Other_V7_1_COMPLETE_FA.pdf",
+          "github_blob_id": "9e20896d88d8fb5afb2d3c5fcad20ccc25a16c59",
+          "github_paths_same_size_and_blob_id": [],
+          "metadata_md5": "67239f1e04417d06951fdee1f1f19eeb",
+          "sha256": "061b2b9581e5a68b7bcc96586de465576d6d7216d52b331559f8dbb062523d1c",
+          "size": 5388072,
+          "status": "LOCAL_BYTES_MATCH_ZENODO_HTTPS"
+        }
+      ],
+      "record": "24343618",
+      "status": "ALL_RECORD_FILES_MATCH_ZENODO_HTTPS"
+    }
+  ],
+  "status": "ALL_SELECTED_DOI_FILES_MATCH_ZENODO_HTTPS"
+}

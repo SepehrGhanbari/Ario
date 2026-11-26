@@ -1,0 +1,141 @@
+test_actual_repo_checksum_fixture_sha (test_crosscheck_v0_2.CrossCheckTests.test_actual_repo_checksum_fixture_sha) ... ok
+test_bad_size (test_crosscheck_v0_2.CrossCheckTests.test_bad_size) ... ok
+test_duplicate_keys (test_crosscheck_v0_2.CrossCheckTests.test_duplicate_keys) ... ok
+test_offline_reference_unknown (test_crosscheck_v0_2.CrossCheckTests.test_offline_reference_unknown) ... ok
+test_swapped_checksum_registry (test_crosscheck_v0_2.CrossCheckTests.test_swapped_checksum_registry) ... ok
+test_symlink_refused (test_crosscheck_v0_2.CrossCheckTests.test_symlink_refused) ... ok
+test_tampered_bytes_same_size (test_crosscheck_v0_2.CrossCheckTests.test_tampered_bytes_same_size) ... ok
+test_unrecognized_asset (test_crosscheck_v0_2.CrossCheckTests.test_unrecognized_asset) ... ok
+test_valid_fixture (test_crosscheck_v0_2.CrossCheckTests.test_valid_fixture) ... FAIL
+test_wrong_source_commit (test_crosscheck_v0_2.CrossCheckTests.test_wrong_source_commit) ... ok
+test_red_config_traversal_must_be_rejected (test_adversarial_r1_v0_2.AdversarialGreenR1Tests.test_red_config_traversal_must_be_rejected) ... ok
+test_red_float_exponent_in_unused_field_must_be_rejected (test_adversarial_r1_v0_2.AdversarialGreenR1Tests.test_red_float_exponent_in_unused_field_must_be_rejected) ... ok
+test_red_http_exception_at_open_must_be_unknown (test_adversarial_r1_v0_2.AdversarialGreenR1Tests.test_red_http_exception_at_open_must_be_unknown) ... ok
+test_red_incomplete_reference_body_must_be_unknown (test_adversarial_r1_v0_2.AdversarialGreenR1Tests.test_red_incomplete_reference_body_must_be_unknown) ... ERROR
+test_red_injected_reference_must_not_claim_live_github (test_adversarial_r1_v0_2.AdversarialGreenR1Tests.test_red_injected_reference_must_not_claim_live_github) ... FAIL
+test_red_nonfinite_extra_metadata_must_be_rejected (test_adversarial_r1_v0_2.AdversarialGreenR1Tests.test_red_nonfinite_extra_metadata_must_be_rejected) ... ok
+test_red_partial_declared_http_body_must_be_unknown (test_adversarial_r1_v0_2.AdversarialGreenR1Tests.test_red_partial_declared_http_body_must_be_unknown) ... ERROR
+test_red_tracking_count_type_must_be_strict (test_adversarial_r1_v0_2.AdversarialGreenR1Tests.test_red_tracking_count_type_must_be_strict) ... ok
+test_bad_reference_types_fail_closed (test_adversarial_extended_v0_2.ExtendedControls.test_bad_reference_types_fail_closed) ... ok
+test_cli_rejected_is_json_and_nonzero (test_adversarial_extended_v0_2.ExtendedControls.test_cli_rejected_is_json_and_nonzero) ... ok
+test_cli_unknown_is_json_and_nonzero (test_adversarial_extended_v0_2.ExtendedControls.test_cli_unknown_is_json_and_nonzero) ... ok
+test_config_rejects_host_prefix_slashes_and_dot_segments (test_adversarial_extended_v0_2.ExtendedControls.test_config_rejects_host_prefix_slashes_and_dot_segments) ... ok
+test_fixed_origin_and_exact_publication_commit (test_adversarial_extended_v0_2.ExtendedControls.test_fixed_origin_and_exact_publication_commit) ... ok
+test_float_exponent_overflow_fails_closed (test_adversarial_extended_v0_2.ExtendedControls.test_float_exponent_overflow_fails_closed) ... ok
+test_https_context_and_redirect_proxy_wiring (test_adversarial_extended_v0_2.ExtendedControls.test_https_context_and_redirect_proxy_wiring) ... ok
+test_integer_limit_and_duplicate_nested_hash_fields (test_adversarial_extended_v0_2.ExtendedControls.test_integer_limit_and_duplicate_nested_hash_fields) ... ok
+test_local_mutation_during_streaming_detected (test_adversarial_extended_v0_2.ExtendedControls.test_local_mutation_during_streaming_detected) ... ok
+test_real_fetch_branch_success_through_stubbed_https_opener (test_adversarial_extended_v0_2.ExtendedControls.test_real_fetch_branch_success_through_stubbed_https_opener) ... ERROR
+test_redirect_and_non200_fail_closed (test_adversarial_extended_v0_2.ExtendedControls.test_redirect_and_non200_fail_closed) ... ok
+test_reference_size_limit_on_wire (test_adversarial_extended_v0_2.ExtendedControls.test_reference_size_limit_on_wire) ... ERROR
+test_renamed_same_bytes_valid_by_explicit_asset_name (test_adversarial_extended_v0_2.ExtendedControls.test_renamed_same_bytes_valid_by_explicit_asset_name) ... FAIL
+test_symlink_swap_between_lstat_and_open_rejected (test_adversarial_extended_v0_2.ExtendedControls.test_symlink_swap_between_lstat_and_open_rejected) ... FAIL
+
+======================================================================
+ERROR: test_red_incomplete_reference_body_must_be_unknown (test_adversarial_r1_v0_2.AdversarialGreenR1Tests.test_red_incomplete_reference_body_must_be_unknown)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/ario-r14-work/r14/historical-r1/test_adversarial_r1_v0_2.py", line 44, in test_red_incomplete_reference_body_must_be_unknown
+    m.fetch_official_reference(m.RELEASE)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/mnt/data/ario-r14-work/r14/historical-r1/ario_github_crosscheck_v0_2.py", line 224, in fetch_official_reference
+    data, validated = _retrieve_reference(config)
+                      ~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "/mnt/data/ario-r14-work/r14/historical-r1/ario_github_crosscheck_v0_2.py", line 184, in _retrieve_reference
+    codings = response.headers.get_all("Content-Encoding", [])
+              ^^^^^^^^^^^^^^^^
+AttributeError: 'BadResponse' object has no attribute 'headers'
+
+======================================================================
+ERROR: test_red_partial_declared_http_body_must_be_unknown (test_adversarial_r1_v0_2.AdversarialGreenR1Tests.test_red_partial_declared_http_body_must_be_unknown)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/ario-r14-work/r14/historical-r1/test_adversarial_r1_v0_2.py", line 59, in test_red_partial_declared_http_body_must_be_unknown
+    m.fetch_official_reference(m.RELEASE)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/mnt/data/ario-r14-work/r14/historical-r1/ario_github_crosscheck_v0_2.py", line 224, in fetch_official_reference
+    data, validated = _retrieve_reference(config)
+                      ~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "/mnt/data/ario-r14-work/r14/historical-r1/ario_github_crosscheck_v0_2.py", line 184, in _retrieve_reference
+    codings = response.headers.get_all("Content-Encoding", [])
+              ^^^^^^^^^^^^^^^^
+AttributeError: 'PartialResponse' object has no attribute 'headers'
+
+======================================================================
+ERROR: test_real_fetch_branch_success_through_stubbed_https_opener (test_adversarial_extended_v0_2.ExtendedControls.test_real_fetch_branch_success_through_stubbed_https_opener)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/ario-r14-work/r14/historical-r1/test_adversarial_extended_v0_2.py", line 81, in test_real_fetch_branch_success_through_stubbed_https_opener
+    result=m.verify_file(self.path,'ario-full.txt', self.cfg)
+  File "/mnt/data/ario-r14-work/r14/historical-r1/ario_github_crosscheck_v0_2.py", line 349, in verify_file
+    raise VerificationRejected("custom releases require an explicit reference provider")
+ario_github_crosscheck_v0_2.VerificationRejected: custom releases require an explicit reference provider
+
+======================================================================
+ERROR: test_reference_size_limit_on_wire (test_adversarial_extended_v0_2.ExtendedControls.test_reference_size_limit_on_wire)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/ario-r14-work/r14/historical-r1/test_adversarial_extended_v0_2.py", line 113, in test_reference_size_limit_on_wire
+    m.fetch_official_reference(self.cfg)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "/mnt/data/ario-r14-work/r14/historical-r1/ario_github_crosscheck_v0_2.py", line 224, in fetch_official_reference
+    data, validated = _retrieve_reference(config)
+                      ~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "/mnt/data/ario-r14-work/r14/historical-r1/ario_github_crosscheck_v0_2.py", line 184, in _retrieve_reference
+    codings = response.headers.get_all("Content-Encoding", [])
+              ^^^^^^^^^^^^^^^^
+AttributeError: 'FakeResponse' object has no attribute 'headers'
+
+======================================================================
+FAIL: test_valid_fixture (test_crosscheck_v0_2.CrossCheckTests.test_valid_fixture)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/ario-r14-work/r14/historical-r1/test_crosscheck_v0_2.py", line 32, in test_valid_fixture
+    self.assertEqual(self.check()["status"], "PINNED_REFERENCE_BYTES_MATCH_GITHUB_NOT_CHECKED")
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'PINNED_REFERENCE_BYTES_MATCH_ORIGIN_UNVERIFIED' != 'PINNED_REFERENCE_BYTES_MATCH_GITHUB_NOT_CHECKED'
+- PINNED_REFERENCE_BYTES_MATCH_ORIGIN_UNVERIFIED
+?                              ---    ^^^ ^^^^
++ PINNED_REFERENCE_BYTES_MATCH_GITHUB_NOT_CHECKED
+?                                +++++ ++ ^^ ^^
+
+
+======================================================================
+FAIL: test_red_injected_reference_must_not_claim_live_github (test_adversarial_r1_v0_2.AdversarialGreenR1Tests.test_red_injected_reference_must_not_claim_live_github)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/ario-r14-work/r14/historical-r1/test_adversarial_r1_v0_2.py", line 64, in test_red_injected_reference_must_not_claim_live_github
+    self.assertEqual(result.get('reference_transport'),'INJECTED_FIXTURE_NOT_NETWORK')
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'CALLER_SUPPLIED_TRANSPORT_UNVERIFIED' != 'INJECTED_FIXTURE_NOT_NETWORK'
+- CALLER_SUPPLIED_TRANSPORT_UNVERIFIED
++ INJECTED_FIXTURE_NOT_NETWORK
+
+
+======================================================================
+FAIL: test_renamed_same_bytes_valid_by_explicit_asset_name (test_adversarial_extended_v0_2.ExtendedControls.test_renamed_same_bytes_valid_by_explicit_asset_name)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/ario-r14-work/r14/historical-r1/test_adversarial_extended_v0_2.py", line 137, in test_renamed_same_bytes_valid_by_explicit_asset_name
+    self.assertEqual(result['status'],'PINNED_REFERENCE_BYTES_MATCH_GITHUB_NOT_CHECKED')
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'PINNED_REFERENCE_BYTES_MATCH_ORIGIN_UNVERIFIED' != 'PINNED_REFERENCE_BYTES_MATCH_GITHUB_NOT_CHECKED'
+- PINNED_REFERENCE_BYTES_MATCH_ORIGIN_UNVERIFIED
+?                              ---    ^^^ ^^^^
++ PINNED_REFERENCE_BYTES_MATCH_GITHUB_NOT_CHECKED
+?                                +++++ ++ ^^ ^^
+
+
+======================================================================
+FAIL: test_symlink_swap_between_lstat_and_open_rejected (test_adversarial_extended_v0_2.ExtendedControls.test_symlink_swap_between_lstat_and_open_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/ario-r14-work/r14/historical-r1/test_adversarial_extended_v0_2.py", line 170, in test_symlink_swap_between_lstat_and_open_rejected
+    with self.assertRaisesRegex(m.VerificationRejected,'ID_MISMATCH'):
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: VerificationRejected not raised
+
+----------------------------------------------------------------------
+Ran 32 tests in 0.094s
+
+FAILED (failures=4, errors=4)

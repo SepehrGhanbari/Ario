@@ -100,6 +100,12 @@ def parse_evidence_ancestry_findings(basis: str) -> dict:
                     or row["property_id"] != "SUPPLIED_RECORD_PRESENT"
                     or target is None or target["reference_type"] not in ("CLAIM", "OBSERVATION")):
                 raise ValueError("M0 ancestry presence binding invalid")
+        if row["use_disposition"] == "RECORD_DESCRIPTION_ONLY" and (
+                row["record_presence"] != "MATCH"
+                or row["ancestry"] != "TRACEABLE_WITHIN_SUPPLIED_SNAPSHOT"
+                or row["assessment_id"] is None
+                or row["reasons"]):
+            raise ValueError("M0 ancestry description disposition inconsistent")
     if "use_disposition" in data and data["use_disposition"] != "UNKNOWN":
         raise ValueError("M0 ancestry fallback state invalid")
     return data
@@ -1137,9 +1143,13 @@ class _EvidenceAncestryGuard:
                 heights[key] = max((1 + heights.get(self.key(r), 0)
                                    for r in self.edges.get(key, ())), default=0)
                 continue
-            # Evidence root-ID collision uses the existing Assessment UNKNOWN
-            # rule. Ancestor references retain the stricter result-ID firewall.
+            # A protected ID colliding with an Evidence object's own ID is
+            # ambiguous even before Assessment use. Keep traversing its parents;
+            # explicit protected references retain the stricter firewall below.
             root_evidence = key == root and key[0] == "EVIDENCE" and key not in active
+            if root_evidence and key[1] in self.forbidden_ids:
+                unknown = True
+                codes.add("UNKNOWN")
             if key[0] in self.FORBIDDEN or (key[1] in self.forbidden_ids and not root_evidence):
                 codes.add("COMPOSITION_FORBIDDEN")
                 if self.unique(key) is None:

@@ -1,0 +1,190 @@
+{
+  "schema": "ario-r14-research-evidence-v1",
+  "files": [
+    {
+      "path": "PATCH_R13_to_R14.diff",
+      "bytes": 2305,
+      "sha256": "0b372bb5d2dcd8ca954760698eec40c1d72130d0e41388e9b5d2f06683ef9865"
+    },
+    {
+      "path": "REPORT_FA.md",
+      "bytes": 5449,
+      "sha256": "973d1b1426426609004774c38e724251648f009b21827d949d0d58d90938d3cf"
+    },
+    {
+      "path": "REVIEWER_HANDOFF_EN.md",
+      "bytes": 2665,
+      "sha256": "466a99937981de7ba6b944d2fd20d4e9a332bc74753b4593e0c8005dd47102e5"
+    },
+    {
+      "path": "candidate/ario_github_crosscheck_v0_3.py",
+      "bytes": 19656,
+      "sha256": "fac354c46e8fc8ce68edf6202980aa974ab3f0319cfe0e8272b5c688330b432b"
+    },
+    {
+      "path": "candidate/ario_github_crosscheck_v0_4.py",
+      "bytes": 19656,
+      "sha256": "fac354c46e8fc8ce68edf6202980aa974ab3f0319cfe0e8272b5c688330b432b"
+    },
+    {
+      "path": "fixtures/research_reference_checksums.json",
+      "bytes": 962,
+      "sha256": "33df4395bffc0ab261af333d84e48b080fdff3d10852de2522bc61e19515ae6f"
+    },
+    {
+      "path": "fixtures/retrieved-ario-manifest.json",
+      "bytes": 63205,
+      "sha256": "f86fb10ef3eb71dd6e3c348b3f0c9b42c88b3837ae889918c33d8f5d62fe11d8"
+    },
+    {
+      "path": "historical-r1/ario_github_crosscheck_v0_2.py",
+      "bytes": 19656,
+      "sha256": "fac354c46e8fc8ce68edf6202980aa974ab3f0319cfe0e8272b5c688330b432b"
+    },
+    {
+      "path": "historical-r1/research_reference_checksums.json",
+      "bytes": 962,
+      "sha256": "33df4395bffc0ab261af333d84e48b080fdff3d10852de2522bc61e19515ae6f"
+    },
+    {
+      "path": "historical-r1/test_adversarial_extended_v0_2.py",
+      "bytes": 9502,
+      "sha256": "5e3e05edbdecb2f7edec500438a26fdddd2a5257a18de9fb75a3d8b310c3c126"
+    },
+    {
+      "path": "historical-r1/test_adversarial_r1_v0_2.py",
+      "bytes": 4465,
+      "sha256": "187d368c86783ea6eb15a6d16b15c5bd5a97bf9897e8bbd3daa90e16be66cc7e"
+    },
+    {
+      "path": "historical-r1/test_crosscheck_v0_2.py",
+      "bytes": 3799,
+      "sha256": "537b7549c96cb9634c1ef9005d6f5354101fc8abb0ec0cbf619928ab6ea2a772"
+    },
+    {
+      "path": "input/ario-github-crosscheck-R1-v0.2-adversarial-review.zip",
+      "bytes": 38223,
+      "sha256": "9ff9bae00bf0d5aecea663e33d7490708c5f676dba9ab98b971f18fca386632a"
+    },
+    {
+      "path": "input/ario-github-crosscheck-R13-independent-review.zip",
+      "bytes": 295204,
+      "sha256": "4c5dcd81f7f838c5883fe9ccdf166984f43059e39dda4f8127e6b0303d978725"
+    },
+    {
+      "path": "input/ario_github_crosscheck_v0_3.py",
+      "bytes": 18780,
+      "sha256": "58e5b143de5d61ebe36499c8ca9d68b85ed0ef96a62a410081668a1c2c1e7bbc"
+    },
+    {
+      "path": "input/candidate/research_reference_checksums.json",
+      "bytes": 962,
+      "sha256": "33df4395bffc0ab261af333d84e48b080fdff3d10852de2522bc61e19515ae6f"
+    },
+    {
+      "path": "input/candidate/retrieved-ario-manifest.json",
+      "bytes": 63205,
+      "sha256": "f86fb10ef3eb71dd6e3c348b3f0c9b42c88b3837ae889918c33d8f5d62fe11d8"
+    },
+    {
+      "path": "logs/GREEN_R14.log",
+      "bytes": 1853,
+      "sha256": "0271927afe460cc32c19db17d0d942a462edc1556877704d8f4e2b22c03e1472"
+    },
+    {
+      "path": "logs/RED_R13.log",
+      "bytes": 14051,
+      "sha256": "053b2f3f341f40555a9da67a96f21a54f9e4c306977e00c065811f4e6a468d36"
+    },
+    {
+      "path": "logs/historical_r1_32.log",
+      "bytes": 11818,
+      "sha256": "e353986b29884090ba8c1b358764f4722a7e09522ee2f817a2a7a7df566150e6"
+    },
+    {
+      "path": "logs/live_attempt.log",
+      "bytes": 109,
+      "sha256": "766541271c4a70cc9ee7866d86ac116bd6f21d5dcd8cc3c587f7980a0222f75f"
+    },
+    {
+      "path": "logs/mutations.log",
+      "bytes": 273,
+      "sha256": "46ffa7f00678a5513c515a91e97b71eaff59ffe04f6ce5a179e7293eb717220d"
+    },
+    {
+      "path": "logs/ported_50.log",
+      "bytes": 6971,
+      "sha256": "bbc2eb9efe96d394d337f2a90d59522c792393038e948f4936e7e83acf6f1a69"
+    },
+    {
+      "path": "logs/ported_http_24.log",
+      "bytes": 1585,
+      "sha256": "e0fb22721fa01778f4fa33b70f03ef53cabe702a587df9ed168275d5ee7f7ae5"
+    },
+    {
+      "path": "logs/r13_20.log",
+      "bytes": 3027,
+      "sha256": "31a4f7fd0f20aafc302a4f58ab80a7ee76f8d4a9272e327f463c9f3132f96bf1"
+    },
+    {
+      "path": "testbench-ported/ario_github_crosscheck_v0_2.py",
+      "bytes": 19656,
+      "sha256": "fac354c46e8fc8ce68edf6202980aa974ab3f0319cfe0e8272b5c688330b432b"
+    },
+    {
+      "path": "testbench-ported/http_controls_ported.py",
+      "bytes": 4139,
+      "sha256": "f1aeaf4e197ef5dc9af1041b5fd0dffd03c399fb080279b695ff0373027d68a9"
+    },
+    {
+      "path": "testbench-ported/input/research_reference_checksums.json",
+      "bytes": 962,
+      "sha256": "33df4395bffc0ab261af333d84e48b080fdff3d10852de2522bc61e19515ae6f"
+    },
+    {
+      "path": "testbench-ported/r12_independent_controls.py",
+      "bytes": 6421,
+      "sha256": "d670d49df254a88f2ff84f5e1714a895fa96d43843bdc3d48dec0c1ed6c46285"
+    },
+    {
+      "path": "testbench-ported/research_reference_checksums.json",
+      "bytes": 962,
+      "sha256": "33df4395bffc0ab261af333d84e48b080fdff3d10852de2522bc61e19515ae6f"
+    },
+    {
+      "path": "testbench-ported/retrieved-ario-manifest.json",
+      "bytes": 63205,
+      "sha256": "f86fb10ef3eb71dd6e3c348b3f0c9b42c88b3837ae889918c33d8f5d62fe11d8"
+    },
+    {
+      "path": "testbench-ported/test_adversarial_extended_v0_2.py",
+      "bytes": 10608,
+      "sha256": "92e7df5d9b38987ba90ddafc3f187c3975b5ad14d1f7ff409211c31d50d68ec9"
+    },
+    {
+      "path": "testbench-ported/test_adversarial_r1_v0_2.py",
+      "bytes": 4571,
+      "sha256": "6276d592356e7e641ac4d1b4d57cc18bb47644fe9379485d90ffe499d311c91f"
+    },
+    {
+      "path": "testbench-ported/test_crosscheck_v0_2.py",
+      "bytes": 3798,
+      "sha256": "d99156eef58ca96fc83fefe4e13420a7a96ecc63ae6accc7f6278bf13bb01cff"
+    },
+    {
+      "path": "tests/run_mutations_r14.py",
+      "bytes": 1544,
+      "sha256": "433b26d9f4c4128bc1ae4da7724a0f889f6d1882cd6aa13825288d3656a223ac"
+    },
+    {
+      "path": "tests/test_r13_falsifiers.py",
+      "bytes": 10526,
+      "sha256": "cf5643c09510c54886edc2e9d959f9d53b0e6789ce291f9d0db542fd4df19120"
+    },
+    {
+      "path": "tests/test_r14_http.py",
+      "bytes": 6274,
+      "sha256": "d9f8afa2ad051c1bb6c4150e36bb742b9489ecfec00f502cf7fa6b9e77029cb2"
+    }
+  ]
+}

@@ -750,6 +750,24 @@ RESEARCH_ONLY / DRAFT / HOLD / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTIO
 
 RESEARCH_ONLY / DRAFT / HOLD / NO_AUTOMATIC_MERGE / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTION.
 
+## 2026-11-24 — bounded release, checkout and DOI verification admission
+
+- Owner explicitly authorized admission and merge after CI of the already tested tools. Base `d12d511e0ae1a19560a13dadaafb77a700fd20ef`. New paths: three root Windows launchers `RUN_VERIFIED_DOWNLOAD.cmd`, `RUN_DOI_CATALOG.cmd`, `RUN_DOI_FULL_VALIDATION.cmd`; `scripts/{ario_verified_release,ario_verify_coverage,run_doi_bulk,test_ario_verified_release,test_ario_verify_coverage,test_run_doi_bulk}.py`; `docs/ARIO_VERIFIED_RELEASE.md`, `docs/ARIO_EXPANDED_COVERAGE.md`, six evidence files under `docs/verification-coverage-evidence/`. Append-only documentation changes to root README, historical release README, and this log. Existing exact preimages retained by the base commit; old blobs verified before append. No other paths modified.
+- Exact reviewed R1.4 source retained unchanged, SHA-256 `fac354c46e8fc8ce68edf6202980aa974ab3f0319cfe0e8272b5c688330b432b`. All three input ZIP manifests verified (8, 15, 8 entries). The six Python source/test files are the already tested bytes, not a new implementation. Fresh focused Linux execution: 41/41 tests passed (11 + 25 + 5). No fresh Linux live HTTPS claim.
+- Owner-supplied Windows evidence: 3/3 pinned GitHub release assets MATCH; 456/456 checkout files and 96,284,142 bytes at the exact base matched, no extra paths; 79/79 files across 15 listed DOI records match two Zenodo HTTPS observations. 54/79 mapping by Git SHA-1 blob ID and size; 25 without match in this tree are not corrupt. Public reports redact local path and normalize JSON, original SHA-256 and size retained in ORIGINAL_HASHES.json. Independent GitHub tree lookup confirmed mapping consistency for all 79 report entries. No direct GitHub SHA-256 comparison, identity/custody guarantee, mode/history check, or hostile-runtime/atomic snapshot guarantee. Default fixed checkout pin stays at the tested base; later revisions require exact commit selection.
+- Backup/preservation: old README/log bytes retained in immutable Git objects at the base above, original ZIPs and user reports retained in the conversation; admission package manifest in `docs/verification-coverage-evidence/ADMISSION_MANIFEST.json`. CI on the new branch is required before merge. No history rewriting, changed governance, keys, memory, signer, production integration, historical publication replacement, auto-execution or trust activation.
+
+RESEARCH_ONLY / PASS_BOUNDED / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTION / NO_AUTOMATIC_MERGE.
+
+## 2026-11-24 — Integrity Gate V1 bounded admission
+
+- Owner explicitly authorized admission and merge after CI. Base `89ef7ba466db2e7a267ee7780df348ee9e5920e6`. Scope: new `RUN_INTEGRITY_GATE.cmd`, `scripts/ario_integrity_gate.py`, `scripts/test_ario_integrity_gate.py`, `docs/ARIO_INTEGRITY_GATE_V1.md` and 11 files under `docs/integrity-gate-v1-evidence/`; append-only root README and ENGINEERING_LOG.md. Original exact preimages retained in Git at the base commit. No other changes.
+- Candidate ZIP manifest 11/11 verified. Exact three dependency copies match existing Git blobs `42c03a3d9a1aa854f57d74aea0a8eafbe45e2ceb`, `03a96c723b4516fd5f0d525a3b686ea3b319470c`, `1558d496d25cc7407561ceee049388dc5f61f5f0`; unchanged. Gate SHA-256 `b89ccb4d715eb00a847a2d30a56c2ec285fedf9355d0cb8dc58b887c032d4c67`. Fresh admission Linux focused tests 28/28. Candidate logs preserve prior 41/41 regression and live UNKNOWN. All new blobs verified against the admission bundle. No fresh Linux live success.
+- Owner-supplied Windows startup-probe: MATCH_RESEARCH_STARTUP_PROBE, exit 0, 473/473 files and 96,396,968 bytes, no problems/extras, fixed synthetic M0 verdict UNKNOWN, no ledger. Download-restore: MATCH_PREPARATION_ONLY, exit 0, historical ZIP SHA-256 matched GitHub reference, 204/204 restored files and 16,183,258 bytes matched pinned source tree. Reports publicly redacted only for local stage paths and normalized JSON; original hashes and ZIP hash in ORIGINAL_HASHES.json. Original materials retained in conversation. TXT restore and gate DOI mode have synthetic rather than new live Windows evidence.
+- The gate is an explicitly invoked research entrypoint, not a universal first-start enforcement mechanism, sandbox, cryptographic signature, identity/custody or freshness proof. Fixed startup pin remains the tested pre-admission base. No changes to legacy runtime, memory, signer, real keys, governance, prior verifiers or historical publication assets. CI required before owner-authorized merge.
+
+RESEARCH_ONLY / PASS_BOUNDED / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTION / NO_AUTOMATIC_MERGE.
+
 
 ## 2026-11-22 — V15.3 historical reader rejects overflowing JSON float exponents
 
@@ -766,3 +784,8 @@ RESEARCH_ONLY / DRAFT / HOLD / NO_AUTOMATIC_MERGE / NO_REAL_KEYS / NO_TRUST_ACTI
 - In the same `fix/v153-json-nonfinite-floats` branch, the bounded `parse_float` guard now distinguishes nonzero significands that round to zero, holding them with `HOLD_JSON_FLOAT_UNDERFLOW`. Exact zero lexemes remain valid; representable finite subnormal `5e-324` and `1e308` remain allowed. Existing explicit NaN/Infinity and overflow controls are preserved.
 - Added three synthetic regression methods for five underflow variants, four legitimate zero forms, and one representable subnormal; no private backup is used. `ENGINEERING_LOG.md` was append-only; previous content is an exact prefix.
 - This retains the historical read-only boundary: no model integration, no recall of private user data, no independent source custody or evidence admission, no signer/trust activation. Local test execution was not established by this log entry; verify exact new-head CI and independent review before merge.
+
+
+## 2026-11-26 — #336 reconcile current main
+
+- Kept current main engineering log as an exact prefix; imported only the two #336 numeric parser history entries from the preserved branch. Source and test blobs are exactly the reviewed #336 versions. Main's source/test blobs were unchanged from the original base. New-head CI required; no historical data or authority changes.

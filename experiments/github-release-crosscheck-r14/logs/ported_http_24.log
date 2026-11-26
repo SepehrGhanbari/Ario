@@ -1,0 +1,25 @@
+fixed length                 BODY 3     expected BODY 3     PASS
+valid chunked                BODY 3     expected BODY 3     PASS
+chunked trailing SP          UNKNOWN    expected UNKNOWN    PASS
+chunked trailing HTAB        UNKNOWN    expected UNKNOWN    PASS
+early EOF declared           UNKNOWN    expected UNKNOWN    PASS
+bad status line              UNKNOWN    expected UNKNOWN    PASS
+invalid chunk size           UNKNOWN    expected UNKNOWN    PASS
+EOF within chunk             UNKNOWN    expected UNKNOWN    PASS
+conflicting lengths          UNKNOWN    expected UNKNOWN    PASS
+invalid length               UNKNOWN    expected UNKNOWN    PASS
+both framing headers         UNKNOWN    expected UNKNOWN    PASS
+close delimited unpinned     UNKNOWN    expected UNKNOWN    PASS
+301                          UNKNOWN    expected UNKNOWN    PASS
+302                          UNKNOWN    expected UNKNOWN    PASS
+303                          UNKNOWN    expected UNKNOWN    PASS
+307                          UNKNOWN    expected UNKNOWN    PASS
+308                          UNKNOWN    expected UNKNOWN    PASS
+404                          UNKNOWN    expected UNKNOWN    PASS
+500                          UNKNOWN    expected UNKNOWN    PASS
+size 65535                   BODY 65535 expected BODY 65535 PASS
+size 65536                   BODY 65536 expected BODY 65536 PASS
+size 65537                   UNKNOWN    expected UNKNOWN    PASS
+close delimited pinned       BODY 962   expected BODY 962   PASS
+TLS setup exception ReferenceUnknown expected ReferenceUnknown
+Conformance checks 24 / 24
