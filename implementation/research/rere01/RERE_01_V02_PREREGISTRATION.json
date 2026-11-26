@@ -1,0 +1,178 @@
+{
+  "experiment": "RERE-01/V0.2",
+  "artifact_kind": "pre_registered_bounded_readonly_comparator",
+  "date": "2026-11-18",
+  "status": "RESEARCH_ONLY / DRAFT / HOLD / NO_MERGE / PRODUCTION=NO_GO",
+  "parent_draft_pr": 274,
+  "source_pin": "6dbf68fd749bc96407a088b6fd0e458ce76cff98",
+  "tested_candidate_basis": "6235df45444f112c3a7a699d5c96cac85a4e5b66 (unmerged PR #210)",
+  "current_main_on_inspection": "9747742ddb8cb6d12c0f170aa7a70938c5d759a0",
+  "event_id": "LAB-E101",
+  "seed": 510101,
+  "independent_synthetic_oracle": {
+    "door_state": "CLOSED",
+    "unavailable_to_comparator": true,
+    "interpretation": "fixed toy truth, not real witness"
+  },
+  "policy": {
+    "version": "RERE-LAB-CONTROLLER-v0.2",
+    "event_time": "2026-11-18T00:00:00Z",
+    "pinned_synthetic_ids_and_roots": [
+      [
+        "C",
+        "root-C"
+      ],
+      [
+        "CAL",
+        "root-CAL"
+      ]
+    ],
+    "calibration_allowed": [
+      [
+        "CAL",
+        "C"
+      ]
+    ],
+    "may_authorize_real_evidence": false
+  },
+  "types_reused": [
+    "core.schema.Assessment",
+    "core.schema.Reference",
+    "core.schema.SupportTarget"
+  ],
+  "scope": "read-only deterministic pure function on frozen M0 assessment objects and synthetic witness declarations; no Ario writer, persistent memory, runtime admission, trust authority, or network",
+  "outputs": [
+    "current_object_level_outcome",
+    "prior_assessment_reliability",
+    "typed_historical_review_chain",
+    "explicit_unresolved_reasons"
+  ],
+  "allowed_outcomes": [
+    "UNKNOWN",
+    "CONDITIONALLY_REFUTED_IN_LAB"
+  ],
+  "policy_semantics": {
+    "T1": "UNKNOWN, A declaration only",
+    "T2": "UNKNOWN, B declaration only",
+    "T3": "CONDITIONALLY_REFUTED_IN_LAB only if C has fixture-pinned root and exact event_time, scope, and CLOSED observation",
+    "T4": "UNKNOWN and prior T3 reliability CHALLENGED only when independent fixture-pinned calibration refutes C timestamp and targets T3 with reason",
+    "negative": "Any missing/ambiguous historical reference, noncontiguous sequence, replayed ID with changed content, self-reference -> REJECT",
+    "false_acceptance": "Any conditional refutation from unpinned C or independent invalidation from shared-root CAL is failure",
+    "false_rejection": "Rejecting fixture-pinned valid C or valid CAL is failure",
+    "M0_status": "M0 Assessment objects are declaration holders; their condition_evaluation strings are NOT automatically trustworthy, NOT admitted evidence"
+  },
+  "tests": [
+    {
+      "id": "P01",
+      "claim": "T1 and T2 unverified contradiction yields UNKNOWN",
+      "preregistered_expected": "PASS at comparator policy",
+      "classification": "COMPARATOR_ONLY"
+    },
+    {
+      "id": "P02",
+      "claim": "Synthetic controller-pinned source C conditionally refutes OPEN at T3",
+      "preregistered_expected": "PASS at comparator policy",
+      "classification": "COMPARATOR_ONLY"
+    },
+    {
+      "id": "P03",
+      "claim": "Controller-pinned independent calibration challenges T3 at T4; current result UNKNOWN; history unchanged",
+      "preregistered_expected": "PASS at comparator policy",
+      "classification": "COMPARATOR_ONLY"
+    },
+    {
+      "id": "P04",
+      "claim": "Input ordering permutation with same frozen sequence has identical projection",
+      "preregistered_expected": "PASS at comparator policy",
+      "classification": "COMPARATOR_ONLY"
+    },
+    {
+      "id": "P05",
+      "claim": "As-of T3 remains reconstructible after T4",
+      "preregistered_expected": "PASS at comparator policy",
+      "classification": "COMPARATOR_ONLY"
+    },
+    {
+      "id": "N01",
+      "claim": "Newer unverified B must never override evidential eligibility",
+      "preregistered_expected": "PASS at comparator policy",
+      "classification": "COMPARATOR_ONLY"
+    },
+    {
+      "id": "N02",
+      "claim": "Calibration copying same root as C is not independent",
+      "preregistered_expected": "PASS at comparator policy",
+      "classification": "COMPARATOR_ONLY"
+    },
+    {
+      "id": "N03",
+      "claim": "Calibration claiming wrong target cannot invalidate C",
+      "preregistered_expected": "PASS at comparator policy",
+      "classification": "COMPARATOR_ONLY"
+    },
+    {
+      "id": "N04",
+      "claim": "Reasonless review must not change status",
+      "preregistered_expected": "PASS at comparator policy",
+      "classification": "COMPARATOR_ONLY"
+    },
+    {
+      "id": "N05",
+      "claim": "Missing predecessor assessment fails closed",
+      "preregistered_expected": "PASS at comparator policy",
+      "classification": "COMPARATOR_ONLY"
+    },
+    {
+      "id": "N06",
+      "claim": "Same record ID with altered content fails closed",
+      "preregistered_expected": "PASS at comparator policy",
+      "classification": "COMPARATOR_ONLY"
+    },
+    {
+      "id": "N07",
+      "claim": "Exact duplicate replay yields no duplicate projected history",
+      "preregistered_expected": "PASS at comparator policy",
+      "classification": "COMPARATOR_ONLY"
+    },
+    {
+      "id": "N08",
+      "claim": "Gapped/ambiguous sequence fails closed",
+      "preregistered_expected": "PASS at comparator policy",
+      "classification": "COMPARATOR_ONLY"
+    },
+    {
+      "id": "N09",
+      "claim": "Self-referential review fails closed",
+      "preregistered_expected": "PASS at comparator policy",
+      "classification": "COMPARATOR_ONLY"
+    },
+    {
+      "id": "N10",
+      "claim": "Unpinned source C stays UNKNOWN despite claimed CLOSED",
+      "preregistered_expected": "PASS at comparator policy",
+      "classification": "COMPARATOR_ONLY"
+    },
+    {
+      "id": "N11",
+      "claim": "C with time mismatch stays UNKNOWN even when controller root pinned",
+      "preregistered_expected": "PASS at comparator policy",
+      "classification": "COMPARATOR_ONLY"
+    },
+    {
+      "id": "N12",
+      "claim": "Hash/signature-looking string without controller pin cannot authorize C",
+      "preregistered_expected": "PASS at comparator policy",
+      "classification": "COMPARATOR_ONLY"
+    }
+  ],
+  "baseline": "Plain append-only tuple records history but has no second-order dependency evaluator; compare traceability and current justified view separately",
+  "limitations": [
+    "Fixture policy is injected by researcher, not a credential",
+    "No independence of human or admin source custody",
+    "No persistent append-only writer",
+    "The existing Ario RERE-01 7 FAIL and 3 NOT_IMPLEMENTED remain unchanged",
+    "No real implementation/production remediation",
+    "No claim of consciousness or source truth"
+  ],
+  "decision_rule": "A full comparator regression PASS means only synthetic comparator behavior, not functioning second-order Ario production memory; require existing SUT integration, authorized evidence and persistence before removing HOLD"
+}

@@ -1,0 +1,164 @@
+{
+  "experiment": "RERE-01",
+  "preregistration_version": "0.1",
+  "preregistered_on": "2026-11-18",
+  "frozen_before_rere01_ci": true,
+  "design_status": "RESEARCH_ONLY / DRAFT / HOLD / NO_MERGE / PRODUCTION=NO_GO",
+  "main_sha": "bc3f734890287c5ec365358680f74241f2285f82",
+  "experimental_dependency": "unmerged PR #210 HEAD 6235df45444f112c3a7a699d5c96cac85a4e5b66",
+  "test_file": "implementation/tests/test_rere01_m0_boundary.py",
+  "seed": 510101,
+  "fixture_id": "LAB-E101",
+  "event_time": "2026-11-18T00:00:00Z",
+  "sealed_synthetic_oracle": {
+    "door_state": "CLOSED",
+    "purpose": "evaluation only; never passed to ConsolidationEngine",
+    "revelation_at": "post-response evaluation"
+  },
+  "testimony": [
+    {
+      "step": "T1",
+      "source": "A",
+      "report": "OPEN",
+      "origin": "A-root",
+      "epistemic_status": "UNAUTHENTICATED"
+    },
+    {
+      "step": "T2",
+      "source": "B",
+      "report": "CLOSED",
+      "origin": "B-root",
+      "epistemic_status": "UNAUTHENTICATED"
+    },
+    {
+      "step": "T3",
+      "source": "C",
+      "report": "CLOSED",
+      "origin": "C-root",
+      "epistemic_status": "SYNTHETIC_CERTIFIED_ONLY_IN_POSITIVE_CONTROL"
+    },
+    {
+      "step": "T4",
+      "source": "CALIBRATION",
+      "report": "C-clock-misaligned",
+      "origin": "CALIBRATION-root",
+      "epistemic_status": "SYNTHETIC_VALID_WITHIN_FIXTURE"
+    }
+  ],
+  "restricted_observation_scope": "Structural memory classes, in-memory synthetic events only; no production I/O or authority",
+  "adjudication_rules": {
+    "t1": "RECORDED or UNKNOWN; no assertion truth promotion",
+    "t2": "UNKNOWN unless evidence policy authenticates source and resolves conflict",
+    "t3": "A scoped negative assessment may be justified only when C authenticity, temporal scope and evidence relation are established independently. Otherwise NOT_IMPLEMENTED or UNKNOWN.",
+    "t4": "The first assessment must be a typed target of a new versioned assessment. On C calibration fault, T3 justification is withdrawn; current epistemic outcome UNKNOWN unless new admissible evidence exists.",
+    "anti_recency": "Age alone may not upgrade veracity.",
+    "duplicate_replay": "Replay same event id and digest must not produce additional epistemic events or unintended reinforcement.",
+    "missing_receipt": "An in-memory hash string is not independently authenticated source bytes.",
+    "root_independence": "Several declared witnesses sharing a root are not independent sources.",
+    "order": "Result of conflict must not vary solely because a legitimate negation arrived first.",
+    "historical": "Never erase earlier claims or assessments; preserve reason and exact supersession link."
+  },
+  "planned_tests": [
+    {
+      "id": "P01",
+      "name": "explicit_recorded_mode",
+      "expected": "PASS",
+      "dimension": "epistemic_guard"
+    },
+    {
+      "id": "N01",
+      "name": "default_raw_ingestion_no_accepted",
+      "expected": "FAIL",
+      "dimension": "epistemic_guard"
+    },
+    {
+      "id": "N02",
+      "name": "implicit_door_conflict",
+      "expected": "FAIL",
+      "dimension": "epistemic_guard"
+    },
+    {
+      "id": "P02",
+      "name": "explicit_negates_conflict",
+      "expected": "PASS",
+      "dimension": "structural"
+    },
+    {
+      "id": "N03",
+      "name": "untrusted_supported_status",
+      "expected": "FAIL",
+      "dimension": "epistemic_guard"
+    },
+    {
+      "id": "N04",
+      "name": "prior_assessment_snapshot",
+      "expected": "NOT_IMPLEMENTED",
+      "dimension": "historical"
+    },
+    {
+      "id": "N05",
+      "name": "duplicate_replay",
+      "expected": "FAIL",
+      "dimension": "historical"
+    },
+    {
+      "id": "N06",
+      "name": "fabricated_hash_completeness",
+      "expected": "FAIL",
+      "dimension": "historical"
+    },
+    {
+      "id": "P03",
+      "name": "invalid_hash_format",
+      "expected": "PASS",
+      "dimension": "structural"
+    },
+    {
+      "id": "N07",
+      "name": "order_swapped_negation",
+      "expected": "FAIL",
+      "dimension": "epistemic_guard"
+    },
+    {
+      "id": "N08",
+      "name": "reasonless_revision",
+      "expected": "FAIL",
+      "dimension": "epistemic_guard"
+    },
+    {
+      "id": "P04",
+      "name": "m0_audit_result_firewall",
+      "expected": "PASS",
+      "dimension": "epistemic_guard"
+    },
+    {
+      "id": "P05",
+      "name": "m0_mutation_candidate_detection",
+      "expected": "PASS",
+      "dimension": "historical"
+    },
+    {
+      "id": "N09",
+      "name": "independent_root_attestation",
+      "expected": "NOT_IMPLEMENTED",
+      "dimension": "epistemic_guard"
+    },
+    {
+      "id": "N10",
+      "name": "typed_recursive_assessment_api",
+      "expected": "NOT_IMPLEMENTED",
+      "dimension": "epistemic_guard"
+    }
+  ],
+  "classification": "Expected FAIL is an anticipated safety assertion failure, marked strict XFAIL in pytest. XFAIL does not count as PASS. NOT_IMPLEMENTED is an absent required behavior, not a tested runtime failure. Unexpected XPASS must fail CI.",
+  "minimum_controls": "P01 counterbalances N01/N03/N08; P02 counterbalances N02/N07; P03 counterbalances N06; P04 counterbalances N10; P05 counterbalances N04; N09 has no valid source-authority positive without external authenticated custody.",
+  "separately_report": [
+    "epistemic_justification",
+    "historical_integrity"
+  ],
+  "inference_limits": [
+    "PR #210 unmerged",
+    "frozen synthetic truth not live reality",
+    "GitHub CI does not authenticate physical source, origin, reviewer, or claim truth"
+  ]
+}

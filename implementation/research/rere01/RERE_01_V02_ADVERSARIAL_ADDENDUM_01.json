@@ -1,0 +1,24 @@
+{
+  "artifact": "RERE-01/v0.2 adversarial follow-up 01",
+  "created": "2026-11-18",
+  "source_inspected_head": "6584503a7d72a0e0d00f76178086dd24ca1b2e25",
+  "scope": "RESEARCH_ONLY / HOLD; new tests before corrective code; existing prereg v0.2 unchanged",
+  "predictions": [
+    {
+      "id": "N13",
+      "title": "invalid T3 must never be relabeled as later challenged justified assessment",
+      "falsifier": "C observed_at mismatches frozen event time; T3 NOT_WARRANTED. Even if later calibration is syntactically valid, T3 historical reliability remains NOT_WARRANTED; current object UNKNOWN",
+      "expected_at_current_source": "RED, projected T3 CHALLENGED erroneously",
+      "requested_safety": "keep T3 NOT_WARRANTED"
+    },
+    {
+      "id": "N14",
+      "title": "unbound calibration time cannot revoke T3",
+      "falsifier": "C valid; CAL declared timestamp changed to pre-event 2020-01-01 while otherwise syntactically eligible. Without separate synthetic controller calibration-time pin, T4 should not have evidential effect",
+      "expected_at_current_source": "RED, projected T3 CHALLENGED",
+      "requested_safety": "keep T3 conditionally warranted, object conditional"
+    }
+  ],
+  "interpretation": "Synthetic controller time pins are fixed fixture rules, NOT real wallclock authentication. SUT must not accept self-declared timestamps as physical truth.",
+  "immutability": "original preregistration and earlier observed CI results remain; this is new post-hoc preregistered addendum before its own CI execution"
+}

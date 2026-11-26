@@ -1,0 +1,35 @@
+--- a/implementation/research/rere01/revision_comparator_v0_2.py
++++ b/implementation/research/rere01/revision_comparator_v0_2.py
+@@ -143,6 +143,7 @@
+     observed: dict[str, LabObservation] = {}
+     reviewed: dict[str, LabAssessment] = {}
+     reliability: dict[str, str] = {}
++    challenged_evidence: set[str] = set()
+     outcome = "UNKNOWN"
+     reasons: tuple[str, ...] = ("NO_AUTHENTICATED_OBJECT_LEVEL_JUDGMENT",)
+ 
+@@ -173,6 +174,7 @@
+                 and source.source_id == "C"
+                 and source.reported_value == "CLOSED"
+                 and source.observed_at == policy.event_time
++                and source.record_id not in challenged_evidence
+                 and _validated(source, roots)
+             )
+             reliability[rec.record_id] = (
+@@ -181,7 +183,7 @@
+             if is_warranted:
+                 outcome = "CONDITIONALLY_REFUTED_IN_LAB"
+                 reasons = ("C_MATCHED_FROZEN_SYNTHETIC_CONTROLLER",)
+-            else:
++            elif reasons == ("NO_AUTHENTICATED_OBJECT_LEVEL_JUDGMENT",):
+                 reasons = ("OBJECT_REVIEW_NOT_WARRANTED",)
+             reviewed[rec.record_id] = rec
+             continue
+@@ -216,6 +218,7 @@
+             "CONDITIONALLY_WARRANTED_IN_LAB" if is_valid_calibration else "NOT_WARRANTED"
+         )
+         if is_valid_calibration:
++            challenged_evidence.add(old_source.record_id)
+             reliability[previous.record_id] = "CHALLENGED_BY_LATER_CALIBRATION"
+             outcome = "UNKNOWN"
+             reasons = ("C_TIME_BINDING_CHALLENGED", "T3_JUSTIFICATION_NO_LONGER_RELIABLE")
