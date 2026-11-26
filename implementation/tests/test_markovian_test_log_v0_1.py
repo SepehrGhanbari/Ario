@@ -14,9 +14,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from research.markovian_test_log_v0_1.markovian_test_log import (
     ORIGIN, WITNESS_NAME, WITNESS_VKEY, Hold, _b64, _SIGTYPE_COSIGN,
     append_synthetic_record, build_witness_request, canonical_json,
-    consistency_proof, key_id, make_vkey, merkle_tree_hash, parse_checkpoint,
+    consistency_proof, key_id, load_research_key, make_vkey, merkle_tree_hash, parse_checkpoint,
     parse_vkey, prepare_bundle, public_vkey_for_signer, sha256,
-    sign_checkpoint, synthetic_capsule, synthetic_leaf, verify_bundle,
+    sign_checkpoint, synthetic_capsule, synthetic_leaf, package_public_bundle, verify_bundle,
     verify_consistency, verify_cosigned_checkpoint, verify_log_checkpoint,
     verify_witness_cosignature_line,
 )
@@ -142,6 +142,36 @@ def test_canonical_json_duplicate_keys_rejected():
     from research.markovian_test_log_v0_1.markovian_test_log import parse_canonical_json
     with pytest.raises(Hold):
         parse_canonical_json(b'{"a":1,"a":2}')
+
+
+
+def test_existing_encrypted_research_key_loads_without_exporting_private_material(tmp_path:Path):
+    key=signer(21)
+    pem=key.private_bytes(
+        serialization.Encoding.PEM,
+        serialization.PrivateFormat.PKCS8,
+        serialization.BestAvailableEncryption(b"synthetic-test-passphrase"),
+    )
+    path=tmp_path/"research-log.private.pem"
+    path.write_bytes(pem)
+    loaded=load_research_key(path,b"synthetic-test-passphrase")
+    assert public_vkey_for_signer(loaded)==public_vkey_for_signer(key)
+    with pytest.raises(Hold,match="HOLD_RESEARCH_KEY_DECRYPTION"):
+        load_research_key(path,b"wrong-passphrase")
+
+def test_public_zip_contains_only_public_artifacts_and_refreshes_after_append(tmp_path:Path):
+    key=signer(22)
+    out=tmp_path/"bundle"
+    prepare_bundle(out,key)
+    zip_path=package_public_bundle(out)
+    import zipfile
+    with zipfile.ZipFile(zip_path) as zf:
+        assert sorted(zf.namelist())==["capsule.json","checkpoint","entries","manifest.json","vkey.txt"]
+    append_synthetic_record(out,key)
+    refreshed=package_public_bundle(out)
+    with zipfile.ZipFile(refreshed) as zf:
+        assert len(zf.read("entries").splitlines())==2
+        assert b"private" not in b" ".join(zf.namelist()[i].encode() for i in range(len(zf.namelist())))
 
 def test_published_markovian_witness_vkey_is_well_formed():
     name,kid,pub=parse_vkey(WITNESS_VKEY,expected_sig_type=4)
