@@ -72,7 +72,13 @@ func main(){
  ctx,cancel:=context.WithTimeout(context.Background(),150*time.Second);defer cancel()
  cli:=client.New(client.Config{URL:logURL,HTTPClient:&http.Client{Timeout:12*time.Second,CheckRedirect:func(*http.Request,[]*http.Request)error{return fmt.Errorf("redirect denied")}}})
  head,e:=cli.GetTreeHead(ctx);if e!=nil{panic("HOLD_LOG_READBACK: "+e.Error())}
- if e=p.VerifyCosignedTreeHead(&logKH,&head);e!=nil{panic("HOLD_TEST2_QUORUM: "+e.Error())}
+ test2Result:="PASS"
+ if e=p.VerifyCosignedTreeHead(&logKH,&head);e!=nil{test2Result="NOT_MET: "+e.Error()}
+ externalPubs:=make([]crypto.PublicKey,0,len(external))
+ for _,w:=range external{pub,pe:=crypto.PublicKeyFromHex(w.PublicKeyHex);if pe!=nil{panic(pe)};externalPubs=append(externalPubs,pub)}
+ externalPolicy,e:=policy.NewKofNPolicy([]crypto.PublicKey{logPub},externalPubs,2)
+ if e!=nil{panic(e)}
+ if e=externalPolicy.VerifyCosignedTreeHead(&logKH,&head);e!=nil{panic("HOLD_EXTERNAL_ONLY_2_OF_4_QUORUM: "+e.Error())}
  retained:=types.TreeHead{Size:retainedSize,RootHash:mustHash(retainedRoot)}
  if head.Size<retained.Size{panic("HOLD_HEAD_BELOW_RETAINED")}
  if head.Size==retained.Size {if head.RootHash!=retained.RootHash{panic("HOLD_SAME_SIZE_ROOT_CONFLICT")}} else {
@@ -98,17 +104,19 @@ func main(){
   }
   results=append(results,result)
  }
- if len(accepted)<3{panic(fmt.Sprintf("HOLD_EXTERNAL_WITNESS_READBACKS: %d/4, need 3",len(accepted)))}
+ if len(accepted)<2{panic(fmt.Sprintf("HOLD_EXTERNAL_WITNESS_READBACKS: %d/4, need 2",len(accepted)))}
  sort.Slice(accepted,func(i,j int)bool{return accepted[i]>accepted[j]})
- minThree:=accepted[2];if minThree<head.Size{panic("HOLD_EXTERNAL_QUORUM_FLOOR_BELOW_HEAD")}
+ minTwo:=accepted[1];if minTwo<head.Size{panic("HOLD_EXTERNAL_QUORUM_FLOOR_BELOW_HEAD")}
  root:=hex.EncodeToString(head.RootHash[:])
  if floorDecision(head.Size,root,head.Size-1,"arbitrary")!="HOLD_BELOW_EXTERNAL_FLOOR"{panic("HOLD_ROLLBACK_CONTROL")}
  if floorDecision(head.Size,root,head.Size,strings.Repeat("0",64))!="HOLD_SAME_SIZE_ROOT_CONFLICT"{panic("HOLD_SAME_SIZE_CONTROL")}
  out:=map[string]any{
-  "result":"EXTERNAL_TEST_WITNESS_QUORUM_READBACK_PASS","policy":"sigsum-test2-2025",
-  "policy_quorum":"4-of-5; any valid quorum necessarily includes at least 3 of 4 non-Glasklar witnesses",
+  "result":"EXTERNAL_TEST_WITNESS_QUORUM_READBACK_PASS","policy":"custom external-only 2-of-4 over the four test2 external public keys",
+  "built_in_sigsum_test2_2025":"NOT_USED_AS_ACCEPTANCE_POLICY",
+  "built_in_test2_diagnostic":test2Result,
+  "policy_quorum":"2-of-4 external witnesses only; Glasklar group is excluded",
   "head_size":head.Size,"head_root":root,"retained_floor_size":retainedSize,"retained_floor_root":retainedRoot,
-  "external_witnesses":results,"minimum_three_external_stored_size":minThree,
+  "external_witnesses":results,"minimum_two_external_stored_size":minTwo,
   "independent_quorum_floor_size":head.Size,"independent_quorum_floor_root":root,
   "rollback_below_floor":"HOLD","same_size_different_root":"HOLD",
   "data_availability":"NOT_PROVEN_BY_WITNESSES","global_latest":"UNKNOWN","network_tier":"TEST_ONLY",
