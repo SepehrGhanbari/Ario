@@ -70,9 +70,11 @@ The script reads PCR values after the quote and checks them against the quote di
 
 ## Execution status
 
-Pre-rebase exact-head CI [run 45853404250](https://github.com/SepehrGhanbari/Ario/actions/runs/45853404250), source commit `7e91aabf4d6bd3763027fead94ee7188b82087e1`, **SUCCESS: 24/24 PASS**. A fresh exact-head run after updating to the latest R22.31 parent is pending.
+Dedicated exact-head CI on the restacked branch: [run 45854078266](https://github.com/SepehrGhanbari/Ario/actions/runs/45854078266), source commit `498e3620362cdea1940377c15be3edc611fcd19f`, **SUCCESS: 24/24 PASS**.
 
-Environment: tpm2-tools 5.6-1build4, swtpm 0.7.3-0ubuntu5.24.04.1, OpenSSL 3.0.13, Ubuntu 24.04.5. Repository Implementation Regression [run 45853404032](https://github.com/SepehrGhanbari/Ario/actions/runs/45853404032) also succeeded on the same source SHA.
+Repository Implementation Regression on the same exact head: [run 45854078244](https://github.com/SepehrGhanbari/Ario/actions/runs/45854078244), **SUCCESS**.
+
+Environment: tpm2-tools 5.6-1build4, swtpm 0.7.3-0ubuntu5.24.04.1, OpenSSL 3.0.13, Ubuntu 24.04.5.
 
 The 24 passing assertions cover:
 - synthetic EK certificate chain, pinned lab root, wrong-root rejection and EK SPKI matching;
@@ -81,7 +83,8 @@ The 24 passing assertions cover:
 - nonce-bound TPM2_CertifyCreation signature, signer, object Name and creation-hash checks, including wrong-challenge and substituted-object rejection;
 - PCR 23 recomputation, binary Quote challenge/signer/selection parsing, TPM signature/PCR-digest validation, and rejection of wrong nonce, wrong AK, altered signature and changed PCR.
 
-Evidence artifact: [R22.32 TPM attestation evidence](https://github.com/SepehrGhanbari/Ario/actions/runs/45853404250/artifacts/15133389714).
+Evidence artifact: [R22.32 TPM attestation evidence](https://github.com/SepehrGhanbari/Ario/actions/runs/45854078266/artifacts/15134911715).
 
-Earlier failed iterations remain visible in Actions history and are not counted. Only the final exact-head run above is counted as passing. This result is software-TPM interoperability evidence, not proof of physical-device or manufacturer identity.
+The earlier pre-restack run 45853404250 also passed 24/24; it is retained as historical evidence. The run above is the final exact-head result after the feature branch was updated to the latest R22.31 PR #411 head.
 
+This remains software-TPM interoperability evidence, not proof of physical-device or manufacturer identity.
