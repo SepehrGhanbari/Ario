@@ -209,21 +209,19 @@ CERTIFY_NONCE="$(openssl rand -hex 32)"
 CERTIFY_ATTEST="$TMP/storage-primary.attest"
 CERTIFY_SIG="$TMP/storage-primary.sig"
 CERTIFY_VERIFY_TICKET="$TMP/storage-primary.verify-ticket"
-CERTIFY_YAML="$TMP/storage-primary.yaml"
 tpm2_certifycreation -C "$AK_CTX" -c "$SRK_CTX" \
   -d "$SRK_CREATION_HASH" -t "$SRK_CREATION_TICKET" -g sha256 \
   -s rsassa -q "$CERTIFY_NONCE" -o "$CERTIFY_SIG" \
   --attestation "$CERTIFY_ATTEST" >/dev/null
 tpm2_verifysignature -c "$AK_CTX" -g sha256 -m "$CERTIFY_ATTEST" \
   -s "$CERTIFY_SIG" -t "$CERTIFY_VERIFY_TICKET" >/dev/null
-tpm2_print -t TPMS_ATTEST "$CERTIFY_ATTEST" >"$CERTIFY_YAML"
-python3 "$ROOT/verify_attestation_yaml.py" --mode creation --yaml "$CERTIFY_YAML" \
+python3 "$ROOT/verify_attestation.py" --mode creation --attest "$CERTIFY_ATTEST" \
   --nonce "$CERTIFY_NONCE" --ak-qualified-name "$AK_QN" \
   --object-name "$SRK_NAME" --creation-hash "$SRK_CREATION_HASH"
 pass "TPM2_CertifyCreation signature, fresh nonce, AK signer, object Name and creation hash verified"
 
 expect_fail "certify attestation rejected with a different challenge" \
-  python3 "$ROOT/verify_attestation_yaml.py" --mode creation --yaml "$CERTIFY_YAML" \
+  python3 "$ROOT/verify_attestation.py" --mode creation --attest "$CERTIFY_ATTEST" \
     --nonce "$(openssl rand -hex 32)" --ak-qualified-name "$AK_QN" \
     --object-name "$SRK_NAME" --creation-hash "$SRK_CREATION_HASH"
 
@@ -241,7 +239,7 @@ tpm2_readpublic -c "$ALT_SRK_CTX" -n "$ALT_SRK_NAME" -q "$ALT_SRK_QN" \
   -o "$ALT_SRK_TPMT" -f tpmt >/dev/null
 python3 "$ROOT/verify_tpm_public_name.py" --public-tpmt "$ALT_SRK_TPMT" --name "$ALT_SRK_NAME"
 expect_fail "certify attestation rejects substituted storage object Name" \
-  python3 "$ROOT/verify_attestation_yaml.py" --mode creation --yaml "$CERTIFY_YAML" \
+  python3 "$ROOT/verify_attestation.py" --mode creation --attest "$CERTIFY_ATTEST" \
     --nonce "$CERTIFY_NONCE" --ak-qualified-name "$AK_QN" \
     --object-name "$ALT_SRK_NAME" --creation-hash "$SRK_CREATION_HASH"
 
@@ -272,11 +270,9 @@ PY
 QUOTE_NONCE="$(openssl rand -hex 32)"
 QUOTE_MSG="$TMP/pcr.quote"
 QUOTE_SIG="$TMP/pcr.quote.sig"
-QUOTE_YAML="$TMP/pcr.quote.yaml"
 tpm2_quote -c "$AK_CTX" -l sha256:23 -q "$QUOTE_NONCE" \
   -m "$QUOTE_MSG" -s "$QUOTE_SIG" -g sha256 >/dev/null
-tpm2_print -t TPMS_ATTEST "$QUOTE_MSG" >"$QUOTE_YAML"
-python3 "$ROOT/verify_attestation_yaml.py" --mode quote --yaml "$QUOTE_YAML" \
+python3 "$ROOT/verify_attestation.py" --mode quote --attest "$QUOTE_MSG" \
   --nonce "$QUOTE_NONCE" --ak-qualified-name "$AK_QN"
 tpm2_checkquote -u "$AK_PUB" -m "$QUOTE_MSG" -s "$QUOTE_SIG" \
   -f "$PCR_AFTER" -l sha256:23 -g sha256 -q "$QUOTE_NONCE" >/dev/null
