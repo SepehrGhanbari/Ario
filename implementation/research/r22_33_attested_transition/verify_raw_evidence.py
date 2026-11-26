@@ -36,6 +36,19 @@ import verify_nv_attestation as nv  # noqa: E402
 POLICY_ID = gate.POLICY_ID
 MANIFEST_FORMAT = "ARIO-R22.32-SWTPM-EVIDENCE-MANIFEST-V1"
 HASH_RE = re.compile(r"^[0-9a-f]{64}$")
+EXPECTED_RAW_FILES = {
+    "ak-name.bin", "ak-public-area.tpmt", "ak-public.pem", "ak-qualified-name.bin",
+    "creation-attestation.bin", "creation-attestation.sig", "creation-nonce.txt",
+    "custodian-challenge-nonce.txt", "custodian-public.pem", "custodian-anchor.json",
+    "custodian-anchor.sig", "custodian-challenge.json", "custodian-challenge.sig",
+    "ek-certificate.crt", "ek-lab-root.crt", "ek-public.pem", "ek-spki-sha256.txt",
+    "nv-attestation.bin", "nv-attestation.sig", "nv-contents.bin", "nv-index.txt",
+    "nv-nonce.txt", "nv-public.yaml", "pcr23-after.bin", "pcr23-before.bin",
+    "pcr23-event-digest.txt", "quote-attestation.bin", "quote-attestation.sig",
+    "quote-nonce.txt", "storage-creation-data.bin", "storage-creation-hash.bin",
+    "storage-name.bin", "storage-public-area.tpmt", "storage-qualified-name.bin",
+    "storage-root-commitment.bin", "storage-root-sha256.txt",
+}
 NV_INDEX_HANDLE = 0x01500020
 NV_NAME_ALG = 0x000B
 NV_ATTRIBUTES = 0x20060006
@@ -177,6 +190,30 @@ def rsa_spki_from_tpm_public(public_area: bytes) -> bytes:
     return der_tlv(0x30, algorithm + bit_string)
 
 
+
+
+def validate_storage_ecc_public(public_area: bytes) -> None:
+    reader = attest.Reader(public_area)
+    public_type = reader.u16()
+    name_alg = reader.u16()
+    attributes = reader.u32()
+    auth_policy = reader.tpm2b()
+    symmetric = reader.u16()
+    scheme = reader.u16()
+    curve = reader.u16()
+    kdf = reader.u16()
+    x = reader.tpm2b()
+    y = reader.tpm2b()
+    if reader.offset != len(reader.data):
+        reject("STORAGE_TPMT_PUBLIC_TRAILING_DATA")
+    if public_type != 0x0023 or name_alg != TPM_ALG_SHA256 or auth_policy:
+        reject("STORAGE_TPMT_PUBLIC_TYPE_OR_POLICY_INVALID")
+    if symmetric != 0x0010 or scheme != 0x0010 or curve != 0x0003 or kdf != 0x0010:
+        reject("STORAGE_TPMT_PUBLIC_MUST_BE_ECC_NIST_P256")
+    if len(x) != 32 or len(y) != 32:
+        reject("STORAGE_TPMT_PUBLIC_ECC_POINT_LENGTH_INVALID")
+
+
 def validate_raw_manifest(root: Path) -> tuple[dict[str, Any], bytes]:
     manifest_path = root / "evidence-manifest.json"
     try:
@@ -198,28 +235,13 @@ def validate_raw_manifest(root: Path) -> tuple[dict[str, Any], bytes]:
             reject("RAW_EVIDENCE_UNEXPECTED_FILESYSTEM_ENTRY")
         actual_names.add(item.name)
     files = manifest["files"]
-    if set(files) != actual_names:
+    if set(files) != actual_names or actual_names != EXPECTED_RAW_FILES:
         reject("RAW_EVIDENCE_MANIFEST_FILE_SET_MISMATCH")
     for name, expected in files.items():
         if Path(name).name != name or not isinstance(expected, str) or not HASH_RE.fullmatch(expected):
             reject("RAW_EVIDENCE_MANIFEST_ENTRY_INVALID")
         if sha256((root / name).read_bytes()) != expected:
             reject("RAW_EVIDENCE_FILE_HASH_MISMATCH:" + name)
-    required = {
-        "ak-name.bin", "ak-public-area.tpmt", "ak-public.pem", "ak-qualified-name.bin",
-        "creation-attestation.bin", "creation-attestation.sig", "creation-nonce.txt",
-        "custodian-challenge-nonce.txt", "custodian-public.pem", "custodian-anchor.json",
-        "custodian-anchor.sig", "custodian-challenge.json", "custodian-challenge.sig",
-        "ek-certificate.crt", "ek-lab-root.crt", "ek-public.pem", "ek-spki-sha256.txt",
-        "nv-attestation.bin", "nv-attestation.sig", "nv-contents.bin", "nv-index.txt",
-        "nv-nonce.txt", "nv-public.yaml", "pcr23-after.bin", "pcr23-before.bin",
-        "pcr23-event-digest.txt", "quote-attestation.bin", "quote-attestation.sig",
-        "quote-nonce.txt", "storage-creation-data.bin", "storage-creation-hash.bin",
-        "storage-name.bin", "storage-public-area.tpmt", "storage-qualified-name.bin",
-        "storage-root-commitment.bin", "storage-root-sha256.txt",
-    }
-    if not required.issubset(actual_names):
-        reject("RAW_EVIDENCE_REQUIRED_FILE_MISSING")
     return manifest, raw
 
 
@@ -362,6 +384,7 @@ def verify_bundle(root: Path, challenge: dict[str, Any], now: int) -> tuple[dict
     storage_public_area = (root / "storage-public-area.tpmt").read_bytes()
     storage_name = (root / "storage-name.bin").read_bytes()
     gate.validate_tpm_public_area(storage_public_area, storage_name, "storage")
+    validate_storage_ecc_public(storage_public_area)
     storage_qualified_name = (root / "storage-qualified-name.bin").read_bytes()
     if len(storage_qualified_name) != 34 or storage_qualified_name[:2] != b"\x00\x0b":
         reject("STORAGE_QUALIFIED_NAME_FORMAT_INVALID")
@@ -414,7 +437,7 @@ def verify_bundle(root: Path, challenge: dict[str, Any], now: int) -> tuple[dict
     nv_attestation = (root / "nv-attestation.bin").read_bytes()
     nv_signature = (root / "nv-attestation.sig").read_bytes()
     nv_signer, nv_extra, nv_attested_name, nv_offset, nv_attested_contents = parse_nv_attestation(nv_attestation)
-    if nv_signer != ak_qualified_name or nv_signer != ak_qualified_name:
+    if nv_signer != ak_qualified_name:
         reject("NV_ATTESTATION_AK_QUALIFIED_NAME_MISMATCH")
     if nv_extra != bytes.fromhex(nv_nonce):
         reject("NV_ATTESTATION_NONCE_MISMATCH")
@@ -568,6 +591,8 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
+        if args.evidence_dir.is_symlink():
+            reject("RAW_EVIDENCE_DIRECTORY_SYMLINK")
         root = args.evidence_dir.resolve(strict=True)
         if not root.is_dir():
             reject("RAW_EVIDENCE_DIRECTORY_INVALID")
