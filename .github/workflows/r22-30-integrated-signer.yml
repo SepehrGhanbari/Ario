@@ -1,0 +1,37 @@
+name: R22.30 integrated TPM signer (swtpm model)
+on:
+  push:
+    branches: [research/r22-30-integrated-signer-20261126]
+    paths:
+      - .github/workflows/r22-30-integrated-signer.yml
+      - implementation/research/r22_30_integrated_signer/**
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  boundary:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install TPM simulator and tools
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tpm2-tools swtpm swtpm-tools openssl
+      - name: Run authorization-boundary probes
+        working-directory: implementation/research/r22_30_integrated_signer
+        run: |
+          set -euo pipefail
+          sudo -E python3 run_boundary.py 2>&1 | tee "$RUNNER_TEMP/r22-30-boundary.log"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r22-30-boundary-evidence
+          path: |
+            ${{ runner.temp }}/r22-30-boundary.log
+            /tmp/ario-r2230-boundary/boundary-results.json
+          if-no-files-found: warn
+          retention-days: 30
