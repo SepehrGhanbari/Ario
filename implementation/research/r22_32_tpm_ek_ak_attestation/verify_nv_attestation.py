@@ -194,7 +194,7 @@ def main() -> int:
         if extra_data != nonce:
             raise ValueError("qualifyingData does not match the fresh challenge")
         if qualified_signer != ak_name:
-            raise ValueError("qualifiedSigner does not match the enrolled AK")
+            raise ValueError("AK Qualified Name (qualifiedSigner) does not match the enrolled AK")
         if index_name != expected_nv_name:
             raise ValueError("attested NV index Name does not match the independently recomputed public Name")
         if offset != 0:
