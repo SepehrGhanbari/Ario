@@ -7,6 +7,8 @@ STATE2="$TMP/tpm-state-2"
 SHARED="$TMP/shared"
 CUSTODIAN_HOME="$TMP/custodian"
 mkdir -p "$STATE1" "$STATE2" "$SHARED" "$CUSTODIAN_HOME"
+# Allow traversal to the custodian-owned 0700 subdirectory without listing TMP.
+chmod 711 "$TMP"
 SWTPM_PIDS=()
 cleanup() {
   for pid in "\${SWTPM_PIDS[@]:-}"; do
