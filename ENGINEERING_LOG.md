@@ -1086,3 +1086,12 @@ Related #379 A15 retained-range experiment covers a different set of three commi
 - Dedicated CI [run 45854444069](https://github.com/SepehrGhanbari/Ario/actions/runs/45854444069), exact head `0229727e6b297a1fd13e598f79940c32c2524ca0`, SUCCESS: 18/18 tests on CPython 3.13.18 / OpenSSL 3.0.13. Artifact ID `15135810639` (702 bytes).
 - Earlier intermediate CI failures were preserved in Actions history; the final tested head is green. Same-domain valid-prefix rollback remains an expected RED and still requires an independently retained authenticated floor.
 - No Sigsum call, new witness, external publication, real key, TPM, trust activation, production promotion, or merge.
+
+
+## 2026-11-26 — R22.31 owner-admin rollback disposition
+
+- Checked existing R22.22I external 2-of-4 test-witness floor and W36/W37 verifier before deciding whether it could be reused. It is a real prior external test-log observation, but it does not commit to the R22.31 journal or branch; reusing it as this journal's floor would be a false binding.
+- Owner reports that they are the only trusted administrator of the current Ario research environment. Recorded this as an owner-provided threat-model assumption, not an independently verified access-control fact.
+- Closed the same-domain valid-prefix rollback item as ACCEPTED_RISK / OUT_OF_SCOPE for the current owner-operated research prototype. The expected-RED regression remains so the limitation cannot be forgotten or misreported as a pass.
+- Explicitly left account/credential/device compromise, an undisclosed second administrator, and hostile-owner resistance NOT_CLOSED. Those require a genuinely out-of-band owner-held floor or independent custodian, not another same-domain file/process.
+- No new Sigsum publication, witness test, external call, key, merge, trust activation, production action, or main-branch change.
