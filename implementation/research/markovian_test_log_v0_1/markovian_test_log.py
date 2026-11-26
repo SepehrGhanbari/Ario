@@ -588,6 +588,12 @@ def append_synthetic_record(out: Path, signer: Ed25519PrivateKey) -> dict[str, A
         if archive_path.exists():
             raise Hold("HOLD_HISTORY_COSIGNATURE_ALREADY_EXISTS")
         os.replace(cosigned, archive_path)
+    cosig_line = out / "witness-cosignature.txt"
+    if cosig_line.exists():
+        archive_path = history / f"witness-cosignature-{old_size:06d}.txt"
+        if archive_path.exists():
+            raise Hold("HOLD_HISTORY_COSIGNATURE_ALREADY_EXISTS")
+        os.replace(cosig_line, archive_path)
     return verify_bundle(out)
 
 
@@ -629,12 +635,20 @@ def submit_checkpoint(out: Path, *, witness_url: str = WITNESS_SUBMIT_URL) -> di
     else:
         remote = verify_cosigned_checkpoint(remote_note, log_vkey, WITNESS_VKEY)
         old_size, old_root = remote["tree_size"], remote["root"]
+        if old_size == 0 and old_root != hashlib.sha256(b"").digest():
+            raise Hold("HOLD_WITNESS_EMPTY_TREE_ROOT")
         if old_size > len(leaves):
             raise Hold("HOLD_WITNESS_AHEAD_OF_LOCAL_LOG")
         if merkle_tree_hash(leaves[:old_size]) != old_root:
             raise Hold("HOLD_WITNESS_ROOT_NOT_LOCAL_PREFIX")
         if old_size == current["tree_size"]:
             if old_root == current["root"]:
+                witness_blobs = [blob for name, blob in remote["signatures"] if name == WITNESS_NAME]
+                if len(witness_blobs) != 1:
+                    raise Hold("HOLD_WITNESS_COSIGNATURE_MISSING_OR_DUPLICATE")
+                cosig_line = f"{_EM_DASH} {WITNESS_NAME} {_b64(witness_blobs[0])}\n".encode("utf-8")
+                _write_replace_or_new(out / "witness-cosignature.txt", cosig_line)
+                _write_replace_or_new(out / "checkpoint.cosigned", remote_note)
                 return {"status": "ALREADY_COSIGNED", **result}
             raise Hold("HOLD_WITNESS_EQUIVOCATION_AT_CURRENT_SIZE")
         if old_size > current["tree_size"]:
