@@ -119,8 +119,14 @@ pass "EK certificate SubjectPublicKeyInfo matches TPM EK public key"
 # activation proves the AK is associated with the TPM holding this EK.
 tpm2_createak -C "$EK_CTX" -c "$AK_CTX" -G rsa -g sha256 -s rsassa \
   -u "$AK_PUB" -f pem -n "$AK_NAME" -q "$AK_QN" >/dev/null
+AK_NAME_HEX="$(python3 - "$AK_NAME" <<'PY'
+from pathlib import Path
+import sys
+print(Path(sys.argv[1]).read_bytes().hex())
+PY
+)"
 openssl rand -out "$CRED_SECRET" 32
-tpm2_makecredential -G rsa -u "$EK_PUB" -s "$CRED_SECRET" -n "$AK_NAME" -o "$CRED_BLOB"
+tpm2_makecredential -G rsa -u "$EK_PUB" -s "$CRED_SECRET" -n "$AK_NAME_HEX" -o "$CRED_BLOB"
 tpm2_startauthsession --policy-session -S "$SESSION" >/dev/null
 tpm2_policysecret -S "$SESSION" -c e >/dev/null
 tpm2_activatecredential -c "$AK_CTX" -C "$EK_CTX" -i "$CRED_BLOB" \
