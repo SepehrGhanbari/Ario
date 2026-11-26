@@ -95,7 +95,7 @@ def main() -> int:
                 select_size = reader.u8()
                 selections.append((hash_alg, reader.take(select_size)))
             pcr_digest = reader.tpm2b()
-            expected_selection = [(TPM_ALG_SHA256, bytes((0x00, 0x00, 0x80))]
+            expected_selection = [(TPM_ALG_SHA256, bytes((0x00, 0x00, 0x80)))]
             if selections != expected_selection:
                 raise ValueError(f"unexpected PCR selection: {selections!r}")
             if len(pcr_digest) != 32:
