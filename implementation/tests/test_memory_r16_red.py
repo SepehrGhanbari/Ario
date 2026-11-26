@@ -59,6 +59,6 @@ def test_cli_memory_conflicts_small_ledger_still_works(tmp_path):
     p = tmp_path / "l.jsonl"
     p.write_text("".join(json.dumps({"concept": "c", "assertion": f"a{i}"}) + "\n" for i in range(10)))
     here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    r = subprocess.run([sys.executable, os.path.join(here, "ario_cli.py"), "--memory-conflicts", "--ledger", str(p),
+    r = subprocess.run([sys.executable, os.path.join(here, "ario_memory_cli.py"), "--memory-conflicts", "--ledger", str(p),
                         "--format", "json"], capture_output=True, text=True, cwd=here)
     assert r.returncode == 0 and json.loads(r.stdout)["total_nodes"] == 10

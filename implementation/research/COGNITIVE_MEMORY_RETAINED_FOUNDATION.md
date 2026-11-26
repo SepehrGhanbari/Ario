@@ -9,3 +9,8 @@ The seven cognitive-memory core modules, original research contracts, benchmarks
 - #210, #273, #381, #385, #420 and #423 source branches remain available. Integration carries the final #385 research tree's additive implementation files, not all historical branch commits or unrelated governance/CLI changes. No history deletion. Close superseded PRs only after successful main merge and retain distinct experiments.
 
 Acceptance: exact-head normal repository CI, with original expected failures disclosed. Stop after integration; no additional speculative review loop.
+
+
+## Integration correction
+
+Initial CI run [45872367701](https://github.com/SepehrGhanbari/Ario/actions/runs/45872367701) reported one failure on all three platforms: `test_memory_r16_red.py::test_cli_memory_conflicts_small_ledger_still_works` invoked the unchanged M0 CLI rather than the new research CLI. Linux: 2144 passed, 1 failed, 7 skipped, 2 xfailed; Windows: 2142 passed, 1 failed, 9 skipped, 2 xfailed. Retarget the seventh CLI test file without changing its assertions. TXT restore run 45872367600 succeeded. Re-run normal CI; no additional experiments.
