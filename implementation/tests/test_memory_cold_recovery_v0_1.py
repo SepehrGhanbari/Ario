@@ -39,7 +39,7 @@ def synthetic_memory(record_count):
                "concept":f"synthetic_memory_concept_{index+1}",
                "assertion":f"synthetic memory assertion {index+1}","source":"research-fixture"}
         line=json.dumps(event,sort_keys=True,separators=(",",":")).encode("utf-8")
-        lines.append(line+b"\\n")
+        lines.append(line+b"\n")
         line_hash=hashlib.sha256(line).hexdigest()
         assert engine.ingest_event_stream([(line_hash,event)])==1
         guard.record_unverified_ledger_report(assertion=event["assertion"],record_sha256=line_hash)
@@ -143,7 +143,7 @@ def test_ledger_and_snapshot_must_describe_the_same_memory(tmp_path:Path):
     archive=ContentAddressedArchive(tmp_path/"archive"); witness=Ed25519PrivateKey.generate()
     e,g,s,l=synthetic_memory(1)
     other={"event_id":"OTHER","concept":"other","assertion":"not the same"}
-    other_line=json.dumps(other,sort_keys=True,separators=(",",":")).encode(); other_ledger=other_line+b"\\n"
+    other_line=json.dumps(other,sort_keys=True,separators=(",",":")).encode(); other_ledger=other_line+b"\n"
     raw=build_checkpoint(s,other_ledger,generation=1,previous_checkpoint_sha256=ZERO_HASH,
                          node_count=len(e.nodes),attribution_count=len(g.attributions))
     cp_sha=archive.put(raw); archive.put(s); archive.put(other_ledger); doc=json.loads(raw)

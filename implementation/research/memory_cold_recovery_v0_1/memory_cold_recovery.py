@@ -21,9 +21,9 @@ MAX_SNAPSHOT_BYTES=32*1024*1024
 MAX_LEDGER_BYTES=16*1024*1024
 MAX_CHECKPOINT_BYTES=64*1024
 MAX_CHAIN_LENGTH=100_000
-_HEX=re.compile(r"[0-9a-f]{64}\\Z")
-_WITNESS_DOMAIN=b"ARIO-MODEL-WITNESS-RECEIPT-v1\\0"
-_READBACK_DOMAIN=b"ARIO-MODEL-LATEST-READBACK-v1\\0"
+_HEX=re.compile(r"[0-9a-f]{64}\Z")
+_WITNESS_DOMAIN=b"ARIO-MODEL-WITNESS-RECEIPT-v1\0"
+_READBACK_DOMAIN=b"ARIO-MODEL-LATEST-READBACK-v1\0"
 
 class RecoveryHold(ValueError):
     """Cold recovery failed closed; no memory state is installed."""
@@ -59,11 +59,11 @@ def parse_canonical_json(raw:bytes,*,max_bytes:int):
 
 def _parse_ledger(raw:bytes)->list[str]:
     if type(raw) is not bytes or len(raw)>MAX_LEDGER_BYTES: raise RecoveryHold("HOLD_LEDGER_SIZE")
-    if raw and not raw.endswith(b"\\n"): raise RecoveryHold("HOLD_LEDGER_INCOMPLETE_TAIL")
+    if raw and not raw.endswith(b"\n"): raise RecoveryHold("HOLD_LEDGER_INCOMPLETE_TAIL")
     hashes=[]
     for line_no,line in enumerate(raw.splitlines(keepends=True),start=1):
-        if not line.endswith(b"\\n"): raise RecoveryHold(f"HOLD_LEDGER_INCOMPLETE_LINE_{line_no}")
-        clean=line.strip(b" \\t\\r\\n")
+        if not line.endswith(b"\n"): raise RecoveryHold(f"HOLD_LEDGER_INCOMPLETE_LINE_{line_no}")
+        clean=line.strip(b" \t\r\n")
         if not clean: continue
         try:
             event=json.loads(clean.decode("utf-8",errors="strict"),object_pairs_hook=_pairs_no_duplicates,parse_constant=_reject_constant)
