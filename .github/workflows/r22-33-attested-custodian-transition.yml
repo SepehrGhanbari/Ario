@@ -47,7 +47,7 @@ jobs:
         with:
           name: r22-33-attested-custodian-transition-evidence
           path: |
-            \${{ runner.temp }}/r22-31-legacy-tests.log
-            \${{ runner.temp }}/r22-33-attested-transition-tests.log
+            ${{ runner.temp }}/r22-31-legacy-tests.log
+            ${{ runner.temp }}/r22-33-attested-transition-tests.log
           if-no-files-found: warn
           retention-days: 30
