@@ -333,6 +333,7 @@ class HistoricalV153View:
         normalized = _normalize_question(question, query=True)
         matches = [(i, row) for i, row in enumerate(self._rows, 1)
                    if isinstance(row.get("user"), str) and
+                   isinstance(row.get("ario"), str) and
                    _normalize_question(row["user"]) == normalized]
         receipt: dict[str, Any] = {
             "port_schema": "ARIO_PR210_LEGACY_V153_VIEW_V1",
@@ -419,10 +420,11 @@ class HistoricalV153View:
         """Check one unambiguous archived question without disclosing text."""
         question_counts: Counter[str] = Counter()
         for row in self._rows:
-            if isinstance(row.get("user"), str):
+            if isinstance(row.get("user"), str) and isinstance(row.get("ario"), str):
                 question_counts[_normalize_question(row["user"])] += 1
         for row in self._rows:
-            if isinstance(row.get("user"), str) and len(row["user"]) <= MAX_QUESTION_CHARS:
+            if (isinstance(row.get("user"), str) and isinstance(row.get("ario"), str)
+                    and len(row["user"]) <= MAX_QUESTION_CHARS):
                 if question_counts[_normalize_question(row["user"])] == 1:
                     return self.recall(row["user"])
         return {
