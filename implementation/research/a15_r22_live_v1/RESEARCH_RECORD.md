@@ -92,3 +92,12 @@ The bridge now rejects incomplete or duplicate live witness inventories, require
 - The current live observation remained tree size 282813/root `748c0c608c8f691fd7e9a9b9d98e920f9a529f3dbcaf180109e5bcacb597196b`; two distinct external witnesses verified, including Remora; A15-to-live consistency passed.
 
 This hardening does not change the evidence boundary: TEST_ONLY, custom external-only 2-of-4, built-in test2 4-of-5 NOT_MET, data availability NOT_PROVEN, global latest UNKNOWN, and trust/production NO_GO. No publication, key, floor write, merge, or trust activation occurred. PR #389 remains DRAFT and unmerged.
+
+
+## Next unresolved boundary — full Broker payload custody — 2026-11-26
+
+Source review of the exact archived A15 checkpoint bytes confirms that the published checkpoint contains only `broker_head`, Broker source metadata, journal scope, and checkpoint-chain fields. It does not contain Broker rows or the SQLite database. The SQLite snapshots present in the CI ZIP are test artifacts, not part of the Nostr event or Sigsum witness floor.
+
+The R22.22I witnesses attest the append-only tree head; they do not attest storage or availability of the Broker payload. A15 checkpoint inclusion under the external floor is now verified, but full Broker payload recovery from an independently administered custodian remains **NOT_ESTABLISHED**.
+
+The research-only acceptance contract is recorded in [`A15_EXTERNAL_PAYLOAD_CUSTODY_CONTRACT_V1.md`](A15_EXTERNAL_PAYLOAD_CUSTODY_CONTRACT_V1.md). It separates witness quorum from payload-storage quorum and specifies byte-level receipts, independent administration, 2-of-3 read/write quorum, and cold recovery when both Nostr relays and GitHub artifacts are unavailable. This is a design/gap record only: no external upload, new key, floor write, merge, trust activation, or production action was performed.
