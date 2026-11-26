@@ -118,7 +118,7 @@ def main():
         return hashlib.sha1(b"blob "+str(len(normalized)).encode()+b"\0"+normalized).hexdigest()
     check("PIN_A15_LIVE_SOURCE", git_blob((research/"a15_r22_live_v1"/"live.py").read_bytes())=="b040a4921aff134b50b5c809d3b8e004a885fe8b")
     check("PIN_R22_EVENT_CODEC", git_blob(args.r22_codec.read_bytes())=="95a79184d33a81ffd75b2188f5041d7cef345868")
-    check("PIN_R22_PURE_VERIFIER", git_blob(args.r22_pure_verifier.read_bytes())=="a29990a1e695b64d7611483e1d0f5f486c02c932")
+    check("PIN_R22_PURE_VERIFIER", git_blob(args.r22_pure_verifier.read_bytes())=="a29990a1e695b64d7611483e1e0d5f486c02c932")
     first_event=live.parse_json(read(args.first/"event.json",32768),32768); second_event=live.parse_json(read(args.second/"event.json",32768),32768)
     pub=read(args.first/"nostr.pub",256).decode("ascii").strip(); log_key=args.first/"log-key.pub"
     first_checkpoint=read(args.first/"checkpoint.json",16384); second_checkpoint=read(args.second/"checkpoint.json",16384)

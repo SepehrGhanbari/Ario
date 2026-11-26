@@ -28,3 +28,7 @@ The exact-head compatibility run using `actions/download-artifact@v4` failed wit
 ## Cross-run artifact transport fallback — 2026-11-26
 
 Two attempts to fetch previous-run artifacts from inside this workflow failed with `Bad credentials` (first `actions/download-artifact@v4`, then `gh api`); neither executed the compatibility verifier. Both transport failures are retained. The two exact A15 synthetic ZIPs were already downloaded through the authenticated GitHub connector, and their SHA256 values match original artifact digests. Exact bytes are stored as test fixtures under `implementation/tests/fixtures/a15_r22_run_45823494521/`; the wrapper checks ZIP hashes, CRC, exact member manifests, path traversal, symlinks and size limits before extraction. The cold-recovery ZIP is deliberately not included in this compatibility job; its historical result remains as-is and is not re-asserted here. Exact-head compatibility CI remains NOT_RUN until the next job completes.
+
+## Exact-head verifier source-pin correction — 2026-11-26
+
+The first fixture-backed run `45837293507` safely verified both ZIP digests and pinned A15/R22 event-codec sources, then stopped at the R22 pure BIP340 verifier Git-blob pin. The expected hash literal contained a one-character transcription error; the exact file at pinned R22.22G commit `255398a8e243d3738b132dafe0fe0edcaab29679` reports blob `a29990a1e695b64d7611483e1e0d5f486c02c932`. Corrected only that literal. No event/proof test ran in the failed attempt; no evidence or protocol state changed.
