@@ -84,6 +84,13 @@ class EvidenceBundleIntegrationTests(unittest.TestCase):
             path.write_text(json.dumps(value, sort_keys=True, separators=(",", ":")), encoding="utf-8")
         self.assert_rejected_after_mutation("custodian-challenge.json", mutate)
 
+    def test_rejects_ak_ek_activation_result_not_matching_signed_challenge(self) -> None:
+        def mutate(path: Path) -> None:
+            data = bytearray(path.read_bytes())
+            data[0] ^= 0x01
+            path.write_bytes(data)
+        self.assert_rejected_after_mutation("ak-activation-result.bin", mutate)
+
     def test_rejects_nv_readback_not_matching_storage_root(self) -> None:
         def mutate(path: Path) -> None:
             data = bytearray(path.read_bytes())
