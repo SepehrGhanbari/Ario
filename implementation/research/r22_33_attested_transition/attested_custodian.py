@@ -100,10 +100,7 @@ def spki_der(public_key: Path) -> bytes:
 
 
 def verify_signature_bytes(public_key: Path, payload: bytes, signature: bytes) -> bool:
-    with tempfile.NamedTemporaryFile(prefix="ario-r22-33-signature-", delete=True) as sig_file:
-        sig_file.write(signature)
-        sig_file.flush()
-        return legacy.openssl_verify(public_key, payload, Path(sig_file.name))
+    return legacy.openssl_verify(public_key, payload, signature)
 
 
 def verify_signed_object(public_key: Path, value: dict[str, Any], signature_b64: str, code: str) -> None:
