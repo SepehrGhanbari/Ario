@@ -30,6 +30,7 @@ jobs:
             implementation/research/r22_33_attested_transition/issue_challenge.py \
             implementation/research/r22_33_attested_transition/attested_custodian.py \
             implementation/research/r22_33_attested_transition/test_attested_custodian.py \
+            implementation/research/r22_32_tpm_ek_ak_attestation/verify_nv_attestation.py \
             implementation/research/r22_32_tpm_ek_ak_attestation/verify_tpm_public_name.py
       - name: Run preserved R22.31 state-machine regression suite
         run: |
