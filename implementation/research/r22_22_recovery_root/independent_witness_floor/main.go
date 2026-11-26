@@ -48,7 +48,7 @@ func parseWitnessSize(raw []byte)(uint64,error){
  if len(raw)==0||len(raw)>4096{return 0,fmt.Errorf("response bounds")}
  value:=strings.TrimSpace(string(raw))
  if strings.HasPrefix(value,"size="){value=strings.TrimPrefix(value,"size=")}
- if value==""||strings.ContainsAny(value,"\\r\\n="){return 0,fmt.Errorf("invalid size response")}
+ if value==""||strings.Contains(value,"="){return 0,fmt.Errorf("invalid size response")}
  n,e:=strconv.ParseUint(value,10,64);if e!=nil{return 0,fmt.Errorf("invalid size")};return n,nil
 }
 func readWitnessSize(ctx context.Context,w externalWitness)(uint64,error){
