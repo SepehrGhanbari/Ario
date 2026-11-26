@@ -49,7 +49,7 @@ jobs:
           BASE=implementation/research/r22_22_recovery_root
           G="$BASE/generic_successor"
           H="$G/atomic_successor.py"
-          test "$(git hash-object "$H")" = 8e51ee8f4601341bb1000a069cefe26d0d1f782f
+          test "$(git hash-object "$H")" = c833076c1c02fae04693a5e7159b56b1818eaa7c
           test "$(git hash-object "$G/successor.py")" = 6ca081e0aec9a748dcf9318ce1bc0d3f51caed14
           test "$(git hash-object "$G/event_codec.py")" = 95a79184d33a81ffd75b2188f5041d7cef345868
           sudo env PYTHONPATH="$RUNNER_TEMP/pydeps" "$(command -v python)" "$H" test "$RUNNER_TEMP/anchor.zip" "$RUNNER_TEMP/candidate.zip" "$(go env GOPATH)/bin/sigsum-verify" "$RUNNER_TEMP/live" | tee "$RUNNER_TEMP/atomic.log"

@@ -315,7 +315,7 @@ def exercise(prepared, candidate_copy):
         b = box("forgedprepared")
         check("05_forged_prepared_object", _as_uid(CUSTODIAN_UID, lambda: commit(b, sha(prepared.old_ledger), forged)), "HOLD_UNPREPARED_BYTES")
 
-        expired = replace(prepared, prepared_ns=0)
+        expired = replace(prepared, prepared_ns=time.monotonic_ns() - MAX_PREPARED_AGE_NS - 1)
         b = box("expired")
         check("06_expired_validation", _as_uid(CUSTODIAN_UID, lambda: commit(b, sha(prepared.old_ledger), expired)), "HOLD_PREPARED_EXPIRED")
 
