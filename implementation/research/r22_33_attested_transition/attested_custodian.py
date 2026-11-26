@@ -126,15 +126,21 @@ def validate_tpm_public_area(public_area: bytes, name: bytes, object_kind: str) 
     if object_kind == "storage":
         if public_type != 0x0023:
             fail("ATTESTATION_STORAGE_PUBLIC_TYPE_INVALID")
-        required = (1 << 1) | (1 << 4) | (1 << 5)
+        # A storage primary is a restricted decryption object, never a signer.
+        required = (1 << 1) | (1 << 4) | (1 << 5) | (1 << 16) | (1 << 17)
+        forbidden = (1 << 18)
     elif object_kind == "ak":
         if public_type != 0x0001:
             fail("ATTESTATION_AK_PUBLIC_TYPE_INVALID")
+        # An AK is a restricted signing object, never a decrypt-capable key.
         required = (1 << 1) | (1 << 4) | (1 << 5) | (1 << 16) | (1 << 18)
+        forbidden = (1 << 17)
     else:
         fail("ATTESTATION_PUBLIC_KIND_INVALID")
     if attributes & required != required:
         fail("ATTESTATION_" + object_kind.upper() + "_ATTRIBUTES_INVALID")
+    if attributes & forbidden:
+        fail("ATTESTATION_" + object_kind.upper() + "_ATTRIBUTES_FORBIDDEN")
     expected_name = public_area[2:4] + hashlib.sha256(public_area).digest()
     if name != expected_name:
         fail("ATTESTATION_" + object_kind.upper() + "_TPM_NAME_MISMATCH")

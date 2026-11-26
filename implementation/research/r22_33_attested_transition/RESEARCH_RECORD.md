@@ -79,3 +79,15 @@ Repository Implementation Regression on the same source commit: [run 45857631880
 The R22.32 software-TPM dependency was extended to include AK TPMT_PUBLIC Name and restricted-signing checks: [run 45857398519](https://github.com/SepehrGhanbari/Ario/actions/runs/45857398519), **26/26 PASS**, source head 6050263e6075415d5261b876c61a2d9cf5c8a30f. Evidence artifact [ID 15135289752](https://github.com/SepehrGhanbari/Ario/actions/runs/45857398519/artifacts/15135289752).
 
 The R22.33 tests use synthetic verifier keys and synthetic evidence manifests. They validate the custodian-side signature, pinning, freshness, field-binding, TPMT_PUBLIC Name derivation, and transition protocol. They do not prove that a real verifier has consumed the R22.32 raw evidence; that verifier implementation and independent key custody remain the next step.
+
+
+## TPM object usage-profile enforcement
+
+A focused audit found that the earlier TPMT_PUBLIC checks required identity attributes but did not reject contradictory key-usage attributes. The verifier and custodian checks now enforce role separation:
+
+- Storage primary: ECC, fixedTPM, fixedParent, sensitiveDataOrigin, restricted, decrypt; signing attribute forbidden.
+- AK: RSA, fixedTPM, fixedParent, sensitiveDataOrigin, restricted, sign; decrypt attribute forbidden.
+
+Names are recomputed after each negative mutation so the test exercises the usage-profile rule rather than merely failing the Name hash. R22.32's live swtpm harness includes one negative control for each forbidden usage bit. R22.33's synthetic receipt matrix includes both missing-required and forbidden-usage cases for both object profiles.
+
+Exact-head CI after this change: pending. The TPM remains software-emulated; no physical TPM, OEM trust, independent custody, or external rollback floor is established.

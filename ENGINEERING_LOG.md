@@ -1129,3 +1129,11 @@ Related #379 A15 retained-range experiment covers a different set of three commi
 - Exact-source Implementation Regression [run 45857631880](https://github.com/SepehrGhanbari/Ario/actions/runs/45857631880): SUCCESS.
 - R22.32 software-TPM extension [run 45857398519](https://github.com/SepehrGhanbari/Ario/actions/runs/45857398519): **26/26 PASS**, including AK TPMT_PUBLIC Name and restricted-signing attribute verification; evidence artifact [ID 15135289752](https://github.com/SepehrGhanbari/Ario/actions/runs/45857398519/artifacts/15135289752).
 - Explicit limits: R22.33 test receipts use synthetic verifier keys and evidence digests. The actual R22.32 raw evidence has not yet been consumed by a separate verifier to produce the signed receipt. Verifier implementation, separately administered verifier key, physical TPM, OEM EK chain, independent custodian and external rollback floor remain NOT_ESTABLISHED. No merge, trust activation, Genesis or production.
+
+
+## 2026-11-26 — R22.32/R22.33 TPM object usage-profile enforcement
+
+- Independent audit found a concrete policy gap: both the R22.32 TPMT_PUBLIC verifier and R22.33 custodian-side verifier required fixed identity bits but did not reject contradictory key-usage attributes. A restricted AK could carry the decrypt bit, and a storage primary could carry the signing bit, while still passing the required-bit check.
+- Tightened the profiles: storage primary requires ECC + fixedTPM/fixedParent/sensitiveDataOrigin/restricted/decrypt and forbids sign; AK requires RSA + fixedTPM/fixedParent/sensitiveDataOrigin/restricted/sign and forbids decrypt. Other optional attributes remain allowed.
+- Added synthetic R22.33 negative controls that recompute the TPM Name after mutation, so the expected failure specifically exercises usage-policy enforcement. Added live swtpm negative controls to the R22.32 harness for each forbidden bit.
+- Exact-head R22.32/R22.33 CI and artifacts pending. No real TPM, real key, independent administrator, external floor, trust activation, production promotion, or merge.

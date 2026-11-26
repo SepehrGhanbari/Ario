@@ -132,7 +132,7 @@ class AttestedCustodianTests(unittest.TestCase):
 
     def make_receipt(self, *, change=None):
         now = int(time.time())
-        storage_attrs = (1 << 1) | (1 << 4) | (1 << 5)
+        storage_attrs = (1 << 1) | (1 << 4) | (1 << 5) | (1 << 16) | (1 << 17)
         ak_attrs = (1 << 1) | (1 << 4) | (1 << 5) | (1 << 16) | (1 << 18)
         storage_public_area = b"\x00\x23\x00\x0b" + storage_attrs.to_bytes(4, "big") + b"storage-public-area"
         ak_public_area = b"\x00\x01\x00\x0b" + ak_attrs.to_bytes(4, "big") + b"ak-public-area"
@@ -346,6 +346,74 @@ class AttestedCustodianTests(unittest.TestCase):
             receipt["evidence_bundle_sha256"] = digest(canonical(receipt["evidence_manifest"]))
         request = self.make_request(receipt=self.make_receipt(change=mutate))
         result, *_ = self.invoke(request, suffix="storage-attributes")
+        self.assert_rejected_without_commit(result, "REJECT ATTESTATION_STORAGE_ATTRIBUTES_INVALID")
+
+    def test_ak_public_area_rejects_decrypt_usage_even_with_recomputed_name(self):
+        def mutate(receipt):
+            raw = bytearray(base64.b64decode(receipt["ak_public_area_tpmt_b64"]))
+            attributes = int.from_bytes(raw[4:8], "big") | (1 << 17)
+            raw[4:8] = attributes.to_bytes(4, "big")
+            altered = bytes(raw)
+            name = altered[2:4] + hashlib.sha256(altered).digest()
+            receipt["ak_public_area_tpmt_b64"] = b64(altered)
+            receipt["ak_name_b64"] = b64(name)
+            receipt["ak_name_sha256"] = digest(name)
+            receipt["evidence_manifest"]["ak_name_sha256"] = digest(name)
+            receipt["evidence_manifest"]["ak_public_area_sha256"] = digest(altered)
+            receipt["evidence_bundle_sha256"] = digest(canonical(receipt["evidence_manifest"]))
+        request = self.make_request(receipt=self.make_receipt(change=mutate))
+        result, *_ = self.invoke(request, suffix="ak-forbidden-decrypt")
+        self.assert_rejected_without_commit(result, "REJECT ATTESTATION_AK_ATTRIBUTES_FORBIDDEN")
+
+    def test_ak_public_area_requires_restricted_signing_bits(self):
+        def mutate(receipt):
+            raw = bytearray(base64.b64decode(receipt["ak_public_area_tpmt_b64"]))
+            attributes = int.from_bytes(raw[4:8], "big") & ~(1 << 18)
+            raw[4:8] = attributes.to_bytes(4, "big")
+            altered = bytes(raw)
+            name = altered[2:4] + hashlib.sha256(altered).digest()
+            receipt["ak_public_area_tpmt_b64"] = b64(altered)
+            receipt["ak_name_b64"] = b64(name)
+            receipt["ak_name_sha256"] = digest(name)
+            receipt["evidence_manifest"]["ak_name_sha256"] = digest(name)
+            receipt["evidence_manifest"]["ak_public_area_sha256"] = digest(altered)
+            receipt["evidence_bundle_sha256"] = digest(canonical(receipt["evidence_manifest"]))
+        request = self.make_request(receipt=self.make_receipt(change=mutate))
+        result, *_ = self.invoke(request, suffix="ak-missing-sign")
+        self.assert_rejected_without_commit(result, "REJECT ATTESTATION_AK_ATTRIBUTES_INVALID")
+
+    def test_storage_primary_rejects_sign_usage_even_with_recomputed_name(self):
+        def mutate(receipt):
+            raw = bytearray(base64.b64decode(receipt["storage_public_area_tpmt_b64"]))
+            attributes = int.from_bytes(raw[4:8], "big") | (1 << 18)
+            raw[4:8] = attributes.to_bytes(4, "big")
+            altered = bytes(raw)
+            name = altered[2:4] + hashlib.sha256(altered).digest()
+            receipt["storage_public_area_tpmt_b64"] = b64(altered)
+            receipt["storage_name_b64"] = b64(name)
+            receipt["storage_root_sha256"] = digest(name)
+            receipt["evidence_manifest"]["storage_name_sha256"] = digest(name)
+            receipt["evidence_manifest"]["storage_public_area_sha256"] = digest(altered)
+            receipt["evidence_bundle_sha256"] = digest(canonical(receipt["evidence_manifest"]))
+        request = self.make_request(receipt=self.make_receipt(change=mutate))
+        result, *_ = self.invoke(request, suffix="storage-forbidden-sign")
+        self.assert_rejected_without_commit(result, "REJECT ATTESTATION_STORAGE_ATTRIBUTES_FORBIDDEN")
+
+    def test_storage_primary_requires_restricted_decryption_bits(self):
+        def mutate(receipt):
+            raw = bytearray(base64.b64decode(receipt["storage_public_area_tpmt_b64"]))
+            attributes = int.from_bytes(raw[4:8], "big") & ~(1 << 17)
+            raw[4:8] = attributes.to_bytes(4, "big")
+            altered = bytes(raw)
+            name = altered[2:4] + hashlib.sha256(altered).digest()
+            receipt["storage_public_area_tpmt_b64"] = b64(altered)
+            receipt["storage_name_b64"] = b64(name)
+            receipt["storage_root_sha256"] = digest(name)
+            receipt["evidence_manifest"]["storage_name_sha256"] = digest(name)
+            receipt["evidence_manifest"]["storage_public_area_sha256"] = digest(altered)
+            receipt["evidence_bundle_sha256"] = digest(canonical(receipt["evidence_manifest"]))
+        request = self.make_request(receipt=self.make_receipt(change=mutate))
+        result, *_ = self.invoke(request, suffix="storage-missing-decrypt")
         self.assert_rejected_without_commit(result, "REJECT ATTESTATION_STORAGE_ATTRIBUTES_INVALID")
 
     def test_wrong_verifier_key_is_not_pinned(self):
