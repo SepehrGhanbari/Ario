@@ -54,7 +54,7 @@ def test_checkpoint_is_c2sp_note_and_signature_verifies():
     assert parsed["tree_size"]==1
     assert parsed["root"]==merkle_tree_hash(leaves)
     assert note.endswith(b"\n")
-    assert b"\n\n— "+ORIGIN.encode()+b" " in note
+    assert b"\n\n"+"— ".encode("utf-8")+ORIGIN.encode()+b" " in note
 
 def test_consistency_proofs_match_rfc6962_for_all_prefixes():
     leaves=[f"synthetic-{i}".encode() for i in range(1,18)]
