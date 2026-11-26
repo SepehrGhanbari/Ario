@@ -40,3 +40,16 @@ The prototype receives storage_root_sha256 as a caller-supplied request field. I
 ## Execution
 
 Pending dedicated CI run on the branch. Prior R22.30 results remain unchanged and are not re-counted.
+
+
+## Exact source reproduction and final verification — 2026-11-26
+
+Dedicated CI [run 45848502455](https://github.com/SepehrGhanbari/Ario/actions/runs/45848502455), source commit `540bd4f4962c7e0db94215373b871bcf40de59b2`, SUCCESS on CPython 3.13.18 and OpenSSL 3.0.13: **8/8 tests PASS**.
+
+The eighth test extracts the exact embedded custodian_gate.py heredoc from the unchanged R22.30 source shell script, creates a synthetic signed epoch-7 anchor, and submits two distinct valid-format requests with different nonces and different storage-root claims, both requesting 7→8 from the same previous head. The exact R22.30 gate approved both requests, emitted two epoch-8 approvals, appended two nonce entries, and left the signed anchor unchanged. This reproduces the source-level state-machine gap against the exact parent implementation, not a copied approximation.
+
+The seven R22.31 prototype tests passed: single transition, second distinct request rejected, exact retry returns byte-identical receipt/signature, post-commit crash recovery, same-nonce/different-request rejection, journal tamper rejection, and eight-way concurrent requests with exactly one epoch winner.
+
+Earlier failed workflow attempts are preserved in Actions history: the first exposed a Python string-escaping error in the reproducer; the second exposed a test fixture that incorrectly inherited setup state. Both were corrected. Only final run 45848502455 is counted as passing.
+
+Boundaries remain: caller-supplied storage-root data is explicitly UNATTESTED; software-only synthetic keys; root-readable custodian key; same-runner journal; no TPM quote, AK/EK binding, physical TPM, independent custodian, external rollback floor, trust activation, production, or merge.
