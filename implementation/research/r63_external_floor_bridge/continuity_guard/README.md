@@ -58,3 +58,15 @@ GitHub Actions run 45826456385, exact source head 78938af150a542df639bec1e3ed743
 - Windows Python 3.13: same 34 PASS, 3 fork-only tests skipped.
 
 Original two RED controls remain unchanged. These tests strengthen only the local protocol model. All four anchor stores remain under one host/admin in the lab; independent custody, protected hardware monotonicity, provider-level rollback resistance, operator admission and production integration remain NOT_ESTABLISHED. RESEARCH_ONLY / HOLD / GENESIS NO_GO.
+
+## 2026-11-26 — independent continuity-proof verifier
+
+Added verify_identity_proof(...) for a third party that already has an out-of-band pinned four-anchor public-key roster, expected witness identity/key, policy hash, and the challenge nonce. It does not learn trust roots from the proof. It verifies the witness signature, every included anchor read signature, every anchor commit signature, exact nonce/scope, distinct responding anchors, initialization-marker quorum, checkpoint hashes, and a single matching 3-of-4 checkpoint. It rejects a replayed nonce, duplicate response, insufficient quorum, modified anchor response, wrong pinned roster, wrong witness key, and same-sequence fork.
+
+Eight new tests (38–45) cover valid third-party verification and these negative cases. GitHub Actions run 45827479141, source HEAD c02c7045b720eab4066e4908e6287ac4fa50c899:
+- Ubuntu Python 3.11: 45/45 PASS.
+- Ubuntu Python 3.13: 45/45 PASS.
+- Windows Python 3.11: 45 tests discovered, 42 PASS, 3 fork-only process tests skipped.
+- Windows Python 3.13: same 42 PASS, 3 fork-only process tests skipped.
+
+The proof is independently verifiable only relative to the caller-supplied pinned roster and expected nonce. The nonce proves response binding, not that the four anchor operators are independent or that their state is outside a common administrator's rollback domain. No real operators, real keys, external enrollment, hardware monotonicity, trust activation or production integration. The original two RED controls remain.
