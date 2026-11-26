@@ -1,0 +1,22 @@
+{
+  "domain_quorum.py": {
+    "sha256": "e9c14c475b3db6a376c7cdd3fad8d912239528be81f29ade5b74016b457483bf",
+    "git_blob_sha": "cc4d2717a132d04e9cd8b63351238b6a6040e901",
+    "bytes": 7305
+  },
+  "test_domain_quorum.py": {
+    "sha256": "be5cf0938db0ca3ec8f6b07cc87b4ec70de8ba7251e0c110dbf684be549614f5",
+    "git_blob_sha": "275587ea0540c4f503211534fe8feae4798fe7a0",
+    "bytes": 12558
+  },
+  "README.md": {
+    "sha256": "ba0b574107216f5938217b3a30aeba0f08792d9a2bbb39fa9fcbf83c9a2a0ffa",
+    "git_blob_sha": "eb87963eb05053f6d17d5cb1eccdc16dea75ded2",
+    "bytes": 4940
+  },
+  "RUN.log": {
+    "sha256": "6c147fe92541a4b30ca800e45ca3427eb354d9b56b70f09997bc3cbcd2e05aee",
+    "git_blob_sha": "2943849e8537e5bece48609dde2bc8c96068fc5e",
+    "bytes": 6892
+  }
+}
