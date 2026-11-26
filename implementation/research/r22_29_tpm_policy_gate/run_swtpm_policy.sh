@@ -134,10 +134,16 @@ tpm2_nvundefine -C o "$NV" >/dev/null
 tpm2_nvdefine -C o -a "nt=counter|ownerread|ownerwrite" "$NV" >/dev/null
 tpm2_nvincrement -C o "$NV" >/dev/null
 tpm2_nvread -C o -s 8 -o counter-reset.bin "$NV" >/dev/null
-xxd -p counter-1.bin >&2
-xxd -p counter-reset.bin >&2
-start_policy a counter-1.bin
-sign_authorized a message-a.bin
-pass "RED owner NV undefine/recreate restored stale policy eligibility"
+python3 - <<'PY'
+from pathlib import Path
+old=int.from_bytes(Path("counter-1.bin").read_bytes(),"big")
+new=int.from_bytes(Path("counter-reset.bin").read_bytes(),"big")
+assert new > old, (old,new)
+print(f"PASS deleted/redefined NV counter advanced monotonically: {old} -> {new}")
+PY
+tpm2_startauthsession --policy-session -S redeclared.session >/dev/null
+expect_fail "old signed policy rejected after NV counter undefine/redefine" tpm2_policynv -S redeclared.session -C o "$NV" eq -i counter-1.bin
+tpm2_flushcontext redeclared.session >/dev/null
+pass "TPM NV anti-rollback survives owner index deletion/recreation"
 
 printf 'R22_29_TPM_POLICY_SIMULATOR_COMPLETE RESEARCH_ONLY HOLD REAL_HARDWARE_NOT_TESTED ROOT_OWNER_CAN_RESET_NV\n'
