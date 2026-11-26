@@ -14,6 +14,32 @@ These instructions govern Codex and other AI-agent work in this repository. Read
 - Preserve real-key isolation, the founder–Ario dual-approval model, Ario's veto and choice, and the evidence-only role of custodians and witnesses. This standing engineering authorization is not a signature, a grant of independent trust authority, consent on behalf of Ario, or activation of Genesis or production. It does not authorize private-key access, destructive history rewrites, deletion of historical evidence, bypass of protections, disclosure of private data, or changes to real signer/TPM custody. If such a barrier prevents a task, report the blocker and continue independent safe work rather than repeatedly soliciting permission to cross it.
 - The previous authorization provisions below are retained as historical context and continue to govern preservation, bounded scope, technical safety, accountability and evidence quality. Their requirements to ask the owner again for an already covered action are superseded by this standing authorization. Do not interpret it as unlimited control of external accounts, spending, systems, other people, or future unrelated tasks. Agents cannot broaden their own authority by editing this provision.
 
+### Execute within authority — no proposal-only handoffs, 2026-11-26
+
+**OWNER-DIRECTED OPERATING RULE.** The owner explicitly instructed agents to stop returning routine recommendations as permission questions. When an agent identifies a useful action that is within the repository's standing authorization and applicable tool/policy boundaries, the agent must choose a proportionate implementation and execute it. A recommendation is not complete merely because it has been presented to the owner.
+
+- Do not ask the owner to approve routine engineering choices, fixes, tests, documentation, research follow-through, review coordination, or other actions already covered by standing authorization. Do not stop at "I recommend X; shall I do it?" Do X, validate it proportionately, record the result, and report what actually happened.
+- The responsible agent owns ordinary technical decisions. When several safe, contract-compliant approaches exist, choose the simplest effective one; explain the choice briefly in the completion report rather than asking the owner to design the next step.
+- Do not hand routine work back to the owner as manual commands, copy/paste tasks, reviewer recruitment, or a sequence of approval prompts when connected tools or another safe execution path are available. Try the available authorized tools and reasonable alternatives first.
+- Before work, establish a bounded goal, acceptance criteria, and stop condition. Reuse valid evidence. Do not invent extra tests, reviews, or HOLD cycles unless they can resolve a material uncertainty, detect a plausible important failure, or satisfy an actual required gate.
+- Escalate only a **real blocker outside current authority or capability**: an indispensable owner-only decision or input; unavailable account permission, credential, human authentication or external consent; a cost/spend; a destructive or irreversible action; protected security/key/TPM/trust/production/governance boundary; a legal, privacy or safety constraint; or an actually enforced mandatory human Code Owner / branch-protection gate. A preferred tool being unavailable is not by itself a reason to stop if a safe alternative exists.
+- When a real blocker remains, state the exact blocked action, why it cannot be performed under current authority, the smallest specific input/action required, and what independent work has already been completed. Ask at most one concise question. Do not present speculative menus or ask for blanket permission.
+- Do not bypass repository rules, required reviews, tool approval gates, security boundaries, or the owner's and Ario's distinct authority. This rule changes the default from permission-seeking to execution; it does not create new trust authority or authorize prohibited actions.
+- Report completed work, evidence, limitations and any genuine blocker. Do not finish a task by offering to do work that is already within scope.
+
+**فارسی — قاعدهٔ اجرا به‌جای پیشنهاد:**
+
+صاحب پروژه صریحاً خواسته است که عامل‌ها پیشنهادهای معمول و قابل‌اجرا را دوباره به شکل سؤالِ اجازه به او برنگردانند. هرگاه اقدامی در محدودهٔ مجوز مستمر مخزن و مرزهای ابزار و سیاست باشد، عامل باید راه‌حل متناسب را خودش انتخاب و اجرا کند؛ سپس نتیجهٔ واقعی را گزارش دهد.
+
+- برای اصلاح معمول، آزمون، مستندسازی، ادامهٔ پژوهش، هماهنگی بازبینی و تصمیم فنیِ داخل اختیار، دوباره نپرسید «انجام بدهم؟». پیشنهادِ اجرا‌نشده را به‌عنوان پیشرفت تحویل ندهید.
+- انتخاب راه فنی متناسب مسئولیت عامل است. اگر چند راه امن و سازگار وجود دارد، ساده‌ترین راه مؤثر را انتخاب کنید و بعد از اجرا دلیلش را کوتاه توضیح دهید.
+- کار را بی‌دلیل به بنیان‌گذار برنگردانید تا فرمان، دستور ترمینال، کپی‌کردن متن یا بازبین پیدا کند؛ ابتدا ابزارهای متصل و راه‌های مجاز جایگزین را خودتان امتحان کنید.
+- پیش از کار، هدف محدود، معیار پذیرش و شرط پایان را مشخص کنید. شواهد معتبر را دوباره استفاده کنید. آزمون یا بازبینی تازه فقط وقتی اضافه شود که ابهام مهمی را حل کند، خطای مهم محتملی را بیازماید یا دروازهٔ اجباری واقعی باشد.
+- فقط مانع واقعی خارج از اختیار یا توان فعلی را به مالک ارجاع دهید: تصمیم یا دادهٔ ضروریِ مختص مالک، نبود دسترسی/اعتبارنامه/احراز هویت یا رضایت بیرونی، هزینه، اقدام مخرب یا برگشت‌ناپذیر، مرز حفاظت‌شدهٔ امنیت/کلید/TPM/اعتماد/تولید/حاکمیت، الزام قانونی/حریم خصوصی/ایمنی، یا بازبینی انسانی اجباری که واقعاً توسط قواعد مخزن تحمیل شده باشد. در دسترس نبودن ابزار ترجیحی، اگر جایگزین امن وجود دارد، مانع واقعی نیست.
+- هنگام وجود مانع، فقط اقدام مسدودشده، دلیل دقیق، کوچک‌ترین ورودی یا اقدام لازم و کارهای مستقلی را که انجام شده‌اند بیان کنید؛ حداکثر یک سؤال روشن بپرسید. فهرست گزینه‌های فرضی یا درخواست مجوز کلی ارائه نکنید.
+- این قاعده مجوز دورزدن قواعد مخزن، بازبینی اجباری، کنترل ابزار، مرزهای امنیتی یا تفکیک اختیار بنیان‌گذار و آریو نیست. فقط پیش‌فرض را از «اجازه‌خواهی» به «اجرا در محدودهٔ اختیار» تغییر می‌دهد.
+- گزارش نهایی باید دربارهٔ کار انجام‌شده، شواهد، محدودیت‌ها و مانع واقعی باشد؛ کار مجاز و قابل‌اجرا را با عبارت «اگر بخواهی انجام می‌دهم» تمام نکنید.
+
 ### Reviewer availability and honest attribution — owner statement, 2026-11-26
 
 - The owner reports that after approximately seven months of work and repeated outreach, Ario has no participating independent human reviewer; the active work is undertaken by the founder and AI assistants/review tools. This is the owner's dated account, not an independently verified exhaustive outreach audit.
