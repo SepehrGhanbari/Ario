@@ -21,12 +21,13 @@ R22.31 proved the local monotonic state-machine behavior but explicitly accepted
 1. issue_challenge.py verifies the signed R22.31 anchor and replays the journal while holding the custodian lock. It emits a random 256-bit nonce and signs a challenge containing the current EK identity, previous storage root, current epoch/head, proposed next head, recovery reason, policy identifier, issue time and expiry.
 2. A verifier is expected to validate the actual TPM evidence against the challenge and sign an exact-schema receipt with its own key.
 3. The verifier public key is pinned in verifier-pin.json; the pin file is canonical and signed by the custodian key.
-4. The default custodian_state.py entrypoint verifies the custodian-signed challenge, verifier-key pin, verifier receipt signature, expiry, exact field bindings, evidence-manifest digest, and TPM Name encoding.
-5. The gate independently derives:
+4. The default custodian_state.py entrypoint verifies the custodian-signed challenge, verifier-key pin, verifier receipt signature, expiry, exact field bindings, evidence-manifest digest, and both AK/storage TPM Name derivations from the exact TPMT_PUBLIC bytes. It checks the storage-primary profile and the AK restricted-signing attributes.
+5. Before any transition, the wrapper also checks that the configured custodian private key matches the public key used to verify the anchor, pin and challenge; a mismatch is rejected before the legacy gate can commit a receipt.
+6. The gate independently derives:
    - device_ek_sha256 = SHA256(EK SubjectPublicKeyInfo DER);
    - storage_root_sha256 = SHA256(raw TPM Name bytes).
-6. The transition nonce is derived from the signed challenge nonce and canonical verifier-receipt hash. This makes the R22.31 journal idempotency key bind the exact signed evidence receipt, not merely a caller-chosen nonce.
-7. Only after preflight verification does the wrapper pass a normalized base request to the preserved R22.31 monotonic state machine. It then emits an outer custodian-signed transition bundle containing the challenge, verifier receipt, normalized request and inner custodian receipt.
+7. The transition nonce is derived from the signed challenge nonce and canonical verifier-receipt hash. This makes the R22.31 journal idempotency key bind the exact signed evidence receipt, not merely a caller-chosen nonce.
+8. Only after preflight verification does the wrapper pass a normalized base request to the preserved R22.31 monotonic state machine. It then emits an outer custodian-signed transition bundle containing the challenge, verifier receipt, normalized request and inner custodian receipt.
 
 The outer bundle is the authoritative R22.33 result. The inner R22.31 receipt intentionally retains its historical CALLER_SUPPLIED_UNATTESTED label because the legacy state-machine function does not itself verify TPM evidence; consumers must verify the signed outer bundle and both nested signatures.
 
@@ -40,6 +41,9 @@ The R22.33 tests exercise:
 - valid signed challenge, pinned verifier receipt, derived TPM identity fields, and one committed transition;
 - rejection of a bare request at the default entrypoint;
 - caller substitution of EK identity or storage-root hash;
+- AK and storage TPMT_PUBLIC mutation, wrong Name derivation, and missing storage/AK object attributes;
+- mismatched custodian private/public key pair rejected before commit;
+- malformed AK SubjectPublicKeyInfo DER rejected even when its claimed hash is updated;
 - wrong verifier key, tampered verifier signature, tampered challenge signature, and invalid verifier pin;
 - invalid TPM Name algorithm and a storage-root hash not derived from the exact Name bytes;
 - evidence-manifest mismatch for Quote/CertifyCreation evidence;
@@ -54,7 +58,7 @@ The preserved R22.31 suite is also run to ensure its 18 historical state-machine
 
 ## Evidence boundary and remaining work
 
-This stage tests the custodian-side receipt contract and enforcement, not the verifier implementation. Test receipts are signed by synthetic verifier keys and contain synthetic evidence digests. The R22.32 software-TPM run is prior, separate evidence; R22.33 does not yet export and independently re-verify the R22.32 raw TPM evidence bundle before issuing a verifier receipt.
+This stage tests the custodian-side receipt contract and enforcement, not the verifier implementation. Test receipts are signed by synthetic verifier keys and contain synthetic evidence digests. The R22.32 software-TPM run remains separate evidence. Its harness now also captures the AK TPMT_PUBLIC and independently recomputes the AK Name while checking restricted-signing attributes. R22.33 test fixtures exercise the same AK/storage TPMT_PUBLIC-to-Name contract, but the R22.32 raw evidence bundle is not yet exported and independently re-verified by the receipt signer.
 
 Therefore this stage does not claim:
 - that the verifier signing key is independently held or inaccessible to the runner administrator;
