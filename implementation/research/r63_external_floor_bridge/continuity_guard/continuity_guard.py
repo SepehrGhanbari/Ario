@@ -173,8 +173,17 @@ class Anchor:
 
 class AnchorQuorum:
     def __init__(self, anchors):
+        anchors = tuple(anchors)
+        need(len(anchors) == len(ANCHORS), "exact four-anchor roster required")
+        names = [a.name for a in anchors]
+        need(len(set(names)) == len(ANCHORS) and set(names) == set(ANCHORS), "unique exact anchor identities required")
+        anchor_keys = [a.public for a in anchors]
+        need(len(set(anchor_keys)) == len(ANCHORS), "anchor signing keys must be distinct")
+        operator_keys = [a.operator_public for a in anchors]
+        need(len(set(operator_keys)) == len(ANCHORS), "anchor enrollment keys must be distinct")
+        store_paths = [str(a.path.resolve()) for a in anchors]
+        need(len(set(store_paths)) == len(ANCHORS), "anchor stores must be distinct paths")
         self.anchors = {a.name: a for a in anchors}
-        need(set(self.anchors) == set(ANCHORS), "exact four-anchor roster required")
         self.pinned = {n: a.public for n, a in self.anchors.items()}
 
     def provision(self, cp, operators):
