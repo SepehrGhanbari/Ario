@@ -70,3 +70,18 @@ Eight new tests (38–45) cover valid third-party verification and these negativ
 - Windows Python 3.13: same 42 PASS, 3 fork-only process tests skipped.
 
 The proof is independently verifiable only relative to the caller-supplied pinned roster and expected nonce. The nonce proves response binding, not that the four anchor operators are independent or that their state is outside a common administrator's rollback domain. No real operators, real keys, external enrollment, hardware monotonicity, trust activation or production integration. The original two RED controls remain.
+
+## 2026-11-26 — 3-of-4 proof boundary and initialization quorum controls
+
+Three further controls extend the independent verifier suite:
+- exactly three of four signed anchor reads are sufficient when the fourth is unavailable;
+- an invalid anchor commit signature is rejected even when its read response is re-signed;
+- fewer than three initialization markers is rejected.
+
+[CI run 45828036041](https://github.com/SepehrGhanbari/Ario/actions/runs/45828036041), source HEAD e44e95632b58d75fdf34c371a8b9ed5e04cb134d:
+- Ubuntu Python 3.11: 48/48 PASS.
+- Ubuntu Python 3.13: 48/48 PASS.
+- Windows Python 3.11: 48 tests discovered, 45 PASS, 3 fork-only tests skipped.
+- Windows Python 3.13: same 45 PASS, 3 fork-only tests skipped.
+
+The verifier is a research function. Its security still depends on the caller retaining the correct four-key roster and the fresh challenge nonce outside the witness's control. The local lab cannot establish independent anchor administration or resist rollback of all four stores under a common administrator.
