@@ -63,3 +63,18 @@ Six new regressions cover duplicate keys in anchor/request/journal, noncanonical
 Latest dedicated CI: [run 45854444069](https://github.com/SepehrGhanbari/Ario/actions/runs/45854444069), exact tested head `0229727e6b297a1fd13e598f79940c32c2524ca0`, **18/18 PASS** on CPython 3.13.18 / OpenSSL 3.0.13. Artifact `r22-31-custodian-monotonic-state-evidence`, ID `15135810639` (702 bytes).
 
 This does not close same-domain journal rollback: a valid older prefix can still be restored without an independently retained authenticated floor. The prototype remains RESEARCH_ONLY; no external custodian, TPM attestation, real key, trust activation, production or merge is established.
+
+
+## 2026-11-26 — owner-admin rollback threat-model disposition
+
+**Disposition: ACCEPTED_RISK / OUT_OF_SCOPE under the owner's declared current operating model.**
+
+The owner reports that they are the only trusted administrator of the Ario repository and its associated research environment. This is an owner-provided assumption, not an independently verified access-control inventory. Under that model, deliberate rewriting of every local state source by the same trusted owner is not treated as an adversarial security requirement. We will not create additional same-domain processes, files, mock custodians, or repeat the Sigsum test merely to simulate independence.
+
+The expected-RED valid-prefix rollback test remains in the suite as an explicit boundary demonstration. It is not a blocker for the narrow R22.30 duplicate-epoch correction, and it is not evidence that the prototype resists a hostile administrator.
+
+**Still NOT CLOSED:** compromise or theft of the owner's GitHub account, credentials, or execution device; compromise by another administrator not included in the declared model; and any deployment that requires resistance to a hostile owner. Those threats require a genuinely out-of-band owner-held floor or an independently administered custodian. They cannot be solved by another file or process under the same authority.
+
+The existing R22.22I 2-of-4 external test-witness floor is not a floor for R22.31: its signed tree head predates this R22.31 state and does not commit to this journal or branch. Reusing it as though it did would be a false binding. No new Sigsum publication, witness test, external call, key, merge, trust activation, or production action was performed.
+
+The R22.31 valid-prefix rollback finding is therefore **closed as an accepted scope limitation for the current owner-operated research prototype**, not as a cryptographic fix. The original same-epoch defect remains addressed by the R22.31 state-machine correction; PR #411 remains open/Draft pending its normal integration path.
