@@ -14,3 +14,7 @@ Acceptance: exact-head normal repository CI, with original expected failures dis
 ## Integration correction
 
 Initial CI run [45872367701](https://github.com/SepehrGhanbari/Ario/actions/runs/45872367701) reported one failure on all three platforms: `test_memory_r16_red.py::test_cli_memory_conflicts_small_ledger_still_works` invoked the unchanged M0 CLI rather than the new research CLI. Linux: 2144 passed, 1 failed, 7 skipped, 2 xfailed; Windows: 2142 passed, 1 failed, 9 skipped, 2 xfailed. Retarget the seventh CLI test file without changing its assertions. TXT restore run 45872367600 succeeded. Re-run normal CI; no additional experiments.
+
+
+## Follow-up: #223 and #258
+Freeze list-supplied source/link digest fields; reject nontext falsification conditions; reject duplicate JSON object keys at any depth in both ledger readers. Existing bounded batch ingestion and resource ceilings are retained. Source promotion deduplicates repeated evidence IDs within one assessment; exact statement binding from #424 remains required. Repeated explicit assessments may retain historical references; no independent corroboration is inferred. Bridge-level whole-file transactional replay and historic line-hash migration remain outside this correction (#227). No production/trust change. CI pending.

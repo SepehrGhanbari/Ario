@@ -25,6 +25,7 @@ from core.memory_consolidation import (
     ConsolidationError,
     NodeEpistemicStatus,
     SemanticNode,
+    _loads_ledger_line,
 )
 from core.source_monitoring import SourceMonitoringError, SourceMonitoringGuard
 from core.prospective_memory import (
@@ -131,7 +132,7 @@ class EpistemicLedgerBridge:
 
                 line_hash = hashlib.sha256(clean).hexdigest()
                 try:
-                    event = json.loads(clean.decode("utf-8"))
+                    event = _loads_ledger_line(clean.decode("utf-8"))
                 except Exception as exc:
                     raise BridgeError(f"malformed JSON on line {line_no}: {exc}") from exc
 

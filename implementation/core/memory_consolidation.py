@@ -60,6 +60,11 @@ class SemanticNode:
             raise ConsolidationError("concept must be non-empty")
         if not self.assertion or not self.assertion.strip():
             raise ConsolidationError("assertion must be non-empty")
+        if self.falsification_condition is not None and type(self.falsification_condition) is not str:
+            raise ConsolidationError("HOLD_INVALID_FALSIFICATION_CONDITION")
+        if type(self.source_event_hashes) not in (list, tuple):
+            raise ConsolidationError("HOLD_INVALID_SOURCE_EVENT_HASHES")
+        object.__setattr__(self, "source_event_hashes", tuple(self.source_event_hashes))
         if not self.source_event_hashes:
             raise ConsolidationError("T-CONS-01: source_event_hashes must contain at least one source event hash")
         for h in self.source_event_hashes:
@@ -82,6 +87,11 @@ class CausalLink:
     def __post_init__(self) -> None:
         if not self.from_node_id or not self.to_node_id:
             raise ConsolidationError("from_node_id and to_node_id must be non-empty")
+        if type(self.evidence_hashes) not in (list, tuple):
+            raise ConsolidationError("HOLD_INVALID_LINK_EVIDENCE_HASHES")
+        if any(type(h) is not str or len(h) != 64 or any(c not in "0123456789abcdef" for c in h.lower()) for h in self.evidence_hashes):
+            raise ConsolidationError("HOLD_INVALID_LINK_EVIDENCE_HASHES")
+        object.__setattr__(self, "evidence_hashes", tuple(self.evidence_hashes))
         if not (0.0 <= self.weight <= 1.0):
             raise ConsolidationError("weight must be between 0.0 and 1.0")
 
@@ -215,11 +225,20 @@ def _unsupported_json_constant(text: str) -> Any:
     raise _UnsupportedLedgerJSON("nonstandard JSON constant")
 
 
+def _unique_ledger_object(pairs: List[Tuple[str, Any]]) -> Dict[str, Any]:
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise _UnsupportedLedgerJSON("duplicate JSON object key")
+        result[key] = value
+    return result
+
+
 def _loads_ledger_line(decoded: str) -> Any:
     # Interpreter resource limits imply UNEXAMINED/HOLD, not proven corruption.
     try:
         return json.loads(
-            decoded, parse_int=_bounded_parse_int,
+            decoded, object_pairs_hook=_unique_ledger_object, parse_int=_bounded_parse_int,
             parse_float=_finite_json_float, parse_constant=_unsupported_json_constant,
         )
     except (RecursionError, MemoryError) as exc:

@@ -509,6 +509,8 @@ class SourceMonitoringGuard:
         if claim_id in supporting_ids:
             raise SelfCitationError(f"T-SRC-01: Self-citation detected: claim '{claim_id}' cites itself")
 
+        # Repeated IDs in one assessment are one source, not corroboration.
+        supporting_ids = tuple(dict.fromkeys(supporting_ids))
         supporting_nodes: List[SourceAttribution] = []
         for sid in supporting_ids:
             node = self._attributions.get(sid)
