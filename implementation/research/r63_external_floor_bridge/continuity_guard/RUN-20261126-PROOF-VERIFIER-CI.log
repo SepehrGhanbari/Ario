@@ -1,0 +1,16 @@
+R63 continuity guard — independent proof verifier CI evidence
+Date: 2026-11-26
+Workflow: https://github.com/SepehrGhanbari/Ario/actions/runs/45827479141
+Tested source HEAD: c02c7045b720eab4066e4908e6287ac4fa50c899
+Documentation commit: 7e7f34220ea98c12f26d271832ade447b13448f9
+Workflow permissions: contents:read only
+External network/publication: NONE
+
+Ubuntu latest / Python 3.11: Ran 45 tests; OK.
+Ubuntu latest / Python 3.13: Ran 45 tests; OK.
+Windows 2022 / Python 3.11: Ran 45 tests; OK (3 fork-only process tests skipped).
+Windows 2022 / Python 3.13: Ran 45 tests; OK (3 fork-only process tests skipped).
+
+The new public verifier validates a nonce-bound witness continuity proof against a caller-supplied pinned anchor roster and expected identity, key, policy and nonce. It verifies the witness signature, anchor read signatures, anchor commit signatures, checkpoint hashes, distinct responders, initialization quorum and one matching checkpoint. Negative controls reject replay, wrong roster/key, tampered anchor read, duplicate response, insufficient quorum and same-sequence fork.
+
+The proof remains dependent on an out-of-band roster and a caller-held challenge nonce. No operator independence, external custody, trusted clock, hardware monotonicity, real key, production integration or trust activation is established. The two existing joint-rollback RED controls remain. RESEARCH_ONLY / HOLD / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTION.
