@@ -44,7 +44,6 @@ openssl pkey -in policy-authority.private.pem -pubout -out policy-authority.publ
 tpm2_loadexternal -C o -G rsa -u policy-authority.public.pem -c policy-authority.ctx -n policy-authority.name >/dev/null
 tpm2_startauthsession -S key-trial.ctx >/dev/null
 tpm2_policyauthorize -S key-trial.ctx -n policy-authority.name -L key-auth.policy >/dev/null
-echo "MARK flush-trial" >&2
 tpm2_flushcontext key-trial.ctx >/dev/null
 tpm2_flushcontext -t >/dev/null
 tpm2_createprimary -C o -G ecc -g sha256 -c primary.ctx >/dev/null
@@ -55,7 +54,8 @@ tpm2_create -C 0x81000001 -G ecc -g sha256 -L key-auth.policy \
   -u signer.public -r signer.private >/dev/null
 tpm2_load -C 0x81000001 -u signer.public -r signer.private -c signer.ctx >/dev/null
 tpm2_loadexternal -C o -G rsa -u policy-authority.public.pem -c policy-authority.ctx -n policy-authority.name >/dev/null
-tpm2_readpublic -c signer.ctx -f yaml -o signer-public.yaml >/dev/null
+tpm2_readpublic -c signer.ctx -f tss -o signer.public >/dev/null
+tpm2_print -t TPM2B_PUBLIC signer.public > signer-public.yaml
 grep -Eiq 'fixedtpm' signer-public.yaml || fail "fixedTPM attribute missing"
 grep -Eiq 'fixedparent' signer-public.yaml || fail "fixedParent attribute missing"
 if grep -q 'BEGIN .*PRIVATE KEY' signer.private; then fail "TPM private blob unexpectedly PEM"; fi
