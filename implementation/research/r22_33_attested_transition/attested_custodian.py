@@ -140,6 +140,18 @@ def validate_tpm_public_area(public_area: bytes, name: bytes, object_kind: str) 
         fail("ATTESTATION_" + object_kind.upper() + "_TPM_NAME_MISMATCH")
 
 
+def validate_spki_der_bytes(data: bytes, code: str) -> None:
+    with tempfile.NamedTemporaryFile(prefix="ario-r22-33-spki-", suffix=".der", delete=True) as stream:
+        stream.write(data)
+        stream.flush()
+        proc = subprocess.run(
+            ["openssl", "pkey", "-pubin", "-inform", "DER", "-in", stream.name, "-noout"],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+        )
+    if proc.returncode != 0:
+        fail(code)
+
+
 def verify_signature_bytes(public_key: Path, payload: bytes, signature: bytes) -> bool:
     return legacy.openssl_verify(public_key, payload, signature)
 
@@ -261,6 +273,7 @@ def validate_receipt(receipt: Any, signature_b64: Any, challenge: dict[str, Any]
         validate_hash(receipt.get(field), "ATTESTATION_" + field.upper() + "_INVALID")
 
     ek_spki = decode_b64(receipt.get("ek_spki_der_b64"), "ATTESTATION_EK_SPKI_INVALID")
+    validate_spki_der_bytes(ek_spki, "ATTESTATION_EK_SPKI_DER_INVALID")
     if not ek_spki or sha256(ek_spki) != receipt["device_ek_sha256"]:
         fail("ATTESTATION_EK_SPKI_HASH_MISMATCH")
     if receipt["device_ek_sha256"] != challenge["device_ek_sha256"]:
@@ -284,6 +297,7 @@ def validate_receipt(receipt: Any, signature_b64: Any, challenge: dict[str, Any]
     if sha256(ak_name) != receipt["ak_name_sha256"]:
         fail("ATTESTATION_AK_NAME_MISMATCH")
     ak_public = decode_b64(receipt.get("ak_public_spki_der_b64"), "ATTESTATION_AK_PUBLIC_INVALID")
+    validate_spki_der_bytes(ak_public, "ATTESTATION_AK_PUBLIC_DER_INVALID")
     if not ak_public or sha256(ak_public) != receipt["ak_public_sha256"]:
         fail("ATTESTATION_AK_PUBLIC_HASH_MISMATCH")
 
