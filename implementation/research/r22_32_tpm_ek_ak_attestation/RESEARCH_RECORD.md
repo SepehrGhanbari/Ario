@@ -28,7 +28,7 @@ The harness therefore tests `MakeCredential/ActivateCredential`, rather than inv
 4. Create an AK and perform MakeCredential/ActivateCredential; compare the returned secret byte-for-byte.
 5. Attempt to activate the TPM-1 credential on a second independent `swtpm` state with a different EK and AK; expect rejection.
 6. Create an Owner-hierarchy storage primary and capture the TPM-computed Name and Qualified Name.
-7. Use `TPM2_Certify` with a fresh verifier challenge to attest that the exact storage object is loaded. Verify the signature and check the attested object Name, Qualified Name, AK Qualified Name, attestation type and qualifying data.
+7. Use `TPM2_CertifyCreation` with a fresh verifier challenge to attest the currently loaded storage object and its TPM-generated creation record. Verify the signature, object Name, creation hash, AK Qualified Name, attestation type and qualifying data. Independently recompute the object Name from the marshalled `TPMT_PUBLIC` bytes and check fixedTPM/fixedParent/sensitiveDataOrigin attributes.
 8. Quote PCR 23 with a separate fresh challenge. Independently recompute the expected PCR extension, verify the quote signature and nonce, and test rejection under a wrong AK, wrong nonce, tampered signature, and post-quote PCR change.
 
 The storage-root identifier emitted by this harness is the SHA-256 of the TPM Name bytes, explicitly named `TPM_STORAGE_PRIMARY_NAME_SHA256`. It is not silently equated with the earlier R22.30 caller-supplied storage-root fingerprint. A future adapter must define and validate the exact mapping before using it in a custodian transition.
@@ -61,7 +61,7 @@ The script reads PCR values after the quote and checks them against the quote di
 - tpm2-tools `tpm2_makecredential`: https://tpm2-tools.readthedocs.io/en/latest/man/tpm2_makecredential.1/
 - tpm2-tools `tpm2_activatecredential`: https://tpm2-tools.readthedocs.io/en/latest/man/tpm2_activatecredential.1/
 - tpm2-tools `tpm2_quote` and `tpm2_checkquote`: https://tpm2-tools.readthedocs.io/en/latest/man/tpm2_quote.1/ and https://tpm2-tools.readthedocs.io/en/latest/man/tpm2_checkquote.1/
-- tpm2-tools `tpm2_certify` and `tpm2_verifysignature`: https://tpm2-tools.readthedocs.io/en/latest/man/tpm2_certify.1/ and https://tpm2-tools.readthedocs.io/en/latest/man/tpm2_verifysignature.1/
+- tpm2-tools `tpm2_certifycreation` and `tpm2_verifysignature`: https://tpm2-tools.readthedocs.io/en/latest/man/tpm2_certify.1/ and https://tpm2-tools.readthedocs.io/en/latest/man/tpm2_verifysignature.1/
 - TCG PC Client Reference Integrity Manifest Specification v1.1r11 (2024-04-26): https://www.trustedcomputinggroup.org/resources/documents/tcg-pc-client-reference-integrity-manifest-specification
 
 ## Execution status
