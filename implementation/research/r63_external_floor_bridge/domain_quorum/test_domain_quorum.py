@@ -227,4 +227,21 @@ class DomainQuorumTests(unittest.TestCase):
         independent=[receipt(p.roster[n]) for n in ("glasklar","geomys","ipng","trustfabric")]
         self.assertTrue(evaluate(p,H,independent,mode="write").accepted)
 
+    def test_48_markovian_4_of_7_collapses_to_two_corporate_domains(self):
+        groups={"stagemole":"AMAGICOM","rgdd":"AMAGICOM","smartit":"AMAGICOM",
+                "little_garden":"GOOGLE","ring_any_bells":"GOOGLE",
+                "navigli":"GEOMYS","remora":"REMORA"}
+        profile=weighted_quorum_domain_profile(groups,4)
+        self.assertEqual(profile.minimum_domains_per_quorum,2)
+        self.assertEqual(profile.minimum_domain_intersection,1)
+        self.assertEqual(len(profile.intersection_example[2]),1)
+    def test_49_independent_3_of_4_has_two_domain_intersection(self):
+        groups={"geomys":"GEOMYS","ipng":"IPNG","trustfabric":"GOOGLE","markovian":"MARKOVIAN"}
+        profile=weighted_quorum_domain_profile(groups,3)
+        self.assertEqual(profile.minimum_domains_per_quorum,3)
+        self.assertEqual(profile.minimum_domain_intersection,2)
+    def test_50_weighted_profile_rejects_invalid_threshold(self):
+        with self.assertRaises(ValueError):
+            weighted_quorum_domain_profile({"a":"A","b":"B"},3)
+
 if __name__=="__main__": unittest.main(verbosity=2)
