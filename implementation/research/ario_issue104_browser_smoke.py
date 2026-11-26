@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
+from html.parser import HTMLParser
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "docs/ario-explainer-demo-2026-11-08/index.html"
@@ -40,10 +41,30 @@ JS = r"""
     ck(options().length === 5 && options()[3].textContent.includes("hash"), "five-en-scenarios");
     ck(options()[4].textContent.includes("fine"), "respectful-human-case");
     ck(options()[0].querySelector('.opts button:nth-child(2)').getAttribute("aria-pressed") === "true", "choice-persist-language");
+    const oldEntry = "Permission: the assistant may send emails.";
+    const newEntry = "Permission: prepare drafts only.";
+    const revision = () => byId("rev-view");
+    const entries = () => Array.from(revision().querySelectorAll(".log-entry"));
+    const revised = () => entries().length === 2 &&
+      entries()[0].classList.contains("struck") &&
+      entries()[0].textContent.includes(oldEntry) &&
+      entries()[1].classList.contains("new") &&
+      entries()[1].textContent.includes(newEntry) &&
+      entries()[1].textContent.includes("REVISED") &&
+      byId("revEraseBtn").getAttribute("aria-pressed") === "false" &&
+      byId("revReviseBtn").getAttribute("aria-pressed") === "true";
+    ck(revised(), "initial-revision-preserved");
     byId("revEraseBtn").click();
-    ck(byId("rev-view").textContent.length > 30, "erase-view");
+    ck(entries().length === 1 &&
+      entries()[0].classList.contains("new") &&
+      entries()[0].textContent.includes(newEntry) &&
+      !revision().textContent.includes(oldEntry) &&
+      !revision().querySelector(".struck") &&
+      revision().textContent.includes("The trail was erased.") &&
+      byId("revEraseBtn").getAttribute("aria-pressed") === "true" &&
+      byId("revReviseBtn").getAttribute("aria-pressed") === "false", "erase-view");
     byId("revReviseBtn").click();
-    ck(byId("rev-view").textContent.includes("REVISED"), "revision-preserved");
+    ck(revised(), "revision-preserved");
     byId("evidenceDisputedBtn").click();
     ck(byId("evidence-output").textContent.includes("CONTESTED"), "disputed-mode");
     ck(byId("evidenceDisputedBtn").getAttribute("aria-pressed") === "true", "disputed-aria");
@@ -67,6 +88,74 @@ JS = r"""
   }
 })();
 """
+
+
+class _ResultMarker(HTMLParser):
+    """Read a real, unique pre element, not script source or comments."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.count = 0
+        self.active = False
+        self.closed = False
+        self.invalid = False
+        self.parts = []
+        self.inert = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag in ("script", "style", "template", "noscript"):
+            self.inert.append(tag)
+        if self.active:
+            self.invalid = True
+        if self.inert:
+            return
+        ids = [v for k, v in attrs if k == "id"]
+        if "ario-browser-smoke" in ids:
+            self.count += 1
+            if tag != "pre" or len(ids) != 1 or self.active:
+                self.invalid = True
+            else:
+                self.active = True
+
+    def handle_endtag(self, tag):
+        if self.inert:
+            if tag == self.inert[-1]:
+                self.inert.pop()
+            return
+        if self.active:
+            if tag == "pre":
+                self.active = False
+                self.closed = True
+            else:
+                self.invalid = True
+
+    def handle_data(self, data):
+        if self.active and not self.inert:
+            self.parts.append(data)
+
+    def handle_startendtag(self, tag, attrs):
+        self.handle_starttag(tag, attrs)
+        if self.active:
+            self.invalid = True
+        self.handle_endtag(tag)
+
+
+def executed_check_count(stdout: str) -> int | None:
+    parser = _ResultMarker()
+    try:
+        parser.feed(stdout)
+        parser.close()
+    except (ValueError, AssertionError):
+        return None
+    if (parser.count != 1 or parser.active or not parser.closed or
+            parser.invalid):
+        return None
+    matched = re.fullmatch(r"ARIO_DEMO_BROWSER_PASS:([0-9]{1,3})",
+                           "".join(parser.parts).strip())
+    if matched is None:
+        return None
+    count = int(matched.group(1))
+    return count if count == 22 else None
 
 
 def main() -> int:
@@ -106,16 +195,10 @@ def main() -> int:
             # Require the actual DOM element emitted by the EXECUTED script.
             # A loose regex for PASS can match the JavaScript source text
             # printed by --dump-dom and falsely report success.
-            matched = re.search(
-                r'<pre id="ario-browser-smoke">ARIO_DEMO_BROWSER_(PASS|FAIL):([^<]*)</pre>',
-                result.stdout,
-            )
-            checks = matched.group(2).strip() if matched else ""
-            if (result.returncode != 0 or not matched or
-                    matched.group(1) != "PASS" or
-                    not checks.isdecimal() or int(checks) < 18):
+            checks = executed_check_count(result.stdout)
+            if result.returncode != 0 or checks is None:
                 print(f"ARIO_DEMO_BROWSER_FAIL:{name}:"
-                      f"{checks if matched else 'NO_EXECUTED_DOM_MARKER'}")
+                      "NONZERO_EXIT_OR_INVALID_EXECUTED_MARKER")
                 return 1
             print(f"ARIO_DEMO_BROWSER_PASS:{name}:{checks}")
     print("ARIO_DEMO_BROWSER_RESULT:PASS_STATIC_LOCAL_ONLY_NOT_SCREEN_READER")

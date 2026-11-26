@@ -7,6 +7,7 @@ on:
     paths:
       - docs/ario-explainer-demo-2026-11-08/**
       - implementation/research/ario_issue104_browser_smoke.py
+      - implementation/tests/test_ario_issue104_demo_static_contract.py
       - .github/workflows/ario-issue104-browser-smoke.yml
 
 permissions:

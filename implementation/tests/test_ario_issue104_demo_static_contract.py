@@ -62,3 +62,73 @@ def test_static_fictional_demo_keeps_source_and_trust_boundaries():
     assert "XMLHttpRequest" not in s
     assert "localStorage" not in s
     assert "navigator.sendBeacon" not in s
+
+
+# Negative controls for browser transport, independent of a real browser.
+import importlib.util
+import subprocess
+from unittest.mock import patch
+
+SMOKE_PATH = PAGE.parents[2] / "implementation" / "research" / "ario_issue104_browser_smoke.py"
+WORKFLOW = PAGE.parents[2] / ".github" / "workflows" / "ario-issue104-browser-smoke.yml"
+SPEC = importlib.util.spec_from_file_location("issue104_smoke_under_test", SMOKE_PATH)
+assert SPEC is not None and SPEC.loader is not None
+SMOKE = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(SMOKE)
+PASS = '<pre id="ario-browser-smoke">ARIO_DEMO_BROWSER_PASS:22</pre>'
+
+
+def test_browser_marker_positive_and_negative_controls():
+    assert SMOKE.executed_check_count(PASS) == 22
+    invalid = [
+        "",
+        SMOKE.JS,
+        "<script>const fake = '" + PASS + "';</script>",
+        "<!--" + PASS + "-->",
+        "<template>" + PASS + "</template>",
+        PASS.replace("PASS:22", "FAIL:erase-view"),
+        PASS.replace("PASS:22", "PASS:21"),
+        PASS.replace("PASS:22", "PASS:999"),
+        PASS + PASS,
+        PASS.replace("</pre>", ""),
+        PASS.replace("PASS:22", "<b>PASS:22</b>"),
+        '<div id="ario-browser-smoke">ARIO_DEMO_BROWSER_PASS:22</div>',
+    ]
+    for output in invalid:
+        assert SMOKE.executed_check_count(output) is None, output[:100]
+
+
+def test_browser_missing_and_exit_fail_closed():
+    with patch.object(SMOKE.shutil, "which", return_value=None):
+        with patch.object(SMOKE.subprocess, "run") as run:
+            assert SMOKE.main() == 2
+            run.assert_not_called()
+    for code, output, expected in [(1, PASS, 1), (0, "", 1),
+                                    (0, SMOKE.JS, 1),
+                                    (0, PASS.replace("PASS", "FAIL"), 1),
+                                    (0, PASS, 0)]:
+        with patch.object(SMOKE.shutil, "which", return_value="fake-browser"):
+            with patch.object(SMOKE.subprocess, "run",
+                              return_value=subprocess.CompletedProcess([], code, output, "")) as run:
+                assert SMOKE.main() == expected
+                assert run.call_count == (2 if expected == 0 else 1)
+    with patch.object(SMOKE.shutil, "which", return_value="fake-browser"):
+        with patch.object(SMOKE.subprocess, "run", side_effect=OSError):
+            assert SMOKE.main() == 2
+
+
+def test_repository_and_ref_guard_contract():
+    # Structural test of the actual workflow expression, not Actions execution.
+    text = WORKFLOW.read_text(encoding="utf-8")
+    guards = re.findall(r"^    if: (.+)$", text, re.MULTILINE)
+    assert guards == ["github.repository == 'SepehrGhanbari/Ario' && "
+                      "github.ref == 'refs/heads/research/issue104-demo-completion-20261122'"]
+    clauses = re.fullmatch(r"github\.repository == '([^']+)' && github\.ref == '([^']+)'",
+                           guards[0])
+    assert clauses is not None
+    repo, ref = clauses.groups()
+    for candidate_repo, candidate_ref, expected in [
+        (repo, ref, True), ("Other/Ario", ref, False),
+        (repo, "refs/heads/main", False), ("Other/Ario", "refs/heads/main", False),
+    ]:
+        assert ((candidate_repo == repo) and (candidate_ref == ref)) is expected
