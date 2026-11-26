@@ -70,4 +70,18 @@ The script reads PCR values after the quote and checks them against the quote di
 
 ## Execution status
 
-Pending dedicated GitHub Actions execution on the exact branch head. No result is counted until the final source revision's workflow and job logs are inspected.
+Dedicated exact-head CI [run 45853404250](https://github.com/SepehrGhanbari/Ario/actions/runs/45853404250), source commit `7e91aabf4d6bd3763027fead94ee7188b82087e1`, **SUCCESS: 24/24 PASS**.
+
+Environment: tpm2-tools 5.6-1build4, swtpm 0.7.3-0ubuntu5.24.04.1, OpenSSL 3.0.13, Ubuntu 24.04.5. Repository Implementation Regression [run 45853404032](https://github.com/SepehrGhanbari/Ario/actions/runs/45853404032) also succeeded on the same source SHA.
+
+The 24 passing assertions cover:
+- synthetic EK certificate chain, pinned lab root, wrong-root rejection and EK SPKI matching;
+- AK-to-EK MakeCredential/ActivateCredential and rejection on a second independent simulator;
+- TPM Name recomputation from TPMT_PUBLIC, required storage-object attributes, and mutation rejection;
+- nonce-bound TPM2_CertifyCreation signature, signer, object Name and creation-hash checks, including wrong-challenge and substituted-object rejection;
+- PCR 23 recomputation, binary Quote challenge/signer/selection parsing, TPM signature/PCR-digest validation, and rejection of wrong nonce, wrong AK, altered signature and changed PCR.
+
+Evidence artifact: [R22.32 TPM attestation evidence](https://github.com/SepehrGhanbari/Ario/actions/runs/45853404250/artifacts/15133389714).
+
+Earlier failed iterations remain visible in Actions history and are not counted. Only the final exact-head run above is counted as passing. This result is software-TPM interoperability evidence, not proof of physical-device or manufacturer identity.
+
