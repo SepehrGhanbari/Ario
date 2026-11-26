@@ -151,9 +151,10 @@ class TpmLab:
             ]
         )
         raw = read_bytes(out)
-        if len(raw) != 32:
-            raise LabError(f"unexpected cpHash length {len(raw)}")
-        return raw
+        if len(raw) != 34 or raw[:2] != b"\x00\x20":
+            raise LabError(f"invalid TPM2B_DIGEST cpHash encoding ({len(raw)} bytes)")
+        # Keep the TPM2B encoding on disk for tpm2_policycphash.
+        return raw[2:]
 
     def trial_policy(self, counter: int, cp_hash: Path, out_policy: Path, tag: str) -> bytes:
         counter_file = self.work / f"{tag}.counter.bin"
@@ -243,6 +244,29 @@ class TpmLab:
 
 
 def verify_with_openssl(public_pem: Path, message: Path, signature: Path) -> bool:
+    # TPM2-tools default output is marshalled TPMT_SIGNATURE, not ASN.1 DER.
+    raw = read_bytes(signature)
+    if raw[:4] != b"\x00\x18\x00\x0b":  # ECDSA, SHA256
+        return False
+    offset = 4
+    integers = []
+    for _ in range(2):
+        if offset + 2 > len(raw):
+            return False
+        size = int.from_bytes(raw[offset:offset+2], "big")
+        offset += 2
+        if not 1 <= size <= 32 or offset + size > len(raw):
+            return False
+        value = raw[offset:offset+size].lstrip(b"\x00") or b"\x00"
+        offset += size
+        if value[0] & 0x80:
+            value = b"\x00" + value
+        integers.append(b"\x02" + bytes([len(value)]) + value)
+    if offset != len(raw):
+        return False
+    payload = b"".join(integers)
+    der = signature.with_suffix(signature.suffix + ".der")
+    atomic_write(der, b"\x30" + bytes([len(payload)]) + payload, mode=0o600)
     return run_ok(
         [
             "openssl",
@@ -251,7 +275,7 @@ def verify_with_openssl(public_pem: Path, message: Path, signature: Path) -> boo
             "-verify",
             str(public_pem),
             "-signature",
-            str(signature),
+            str(der),
             str(message),
         ],
         timeout=30,
