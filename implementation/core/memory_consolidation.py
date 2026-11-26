@@ -191,6 +191,31 @@ class LedgerIntegrityReport:
         }
 
 
+@dataclasses.dataclass(frozen=True)
+class LedgerLineCoverage:
+    """One completed nonblank line; both digests describe the same input bytes."""
+    line_number: int
+    legacy_trimmed_sha256: str
+    raw_line_sha256: str
+    outcome: str
+
+
+@dataclasses.dataclass(frozen=True)
+class LedgerIngestionCoverage:
+    """Per-call structural coverage, never proof or permission to retain a ledger."""
+    records_seen: int
+    records_structurally_valid: int
+    records_newly_ingested: int
+    semantic_nodes_created_or_reinforced: int
+    skipped_unmapped_events: int
+    replayed_events: int
+    blank_lines: int
+    lines: Tuple[LedgerLineCoverage, ...]
+    contract_version: str = "ledger_ingestion_coverage_v1"
+    legacy_line_hash_scheme: str = "legacy_trimmed_v0_1"
+    raw_line_hash_scheme: str = "raw_line_v0_2"
+
+
 def _synchronized_memory(method):
     """Readers and ancillary mutators see only completed batches.
 
@@ -326,6 +351,19 @@ _JSON_WHITESPACE = b" \t\r\n"
 _STORED_SHA256 = re.compile(r"[0-9a-f]{64}")
 
 
+def ledger_line_digests(raw_line: bytes) -> Tuple[str, str]:
+    """Legacy trimmed identity and exact physical-line digest (report only).
+
+    LF/CRLF and JSON whitespace may share one legacy identity. Do not treat
+    this pair as an inverse alias or proof of authenticity.
+    """
+    if not isinstance(raw_line, (bytes, bytearray)):
+        raise ConsolidationError("HOLD_LEDGER_LINE_BYTES")
+    raw = bytes(raw_line)
+    return (hashlib.sha256(raw.strip(_JSON_WHITESPACE)).hexdigest(),
+            hashlib.sha256(raw).hexdigest())
+
+
 def _direct_batch_bytes_after(payload: Any, used: int) -> int:
     if not isinstance(payload, dict):
         raise ConsolidationError("HOLD_EVENT_MUST_BE_JSON_OBJECT")
@@ -398,8 +436,12 @@ class ConsolidationEngine:
                         return _held("HOLD_LEDGER_BYTES_TOO_LARGE", line_no)
                     if len(raw_line) > MAX_LEDGER_LINE_BYTES:
                         return _held("HOLD_LEDGER_LINE_TOO_LARGE", line_no)
+                    terminated = raw_line.endswith(b"\n")
                     clean = raw_line.strip(_JSON_WHITESPACE)
                     if not clean:
+                        # A blank tail with no LF is incomplete framing, not a record.
+                        if not terminated:
+                            return _held("HOLD_INCOMPLETE_JSONL_LINE", line_no)
                         continue
                     try:
                         markers += _json_structure_markers(
@@ -408,12 +450,12 @@ class ConsolidationEngine:
                         return _held(str(exc), line_no)
                     try:
                         event = _loads_ledger_line(clean.decode("utf-8"))
-                        if not isinstance(event, dict):
-                            return _held("HOLD_EVENT_MUST_BE_JSON_OBJECT", line_no)
-                        valid_lines += 1
                     except _UnsupportedLedgerJSON:
                         return _held("HOLD_LEDGER_JSON_UNSUPPORTED", line_no)
                     except Exception as exc:
+                        # Crash tails are usually unterminated *and* unparseable.
+                        # Keep the historical line number; do not collapse them
+                        # into a framing hold that clears corrupt_line_no.
                         snippet = clean[:80].decode("utf-8", errors="replace")
                         return LedgerIntegrityReport(
                             ledger_path=str(ledger_path), total_bytes=total_bytes,
@@ -421,6 +463,11 @@ class ConsolidationEngine:
                             corrupt_line_no=line_no, corrupt_line_snippet=snippet,
                             diagnostic=f"CORRUPT_JSON_OR_TRUNCATED_TAIL: {exc}",
                         )
+                    if not terminated:
+                        return _held("HOLD_INCOMPLETE_JSONL_LINE", line_no)
+                    if not isinstance(event, dict):
+                        return _held("HOLD_EVENT_MUST_BE_JSON_OBJECT", line_no)
+                    valid_lines += 1
                 end_fd = os.fstat(f.fileno())
         except OSError as exc:
             return _held(f"HOLD_LEDGER_UNREADABLE: {type(exc).__name__}", line_no + 1)
@@ -522,6 +569,14 @@ class ConsolidationEngine:
         return set(self._ledger_hashes)
 
     def ingest_ledger_file(self, ledger_path: Path) -> int:
+        """Legacy return contract: count newly ingested records, not semantic nodes."""
+        return self._ingest_ledger_file(ledger_path, coverage=False)
+
+    def ingest_ledger_file_with_coverage(self, ledger_path: Path) -> LedgerIngestionCoverage:
+        """Opt-in, per-batch report; no persistent digest aliases or history rewrite."""
+        return self._ingest_ledger_file(ledger_path, coverage=True)
+
+    def _ingest_ledger_file(self, ledger_path: Path, *, coverage: bool) -> int | LedgerIngestionCoverage:
         """Bounded all-or-nothing file observation; refuse detected concurrent changes.
 
         The final stat check is not an immutable snapshot or publisher-authentication
@@ -542,6 +597,8 @@ class ConsolidationEngine:
             raise ConsolidationError("HOLD_LEDGER_BYTES_TOO_LARGE")
 
         events = []
+        line_refs = []
+        blank_lines = 0
         bytes_read = 0
         markers = 0
         try:
@@ -561,14 +618,17 @@ class ConsolidationEngine:
                     if len(raw_line) > MAX_LEDGER_LINE_BYTES:
                         raise ConsolidationError(
                             f"HOLD_LEDGER_LINE_TOO_LARGE: line {line_no}")
+                    if not raw_line.endswith(b"\n"):
+                        raise ConsolidationError(f"HOLD_INCOMPLETE_JSONL_LINE: line {line_no}")
                     clean_line = raw_line.strip(_JSON_WHITESPACE)
                     if not clean_line:
+                        blank_lines += 1
                         continue
                     if len(events) >= self.max_batch_events:
                         raise ConsolidationError("HOLD_BATCH_TOO_LARGE")
                     markers += _json_structure_markers(
                         clean_line, MAX_LEDGER_STRUCTURE_MARKERS - markers)
-                    line_hash = hashlib.sha256(clean_line).hexdigest()
+                    line_hash, raw_digest = ledger_line_digests(raw_line)
                     try:
                         event = _loads_ledger_line(clean_line.decode("utf-8"))
                     except _UnsupportedLedgerJSON as exc:
@@ -580,6 +640,8 @@ class ConsolidationEngine:
                     if not isinstance(event, dict):
                         raise ConsolidationError("HOLD_EVENT_MUST_BE_JSON_OBJECT")
                     events.append((line_hash, event))
+                    if coverage:
+                        line_refs.append((line_no, line_hash, raw_digest))
                 end_fd = os.fstat(f.fileno())
         except OSError as exc:
             raise ConsolidationError("HOLD_LEDGER_UNREADABLE") from exc
@@ -598,9 +660,28 @@ class ConsolidationEngine:
             raise ConsolidationError("HOLD_LEDGER_CHANGED_DURING_INGESTION")
 
         # Only now may the graph, hashes and replay indexes be mutated.
-        return self.ingest_event_stream(events)
+        if not coverage:
+            return self.ingest_event_stream(events)
+        outcomes: List[str] = []
+        count = self._ingest_event_stream(events, outcomes)
+        lines = tuple(LedgerLineCoverage(*ref, outcome)
+                      for ref, outcome in zip(line_refs, outcomes, strict=True))
+        return LedgerIngestionCoverage(
+            records_seen=len(events),
+            records_structurally_valid=len(events),
+            records_newly_ingested=count,
+            semantic_nodes_created_or_reinforced=outcomes.count("SEMANTIC_LINKED"),
+            skipped_unmapped_events=outcomes.count("UNMAPPED_EMPTY_ASSERTION"),
+            replayed_events=outcomes.count("REPLAY"),
+            blank_lines=blank_lines,
+            lines=lines,
+        )
 
     def ingest_event_stream(self, events: Iterable[Tuple[str, Dict[str, Any]]]) -> int:
+        return self._ingest_event_stream(events)
+
+    def _ingest_event_stream(self, events: Iterable[Tuple[str, Dict[str, Any]]],
+                             outcomes: Optional[List[str]] = None) -> int:
         """In-memory all-or-nothing batch; not a durable filesystem transaction.
 
         Preserve the previous graph, hashes and lineage if a later item is
@@ -637,7 +718,9 @@ class ConsolidationEngine:
                 raise ConsolidationError("HOLD_REENTRANT_EVENT_BATCH")
             self._batch_running = True
             try:
-                return self._ingest_event_stream_locked(batch)
+                if outcomes is None:
+                    return self._ingest_event_stream_locked(batch)
+                return self._ingest_event_stream_locked(batch, outcomes)
             finally:
                 self._batch_running = False
 
@@ -742,7 +825,8 @@ class ConsolidationEngine:
         self._batch_running = False
         self._batch_lock = threading.RLock()
 
-    def _ingest_event_stream_locked(self, events: Iterable[Tuple[str, Dict[str, Any]]]) -> int:
+    def _ingest_event_stream_locked(self, events: Iterable[Tuple[str, Dict[str, Any]]],
+                                    outcomes: Optional[List[str]] = None) -> int:
         previous = (
             self._nodes,
             self._legacy_aliases,
@@ -786,8 +870,12 @@ class ConsolidationEngine:
                         and self._event_stable_digests.get(h) != stable
                     ):
                         raise ConsolidationError("HOLD_REUSED_HASH_DIFFERENT_EVENT_PAYLOAD")
+                    if outcomes is not None:
+                        outcomes.append("REPLAY")
                     continue  # Identical event, or WM attention-only replay.
-                self._process_raw_event(h, ev)
+                linked = self._process_raw_event(h, ev)
+                if outcomes is not None:
+                    outcomes.append("SEMANTIC_LINKED" if linked else "UNMAPPED_EMPTY_ASSERTION")
                 self._event_payload_digests[h] = digest
                 self._event_stable_digests[h] = stable
                 self._ledger_hashes.add(h)
@@ -799,13 +887,13 @@ class ConsolidationEngine:
             raise
         return count
 
-    def _process_raw_event(self, event_hash: str, event: Dict[str, Any]) -> None:
+    def _process_raw_event(self, event_hash: str, event: Dict[str, Any]) -> bool:
         """Consolidate an individual episodic event into semantic schemas."""
         concept = str(event.get("concept", event.get("task_id", event.get("tool", "general")))).strip()
         assertion = str(event.get("assertion", event.get("goal", event.get("action", "")))).strip()
         if not assertion:
             # Nothing to consolidate from an empty event assertion
-            return
+            return False
 
         node_id = self.compute_node_id(concept, assertion, version=self.node_id_version)
         if self.node_id_version == "v2":
@@ -860,6 +948,7 @@ class ConsolidationEngine:
                 reinforcement_count=1,
                 falsification_condition=event.get("falsification_condition"),
             )
+        return True
 
     @_synchronized_memory
     def apply_saliency_decay(self, cycles: int = 1) -> None:

@@ -14,8 +14,10 @@ Epistemic Invariant Guarantees:
 
 from __future__ import annotations
 
+import copy
 import dataclasses
 import hashlib
+import io
 import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
@@ -26,6 +28,9 @@ from core.memory_consolidation import (
     NodeEpistemicStatus,
     SemanticNode,
     _loads_ledger_line,
+    _JSON_WHITESPACE,
+    _event_digest,
+    ledger_line_digests,
 )
 from core.source_monitoring import SourceMonitoringError, SourceMonitoringGuard
 from core.prospective_memory import (
@@ -99,7 +104,7 @@ class EpistemicLedgerBridge:
         ledger_path: str | Path,
         current_epoch: Optional[float] = None,
     ) -> BridgeAuditSummary:
-        """Ingest agent execution JSONL without mutating the source file."""
+        """Parse first, then atomically apply to engine and guard in-process."""
         target = Path(ledger_path)
         if target.is_symlink():
             raise BridgeError(f"symbolic-link ledger refused: {target}")
@@ -110,13 +115,46 @@ class EpistemicLedgerBridge:
         if file_size > MAX_LEDGER_BYTES:
             raise BridgeError(f"ledger size {file_size} exceeds bound {MAX_LEDGER_BYTES}")
 
-        file_hasher = hashlib.sha256()
-        total_events = 0
-        steps_observed = 0
-        reported_task_finishes_count = 0
-        triggered_intentions: List[Dict[str, Any]] = []
+        # Read at most the existing byte budget. Preflight framing on exactly
+        # the bytes subsequently consumed, before any guard or memory writes.
+        # This is not a publisher-authenticated or durable filesystem snapshot.
+        with target.open("rb") as source:
+            raw = source.read(MAX_LEDGER_BYTES + 1)
+        if len(raw) > MAX_LEDGER_BYTES:
+            raise BridgeError("ledger exceeds byte budget during read")
+        if raw and not raw.endswith(b"\n"):
+            raise BridgeError("HOLD_INCOMPLETE_JSONL_LINE")
+        records, ledger_sha256 = self._parse_agent_ledger(raw)
+        # Match the joint-snapshot lock order. Never replace a live RLock.
+        locks = sorted((self.engine._batch_lock, self.guard._lock), key=id)
+        with locks[0], locks[1]:
+            if self.engine._batch_running or getattr(
+                    self.engine._thread_state(), "materializing", False):
+                raise ConsolidationError("HOLD_REENTRANT_EVENT_BATCH")
+            # All six graph containers hold immutable records or scalar values.
+            # Guard revisions contain mutable lists, so deep-copy them.
+            engine_fields = ("_nodes", "_legacy_aliases", "_links", "_ledger_hashes",
+                             "_event_payload_digests", "_event_stable_digests")
+            engine_before = {name: getattr(self.engine, name).copy()
+                             for name in engine_fields}
+            guard_before = copy.deepcopy((self.guard._attributions,
+                                          self.guard._revisions,
+                                          self.guard._active_verified_ids))
+            try:
+                return self._commit_agent_records(target, ledger_sha256, records)
+            except BaseException:
+                for name, value in engine_before.items():
+                    setattr(self.engine, name, value)
+                (self.guard._attributions, self.guard._revisions,
+                 self.guard._active_verified_ids) = guard_before
+                raise
+            # The registry is never accessed or mutated by this import. Do not
+            # roll back unrelated registry activity from another caller.
 
-        with target.open("rb") as stream:
+    def _parse_agent_ledger(self, raw: bytes) -> Tuple[List[Tuple[int, str, Dict[str, Any]]], str]:
+        records: List[Tuple[int, str, Dict[str, Any]]] = []
+        file_hasher = hashlib.sha256()
+        with io.BytesIO(raw) as stream:
             for line_no, raw_line in enumerate(iter(lambda: stream.readline(MAX_LINE_BYTES + 1), b""), start=1):
                 if line_no > MAX_EVENTS:
                     raise BridgeError(f"event-count limit {MAX_EVENTS} exceeded on line {line_no}")
@@ -126,11 +164,11 @@ class EpistemicLedgerBridge:
                     break
 
                 file_hasher.update(raw_line)
-                clean = raw_line.strip()
+                clean = raw_line.strip(_JSON_WHITESPACE)
                 if not clean:
                     continue
 
-                line_hash = hashlib.sha256(clean).hexdigest()
+                line_hash, _ = ledger_line_digests(raw_line)
                 try:
                     event = _loads_ledger_line(clean.decode("utf-8"))
                 except Exception as exc:
@@ -139,88 +177,121 @@ class EpistemicLedgerBridge:
                 if not isinstance(event, dict):
                     raise BridgeError(f"event on line {line_no} must be a JSON object")
 
-                event_type = event.get("event")
-                total_events += 1
+                records.append((line_no, line_hash, event))
+        return records, file_hasher.hexdigest()
 
-                # 1. TASK_STARTED: Preserve the historical goal ID on external testimony.
-                if event_type == "TASK_STARTED":
-                    task_id = str(event.get("task_id", f"task-{line_no}"))
-                    goal = str(event.get("goal", ""))
-                    if goal:
-                        goal_claim = f"task_goal:{task_id}:{goal}"
-                        goal_digest = hashlib.sha256(goal_claim.encode("utf-8")).hexdigest()
-                        self.guard.create_external_testimony(
-                            assertion=goal_claim,
-                            attribution_id=f"ATTR-HYP-{goal_digest[:12]}",
-                            falsification_condition=f"task_{task_id}_fails",
-                        )
-                        self.engine.ingest_event_stream([(
-                            line_hash,
-                            {
-                                "concept": f"task_goal:{task_id}",
-                                "assertion": goal,
-                                "status": NodeEpistemicStatus.RECORDED.value,
-                            },
-                        )])
+    def _commit_agent_records(self, target: Path, ledger_sha256: str,
+                              records: List[Tuple[int, str, Dict[str, Any]]]) -> BridgeAuditSummary:
+        total_events = 0
+        steps_observed = 0
+        reported_task_finishes_count = 0
+        triggered_intentions: List[Dict[str, Any]] = []
+        for line_no, line_hash, event in records:
+            event_type = event.get("event")
+            total_events += 1
 
-                # 2. STEP_OBSERVED: Unverified report -> recorded semantic node
-                elif event_type == "STEP_OBSERVED":
-                    steps_observed += 1
-                    tool = str(event.get("tool", ""))
-                    # Preserve the injected guard input boundary from #381.
-                    if not tool.strip() or tool not in self.guard._allowlisted_tools:
-                        raise SourceMonitoringError(f"Tool '{tool}' is not allowlisted for ledger import")
-                    step_id = str(event.get("step_id", f"step-{line_no}"))
-                    task_id = str(event.get("task_id", "unknown"))
-                    status = str(event.get("status", "UNKNOWN"))
-                    result = event.get("result", {})
-                    if not isinstance(result, dict):
-                        result = {"raw": result}
-
-                    path_val = str(result.get("path", event.get("path", "")))
-                    target_name = path_val or str(result.get("target", tool))
-                    stdout_str = json.dumps(result, sort_keys=True)
-
-                    # A JSONL status and self-hashed result are reports, not
-                    # independent evidence that the tool actually executed.
-                    self.guard.record_unverified_ledger_report(
-                        assertion=f"reported_step_execution:{tool}:{target_name}:{status}",
-                        record_sha256=line_hash,
+            # 1. TASK_STARTED: Preserve the historical goal ID on external testimony.
+            if event_type == "TASK_STARTED":
+                task_id = str(event.get("task_id", f"task-{line_no}"))
+                goal = str(event.get("goal", ""))
+                if goal:
+                    goal_claim = f"task_goal:{task_id}:{goal}"
+                    goal_digest = hashlib.sha256(goal_claim.encode("utf-8")).hexdigest()
+                    self.guard.create_external_testimony(
+                        assertion=goal_claim,
+                        attribution_id=f"ATTR-HYP-{goal_digest[:12]}",
+                        falsification_condition=f"task_{task_id}_fails",
                     )
+                    self.engine.ingest_event_stream([(
+                        line_hash,
+                        {
+                            "concept": f"task_goal:{task_id}",
+                            "assertion": goal,
+                            "status": NodeEpistemicStatus.RECORDED.value,
+                        },
+                    )])
 
-                    # Determine semantic concept and assertion
-                    concept = f"agent_tool:{tool}:{target_name}"
-                    assertion = stdout_str
+            # 2. STEP_OBSERVED: Unverified report -> recorded semantic node
+            elif event_type == "STEP_OBSERVED":
+                steps_observed += 1
+                tool = str(event.get("tool", ""))
+                # Preserve the injected guard input boundary from #381.
+                if not tool.strip() or tool not in self.guard._allowlisted_tools:
+                    raise SourceMonitoringError(f"Tool '{tool}' is not allowlisted for ledger import")
+                step_id = str(event.get("step_id", f"step-{line_no}"))
+                task_id = str(event.get("task_id", "unknown"))
+                status = str(event.get("status", "UNKNOWN"))
+                result = event.get("result", {})
+                if not isinstance(result, dict):
+                    result = {"raw": result}
 
-                    # Check for contradiction with existing step results
-                    claim_data: Dict[str, Any] = {
-                        "concept": concept,
-                        "assertion": assertion,
-                        # Successful and failed self-reports have equal epistemic
-                        # standing unless an explicit contradictory observation exists.
-                        "status": NodeEpistemicStatus.RECORDED.value,
-                    }
+                path_val = str(result.get("path", event.get("path", "")))
+                target_name = path_val or str(result.get("target", tool))
+                stdout_str = json.dumps(result, sort_keys=True)
 
-                    # If previous observation on same target exists with different assertion, mark conflict
+                # A JSONL status and self-hashed result are reports, not
+                # independent evidence that the tool actually executed.
+                self.guard.record_unverified_ledger_report(
+                    assertion=f"reported_step_execution:{tool}:{target_name}:{status}",
+                    record_sha256=line_hash,
+                )
+
+                # Determine semantic concept and assertion
+                concept = f"agent_tool:{tool}:{target_name}"
+                assertion = stdout_str
+
+                # Check for contradiction with existing step results
+                claim_data: Dict[str, Any] = {
+                    "concept": concept,
+                    "assertion": assertion,
+                    # Successful and failed self-reports have equal epistemic
+                    # standing unless an explicit contradictory observation exists.
+                    "status": NodeEpistemicStatus.RECORDED.value,
+                }
+
+                # A replay after a later contradiction must retain the original
+                # projection, not recalculate it from the newer graph. Verify
+                # the retained payload digest against the exact base projection
+                # or a historical conflict projection, never hash membership alone.
+                if line_hash in self.engine._event_payload_digests:
+                    retained = self.engine._event_payload_digests[line_hash]
+                    node_id = self.engine.compute_node_id(
+                        concept.strip(), assertion.strip(), version=self.engine.node_id_version)
+                    node = self.engine.nodes.get(node_id)
+                    if node is None or line_hash not in node.source_event_hashes:
+                        raise ConsolidationError("HOLD_REUSED_HASH_DIFFERENT_EVENT_PAYLOAD")
+                    if retained == _event_digest(claim_data):
+                        continue
                     for existing in self.engine.nodes.values():
                         if existing.concept == concept and existing.assertion != assertion:
-                            claim_data["negates"] = existing.node_id
-                            claim_data["status"] = NodeEpistemicStatus.CONTESTED.value
-                            break
+                            prior = dict(claim_data, negates=existing.node_id,
+                                         status=NodeEpistemicStatus.CONTESTED.value)
+                            if retained == _event_digest(prior):
+                                break
+                    else:
+                        raise ConsolidationError("HOLD_REUSED_HASH_DIFFERENT_EVENT_PAYLOAD")
+                    continue
 
-                    self.engine.ingest_event_stream([(line_hash, claim_data)])
+                # If previous observation on same target exists with different assertion, mark conflict
+                for existing in self.engine.nodes.values():
+                    if existing.concept == concept and existing.assertion != assertion:
+                        claim_data["negates"] = existing.node_id
+                        claim_data["status"] = NodeEpistemicStatus.CONTESTED.value
+                        break
 
-                # 3. TASK_FINISHED: count the untrusted report without
-                # evaluating a registry cue that could mutate a pending intention
-                # and expose its action_payload.
-                elif event_type == "TASK_FINISHED":
-                    reported_task_finishes_count += 1
+                self.engine.ingest_event_stream([(line_hash, claim_data)])
+
+            # 3. TASK_FINISHED: count the untrusted report without
+            # evaluating a registry cue that could mutate a pending intention
+            # and expose its action_payload.
+            elif event_type == "TASK_FINISHED":
+                reported_task_finishes_count += 1
 
         contested_count = sum(1 for n in self.engine.nodes.values() if n.status == NodeEpistemicStatus.CONTESTED)
 
         return BridgeAuditSummary(
             ledger_path=str(target),
-            ledger_sha256=file_hasher.hexdigest(),
+            ledger_sha256=ledger_sha256,
             total_events_read=total_events,
             steps_observed=steps_observed,
             nodes_consolidated=len(self.engine.nodes),
