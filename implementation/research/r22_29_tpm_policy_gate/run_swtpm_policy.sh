@@ -47,15 +47,18 @@ tpm2_policyauthorize -S key-trial.ctx -n policy-authority.name -L key-auth.polic
 tpm2_flushcontext key-trial.ctx >/dev/null
 tpm2_flushcontext -t >/dev/null
 tpm2_createprimary -C o -G ecc -g sha256 -c primary.ctx >/dev/null
+echo "MARK persist-parent" >&2
 tpm2_evictcontrol -C o -c primary.ctx 0x81000001 >/dev/null
 tpm2_flushcontext -t >/dev/null
 tpm2_create -C 0x81000001 -G ecc -g sha256 -L key-auth.policy \
   -a "fixedtpm|fixedparent|sensitivedataorigin|sign|noda" \
   -u signer.public -r signer.private >/dev/null
 tpm2_load -C 0x81000001 -u signer.public -r signer.private -c signer.ctx >/dev/null
+echo "MARK persist-signer" >&2
 tpm2_evictcontrol -C o -c signer.ctx 0x81000002 >/dev/null
 tpm2_flushcontext -t >/dev/null
 tpm2_loadexternal -C o -G rsa -u policy-authority.public.pem -c policy-authority.ctx -n policy-authority.name >/dev/null
+echo "MARK persist-authority" >&2
 tpm2_evictcontrol -C o -c policy-authority.ctx 0x81000003 >/dev/null
 tpm2_flushcontext -t >/dev/null
 tpm2_readpublic -c 0x81000002 -f tss -o signer.public >/dev/null
