@@ -24,13 +24,10 @@ jobs:
           set -euo pipefail
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends tpm2-tools swtpm swtpm-tools openssl
-      - name: Generate per-run challenge nonce test vector
-        run: |
-          set -euo pipefail
-          echo "ARIO_R22_33_CHALLENGE_NONCE=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
       - name: Compile verifier and run EK/AK/Quote/Certify adversarial matrix
         env:
           ARIO_R22_32_EVIDENCE_DIR: ${{ runner.temp }}/r22-32-raw-evidence
+          ARIO_R22_33_CI_CUSTODIAN_PRIVATE_KEY_PATH: ${{ runner.temp }}/r22-33-ci-custodian.key
         run: |
           set -euo pipefail
           python3 -m py_compile implementation/research/r22_32_tpm_ek_ak_attestation/verify_attestation.py implementation/research/r22_32_tpm_ek_ak_attestation/verify_nv_attestation.py \
