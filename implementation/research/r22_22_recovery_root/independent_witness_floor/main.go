@@ -123,6 +123,8 @@ func main(){
  }
  if accepted<2{panic(fmt.Sprintf("HOLD_EXTERNAL_COSIGNATURES: %d/4, need 2",accepted))}
  root:=hex.EncodeToString(head.RootHash[:])
+ previousRepoRollback:=floorDecision(remoraSize,hex.EncodeToString(remoraRoot[:]),retainedSize,retainedRoot)
+ if previousRepoRollback!="HOLD_BELOW_EXTERNAL_FLOOR"{panic("HOLD_PREVIOUS_REPO_SNAPSHOT_ROLLBACK_CONTROL")}
  if floorDecision(head.Size,root,head.Size-1,"arbitrary")!="HOLD_BELOW_EXTERNAL_FLOOR"{panic("HOLD_ROLLBACK_CONTROL")}
  if floorDecision(head.Size,root,head.Size,strings.Repeat("0",64))!="HOLD_SAME_SIZE_ROOT_CONFLICT"{panic("HOLD_SAME_SIZE_CONTROL")}
  out:=map[string]any{
@@ -134,7 +136,8 @@ func main(){
   "head_size":head.Size,"head_root":root,
   "retained_floor_size":retainedSize,"retained_floor_root":retainedRoot,
   "independent_quorum_floor_size":head.Size,"independent_quorum_floor_root":root,
-  "rollback_below_floor":"HOLD","same_size_different_root":"HOLD",
+  "rollback_below_floor":"HOLD",
+  "previous_repo_snapshot_rollback_check":previousRepoRollback,"same_size_different_root":"HOLD",
   "independent_custodian":"remora.n621.de / Florian Larysch",
   "custodian_readback_source":"https://remora.n621.de/status",
   "custodian_readback_size":remoraSize,

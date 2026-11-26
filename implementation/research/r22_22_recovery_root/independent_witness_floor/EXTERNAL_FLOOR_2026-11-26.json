@@ -1,0 +1,37 @@
+{
+  "schema": "ario.r22.22i.external-floor.v1",
+  "observed_at_utc": "2026-11-26T14:18:52Z",
+  "sigsum_log": "https://test.sigsum.org/barreleye",
+  "log_key_hash": "4e89cc51651f0d95f3c6127c15e1a42e3ddf7046c5b17b752689c402e773bb4d",
+  "external_floor": {
+    "tree_size": 282812,
+    "root_hash": "77a9fa7f729892730a46fb7219bbe44859bc7a99fac28ff413be5ad6b0f03629"
+  },
+  "custodian_readback": {
+    "name": "remora.n621.de",
+    "operator": "Florian Larysch",
+    "url": "https://remora.n621.de/status",
+    "tree_size": 282812,
+    "root_hash": "77a9fa7f729892730a46fb7219bbe44859bc7a99fac28ff413be5ad6b0f03629",
+    "matches_cosigned_head": true,
+    "operator_independence_note": "Operator states neither they nor their employer operate transparency logs or are affiliated with entities that do",
+    "limitations": ["TEST_ONLY", "VM on third-party host", "no HSM", "no redundancy", "best-effort availability"]
+  },
+  "verified_external_cosigners": [
+    {"name": "remora.n621.de", "operator": "Florian Larysch", "signature_valid": true, "signature_timestamp": 1795702723},
+    {"name": "witness.stagemole.eu", "operator": "Mullvad test witness / Grégoire Détrez", "signature_valid": true, "signature_timestamp": 1795702722, "status_readback": "HTTP 404"}
+  ],
+  "custom_research_policy": "2-of-4 external-only; Glasklar excluded",
+  "builtin_sigsum_test2_2025": "NOT_MET",
+  "previous_repo_floor": {
+    "tree_size": 282811,
+    "root_hash": "7f5a1fbf808e3a63652c0817a568c50b9965af19d4fd0faf98fe426166b90ff7"
+  },
+  "previous_repo_snapshot_rollback": "HOLD_BELOW_EXTERNAL_FLOOR",
+  "data_availability": "NOT_PROVEN",
+  "global_latest": "UNKNOWN",
+  "trust_activation": "NO_GO",
+  "production": "NO_GO",
+  "admission": false,
+  "publication_performed": false
+}
