@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
@@ -189,4 +190,65 @@ func TestPriorFloorRejectsForkAboveFloor(t *testing.T){
  f.cust.objects[r2.CheckpointSHA256]=raw;f.cust.objects[r3.CheckpointSHA256]=raw3;f.cust.latest=r3;f.wit.chain=[]Receipt{r1,r2,r3}
  floorHash,_:=receiptHash(f.chain[1])
  if _,e:=f.recover(t,&Floor{Generation:2,ReceiptSHA256:floorHash});e==nil{t.Fatal("accepted alternate chain above retained generation floor")}
+}
+
+type memoryWriter struct {
+	memoryCustodian
+	private ed25519.PrivateKey
+	keyID string
+}
+func (w *memoryWriter) StoreAndAdvance(_ context.Context, req AdvanceRequest)(Receipt,error){
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	expected:=genesisReceipt
+	generation:=uint64(1)
+	var previous Checkpoint
+	if w.latest.Generation>0{
+		var e error
+		expected,e=receiptHash(w.latest);if e!=nil{return Receipt{},e}
+		generation=w.latest.Generation+1
+		raw,ok:=w.objects[w.latest.CheckpointSHA256];if !ok{return Receipt{},ErrHold}
+		previous,e=strictCheckpoint(raw);if e!=nil{return Receipt{},e}
+	}
+	if req.ExpectedReceiptSHA256!=expected{return Receipt{},ErrStaleHead}
+	cp,e:=strictCheckpoint(req.Checkpoint);if e!=nil{return Receipt{},e}
+	if e=validateCheckpoint(cp);e!=nil{return Receipt{},e}
+	if cp.Scope!=req.Scope||cp.Generation!=generation||cp.PreviousReceiptSHA256!=expected{return Receipt{},ErrHold}
+	if generation>1{
+		if cp.Cursor<previous.Cursor||!samePrefix(previous.Matches,cp.Matches)||cp.TargetSize<previous.TargetSize{return Receipt{},ErrHold}
+		if cp.TargetSize==previous.TargetSize&&cp.TargetRoot!=previous.TargetRoot{return Receipt{},ErrHold}
+		if cp.TargetSize>previous.TargetSize&&len(req.TransitionProof)==0{return Receipt{},ErrHold}
+	}
+	h:=digest(req.Checkpoint)
+	if existing,ok:=w.objects[h];ok&&!bytes.Equal(existing,req.Checkpoint){return Receipt{},ErrHold}
+	r:=Receipt{Profile:keeperProfile,Scope:cp.Scope,Generation:cp.Generation,PreviousReceiptSHA256:cp.PreviousReceiptSHA256,CheckpointSHA256:h,CheckpointBytes:uint64(len(req.Checkpoint)),Cursor:cp.Cursor,TargetSize:cp.TargetSize,TargetRoot:cp.TargetRoot,MatchManifestSHA256:cp.MatchManifestSHA256,KeyID:w.keyID}
+	if len(req.TransitionProof)>0{r.TransitionProofSHA256=digest(req.TransitionProof)}
+	r,e=signReceipt(r,w.private);if e!=nil{return Receipt{},e}
+	w.objects[h]=append([]byte(nil),req.Checkpoint...)
+	w.latest=r
+	return r,nil
+}
+func TestCustodianWriterCASProtectsConcurrentCheckpointAdvances(t *testing.T){
+	f:=newFixture(t);r1:=f.chain[0];raw1:=f.cust.objects[r1.CheckpointSHA256]
+	w:=&memoryWriter{memoryCustodian:memoryCustodian{latest:r1,objects:map[string][]byte{r1.CheckpointSHA256:append([]byte(nil),raw1...)}},private:f.priv,keyID:"synthetic-keeper-key"}
+	prevHash,_:=receiptHash(r1)
+	makeProposal:=func(index uint64)[]byte{
+		cp:=Checkpoint{Profile:checkpointProfile,Scope:r1.Scope,Generation:2,PreviousReceiptSHA256:prevHash,Cursor:15,TargetSize:r1.TargetSize,TargetRoot:r1.TargetRoot,FrontierSHA256:hex64(fmt.Sprintf("writer-frontier-%d",index)),Matches:append([]Match(nil),f.cps[0].Matches...)}
+		cp.Matches=append(cp.Matches,Match{index,hex64(fmt.Sprintf("writer-match-%d",index))})
+		cp.MatchManifestSHA256=matchManifest(cp.Matches)
+		b,_:=canonicalCheckpoint(cp);return b
+	}
+	proposals:=[][]byte{makeProposal(12),makeProposal(14)}
+	start:=make(chan struct{});type result struct{r Receipt;e error};results:=make(chan result,2)
+	for _,b:=range proposals{go func(raw []byte){<-start;r,e:=w.StoreAndAdvance(context.Background(),AdvanceRequest{Scope:r1.Scope,ExpectedReceiptSHA256:prevHash,Checkpoint:raw});results<-result{r,e}}(b)}
+	close(start);a,b:=<-results,<-results
+	wins:=0;var winner Receipt
+	for _,x:=range []result{a,b}{if x.e==nil{wins++;winner=x.r}else if !errors.Is(x.e,ErrStaleHead){t.Fatalf("unexpected writer error: %v",x.e)}}
+	if wins!=1{t.Fatalf("expected exactly one signed keeper receipt, got %d",wins)}
+	w.mu.Lock();latest:=w.latest;w.mu.Unlock()
+	if latest.Generation!=2{t.Fatal("CAS head did not advance once")}
+	f.wit.chain=[]Receipt{r1,winner}
+	got,e:=Recover(context.Background(),r1.Scope,"synthetic-keeper-key",f.pub,w,f.wit,nil,nil)
+	if e!=nil{t.Fatal(e)}
+	if got.Receipt.Generation!=2||len(got.Checkpoint.Matches)!=3{t.Fatal("winning checkpoint not recoverable")}
 }
