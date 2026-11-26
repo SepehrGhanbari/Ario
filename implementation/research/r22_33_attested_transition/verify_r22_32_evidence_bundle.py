@@ -29,7 +29,7 @@ MANIFEST_FORMAT = "ARIO-R22.32-SWTPM-EVIDENCE-MANIFEST-V1"
 SUMMARY_FORMAT = "ARIO-R22.32-OFFLINE-VERIFIER-SUMMARY-V1"
 EXPECTED_FILES = {
     "ak-name.bin", "ak-public-area.tpmt", "ak-public.pem", "ak-qualified-name.bin",
-    "creation-attestation.bin", "creation-attestation.sig", "creation-nonce.txt",
+    "ak-activation-result.bin", "creation-attestation.bin", "creation-attestation.sig", "creation-nonce.txt",
     "custodian-challenge-nonce.txt", "custodian-public.pem", "custodian-anchor.json",
     "custodian-anchor.sig", "custodian-challenge.json", "custodian-challenge.sig",
     "ek-certificate.crt", "ek-lab-root.crt",
@@ -161,7 +161,7 @@ def validate_signed_challenge(bundle: Path, ek_spki_sha256: str) -> tuple[dict, 
     required = {
         "format", "nonce", "device_ek_sha256", "previous_storage_root_sha256",
         "previous_epoch", "next_epoch", "previous_head_sha256", "next_head_sha256",
-        "reason", "policy_id", "issued_at", "expires_at",
+        "ak_activation_secret_sha256", "reason", "policy_id", "issued_at", "expires_at",
     }
     if set(challenge) != required:
         raise VerificationError("custodian challenge has an unexpected schema")
@@ -174,6 +174,8 @@ def validate_signed_challenge(bundle: Path, ek_spki_sha256: str) -> tuple[dict, 
         raise VerificationError("exported challenge nonce does not match signed challenge")
     if challenge["device_ek_sha256"] != ek_spki_sha256 or challenge["device_ek_sha256"] != anchor["device_ek_sha256"]:
         raise VerificationError("signed challenge EK identity mismatch")
+    if not isinstance(challenge["ak_activation_secret_sha256"], str) or not re.fullmatch(r"[0-9a-f]{64}", challenge["ak_activation_secret_sha256"]):
+        raise VerificationError("signed challenge AK activation secret hash is malformed")
     if challenge["previous_storage_root_sha256"] != anchor["storage_root_sha256"]:
         raise VerificationError("challenge previous storage root does not match signed anchor")
     if challenge["previous_head_sha256"] != anchor["head_sha256"]:
@@ -293,6 +295,9 @@ def verify_bundle(bundle_path: Path) -> dict:
              "--public-tpmt", str(bundle / "storage-public-area.tpmt"),
              "--name", str(bundle / "storage-name.bin"), "--require-storage-primary"])
 
+        activation_result = (bundle / "ak-activation-result.bin").read_bytes()
+        if len(activation_result) != 32 or sha256(activation_result) != challenge["ak_activation_secret_sha256"]:
+            raise VerificationError("MakeCredential/ActivateCredential result does not match signed challenge")
         ak_qn = (bundle / "ak-qualified-name.bin").read_bytes()
         if len(ak_qn) != 34 or ak_qn[:2] != b"\x00\x0b":
             raise VerificationError("AK Qualified Name is not a SHA-256 TPM Name")
@@ -373,6 +378,7 @@ def verify_bundle(bundle_path: Path) -> dict:
                 "ek_certificate_chain": "PASS_LAB_CA_ONLY",
                 "ek_certificate_public_key_binding": "PASS",
                 "ak_public_name_and_profile": "PASS_RSA_2048_RSASSA_SHA256",
+                "ak_ek_credential_activation": "PASS_CHALLENGE_BOUND_RESULT",
                 "storage_public_name_and_profile": "PASS_ECC_NIST_P256",
                 "storage_root_and_creation_hash": "PASS",
                 "challenge_nonce_domain_separation": "PASS",
