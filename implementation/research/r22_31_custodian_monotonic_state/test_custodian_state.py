@@ -199,3 +199,67 @@ class CustodianStateTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class R2230SourceRegressionTests(unittest.TestCase):
+    def test_exact_r2230_embedded_gate_approves_two_distinct_requests_for_same_epoch(self):
+        repo_root = HERE.parents[2]
+        source = repo_root / "implementation/research/r22_30_tpm_clear_custody/run_swtpm_clear_custody.sh"
+        shell_text = source.read_text(encoding="utf-8")
+        marker = 'cat > "$SHARED/custodian_gate.py" <<\\'PY\\'\\n'
+        self.assertIn(marker, shell_text)
+        start = shell_text.index(marker) + len(marker)
+        end = shell_text.index("\\nPY\\n", start)
+        gate_source = shell_text[start:end] + "\\n"
+
+        with tempfile.TemporaryDirectory(prefix="ario-r22-30-repro-") as directory:
+            root = Path(directory)
+            gate = root / "custodian_gate.py"
+            gate.write_text(gate_source, encoding="utf-8")
+            anchor = {
+                "device_ek_sha256": digest(b"r22.30-synthetic-ek"),
+                "storage_root_sha256": digest(b"r22.30-original-storage-root"),
+                "epoch": 7,
+                "head_sha256": digest(b"r22.30-previous-head"),
+            }
+            anchor_path = root / "anchor.json"
+            anchor_sig = root / "anchor.sig"
+            anchor_bytes = canonical(anchor)
+            anchor_path.write_bytes(anchor_bytes)
+            anchor_sig.write_bytes(subprocess.run(
+                ["openssl", "dgst", "-sha256", "-sign", str(self.private)],
+                input=anchor_bytes, check=True, stdout=subprocess.PIPE,
+            ).stdout)
+            nonce_ledger = root / "consumed_nonces.jsonl"
+            approvals = []
+            for index in (1, 2):
+                request = {
+                    "device_ek_sha256": anchor["device_ek_sha256"],
+                    "storage_root_sha256": digest(f"r22.30-claimed-root-{index}".encode()),
+                    "previous_epoch": 7,
+                    "next_epoch": 8,
+                    "previous_head_sha256": anchor["head_sha256"],
+                    "reason": "TPM_CLEAR_RECOVERY",
+                    "nonce": f"{index:064x}",
+                }
+                request_path = root / f"request-{index}.json"
+                response_path = root / f"response-{index}.json"
+                request_path.write_bytes(canonical(request))
+                result = subprocess.run([
+                    sys.executable, str(gate),
+                    "--anchor", str(anchor_path),
+                    "--anchor-signature", str(anchor_sig),
+                    "--public-key", str(self.public),
+                    "--private-key", str(self.private),
+                    "--nonce-ledger", str(nonce_ledger),
+                    "--request", str(request_path),
+                    "--response", str(response_path),
+                ], text=True, capture_output=True, check=False)
+                approvals.append((result.returncode, result.stdout, result.stderr, response_path))
+
+            self.assertEqual([item[0] for item in approvals], [0, 0], approvals)
+            self.assertTrue(all("APPROVED EXPLICIT_RECOVERY epoch=8" in item[1] for item in approvals))
+            self.assertEqual(len(nonce_ledger.read_text().splitlines()), 2)
+            self.assertEqual(anchor_path.read_bytes(), anchor_bytes)
+
+
