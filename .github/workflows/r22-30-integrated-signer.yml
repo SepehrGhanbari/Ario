@@ -35,3 +35,34 @@ jobs:
             /tmp/ario-r2230-boundary/boundary-results.json
           if-no-files-found: warn
           retention-days: 30
+
+  integrated:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install disposable TPM tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tpm2-tools swtpm swtpm-tools openssl
+      - name: Build local witness/quorum adapter
+        working-directory: implementation/research/r22_30_integrated_signer/bridge
+        env:
+          GOTOOLCHAIN: local
+          GOWORK: 'off'
+          GOPROXY: 'off'
+        run: go build -o "$RUNNER_TEMP/ario2230-bridge" .
+      - name: Execute integrated first-generation signer and crash matrix
+        working-directory: implementation/research/r22_30_integrated_signer
+        run: |
+          set -euo pipefail
+          sudo -E python3 run_integrated.py "$RUNNER_TEMP/ario2230-bridge" 2>&1 | tee "$RUNNER_TEMP/r22-30-integrated.log"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r22-30-integrated-evidence
+          path: ${{ runner.temp }}/r22-30-integrated.log
+          if-no-files-found: warn
+          retention-days: 30
