@@ -65,7 +65,7 @@ def test_consistency_proofs_match_rfc6962_for_all_prefixes():
                 merkle_tree_hash(leaves[:old_size]),merkle_tree_hash(leaves[:new_size]))
 
 def test_witness_request_has_exact_c2sp_framing():
-    note=b"origin\n1\n"+base64.b64encode(hashlib.sha256(b"x").digest())+b"\n\n— origin sig\n"
+    note=b"origin\n1\n"+base64.b64encode(hashlib.sha256(b"x").digest())+b"\n\n"+"— origin sig\n".encode("utf-8")
     proof=[bytes(range(32))]
     request=build_witness_request(1,proof,note)
     assert request.startswith(b"old 1\n"+_b64(proof[0]).encode()+b"\n\n")
