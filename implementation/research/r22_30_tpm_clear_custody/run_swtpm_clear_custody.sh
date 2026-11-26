@@ -14,6 +14,7 @@ cleanup() {
     wait "$pid" 2>/dev/null || true
   done
   if id ario-custodian >/dev/null 2>&1; then sudo userdel ario-custodian >/dev/null 2>&1 || true; fi
+  if getent group ario-custodian >/dev/null 2>&1; then sudo groupdel ario-custodian >/dev/null 2>&1 || true; fi
   rm -rf "$TMP"
 }
 trap cleanup EXIT
@@ -176,7 +177,10 @@ pass "replacement TPM presents a different EK identity"
 
 # Build a narrowly scoped, separate-UID custodian model. This is NOT an
 # independently administered custodian: the CI runner's root can still read it.
-sudo useradd -M -d "$CUSTODIAN_HOME" -s /usr/sbin/nologin ario-custodian
+if getent passwd ario-custodian >/dev/null 2>&1; then sudo userdel ario-custodian >/dev/null 2>&1 || true; fi
+if getent group ario-custodian >/dev/null 2>&1; then sudo groupdel ario-custodian >/dev/null 2>&1 || true; fi
+sudo groupadd --system ario-custodian
+sudo useradd --system --no-create-home --gid ario-custodian --home-dir "$CUSTODIAN_HOME" --shell /usr/sbin/nologin ario-custodian
 sudo chown ario-custodian:ario-custodian "$CUSTODIAN_HOME"
 sudo chmod 700 "$CUSTODIAN_HOME"
 sudo -u ario-custodian -- openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 \
