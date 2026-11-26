@@ -201,6 +201,98 @@ ROOT_NAME_SHA256="$(sha256sum "$SRK_NAME" | awk '{print $1}')"
 printf 'TPM_STORAGE_PRIMARY_NAME_SHA256=%s\n' "$ROOT_NAME_SHA256"
 pass "storage primary Name and Qualified Name captured from TPM"
 
+# Bind the exact 32-byte storage-root claim to a TPM NV index. This proves
+# what the TPM stored and signed at this moment; it does not prove the claim
+# was correctly measured from a filesystem or make the NV index immutable.
+ROOT_COMMITMENT="$TMP/root-commitment.bin"
+printf '%s' "$ROOT_NAME_SHA256" | xxd -r -p >"$ROOT_COMMITMENT"
+[[ "$(wc -c <"$ROOT_COMMITMENT")" -eq 32 ]] || fail "storage-root commitment is not 32 bytes"
+
+NV_INDEX="0x01500020"
+NV_PUBLIC="$TMP/nv-public.yaml"
+NV_READBACK="$TMP/nv-readback.bin"
+NV_ATTEST="$TMP/nv-attest.bin"
+NV_SIG="$TMP/nv-attest.sig"
+NV_TICKET="$TMP/nv-attest.ticket"
+NV_NONCE="$(openssl rand -hex 32)"
+
+tpm2_nvdefine -C o -s 32 -a "ownerread|ownerwrite|authread|authwrite" "$NV_INDEX" >/dev/null
+tpm2_nvwrite -C o -i "$ROOT_COMMITMENT" "$NV_INDEX" >/dev/null
+tpm2_nvread -C o -s 32 -o "$NV_READBACK" "$NV_INDEX" >/dev/null
+cmp -s "$ROOT_COMMITMENT" "$NV_READBACK" || fail "TPM NV readback differs from the storage-root commitment"
+tpm2_nvreadpublic >"$NV_PUBLIC"
+
+tpm2_nvcertify -C "$AK_CTX" -c o -g sha256 -s rsassa -q "$NV_NONCE" \
+  --size 32 -o "$NV_SIG" --attestation "$NV_ATTEST" "$NV_INDEX" >/dev/null
+tpm2_verifysignature -c "$AK_CTX" -g sha256 -m "$NV_ATTEST" \
+  -s "$NV_SIG" -t "$NV_TICKET" >/dev/null
+python3 "$ROOT/verify_nv_attestation.py" --attest "$NV_ATTEST" \
+  --nonce "$NV_NONCE" --ak-qualified-name "$AK_QN" \
+  --nv-public-yaml "$NV_PUBLIC" --nv-index "$NV_INDEX" \
+  --expected-contents "$ROOT_COMMITMENT"
+pass "TPM2_NV_Certify signature, fresh challenge, index Name and exact storage-root bytes verified"
+cp "$NV_ATTEST" "$TMP/original-nv-attest.bin"
+
+expect_fail "NV attestation rejected with a different challenge" \
+  python3 "$ROOT/verify_nv_attestation.py" --attest "$NV_ATTEST" \
+    --nonce "$(openssl rand -hex 32)" --ak-qualified-name "$AK_QN" \
+    --nv-public-yaml "$NV_PUBLIC" --nv-index "$NV_INDEX" \
+    --expected-contents "$ROOT_COMMITMENT"
+expect_fail "NV attestation rejects a substituted root commitment" \
+  python3 "$ROOT/verify_nv_attestation.py" --attest "$NV_ATTEST" \
+    --nonce "$NV_NONCE" --ak-qualified-name "$AK_QN" \
+    --nv-public-yaml "$NV_PUBLIC" --nv-index "$NV_INDEX" \
+    --expected-contents "$TMP/alternate-root.bin"
+expect_fail "NV attestation rejects a substituted NV index handle" \
+  python3 "$ROOT/verify_nv_attestation.py" --attest "$NV_ATTEST" \
+    --nonce "$NV_NONCE" --ak-qualified-name "$AK_QN" \
+    --nv-public-yaml "$NV_PUBLIC" --nv-index "0x01500021" \
+    --expected-contents "$ROOT_COMMITMENT"
+expect_fail "NV attestation rejects a different AK Qualified Name" \
+  python3 "$ROOT/verify_nv_attestation.py" --attest "$NV_ATTEST" \
+    --nonce "$NV_NONCE" --ak-qualified-name "$AK2_QN" \
+    --nv-public-yaml "$NV_PUBLIC" --nv-index "$NV_INDEX" \
+    --expected-contents "$ROOT_COMMITMENT"
+
+# Expected mutability boundary: the same TPM owner can overwrite the NV value
+# and obtain a fresh, valid attestation. This is deliberately not called
+# rollback resistance or independent custody.
+ALT_ROOT_COMMITMENT="$TMP/alternate-root.bin"
+openssl rand -out "$ALT_ROOT_COMMITMENT" 32
+ALT_NV_READBACK="$TMP/alternate-nv-readback.bin"
+ALT_NV_PUBLIC="$TMP/alternate-nv-public.yaml"
+ALT_NV_ATTEST="$TMP/alternate-nv-attest.bin"
+ALT_NV_SIG="$TMP/alternate-nv-attest.sig"
+ALT_NV_TICKET="$TMP/alternate-nv-attest.ticket"
+ALT_NV_NONCE="$(openssl rand -hex 32)"
+
+tpm2_nvwrite -C o -i "$ALT_ROOT_COMMITMENT" "$NV_INDEX" >/dev/null
+tpm2_nvread -C o -s 32 -o "$ALT_NV_READBACK" "$NV_INDEX" >/dev/null
+cmp -s "$ALT_ROOT_COMMITMENT" "$ALT_NV_READBACK" || fail "alternate NV readback mismatch"
+tpm2_nvreadpublic >"$ALT_NV_PUBLIC"
+tpm2_nvcertify -C "$AK_CTX" -c o -g sha256 -s rsassa -q "$ALT_NV_NONCE" \
+  --size 32 -o "$ALT_NV_SIG" --attestation "$ALT_NV_ATTEST" "$NV_INDEX" >/dev/null
+tpm2_verifysignature -c "$AK_CTX" -g sha256 -m "$ALT_NV_ATTEST" \
+  -s "$ALT_NV_SIG" -t "$ALT_NV_TICKET" >/dev/null
+python3 "$ROOT/verify_nv_attestation.py" --attest "$ALT_NV_ATTEST" \
+  --nonce "$ALT_NV_NONCE" --ak-qualified-name "$AK_QN" \
+  --nv-public-yaml "$ALT_NV_PUBLIC" --nv-index "$NV_INDEX" \
+  --expected-contents "$ALT_ROOT_COMMITMENT"
+pass "TPM owner can rewrite NV contents and obtain a fresh valid attestation (expected limitation)"
+
+expect_fail "old NV attestation rejected against rewritten contents" \
+  python3 "$ROOT/verify_nv_attestation.py" --attest "$NV_ATTEST" \
+    --nonce "$NV_NONCE" --ak-qualified-name "$AK_QN" \
+    --nv-public-yaml "$ALT_NV_PUBLIC" --nv-index "$NV_INDEX" \
+    --expected-contents "$ALT_ROOT_COMMITMENT"
+expect_fail "new NV attestation rejected against the prior root commitment" \
+  python3 "$ROOT/verify_nv_attestation.py" --attest "$ALT_NV_ATTEST" \
+    --nonce "$ALT_NV_NONCE" --ak-qualified-name "$AK_QN" \
+    --nv-public-yaml "$ALT_NV_PUBLIC" --nv-index "$NV_INDEX" \
+    --expected-contents "$ROOT_COMMITMENT"
+
+
+
 # TPM2_Certify proves the exact storage object is loaded and binds it to a
 # fresh verifier challenge. The verifier checks the signature and decoded fields.
 CERTIFY_NONCE="$(openssl rand -hex 32)"

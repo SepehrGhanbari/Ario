@@ -88,3 +88,17 @@ Evidence artifact: [R22.32 TPM attestation evidence](https://github.com/SepehrGh
 The earlier pre-restack run 45853404250 also passed 24/24; it is retained as historical evidence. The run above is the final exact-head result after the feature branch was updated to the latest R22.31 PR #411 head.
 
 This remains software-TPM interoperability evidence, not proof of physical-device or manufacturer identity.
+
+## R22.32 addendum — exact NV contents attestation (2026-11-26)
+
+**New bounded question:** Can the exact 32-byte storage-root claim be carried inside a TPM NV index and returned in a fresh, AK-signed `TPMS_ATTEST_NV`, with the NV index Name independently recomputed from its public area?
+
+**Implementation:** Added `verify_nv_attestation.py` and extended `run_swtpm_attestation.sh`. The harness writes the SHA-256 of the TPM storage-primary Name into a 32-byte NV index, reads it back, obtains `TPM2_NV_Certify` using the already credential-activated AK, verifies the signature with `tpm2_verifysignature`, and independently checks the attestation type, qualifying data, AK Qualified Name, NV index Name, offset and exact contents. The NV Name is recomputed from the TPM2_NV_ReadPublic YAML fields (handle, nameAlg, attributes including TPMA_NV_WRITTEN, empty authPolicy and dataSize).
+
+**Adversarial controls:** wrong challenge, substituted content, substituted NV handle, and substituted AK Qualified Name must be rejected. The same TPM owner then overwrites the NV index with a fresh random 32-byte value and obtains a second valid attestation. The old attestation must not validate against the new value, and the new attestation must not validate against the old value.
+
+**Interpretation:** A valid NV_Certify signature authenticates the bytes currently stored in the specified NV index at attestation time. It does **not** prove that the bytes were correctly measured from an external filesystem, that the owner chose an honest value, that the NV index cannot be rewritten, or that a prior valid state cannot be restored after TPM Clear/redefinition. This is therefore a `TPM_NV_ATTESTED_CLAIM`, not a `TPM_MEASURED_ROOT`, an immutable floor, or independent custody. The explicit owner-rewrite positive is included to prevent overclaiming.
+
+**Source references:** tpm2-tools documents `tpm2_nvcertify` as attesting NV index contents and identifies the NV index/owner hierarchy authorization options: https://tpm2-tools.readthedocs.io/en/stable/man/tpm2_nvcertify.1/ . The TPM 2.0 specification defines `TPMS_NV_CERTIFY_INFO` as index Name, offset and NV contents: https://trustedcomputinggroup.org/wp-content/uploads/Trusted-Platform-Module-2.0-Library-Part-2-Structures_Version-185_pub.pdf . TPM Names for NV indices are derived from the NV public area; the Name changes when dynamic attributes such as TPMA_NV_WRITTEN change: https://trustedcomputinggroup.org/wp-content/uploads/Trusted-Platform-Module-2.0-Library-Part-1-Architecture_Version-185_pub.pdf .
+
+**Initial execution status:** parser-only synthetic validation passed positive exact-content, wrong-content and wrong-challenge cases locally. Exact software-TPM CI is pending for the new commit. No physical TPM, OEM certificate, real key, external custodian, anti-rollback guarantee, trust activation, production or merge is claimed.

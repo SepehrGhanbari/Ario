@@ -1105,3 +1105,14 @@ Related #379 A15 retained-range experiment covers a different set of three commi
 - Exact-head Repository Implementation Regression [run 45854078244](https://github.com/SepehrGhanbari/Ario/actions/runs/45854078244): **SUCCESS**.
 - Final evidence artifact: [R22.32 TPM attestation evidence](https://github.com/SepehrGhanbari/Ario/actions/runs/45854078266/artifacts/15134911715).
 - This addendum supersedes the earlier "fresh exact-head run pending" note. The limitations remain unchanged: synthetic lab CA, software TPM only, no OEM/manufacturer trust, no physical TPM, no event-log appraisal, no independent custodian, no signer integration, no trust activation, no production and no merge.
+
+### 2026-11-26 — R22.32 exact NV contents attestation extension
+
+- **Scope:** Continue existing PR #414 only; no new PR, merge, production promotion, real key or trust activation.
+- **Parent preserved:** `5f7e1f8ffc3835f00447f67489785a30a6cc6e58` (previous branch head remains addressable in Git history).
+- **Paths:** `implementation/research/r22_32_tpm_ek_ak_attestation/verify_nv_attestation.py` (new); `implementation/research/r22_32_tpm_ek_ak_attestation/run_swtpm_attestation.sh`; `implementation/research/r22_32_tpm_ek_ak_attestation/RESEARCH_RECORD.md`; this append-only log.
+- **Reason:** R22.32 previously certified a TPM storage-object creation record but did not sign the exact 32-byte root claim as NV contents. The new bounded experiment uses TPM2_NV_Certify and verifies the returned index Name, offset, challenge, AK Qualified Name and exact bytes.
+- **Preservation:** Existing research record and engineering log are retained and appended only. Prior branch commit 5f7e1f8ffc3835f00447f67489785a30a6cc6e58 is the recovery point.
+- **Local validation:** The new parser was exercised against a synthetic TPMS_ATTEST_NV positive fixture plus wrong-content and wrong-challenge negatives. This is parser-only, not TPM execution.
+- **CI status at commit preparation:** NOT_RUN for the new exact-source software-TPM harness. Do not report PASS until the dedicated workflow result and artifact are read back.
+- **Known boundary:** The owner can overwrite NV contents and obtain a fresh valid attestation. This authenticates a current TPM-held claim; it does not prove the claim's external measurement provenance, immutability, rollback resistance, or independent custody.
