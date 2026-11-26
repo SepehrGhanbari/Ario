@@ -219,11 +219,16 @@ func verifyBundle(root string) error {
   if e:=proof.Verify(&old,&cth.TreeHead); e!=nil{return fmt.Errorf("HOLD_PROOF_VERIFY_%d: %w",f.Size,e)}
  }
  pub,signerHash:=signer()
+ rawLeavesBytes,e:=readFile(root,"leaves.raw"); if e!=nil{return e}
+ rawLeaves,e:=types.LeavesFromASCII(bytes.NewReader(rawLeavesBytes),3); if e!=nil{return fmt.Errorf("HOLD_RAW_LEAVES_PARSE: %w",e)}
+ if len(rawLeaves)!=3{return fmt.Errorf("HOLD_RAW_LEAVES_COUNT")}
  for i,lp:=range m.Leaves {
   index:=firstIndex+uint64(i)
   if lp.Index!=index || lp.Checksum!=expectedChecksums[i] || lp.LeafFile!=fmt.Sprintf("leaf-%d.ascii",index) || lp.InclusionFile!=fmt.Sprintf("inclusion-%d.raw",index) {return fmt.Errorf("HOLD_LEAF_MANIFEST_%d",index)}
   leafBytes,e:=readFile(root,lp.LeafFile); if e!=nil{return e}
-  var leaf types.Leaf; if e:=leaf.FromASCII(bytes.NewReader(leafBytes)); e!=nil{return e}
+  parsedLeaves,e:=types.LeavesFromASCII(bytes.NewReader(leafBytes),1); if e!=nil{return e}; if len(parsedLeaves)!=1{return fmt.Errorf("HOLD_LEAF_COUNT_%d",index)}
+  leaf:=parsedLeaves[0]
+  if !bytes.Equal(rawLeaves[i].ToBinary(),leaf.ToBinary()) {return fmt.Errorf("HOLD_RAW_CANONICAL_LEAF_MISMATCH_%d",index)}
   if hex.EncodeToString(leaf.Checksum[:])!=lp.Checksum || leaf.KeyHash!=signerHash || !leaf.Verify(&pub) {return fmt.Errorf("HOLD_LEAF_VERIFY_%d",index)}
   incBytes,e:=readFile(root,lp.InclusionFile); if e!=nil{return e}
   var inc types.InclusionProof; if e:=inc.FromASCII(bytes.NewReader(incBytes)); e!=nil{return e}
