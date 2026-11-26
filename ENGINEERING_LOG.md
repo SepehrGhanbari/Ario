@@ -1085,3 +1085,12 @@ Related #379 A15 retained-range experiment covers a different set of three commi
 - Tool-version correction: Ubuntu's tpm2-tools 5.6 `tpm2_certify` does not expose qualifyingData, and `tpm2_print` cannot render the Creation attestation type. The harness uses TPM2_CertifyCreation with a fresh challenge and a direct binary TPMS_ATTEST parser. This is not claimed equivalent to TPM2_Certify; the storage object's Qualified Name is captured but is not claimed to be signed in the Creation attestation.
 - Explicit limits: synthetic lab CA, not an OEM EK certificate or manufacturer trust chain; no physical TPM, real device identity, Secure Boot/event-log appraisal, independent custodian, external rollback floor, Ario signer integration, trust activation, production, or merge. No real key was used. Earlier failed iterations remain in Actions history; only the final 24/24 run is counted.
 - Evidence artifact: [R22.32 TPM attestation evidence](https://github.com/SepehrGhanbari/Ario/actions/runs/45853404250/artifacts/15133389714).
+
+
+### R22.32 restack verification addendum — 2026-11-26
+
+- The feature branch was updated by a fast-forward merge commit `498e3620362cdea1940377c15be3edc611fcd19f` with the latest R22.31 PR #411 head `f83e8b3948045a426b89ac22404148f85cea9ccc` as its second parent. Compare: 8 commits ahead, 0 behind; six changed files.
+- Dedicated exact-head CI [run 45854078266](https://github.com/SepehrGhanbari/Ario/actions/runs/45854078266): **SUCCESS, 24/24 PASS**.
+- Exact-head Repository Implementation Regression [run 45854078244](https://github.com/SepehrGhanbari/Ario/actions/runs/45854078244): **SUCCESS**.
+- Final evidence artifact: [R22.32 TPM attestation evidence](https://github.com/SepehrGhanbari/Ario/actions/runs/45854078266/artifacts/15134911715).
+- This addendum supersedes the earlier "fresh exact-head run pending" note. The limitations remain unchanged: synthetic lab CA, software TPM only, no OEM/manufacturer trust, no physical TPM, no event-log appraisal, no independent custodian, no signer integration, no trust activation, no production and no merge.
