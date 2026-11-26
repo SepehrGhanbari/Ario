@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 """Check decoded TPM2_ATTEST fields emitted by tpm2_print.
 
-Signature verification is deliberately performed separately by tpm2_checkquote
-or tpm2_verifysignature. This helper checks the challenge and object identity
-fields that a successful signature alone does not appraise.
+Signature verification is performed separately by tpm2_checkquote or
+tpm2_verifysignature. This helper checks the challenge and identity fields.
 """
 from __future__ import annotations
 
 import argparse
 import re
-import sys
 from pathlib import Path
 
 
@@ -34,12 +32,12 @@ def file_hex(path: str) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mode", choices=("quote", "certify"), required=True)
+    parser.add_argument("--mode", choices=("quote", "creation"), required=True)
     parser.add_argument("--yaml", required=True)
     parser.add_argument("--nonce", required=True)
     parser.add_argument("--ak-qualified-name", required=True)
     parser.add_argument("--object-name")
-    parser.add_argument("--object-qualified-name")
+    parser.add_argument("--creation-hash")
     args = parser.parse_args()
 
     try:
@@ -53,8 +51,8 @@ def main() -> int:
 
         if "tpm_generated_value" not in magic and hex_value(magic) != "ff544347":
             raise ValueError(f"not TPM-generated attestation: {magic}")
-        expected_type = "TPM_ST_ATTEST_QUOTE" if args.mode == "quote" else "TPM_ST_ATTEST_CERTIFY"
-        numeric_type = "8018" if args.mode == "quote" else "8017"
+        expected_type = "TPM_ST_ATTEST_QUOTE" if args.mode == "quote" else "TPM_ST_ATTEST_CREATION"
+        numeric_type = "8018" if args.mode == "quote" else "801a"
         if expected_type not in kind and hex_value(kind) != numeric_type:
             raise ValueError(f"wrong attestation type: {kind}")
         if extra != expected_nonce:
@@ -62,15 +60,15 @@ def main() -> int:
         if signer != expected_signer:
             raise ValueError("qualifiedSigner does not match the enrolled AK")
 
-        if args.mode == "certify":
-            if not args.object_name or not args.object_qualified_name:
-                raise ValueError("certify mode requires object Name and Qualified Name")
-            actual_name = hex_value(scalar(document, "name"))
-            actual_qname = hex_value(scalar(document, "qualifiedName"))
+        if args.mode == "creation":
+            if not args.object_name or not args.creation_hash:
+                raise ValueError("creation mode requires object Name and creation hash")
+            actual_name = hex_value(scalar(document, "objectName"))
+            actual_creation_hash = hex_value(scalar(document, "creationHash"))
             if actual_name != file_hex(args.object_name):
-                raise ValueError("certified object Name mismatch")
-            if actual_qname != file_hex(args.object_qualified_name):
-                raise ValueError("certified object Qualified Name mismatch")
+                raise ValueError("attested object Name mismatch")
+            if actual_creation_hash != file_hex(args.creation_hash):
+                raise ValueError("attested creation hash mismatch")
 
         print(f"PASS decoded {args.mode} attestation fields, challenge and signer binding")
         return 0
