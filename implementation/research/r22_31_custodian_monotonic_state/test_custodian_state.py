@@ -157,7 +157,7 @@ class CustodianStateTests(unittest.TestCase):
         first, _, _ = self.invoke(self.request(), suffix="before-rollback")
         self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
         committed = self.journal.read_bytes()
-        self.assertTrue(committed.endswith(b"\\n"))
+        self.assertTrue(committed.endswith(b"\n"))
 
         # A same-domain administrator deletes the complete tail. Empty is a
         # valid zero-record prefix, so the signed initial anchor still verifies.
