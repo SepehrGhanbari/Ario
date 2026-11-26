@@ -132,3 +132,17 @@ def test_repository_and_ref_guard_contract():
         (repo, "refs/heads/main", False), ("Other/Ario", "refs/heads/main", False),
     ]:
         assert ((candidate_repo == repo) and (candidate_ref == ref)) is expected
+
+
+def test_revision_status_is_bilingual_and_separate_from_history():
+    s = source()
+    assert '<div class="log" id="rev-view"></div>' in s
+    assert '<p id="rev-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>' in s
+    assert s.count("revEraseStatus:") == 2
+    assert s.count("revKeepStatus:") == 2
+    assert 'var announcement = mode === "erase" ? t.revEraseStatus : t.revKeepStatus;' in s
+    assert 'if (status.textContent !== announcement) status.textContent = announcement;' in s
+    assert "Teaching erase view:" in s
+    assert "Teaching revision view:" in s
+    assert "نمایش آموزشی حذف:" in s
+    assert "نمایش آموزشی اصلاح:" in s

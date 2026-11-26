@@ -17,7 +17,8 @@ function makeElement(id) {
     attributes: {},
     listeners: {},
     dataId: null,
-    classList: { add() {}, remove() {} },
+    classList: { add() {}, remove() {}, contains(name) { return name === 'node-circle' && id.startsWith('node-'); } },
+    focus() { document.activeElement = this; },
     addEventListener(type, callback) {
       (this.listeners[type] ||= []).push(callback);
     },
@@ -34,6 +35,7 @@ function getElementById(id) {
 const document = {
   documentElement: { lang: '', dir: '' },
   ready: null,
+  activeElement: null,
   addEventListener(type, callback) {
     if (type === 'DOMContentLoaded') this.ready = callback;
   },
@@ -44,12 +46,26 @@ const document = {
   }
 };
 const svg = getElementById('graphSvg');
+// Model DOM replacement explicitly: detached SVG nodes lose focus.
+svg.nodeElements = [];
+svg.contains = function(element) { return this.nodeElements.includes(element); };
+let svgMarkup = '';
+Object.defineProperty(svg, 'innerHTML', {
+  get() { return svgMarkup; },
+  set(value) {
+    if (this.contains(document.activeElement)) document.activeElement = getElementById('body');
+    svgMarkup = value;
+    this.nodeElements = [];
+  }
+});
 svg.querySelectorAll = function(selector) {
   if (selector !== '.node-circle') return [];
-  const ids = [...this.innerHTML.matchAll(/<g class="node-circle" data-id="([^"]+)"/g)].map(item => item[1]);
-  this.nodeElements = ids.map(id => {
+  if (this.nodeElements.length) return this.nodeElements;
+  const nodes = [...this.innerHTML.matchAll(/<g class="node-circle" data-id="([^"]+)"[^>]*aria-pressed="([^"]+)"[^>]*>/g)];
+  this.nodeElements = nodes.map(([, id, pressed]) => {
     const element = makeElement('node-' + id);
     element.dataId = id;
+    element.setAttribute('aria-pressed', pressed);
     return element;
   });
   return this.nodeElements;
@@ -105,4 +121,44 @@ test('SVG nodes are keyboard-operable with Enter and Space', () => {
   n3.listeners.keydown[0].call(n3, { key: 'Enter', preventDefault() { prevented = true; } });
   assert.equal(prevented, true);
   assert.equal(context.selectedNodeId, 'N3');
+});
+
+
+test('replacement retains focus on the same logical node on Enter and Space, not the detached node', () => {
+  for (const language of ['fa', 'en']) {
+    context.setLang(language);
+    for (const key of ['Enter', ' ']) {
+      const prior = svg.nodeElements.find(node => node.dataId === 'N1');
+      prior.focus();
+      let prevented = false;
+      prior.listeners.keydown[0].call(prior, {key, preventDefault() { prevented = true; }});
+      const current = svg.nodeElements.find(node => node.dataId === 'N1');
+      assert.ok(prevented);
+      assert.notEqual(current, prior);
+      assert.equal(document.activeElement, current);
+      assert.equal(context.selectedNodeId, 'N1');
+      assert.deepEqual(svg.nodeElements.filter(n => n.getAttribute('aria-pressed') === 'true').map(n => n.dataId), ['N1']);
+    }
+  }
+});
+
+test('scenario selection does not steal focus; exactly one scenario and node are pressed', () => {
+  for (const [scenario, selected] of [['base', 'N4'], ['fals', 'N2'], ['self', 'N3']]) {
+    const button = getElementById('btn-' + scenario);
+    button.focus();
+    button.listeners.click[0]();
+    assert.equal(document.activeElement, button);
+    assert.deepEqual(document.querySelectorAll('.scen-btn').filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.id), [button.id]);
+    assert.deepEqual(svg.nodeElements.filter(n => n.getAttribute('aria-pressed') === 'true').map(n => n.dataId), [selected]);
+  }
+});
+
+test('graph name follows language and language button keeps focus', () => {
+  const button = getElementById('langBtn');
+  button.focus();
+  context.setLang('fa');
+  assert.equal(svg.getAttribute('aria-label'), 'گراف ساختگی وابستگی شواهد');
+  button.listeners.click[0]();
+  assert.equal(svg.getAttribute('aria-label'), 'Synthetic evidence dependency graph');
+  assert.equal(document.activeElement, button);
 });

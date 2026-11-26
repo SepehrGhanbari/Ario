@@ -52,8 +52,13 @@ JS = r"""
       entries()[1].textContent.includes(newEntry) &&
       entries()[1].textContent.includes("REVISED") &&
       byId("revEraseBtn").getAttribute("aria-pressed") === "false" &&
-      byId("revReviseBtn").getAttribute("aria-pressed") === "true";
+      byId("revReviseBtn").getAttribute("aria-pressed") === "true" &&
+      byId("rev-status").getAttribute("role") === "status" &&
+      byId("rev-status").getAttribute("aria-live") === "polite" &&
+      byId("rev-status").getAttribute("aria-atomic") === "true" &&
+      byId("rev-status").textContent === "Teaching revision view: the previous record and correction are both retained.";
     ck(revised(), "initial-revision-preserved");
+    byId("revEraseBtn").focus();
     byId("revEraseBtn").click();
     ck(entries().length === 1 &&
       entries()[0].classList.contains("new") &&
@@ -62,9 +67,12 @@ JS = r"""
       !revision().querySelector(".struck") &&
       revision().textContent.includes("The trail was erased.") &&
       byId("revEraseBtn").getAttribute("aria-pressed") === "true" &&
-      byId("revReviseBtn").getAttribute("aria-pressed") === "false", "erase-view");
+      byId("revReviseBtn").getAttribute("aria-pressed") === "false" &&
+      byId("rev-status").textContent === "Teaching erase view: the previous record is hidden in this view." &&
+      document.activeElement === byId("revEraseBtn"), "erase-view");
+    byId("revReviseBtn").focus();
     byId("revReviseBtn").click();
-    ck(revised(), "revision-preserved");
+    ck(revised() && document.activeElement === byId("revReviseBtn"), "revision-preserved");
     byId("evidenceDisputedBtn").click();
     ck(byId("evidence-output").textContent.includes("CONTESTED"), "disputed-mode");
     ck(byId("evidenceDisputedBtn").getAttribute("aria-pressed") === "true", "disputed-aria");
@@ -74,7 +82,8 @@ JS = r"""
     ck(required.every(id => byId(id).tagName === "BUTTON"), "native-keyboard-controls");
     ck(!!document.querySelector('#evidence-output[aria-live="polite"]'), "status-announcement");
     byId("langBtn").click();
-    ck(document.documentElement.lang === "fa" && options().length === 5, "return-fa");
+    ck(document.documentElement.lang === "fa" && options().length === 5 &&
+      byId("rev-status").textContent === "نمایش آموزشی اصلاح: سابقهٔ قبلی و اصلاح جدید هر دو حفظ شده‌اند.", "return-fa");
     ck(performance.getEntriesByType("resource").length === 0, "no-auto-network-resources");
     const marker = document.createElement("pre");
     marker.id = "ario-browser-smoke";

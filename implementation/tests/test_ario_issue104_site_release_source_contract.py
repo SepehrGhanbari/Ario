@@ -74,3 +74,24 @@ def test_no_external_script_or_user_upload_surface():
     assert "localStorage" not in demo
     assert "navigator.sendBeacon" not in demo
     assert not re.search(r'<input\b|<textarea\b', demo, re.IGNORECASE)
+
+
+def test_revision_status_is_bilingual_and_separate_from_history():
+    s = _files()[0]
+    assert '<div class="log" id="rev-view"></div>' in s
+    assert '<p id="rev-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>' in s
+    assert s.count("revEraseStatus:") == 2
+    assert s.count("revKeepStatus:") == 2
+    assert 'var announcement = mode === "erase" ? t.revEraseStatus : t.revKeepStatus;' in s
+    assert 'if (status.textContent !== announcement) status.textContent = announcement;' in s
+    assert "Teaching erase view:" in s
+    assert "Teaching revision view:" in s
+    assert "نمایش آموزشی حذف:" in s
+    assert "نمایش آموزشی اصلاح:" in s
+
+
+def test_site_and_docs_explainer_keep_identical_application_script():
+    docs = ROOT / "docs" / "ario-explainer-demo-2026-11-08" / "index.html"
+    demo, _, _ = _files()
+    pattern = r"<script>([\s\S]*?)</script>"
+    assert re.findall(pattern, demo) == re.findall(pattern, docs.read_text(encoding="utf-8"))
