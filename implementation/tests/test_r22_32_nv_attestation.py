@@ -127,6 +127,25 @@ def test_nv_public_name_is_recomputed_from_written_public_area(tmp_path: Path) -
     assert size == 32
 
 
+def test_nv_public_accepts_omitted_empty_auth_policy(tmp_path: Path) -> None:
+    public_path = tmp_path / "nv-public-no-policy-field.yaml"
+    public_path.write_text(public_yaml().replace("  authorization policy:\\n", ""), encoding="utf-8")
+    parsed_name, attributes, size = VERIFIER.parse_nv_public(str(public_path), hex(NV_INDEX))
+    assert len(parsed_name) == 34
+    assert attributes == NV_ATTRIBUTES
+    assert size == 32
+
+
+def test_nv_public_rejects_nonempty_auth_policy(tmp_path: Path) -> None:
+    public_path = tmp_path / "nv-public-nonempty-policy.yaml"
+    public_path.write_text(
+        public_yaml().replace("  authorization policy:\\n", "  authorization policy: 0x" + "11" * 32 + "\\n"),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="requires an empty NV authorization policy"):
+        VERIFIER.parse_nv_public(str(public_path), hex(NV_INDEX))
+
+
 def test_nv_public_rejects_unwritten_index(tmp_path: Path) -> None:
     public_path = tmp_path / "nv-public.yaml"
     public_path.write_text(public_yaml(NV_ATTRIBUTES & ~VERIFIER.TPMA_NV_WRITTEN), encoding="utf-8")
