@@ -628,6 +628,25 @@ class ConsolidationEngine:
             local = self.__dict__.setdefault("_local", threading.local())
         return local
 
+    def to_snapshot(self) -> bytes:
+        """Return a bounded, deterministic data-only snapshot (never pickle)."""
+        from .memory_snapshot import encode_engine_snapshot
+
+        return encode_engine_snapshot(self)
+
+    @classmethod
+    def from_snapshot(cls, snapshot: bytes, *, expected_sha256: str) -> "ConsolidationEngine":
+        """Build a fresh engine only after its complete snapshot is validated."""
+        from .memory_snapshot import decode_engine_snapshot
+
+        return decode_engine_snapshot(cls, snapshot, expected_sha256=expected_sha256)
+
+    def restore_snapshot(self, snapshot: bytes, *, expected_sha256: str) -> None:
+        """Atomically replace this engine after complete data-only validation."""
+        from .memory_snapshot import restore_engine_snapshot
+
+        restore_engine_snapshot(self, snapshot, expected_sha256=expected_sha256)
+
     def __getstate__(self) -> Dict[str, Any]:
         # Snapshot under the lock; a lock object is process-local, not state.
         with self._batch_lock:
