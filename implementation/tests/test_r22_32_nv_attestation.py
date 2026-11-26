@@ -129,7 +129,7 @@ def test_nv_public_name_is_recomputed_from_written_public_area(tmp_path: Path) -
 
 def test_nv_public_accepts_omitted_empty_auth_policy(tmp_path: Path) -> None:
     public_path = tmp_path / "nv-public-no-policy-field.yaml"
-    public_path.write_text(public_yaml().replace("  authorization policy:\\n", ""), encoding="utf-8")
+    public_path.write_text(public_yaml().replace("  authorization policy:\n", ""), encoding="utf-8")
     parsed_name, attributes, size = VERIFIER.parse_nv_public(str(public_path), hex(NV_INDEX))
     assert len(parsed_name) == 34
     assert attributes == NV_ATTRIBUTES
@@ -138,10 +138,13 @@ def test_nv_public_accepts_omitted_empty_auth_policy(tmp_path: Path) -> None:
 
 def test_nv_public_rejects_nonempty_auth_policy(tmp_path: Path) -> None:
     public_path = tmp_path / "nv-public-nonempty-policy.yaml"
-    public_path.write_text(
-        public_yaml().replace("  authorization policy:\\n", "  authorization policy: 0x" + "11" * 32 + "\n"),
-        encoding="utf-8",
+    nonempty_policy = "0x" + "11" * 32
+    fixture = public_yaml().replace(
+        "  size: 32\n",
+        f"  authorization policy: {nonempty_policy}\n  size: 32\n",
     )
+    assert f"authorization policy: {nonempty_policy}" in fixture
+    public_path.write_text(fixture, encoding="utf-8")
     with pytest.raises(ValueError, match="requires an empty NV authorization policy"):
         VERIFIER.parse_nv_public(str(public_path), hex(NV_INDEX))
 
@@ -161,7 +164,7 @@ def test_nv_public_rejects_mismatched_reported_name(tmp_path: Path) -> None:
     lines = public_yaml().splitlines()
     name_line = next(i for i, line in enumerate(lines) if line.strip().startswith("name:"))
     lines[name_line] = "  name: " + ("00" * 34)
-    public_path.write_text("\\n".join(lines) + "\\n", encoding="utf-8")
+    public_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     with pytest.raises(ValueError, match="does not match"):
         VERIFIER.parse_nv_public(str(public_path), hex(NV_INDEX))
 
