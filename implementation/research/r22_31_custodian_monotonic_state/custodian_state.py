@@ -265,7 +265,40 @@ def append_durable(path: Path, data: bytes) -> None:
         os.close(dir_fd)
 
 
+
+def validate_distinct_paths(args: argparse.Namespace) -> None:
+    """Reject path aliases before opening the lock or mutating any file.
+
+    resolve() catches lexical and symlink aliases; samefile() additionally catches
+    existing hard links. This is a caller-path safety guard, not protection from a
+    hostile process racing filesystem changes after validation.
+    """
+    names = (
+        "anchor", "anchor_signature", "public_key", "private_key",
+        "journal", "lock", "request", "response", "response_signature",
+    )
+    seen: list[tuple[str, Path, Path]] = []
+    for name in names:
+        path = getattr(args, name)
+        try:
+            resolved = path.resolve(strict=False)
+        except (OSError, RuntimeError) as exc:
+            raise GateError("PATH_RESOLUTION_FAILED") from exc
+        for prior_name, prior_path, prior_resolved in seen:
+            aliases = resolved == prior_resolved
+            if not aliases:
+                try:
+                    aliases = path.exists() and prior_path.exists() and os.path.samefile(path, prior_path)
+                except OSError:
+                    aliases = False
+            if aliases:
+                raise GateError(f"PATH_ALIAS:{prior_name}:{name}")
+        seen.append((name, path, resolved))
+
+
+
 def process_request(args: argparse.Namespace) -> int:
+    validate_distinct_paths(args)
     lock_path: Path = args.lock
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     with lock_path.open("a+b") as lock_stream:
