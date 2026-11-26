@@ -1197,3 +1197,12 @@ No collaborator removal, ruleset change, key rotation, new witness test, merge, 
 - Generic regression exposed a no-op test mutation: the synthetic NV YAML omitted `authorization policy`, so the non-empty-policy fixture never inserted a value. Corrected the test to insert a 32-byte non-empty policy before `size` and assert the mutation.
 - Final head `09e0c224b9e25a2a2958d2fc52f70b4e4e9e0ddb`: M0 **2111 PASS**; Windows and Python 3.14 differential advisories PASS; manifest/restore/generator matrix and self-audit readback PASS. Runs **45859336248** and **45859336333**.
 - The NV workflow artifact is a summary, not a portable raw-TPM evidence bundle. R22.33 still needs a verifier that consumes actual R22.32 evidence. No physical TPM, OEM trust, independent administrator, external rollback floor, real key, trust activation, production or merge is established.
+
+
+## 2026-11-26 — R22.32 AK TPMT_PUBLIC identity extension
+
+- Added TPM readback of the persistent RSA AK TPMT_PUBLIC and Qualified Name.
+- Independently recomputed the AK Name and checked fixedTPM, fixedParent, sensitiveDataOrigin, restricted and signEncrypt attributes.
+- Dedicated workflow [run 45858737039](https://github.com/SepehrGhanbari/Ario/actions/runs/45858737039), source head `1fda8008beaa6355344f90404fb45531a9f0fd73`: **36 PASS lines**.
+- Exact-head Repository Implementation Regression [run 45859727760](https://github.com/SepehrGhanbari/Ario/actions/runs/45859727760), advisory self-audit [run 45859727982](https://github.com/SepehrGhanbari/Ario/actions/runs/45859727982), and Published TXT Restore Security [run 45859727974](https://github.com/SepehrGhanbari/Ario/actions/runs/45859727974): all SUCCESS.
+- No physical TPM, OEM EK chain, independent custodian, trust activation, production or merge.
