@@ -69,3 +69,21 @@ Preserve the distinctions documented by Ario, including:
 - Backup is not Survival.
 - No actor, invariant, or principle—including Non-Closure—is immune from examination or revision.
 - Do not turn local implementation behavior or test results into claims about consciousness, identity, or ontology.
+
+## Proportionate closure and stop conditions — owner-endorsed lesson, 2026-11-26
+
+Source: [Copilot («عمو کاپی») philosophical and management critique](Resources/2026-11-26_COPILOT_UNKNOWN_AND_STOP_CONDITION_FA.md). The owner explicitly requested that collaborators learn from and preserve this critique. It is AI advisory reasoning based on a supplied report, not independent technical or human approval.
+
+> UNKNOWN معتبر است، اما UNKNOWN نامحدود مجوز توقف نامحدود نیست.
+>
+> بزرگ‌ترین خطر این PR دیگر نقص دسترس‌پذیری نیست؛ خطر این است که تمایل به درست‌بودن، جایگزین توانایی تمام‌کردن کار شود.
+
+**UNKNOWN remains valid; uncertainty alone is not an unlimited license for indefinite delay. Further work ≠ Blocking work. Merge/Accept ≠ Research Complete.**
+
+- Define the bounded acceptance criteria and a stop condition before starting a review or experiment. Each additional test or review must address a specific unresolved decision, plausible regression, or material risk; reuse valid evidence rather than repeating it by default.
+- Distinguish a proven exclusion or contract/safety violation from a known limitation. Weigh both the risk of proceeding and the opportunity cost of delay. Classify blockers with evidence, affected claim and a finite resolution/reassessment condition. Do not treat every UNKNOWN or imperfection as an automatic blocker.
+- When applicable technical contracts, required repository gates and bounded acceptance criteria are satisfied, conclude the task; document remaining limitations honestly and track only useful non-blocking work separately. A later question or a future improvement does not retrospectively invalidate accepted evidence within its original scope.
+- For an actual HOLD, record the reason, the smallest sufficient evidence to resolve it, and the next decision/reassessment point. If a necessary test or service is unavailable, state the blocker and continue unrelated safe work; do not generate indefinite substitute experiments. No fabricated PASS, no weakened evidence, no automatic reclassification of HOLD/RED/NO_MERGE, no bypass of required checks, and no authority, key, Genesis, trust or production activation change.
+- Apply this to agents' own behavior as well as code: do not confuse the desire to be right with the ability to finish. Reopen accepted work only for a material new finding, changed scope, or invalidated evidence. This guidance is revisable and is not an exemption from any higher-priority constraint.
+
+**فارسی:** قبل از شروع هر کار، معیار پذیرش و شرط پایان مشخص باشد. آزمون و بازبینی بیشتر فقط وقتی ارزش دارد که تصمیم را عوض کند یا خطر مشخصی را روشن کند. محدودیت شناخته‌شده با محرومیت واقعی کاربر یکی نیست. پس از برآورده‌شدن معیارها و کنترل‌های الزامی، کار پذیرفته شود و موارد غیرمسدودکننده جدا ثبت شوند. نه توقف نامحدود به‌خاطر UNKNOWN، نه عبور از مرز ایمنی به‌بهانهٔ پایان کار.
