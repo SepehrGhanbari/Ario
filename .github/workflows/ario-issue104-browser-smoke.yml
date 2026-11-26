@@ -30,3 +30,31 @@ jobs:
       - name: Headless browser real DOM/interaction smoke in FA and EN
         run: |
           python -B implementation/research/ario_issue104_browser_smoke.py
+
+      - name: Real browser negative controls (disposable HTML only)
+        run: |
+          python -B - <<'PY'
+          import importlib.util
+          import tempfile
+          from pathlib import Path
+
+          spec = importlib.util.spec_from_file_location(
+              "smoke", "implementation/research/ario_issue104_browser_smoke.py")
+          smoke = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(smoke)
+          source = smoke.SOURCE.read_text(encoding="utf-8")
+          mutations = [
+              ('function showErase() { renderRev("erase"); }',
+               'function showErase() {}'),
+              ('function showRevise() { renderRev("revise"); }',
+               'function showRevise() {}'),
+          ]
+          with tempfile.TemporaryDirectory(prefix="ario-demo-mutants-") as directory:
+              for index, (original, replacement) in enumerate(mutations):
+                  assert source.count(original) == 1
+                  mutant = Path(directory) / f"mutant-{index}.html"
+                  mutant.write_text(source.replace(original, replacement), encoding="utf-8")
+                  smoke.SOURCE = mutant
+                  assert smoke.main() == 1, f"mutant {index} was not rejected by browser"
+                  print(f"ARIO_DEMO_MUTANT_REJECTED:{index}")
+          PY
