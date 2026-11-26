@@ -48,3 +48,8 @@ Raw Actions artifact 15047434021 ZIP SHA256 00cbfca171d2a3b3aea5add92113aa8cc3a0
 
 
 Retention boundary: the upstream rktpb project used by paste.rs documents automatic deletion of stale pastes, but does not publish a fixed retention interval in the README. Treat paste.rs as a successfully tested external transport/readback endpoint, not durable archive custody. The exact kit, pointer and compact evidence bundle are also retained in the connected private Drive folder and have been fetched back byte-identically. The 24-hour and 7-day no-republish checks remain the actual persistence tests; absence, expiry or deletion must yield HOLD, never a re-publish.
+
+
+## 2026-11-26 — R22.22C fixed historical range, not blind freshness
+
+Related #379 A15 retained-range experiment covers a different set of three commitments; reuse its design without changing A15. R22.22C adds an isolated version on #380; original kit and scheduled readback workflow remain untouched. Exact known two-leaf range 281668..281669; both initial and later retained roots checked against one officially cosigned head, requiring real Merkle consistency proof for each larger head. Fixed two inclusion checks regardless of log growth, not global suffix completeness or discovery of new leaves. Seven floor cases with actual library Merkle proof and range cases with up to 100000 additional leaves and 2^62 tree size; tests and live result pending. Existing paste and capsule only, no new publication; retrieve via pinned bytes, use exact original semantic link verifier. No admission, independent admin, freshness or merge. Source derived from R22.10 blob 2276889ea769dd7377c26fb5f5bf2d55963e0b44. See retained_range/.
