@@ -45,3 +45,20 @@ This is a retained-evidence compatibility result, not a new live publication or 
 The preceding section cited run ID `45837502441` in error. That ID is an **Implementation Regression** run and is not the dedicated proof-compatibility workflow. The correct dedicated run is [`45837490601`](https://github.com/SepehrGhanbari/Ario/actions/runs/45837490601), workflow path `.github/workflows/a15-r22-proof-compatibility.yml`, event `push`, exact source head `56f2890bb14a1e25e05e891a16d52eda597c12a7`, conclusion `success`. Its single `compatibility` job completed successfully; the job log records **22/22 checks PASS**, including both official Sigsum TEST proof verifications, the A15 seq1→seq2 predecessor binding, both cross-profile envelope/event rejections, and swapped/tampered proof rejection.
 
 Run `45837502441` remains a separate successful Implementation Regression run. This correction changes only the run reference; it does not change the evidence, protocol state, or historical failure disposition. The original A15 live run's reveal-job failure remains visible. No new publication, key, merge, trust activation, or production action occurred.
+
+
+## A15 checkpoint anchored under the R22.22I external witness floor — 2026-11-26 (read-only)
+
+Dedicated workflow [45841356957](https://github.com/SepehrGhanbari/Ario/actions/runs/45841356957) succeeded on exact source commit `5ecd2ca08ff1e6405dc52e00484af124bc8dab55`.
+
+The test joined the exact retained A15 artifacts to the independently witnessed R22.22I floor without publishing or signing anything:
+- Both original A15 ZIP digests and exact member manifests matched: FIRST-ONLY `f6012b78741a23992be901141fb8eb560f7010d17ecc4ccf4e71d3f917cd5f97`; SECOND-REVEAL-SYNTHETIC `4eec66aeb8036e9628094acbe815c7418e88836d064b384dcd0558ed4910f3ec`.
+- Both archived A15 inclusion proofs passed the official Sigsum verifier. A15 seq=1 is tree size 282773/root `a22c530084d2f025d28102a1178048fdfde039a78eccec2602536b3a139e37af`; seq=2 is tree size 282774/root `4a75206b4b69142d1d90a284420d64cabf11ebe09931ba8e97262e2ad7baa1d5`, leaf index 282773.
+- The pinned R22.22I external-floor record is from commit `2139914a255aa58b3706eaa401dc744fa82e8d56`, exact Git blob `07b1172fd77cf53d9dba9b4e06215d33f42705cb`. It identifies the same Sigsum log ID `4e89cc51651f0d95f3c6127c15e1a42e3ddf7046c5b17b752689c402e773bb4d`.
+- The externally witnessed floor is tree size 282813/root `748c0c608c8f691fd7e9a9b9d98e920f9a529f3dbcaf180109e5bcacb597196b`. The pinned record contains two valid external cosigners (Remora and Stagemole); Remora's status page exactly matches the signed size and root.
+- A live Sigsum consistency proof from A15 size 282774 to external floor size 282813 was retrieved and verified with the official sigsum-go v0.14.1 consistency verifier. Result: `A15_HEAD_TO_EXTERNAL_WITNESS_FLOOR_CONSISTENCY PASS`.
+- Separately, the same 10-node proof was checked with the pinned R63 `verify_direct.py` consistency algorithm; changing one proof node caused rejection.
+
+This establishes that the two A15 checkpoint leaves are within the later tree head covered by the R22.22I external witness signatures. It does **not** establish global latestness, data availability, production-grade custody, or full administrative independence. The policy was custom external-only 2-of-4; the built-in Sigsum test2 4-of-5 policy remained `NOT_MET`. Remora is a test VM without HSM/redundancy; Stagemole is a best-effort test witness. `global_latest=UNKNOWN`, admission=false, trust activation=NO_GO, production=NO_GO.
+
+The original A15 live workflow's final reveal failure remains preserved and is not relabelled as a full success. This bridge used retained artifacts only: no new relay publication, no new signing key, no floor write, no merge, no trust activation, and no production action.
