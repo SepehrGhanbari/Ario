@@ -18,7 +18,7 @@ custodian_state.py is a separate, standard-library Python prototype using OpenSS
 - Commits the transition and signed receipt in one fsynced journal record while holding an exclusive process lock.
 - Rejects a second distinct request for an already-consumed epoch.
 - Returns the original signed receipt for an exact retry after a simulated post-commit/lost-response crash; it does not sign again.
-- Rejects a nonce reused with a different request and detects journal tampering/truncation.
+- Rejects a nonce reused with a different request and detects record tampering or an incomplete final record. It cannot detect deletion of complete tail records or rollback to an earlier valid journal prefix without an external rollback floor.
 - Serializes concurrent requests so only one request can consume a given epoch.
 
 ## Important limitation: evidence provenance
@@ -26,6 +26,8 @@ custodian_state.py is a separate, standard-library Python prototype using OpenSS
 The new receipt explicitly labels storage_root_provenance=CALLER_SUPPLIED_UNATTESTED. The prototype proves state-machine behavior over the supplied request; it does **not** prove that the claimed storage-root fingerprint was measured from a real TPM. There is no TPM quote, AK-to-EK credential activation, EK certificate validation, PCR policy, firmware/secure-boot evidence, or physical hardware in this experiment.
 
 The journal is also stored on the same research runner. A runner administrator can read the custodian key and replace/rollback the journal. This is not independent custody or rollback-resistant storage. External witness-floor integration remains separate work.
+
+A complete-record rollback is specifically undetectable here: deleting the journal or restoring any earlier valid prefix causes replay to derive that older state from the unchanged signed initial anchor. The local prototype cannot distinguish that rollback from a genuinely shorter history. Only an independently retained, authenticated floor (outside this runner's administrative domain) can detect it; this is an expected RED boundary, not a passing anti-rollback property.
 
 ## Acceptance criteria
 
