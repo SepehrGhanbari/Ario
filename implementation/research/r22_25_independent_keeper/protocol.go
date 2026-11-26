@@ -64,8 +64,11 @@ type Floor struct {
 }
 
 // CustodianWriter is implemented only by the separately administered keeper.
-// Its real deployment must hold the signing key and monotonic head outside
-// publisher/GitHub credentials; AdvanceHead must be an atomic compare-and-swap.
+// The real service must hold its signing key and monotonic head outside
+// publisher/GitHub credentials; atomically CAS the expected head; independently
+// verify the source-log head, consistency proof, checkpoint structure and
+// append-only match manifest before signing. It must reject caller assertions
+// that have not been independently verified.
 type AdvanceRequest struct {
 	Scope string
 	ExpectedReceiptSHA256 string
