@@ -5,6 +5,7 @@ on:
     paths:
       - .github/workflows/a15-r63-r22d-reconcile.yml
       - implementation/research/a15_r22_live_v1/r63_r22d_reconcile.py
+      - implementation/research/a15_r22_live_v1/r63_r22d_reconcile.py
 permissions:
   contents: read
   actions: read
@@ -36,6 +37,7 @@ jobs:
       - name: Test dual-signature normalization on retained exact notes
         run: |
           set -euo pipefail
+          python -B -m py_compile implementation/research/a15_r22_live_v1/r63_r22d_reconcile.py implementation/research/a15_r22_live_v1/note_normalizer.py
           python implementation/research/a15_r22_live_v1/r63_r22d_reconcile.py selftest "$RUNNER_TEMP/a15-cold-recovery.zip" pinned-r63/implementation/research/r63_external_floor_bridge/read_quorum
       - name: Read current witness notes and verify consistency against R22.22D reference
         run: |
