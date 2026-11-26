@@ -130,7 +130,7 @@ def verify_signed_json(public_key: Path, message_path: Path, signature_path: Pat
         value = json.loads(raw)
     except json.JSONDecodeError as exc:
         raise VerificationError(f"{label}: signed JSON is malformed") from exc
-    canonical = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    canonical = (json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False) + "\n").encode("utf-8")
     if raw != canonical:
         raise VerificationError(f"{label}: signed JSON is not canonical")
     run(["openssl", "dgst", "-sha256", "-verify", str(public_key),
@@ -303,7 +303,7 @@ def verify_bundle(bundle_path: Path) -> dict:
         if read_hex(bundle / "storage-root-sha256.txt", "storage root") != storage_root:
             raise VerificationError("storage-root text fingerprint mismatch")
 
-        creation_data = (bundle / "storage-creation-data.bin").read_bytes()
+        creation_data = tpm2b_contents((bundle / "storage-creation-data.bin").read_bytes())
         creation_hash = tpm2b_contents((bundle / "storage-creation-hash.bin").read_bytes())
         if creation_hash != hashlib.sha256(creation_data).digest():
             raise VerificationError("CertifyCreation creationHash is not SHA256(creationData)")
