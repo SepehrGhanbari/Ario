@@ -1,0 +1,23 @@
+R63 witness continuity guard — cross-platform CI evidence
+Date: 2026-11-26
+Workflow: https://github.com/SepehrGhanbari/Ario/actions/runs/45826456385
+Tested source HEAD: 78938af150a542df639bec1e3ed743cdfb186a0a
+Final documentation commit: 6271cb1d063ebd61b985e410556dcae51de8a753
+Workflow permissions: contents:read only
+External network/publication: NONE
+
+Ubuntu latest / Python 3.11: Ran 37 tests; OK.
+Ubuntu latest / Python 3.13: Ran 37 tests; OK.
+Windows 2022 / Python 3.11: Ran 37 tests; OK (3 fork-only process tests skipped).
+Windows 2022 / Python 3.13: Ran 37 tests; OK (3 fork-only process tests skipped).
+
+New controls:
+- duplicate anchor signing key rejected;
+- duplicate anchor enrollment key rejected;
+- duplicate anchor identity rejected;
+- duplicate resolved store path rejected;
+- one stale nonce response excluded while three valid anchors retain quorum;
+- two stale nonce responses cause quorum HOLD;
+- one stale anchor store is outvoted by three current stores.
+
+The original two deliberate RED controls remain: joint rollback of all four anchor stores plus local state; and rollback of three anchors plus loss of the fourth and local rollback. All four anchor databases in this lab remain on one host/administrator. These results do not establish independent custody, provider-level rollback resistance, trusted hardware monotonicity, operator admission, or production authority. RESEARCH_ONLY / HOLD / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTION.
