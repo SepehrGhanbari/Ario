@@ -75,6 +75,15 @@ def _validated(observation: LabObservation, roots: dict[str, str]) -> bool:
     )
 
 
+def _observation_basis(observation: LabObservation) -> tuple[str, ...]:
+    # The fixture cannot distinguish two aliases of the same scoped source
+    # statement. IDs, sequence numbers and asserted receipts confer no
+    # independent basis. This is a conservative toy equivalence key only.
+    return (observation.source_id, observation.origin_root,
+            observation.reported_value, observation.observed_at,
+            observation.event_id)
+
+
 def _single_lab_evidence(assessment: Assessment) -> str | None:
     refs = assessment.admissible_evidence_refs
     if len(refs) != 1:
@@ -143,7 +152,7 @@ def project(records: tuple[Record, ...], policy: SyntheticPolicy) -> Projection:
     observed: dict[str, LabObservation] = {}
     reviewed: dict[str, LabAssessment] = {}
     reliability: dict[str, str] = {}
-    challenged_evidence: set[str] = set()
+    challenged_evidence: set[tuple[str, ...]] = set()
     outcome = "UNKNOWN"
     reasons: tuple[str, ...] = ("NO_AUTHENTICATED_OBJECT_LEVEL_JUDGMENT",)
 
@@ -174,7 +183,7 @@ def project(records: tuple[Record, ...], policy: SyntheticPolicy) -> Projection:
                 and source.source_id == "C"
                 and source.reported_value == "CLOSED"
                 and source.observed_at == policy.event_time
-                and source.record_id not in challenged_evidence
+                and _observation_basis(source) not in challenged_evidence
                 and _validated(source, roots)
             )
             reliability[rec.record_id] = (
@@ -218,16 +227,18 @@ def project(records: tuple[Record, ...], policy: SyntheticPolicy) -> Projection:
             "CONDITIONALLY_WARRANTED_IN_LAB" if is_valid_calibration else "NOT_WARRANTED"
         )
         if is_valid_calibration:
-            challenged_evidence.add(old_source.record_id)
-            # Withdraw every currently warranted assessment that depends on
-            # this exact observation, not just the named prior assessment.
+            basis = _observation_basis(old_source)
+            challenged_evidence.add(basis)
+            # Withdraw all currently warranted assessments of the same
+            # fixture-equivalent observation, including relabeled copies.
             for prior_id, prior in reviewed.items():
                 if (prior.assessment.target.subject_reference.reference_type == "CLAIM"
-                        and _single_lab_evidence(prior.assessment) == old_source.record_id
                         and reliability[prior_id] == "CONDITIONALLY_WARRANTED_IN_LAB"):
-                    reliability[prior_id] = "CHALLENGED_BY_LATER_CALIBRATION"
-            # A different still-warranted observation is not erased by this
-            # record-scoped calibration. Preserve its conditional outcome.
+                    observation = observed.get(_single_lab_evidence(prior.assessment))
+                    if observation is not None and _observation_basis(observation) == basis:
+                        reliability[prior_id] = "CHALLENGED_BY_LATER_CALIBRATION"
+            # Only a genuinely different still-warranted basis could retain
+            # the outcome; this frozen fixture currently permits only one.
             if any(reliability[prior_id] == "CONDITIONALLY_WARRANTED_IN_LAB"
                    and prior.assessment.target.subject_reference.reference_type == "CLAIM"
                    for prior_id, prior in reviewed.items()):

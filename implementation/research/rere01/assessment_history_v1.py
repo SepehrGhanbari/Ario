@@ -56,6 +56,8 @@ def _policy_data(policy):
 
 
 def _record_data(rec):
+    _check(type(rec) in (LabObservation, LabAssessment), "invalid record type")
+    _check(type(rec.seq) is int and 1 <= rec.seq <= MAX_RECORDS, "invalid sequence")
     if type(rec) is LabObservation:
         for key, value in vars(rec).items():
             if key != "seq":
@@ -187,7 +189,18 @@ def append_history(raw: bytes, *, expected_sha256: str,
                    additions: tuple[Record, ...]) -> bytes:
     before = restore_history(raw, expected_sha256=expected_sha256)
     _check(type(additions) is tuple and len(additions) <= MAX_RECORDS, "addition bound/type")
-    after = encode_history(before.records + additions, before.policy)
+    # A full valid history can still accept an exact replay without counting
+    # it as a new record or exceeding the distinct-record budget.
+    by_id = {rec.record_id: rec for rec in before.records}
+    for rec in additions:
+        _record_data(rec)
+        old = by_id.get(rec.record_id)
+        if old is not None:
+            _check(old == rec, "record ID reused with altered content")
+        else:
+            by_id[rec.record_id] = rec
+    _check(len(by_id) <= MAX_RECORDS, "history count/type")
+    after = encode_history(tuple(by_id.values()), before.policy)
     verified = restore_history(after, expected_sha256=_sha(after))
     _check(verified.records[:len(before.records)] == before.records, "not append-only")
     return after

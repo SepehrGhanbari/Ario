@@ -32,16 +32,16 @@ def test_every_assessment_depending_on_revoked_c_is_challenged():
     assert dict(result.assessment_reliability)["LAB-T3-AGAIN"] == "CHALLENGED_BY_LATER_CALIBRATION"
 
 
-def test_distinct_unrevoked_observation_preserves_conditional_judgment():
+def test_relabeled_equivalent_observation_is_not_independent_basis():
     policy, rows, _ = _fixture()
     a,b,c,t3,cal,t4,again = rows
     other = replace(c, seq=5,record_id="LAB-C-OTHER")
     ref = replace(again.assessment.admissible_evidence_refs[0],reference_id=other.record_id)
     second = replace(again,seq=6,assessment=replace(again.assessment,admissible_evidence_refs=(ref,)))
     result = project((a,b,c,t3,other,second,replace(cal,seq=7),replace(t4,seq=8)),policy)
-    assert result.event_outcome == "CONDITIONALLY_REFUTED_IN_LAB"
+    assert result.event_outcome == "UNKNOWN"
     assert dict(result.assessment_reliability)["LAB-T3"] == "CHALLENGED_BY_LATER_CALIBRATION"
-    assert dict(result.assessment_reliability)["LAB-T3-AGAIN"] == "CONDITIONALLY_WARRANTED_IN_LAB"
+    assert dict(result.assessment_reliability)["LAB-T3-AGAIN"] == "CHALLENGED_BY_LATER_CALIBRATION"
     assert not result.evidence_authorized_for_real_memory
 
 
@@ -147,3 +147,41 @@ def test_caller_supplied_old_pin_does_not_establish_freshness():
         restore_history(old,expected_sha256=sha(latest))
     # Expected limitation, not a safety success: the caller controls the pin.
     assert restore_history(old,expected_sha256=sha(old)).projection.event_outcome=="CONDITIONALLY_REFUTED_IN_LAB"
+
+
+@pytest.mark.parametrize("receipt",["", "f"*64, "new asserted signature"])
+def test_alias_created_after_calibration_cannot_resurrect(receipt):
+    policy,rows,_ = _fixture()
+    a,b,c,t3,cal,t4,again = rows
+    other = replace(c,seq=7,record_id="LAB-C-ALIAS",declared_receipt=receipt)
+    ref = replace(again.assessment.admissible_evidence_refs[0],reference_id=other.record_id)
+    second=replace(again,seq=8,assessment=replace(again.assessment,admissible_evidence_refs=(ref,)))
+    initial=encode_history(rows[:6],policy)
+    after=append_history(initial,expected_sha256=sha(initial),additions=(other,second))
+    result=restore_history(after,expected_sha256=sha(after)).projection
+    assert result.event_outcome=="UNKNOWN"
+    assert dict(result.assessment_reliability)["LAB-T3-AGAIN"]=="NOT_WARRANTED"
+
+
+def test_duplicate_json_key_with_self_pin_is_rejected():
+    policy,rows,_ = _fixture()
+    raw=encode_history(rows,policy)
+    bad=raw.replace(b'"format":',b'"format":"forged","format":',1)
+    with pytest.raises(LabContractError):
+        restore_history(bad,expected_sha256=sha(bad))
+
+
+@pytest.mark.parametrize("seq",[True,0,65,"1"])
+def test_noncanonical_sequence_refused(seq):
+    policy,rows,_ = _fixture()
+    with pytest.raises(LabContractError):
+        encode_history((replace(rows[0],seq=seq),),policy)
+
+
+def test_full_distinct_record_budget_accepts_exact_replay_not_new_record():
+    policy,rows,_ = _fixture()
+    history=tuple(replace(rows[0],seq=i,record_id=f"UNVERIFIED-{i}") for i in range(1,65))
+    raw=encode_history(history,policy)
+    assert append_history(raw,expected_sha256=sha(raw),additions=(history[-1],))==raw
+    with pytest.raises(LabContractError):
+        append_history(raw,expected_sha256=sha(raw),additions=(replace(history[-1],record_id="new"),))
