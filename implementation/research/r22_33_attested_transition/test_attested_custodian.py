@@ -18,7 +18,7 @@ LEGACY_GATE = R31_DIR / "custodian_state_legacy.py"
 ISSUER = HERE / "issue_challenge.py"
 
 sys.path.insert(0, str(HERE))
-from attested_custodian import derived_nv_nonce, derived_transition_nonce  # noqa: E402
+from attested_custodian import (derived_creation_nonce, derived_nv_nonce, derived_quote_nonce, derived_transition_nonce)  # noqa: E402
 
 
 def canonical(value):
@@ -157,6 +157,8 @@ class AttestedCustodianTests(unittest.TestCase):
         storage_root = digest(storage_name)
         nv_contents = bytes.fromhex(storage_root)
         nv_nonce = derived_nv_nonce(self.challenge["nonce"])
+        creation_nonce = derived_creation_nonce(self.challenge["nonce"])
+        quote_nonce = derived_quote_nonce(self.challenge["nonce"])
         nv_attestation_sha256 = digest(b"synthetic NV attestation")
         nv_signature_sha256 = digest(b"synthetic NV signature")
         manifest = {
@@ -213,6 +215,8 @@ class AttestedCustodianTests(unittest.TestCase):
             "nv_contents_b64": b64(nv_contents),
             "nv_offset": 0,
             "nv_nonce": nv_nonce,
+            "creation_nonce": creation_nonce,
+            "quote_nonce": quote_nonce,
             "nv_qualified_signer_b64": b64(ak_qualified_name),
             "nv_attestation_sha256": nv_attestation_sha256,
             "nv_signature_sha256": nv_signature_sha256,
@@ -597,6 +601,20 @@ class AttestedCustodianTests(unittest.TestCase):
         ))
         result, *_ = self.invoke(request, suffix="nv-handle")
         self.assert_rejected_without_commit(result, "REJECT ATTESTATION_NV_INDEX_HANDLE_INVALID")
+
+    def test_creation_nonce_must_be_derived_from_custodian_challenge(self):
+        request = self.make_request(receipt=self.make_receipt(
+            change=lambda receipt: receipt.update({"creation_nonce": "a" * 64})
+        ))
+        result, *_ = self.invoke(request, suffix="creation-nonce-mismatch")
+        self.assert_rejected_without_commit(result, "REJECT ATTESTATION_CREATION_NONCE_NOT_CHALLENGE_DERIVED")
+
+    def test_quote_nonce_must_be_derived_from_custodian_challenge(self):
+        request = self.make_request(receipt=self.make_receipt(
+            change=lambda receipt: receipt.update({"quote_nonce": "b" * 64})
+        ))
+        result, *_ = self.invoke(request, suffix="quote-nonce-mismatch")
+        self.assert_rejected_without_commit(result, "REJECT ATTESTATION_QUOTE_NONCE_NOT_CHALLENGE_DERIVED")
 
     def test_nv_offset_float_is_rejected_as_non_integer(self):
         request = self.make_request(receipt=self.make_receipt(
