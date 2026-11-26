@@ -62,3 +62,21 @@ The test joined the exact retained A15 artifacts to the independently witnessed 
 This establishes that the two A15 checkpoint leaves are within the later tree head covered by the R22.22I external witness signatures. It does **not** establish global latestness, data availability, production-grade custody, or full administrative independence. The policy was custom external-only 2-of-4; the built-in Sigsum test2 4-of-5 policy remained `NOT_MET`. Remora is a test VM without HSM/redundancy; Stagemole is a best-effort test witness. `global_latest=UNKNOWN`, admission=false, trust activation=NO_GO, production=NO_GO.
 
 The original A15 live workflow's final reveal failure remains preserved and is not relabelled as a full success. This bridge used retained artifacts only: no new relay publication, no new signing key, no floor write, no merge, no trust activation, and no production action.
+
+
+## A15 bridge live revalidation against current R22.22I external witnesses — 2026-11-26
+
+The A15 external-floor bridge was extended to re-run the pinned R22.22I verifier in the same GitHub Actions job, rather than relying only on the historical floor JSON. The R22.22I source remains pinned to commit `2139914a255aa58b3706eaa401dc744fa82e8d56`; the historical floor JSON remains pinned to blob `07b1172fd77cf53d9dba9b4e06215d33f42705cb`.
+
+Both the push run [45842212821](https://github.com/SepehrGhanbari/Ario/actions/runs/45842212821) and PR run [45842227202](https://github.com/SepehrGhanbari/Ario/actions/runs/45842227202) completed successfully on bridge source commit `e288ae5470728a5e3eab30373f39e0ebcda65c22`.
+
+Within each run:
+- The pinned R22.22I verifier performed a fresh read-only Sigsum TEST tree-head check and external-only 2-of-4 witness verification.
+- Remora's live `/status` size and root exactly matched the signed tree head.
+- The live head remained size 282813/root `748c0c608c8f691fd7e9a9b9d98e920f9a529f3dbcaf180109e5bcacb597196b` at the time of this run.
+- The bridge verified the A15 seq=2 head (size 282774/root `4a75206b4b69142d1d90a284420d64cabf11ebe09931ba8e97262e2ad7baa1d5`) as a prefix of both the pinned floor and the fresh live external witness head.
+- The pinned floor and fresh live head had the same size and root; equality was checked directly. The A15-to-live consistency proof was fetched and verified.
+
+The custom external-only 2-of-4 policy passed; the built-in Sigsum test2 4-of-5 policy remained `NOT_MET`. The external witnesses attest the tree head, not availability of A15 Broker rows. Remora is a test VM without HSM/redundancy; Stagemole is a best-effort test witness. This does not establish trusted time, global latestness, production-grade durable custody, full administrative independence, admission, trust activation, or production.
+
+No new relay publication, signing key, floor write, merge, trust activation, or production action occurred. Original A15 live-run reveal failure remains preserved.
