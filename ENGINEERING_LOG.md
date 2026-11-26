@@ -795,3 +795,12 @@ RESEARCH_ONLY / PASS_BOUNDED / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTIO
 
 - Extracted only the reviewed paired-answer eligibility correction from #351 (source 9900bc63b7ae3bc8c32a87bc9b95aeec40e530d4). The main reader accepts content records with a user field but no Ario reply, then previously treated them as answers: false recall/currentness metadata, potential KeyError on reveal and false ambiguity. Restrict recall and selfcheck to validated paired user/Ario rows; preserve content records and existing reveal API unchanged. No other #351 boundary or custody research integrated.
 - Two existing synthetic regression cases adapted to the current main API. Existing log preserved as exact prefix; no private archive, model, trust or runtime integration. Exact-head CI pending.
+
+
+## 2026-11-27 — Markovian synthetic C2SP log client v0.1 (RESEARCH_ONLY / SYNTHETIC_ONLY)
+
+- Added isolated implementation/research/markovian_test_log_v0_1/ client and focused tests. Reuses the existing encrypted Kladje research identity/origin; no new key is generated.
+- Emits a C2SP signed-note vkey (Ed25519 type 0x01), C2SP tlog-checkpoint, synthetic-only capsule/entries, RFC 6962 root and consistency proof, and C2SP tlog-witness add-checkpoint framing.
+- Pins Markovian's witness cosignature verifier key from its operator-published /about page. Local submit command verifies returned cosignature and current witness checkpoint, refuses stale/mismatched state, and never retries automatically.
+- Public bundle intentionally excludes private key and passphrase. Prepare/append commands do not make network requests. Submit is a separate explicit command and must only be run after Markovian confirms manual origin/key pinning.
+- No public checkpoint has yet been published; the static public bundle will be added only after the existing local encrypted research key produces it. No live witness request, Kladje request, merge, trust activation, or production change.
