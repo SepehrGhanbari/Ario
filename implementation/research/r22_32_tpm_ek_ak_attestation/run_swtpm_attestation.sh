@@ -22,6 +22,14 @@ pass() { printf 'PASS %s\n' "$1"; }
 fail() { printf 'FAIL %s\n' "$1"; exit 1; }
 
 CHALLENGE_NONCE="$(printenv ARIO_R22_33_CHALLENGE_NONCE 2>/dev/null || true)"
+CI_CUSTODIAN_PRIVATE_KEY_PATH="$(printenv ARIO_R22_33_CI_CUSTODIAN_PRIVATE_KEY_PATH 2>/dev/null || true)"
+CI_CUSTODIAN_DIR="$TMP/r22-33-ci-custodian"
+CI_CHALLENGE_JSON="$CI_CUSTODIAN_DIR/challenge.json"
+CI_CHALLENGE_SIG="$CI_CUSTODIAN_DIR/challenge.sig"
+CI_ANCHOR_JSON="$CI_CUSTODIAN_DIR/anchor.json"
+CI_ANCHOR_SIG="$CI_CUSTODIAN_DIR/anchor.sig"
+CI_CUSTODIAN_PRIVATE="$CI_CUSTODIAN_DIR/custodian.key"
+CI_CUSTODIAN_PUBLIC="$CI_CUSTODIAN_DIR/custodian.pub"
 if [[ -n "$CHALLENGE_NONCE" && ! "$CHALLENGE_NONCE" =~ ^[0-9a-f]{64}$ ]]; then
   fail "ARIO_R22_33_CHALLENGE_NONCE must be 64 lowercase hex characters"
 fi
@@ -130,6 +138,65 @@ EK_FP="$(pub_fingerprint "$EK_PUB")"
 CERT_EK_FP="$(pub_fingerprint "$TMP/ek-from-cert.pem")"
 [[ "$EK_FP" == "$CERT_EK_FP" ]] || fail "EK certificate SPKI does not match TPM EK public key"
 pass "EK certificate SubjectPublicKeyInfo matches TPM EK public key"
+
+# In the R22.33 end-to-end path, issue a real custodian-signed challenge only
+# after the TPM-generated EK identity is known, then derive every TPM nonce
+# from that challenge before creating the attestation evidence.
+if [[ -n "$CI_CUSTODIAN_PRIVATE_KEY_PATH" ]]; then
+  mkdir -p "$CI_CUSTODIAN_DIR" "$(dirname "$CI_CUSTODIAN_PRIVATE_KEY_PATH")"
+  openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 \
+    -out "$CI_CUSTODIAN_PRIVATE" >/dev/null 2>&1
+  openssl pkey -in "$CI_CUSTODIAN_PRIVATE" -pubout -out "$CI_CUSTODIAN_PUBLIC" >/dev/null 2>&1
+  PREVIOUS_ROOT="$(python3 - <<'PY'
+import hashlib
+print(hashlib.sha256(b"ARIO-R22.33-CI-PREVIOUS-STORAGE-ROOT").hexdigest())
+PY
+)"
+  PREVIOUS_HEAD="$(python3 - <<'PY'
+import hashlib
+print(hashlib.sha256(b"ARIO-R22.33-CI-PREVIOUS-HEAD").hexdigest())
+PY
+)"
+  GITHUB_SHA_VALUE="$(printenv GITHUB_SHA 2>/dev/null || printf 'ARIO-R22.33-CI-NEXT-HEAD')"
+  NEXT_HEAD="$(python3 - "$GITHUB_SHA_VALUE" <<'PY'
+import hashlib, sys
+print(hashlib.sha256(sys.argv[1].encode("utf-8")).hexdigest())
+PY
+)"
+  python3 - "$EK_FP" "$PREVIOUS_ROOT" "$PREVIOUS_HEAD" "$CI_ANCHOR_JSON" <<'PY'
+import json, sys
+from pathlib import Path
+anchor = {
+    "format": "ARIO-R22.31-ANCHOR-V1",
+    "device_ek_sha256": sys.argv[1],
+    "storage_root_sha256": sys.argv[2],
+    "epoch": 7,
+    "head_sha256": sys.argv[3],
+}
+Path(sys.argv[4]).write_bytes(
+    (json.dumps(anchor, sort_keys=True, separators=(",", ":"), ensure_ascii=False) + "\n").encode("utf-8")
+)
+PY
+  openssl dgst -sha256 -sign "$CI_CUSTODIAN_PRIVATE" \
+    -out "$CI_ANCHOR_SIG" "$CI_ANCHOR_JSON"
+  python3 "$ROOT/../r22_33_attested_transition/issue_challenge.py" \
+    --anchor "$CI_ANCHOR_JSON" --anchor-signature "$CI_ANCHOR_SIG" \
+    --public-key "$CI_CUSTODIAN_PUBLIC" --private-key "$CI_CUSTODIAN_PRIVATE" \
+    --journal "$CI_CUSTODIAN_DIR/journal.jsonl" --lock "$CI_CUSTODIAN_DIR/lock" \
+    --output "$CI_CHALLENGE_JSON" --signature "$CI_CHALLENGE_SIG" \
+    --next-head-sha256 "$NEXT_HEAD" --ttl-seconds 300
+  CHALLENGE_NONCE="$(python3 - "$CI_CHALLENGE_JSON" <<'PY'
+import json, sys
+print(json.loads(open(sys.argv[1], encoding="utf-8").read())["nonce"])
+PY
+)"
+  cp "$CI_CUSTODIAN_PRIVATE" "$CI_CUSTODIAN_PRIVATE_KEY_PATH"
+  chmod 600 "$CI_CUSTODIAN_PRIVATE_KEY_PATH"
+  pass "fresh custodian-signed R22.33 challenge issued for this TPM EK"
+fi
+if [[ -z "$CHALLENGE_NONCE" ]]; then
+  CHALLENGE_NONCE="$(openssl rand -hex 32)"
+fi
 
 # AK is not assumed to have a manufacturer X.509 certificate. Credential
 # activation proves the AK is associated with the TPM holding this EK.
@@ -508,6 +575,16 @@ if [[ -n "$EVIDENCE_DIR" ]]; then
   printf '%s\n' "$ROOT_NAME_SHA256" >"$EVIDENCE_DIR/storage-root-sha256.txt"
   if [[ -n "$CHALLENGE_NONCE" ]]; then
     printf '%s\n' "$CHALLENGE_NONCE" >"$EVIDENCE_DIR/custodian-challenge-nonce.txt"
+  fi
+  if [[ -n "$CI_CUSTODIAN_PRIVATE_KEY_PATH" ]]; then
+    cp "$CI_CUSTODIAN_PUBLIC" "$EVIDENCE_DIR/custodian-public.pem"
+    cp "$CI_ANCHOR_JSON" "$EVIDENCE_DIR/custodian-anchor.json"
+    cp "$CI_ANCHOR_SIG" "$EVIDENCE_DIR/custodian-anchor.sig"
+    cp "$CI_CHALLENGE_JSON" "$EVIDENCE_DIR/custodian-challenge.json"
+    cp "$CI_CHALLENGE_SIG" "$EVIDENCE_DIR/custodian-challenge.sig"
+    case "$(realpath "$CI_CUSTODIAN_PRIVATE_KEY_PATH")" in
+      "$(realpath "$EVIDENCE_DIR")"/*) fail "custodian private key must never be placed in the public evidence bundle" ;;
+    esac
   fi
   python3 - "$EVIDENCE_DIR" <<'PY'
 import hashlib, json, sys
