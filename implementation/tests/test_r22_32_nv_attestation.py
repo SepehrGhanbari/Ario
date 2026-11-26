@@ -37,15 +37,15 @@ def tpm2b(value: bytes) -> bytes:
 
 def public_yaml(attributes: int = NV_ATTRIBUTES) -> str:
     return (
-        "0x1500020:\\n"
-        "  hash algorithm:\\n"
-        "    friendly: sha256\\n"
-        "    value: 0xB\\n"
-        "  attributes:\\n"
-        "    friendly: ownerread|ownerwrite|authread|authwrite|written\\n"
-        f"    value: 0x{attributes:x}\\n"
-        "  size: 32\\n"
-        "  authorization policy:\\n"
+        "0x1500020:\n"
+        "  hash algorithm:\n"
+        "    friendly: sha256\n"
+        "    value: 0xB\n"
+        "  attributes:\n"
+        "    friendly: ownerread|ownerwrite|authread|authwrite|written\n"
+        f"    value: 0x{attributes:x}\n"
+        "  size: 32\n"
+        "  authorization policy:\n"
     )
 
 

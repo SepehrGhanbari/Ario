@@ -1123,3 +1123,10 @@ Related #379 A15 retained-range experiment covers a different set of three commi
 - Added an explicit `expect_reject` wrapper that requires a verifier `REJECT` line, preventing unrelated errors (such as a missing fixture) from being counted as a valid negative.
 - Added `implementation/tests/test_r22_32_nv_attestation.py` for NV public Name recomputation, written-state and handle checks, exact field acceptance, challenge/content/signer/offset/trailing-byte negatives, and Bash syntax/order checks.
 - Exact TPM simulator execution remains **NOT_RUN**: the R22.32 workflow file is branch-local and absent from `main`; no current-head TPM workflow run exists. The generic Implementation Regression workflow will run the new parser tests.
+
+### 2026-11-26 — R22.32 NV attestation first-run failure and correction
+
+- Dedicated TPM workflow run **45857424209** executed on exact head `ae553dac0ccf04578cb8156064d33088f7753f63` and failed **before** invoking `tpm2_nvcertify`: the verifier rejected the zero-length NV authorization-policy representation emitted by `tpm2_nvreadpublic`. The workflow log is the evidence; no NV attestation PASS is claimed for that run.
+- Generic Implementation Regression run **45857424187** reported **8 failed, 2100 passed, 8 skipped, 273 subtests passed**. The eight new parser tests all stopped while parsing their synthetic NV YAML fixture because the fixture encoded literal backslash-n sequences instead of line breaks. Existing-suite results remain separate from the new test failures.
+- This commit accepts only explicit empty-policy representations (blank, zero-length forms) and rejects non-empty policy material; it also prints the public NV metadata in the research workflow log for audit.
+- The synthetic fixture now uses actual newline characters. Exact TPM NV_Certify remains pending a fresh current-head workflow run.

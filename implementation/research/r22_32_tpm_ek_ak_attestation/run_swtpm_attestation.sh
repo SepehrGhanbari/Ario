@@ -235,6 +235,9 @@ tpm2_nvwrite -C o -i "$ROOT_COMMITMENT" "$NV_INDEX" >/dev/null
 tpm2_nvread -C o -s 32 -o "$NV_READBACK" "$NV_INDEX" >/dev/null
 cmp -s "$ROOT_COMMITMENT" "$NV_READBACK" || fail "TPM NV readback differs from the storage-root commitment"
 tpm2_nvreadpublic >"$NV_PUBLIC"
+printf 'NV_PUBLIC_YAML_BEGIN\\n'
+cat "$NV_PUBLIC"
+printf 'NV_PUBLIC_YAML_END\\n'
 
 tpm2_nvcertify -C "$AK_CTX" -c o -g sha256 -s rsassa -q "$NV_NONCE" \
   --size 32 -o "$NV_SIG" --attestation "$NV_ATTEST" "$NV_INDEX" >/dev/null
