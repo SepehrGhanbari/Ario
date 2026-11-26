@@ -101,7 +101,11 @@ func main(){
   }
   results=append(results,result)
  }
- if len(accepted)<2{panic(fmt.Sprintf("HOLD_EXTERNAL_WITNESS_READBACKS: %d/4, need 2",len(accepted)))}
+ if len(accepted)<2{
+  diagnostic:=map[string]any{"result":"HOLD_EXTERNAL_WITNESS_READBACKS","valid_external_readbacks":len(accepted),"built_in_test2_diagnostic":test2Result,"head_size":head.Size,"head_root":hex.EncodeToString(head.RootHash[:]),"external_witnesses":results}
+  _=json.NewEncoder(os.Stdout).Encode(diagnostic)
+  panic(fmt.Sprintf("HOLD_EXTERNAL_WITNESS_READBACKS: %d/4, need 2",len(accepted)))
+ }
  sort.Slice(accepted,func(i,j int)bool{return accepted[i]>accepted[j]})
  minTwo:=accepted[1];if minTwo<head.Size{panic("HOLD_EXTERNAL_QUORUM_FLOOR_BELOW_HEAD")}
  root:=hex.EncodeToString(head.RootHash[:])

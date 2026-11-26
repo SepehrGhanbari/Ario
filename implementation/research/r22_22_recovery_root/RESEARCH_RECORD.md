@@ -135,3 +135,8 @@ The built-in test2 policy did not meet its grouped 4-of-5 threshold in live run 
 ## R22.22I witness readback parser correction (2026-11-26)
 
 Live run 45835737810: six quorum/rollback unit controls PASS, but external witness readbacks were 0/4 because the client parser expected key-value `size=N`. The Sigsum witness API specifies the get-tree-size response as a bare ASCII decimal number. Corrected the parser to accept the specified bare decimal (and key-value compatibility), reject ambiguous/multiline values, and added three parser controls. This was an adapter/parser mismatch; no witness was contacted with a write, and no state changed. Retry read-only.
+
+
+## R22.22I diagnostics retained (2026-11-26)
+
+Custom external-only quorum and all unit/parser tests pass, but run 45836088990 returned 0/4 successful witness size readbacks. Added bounded diagnostic output before HOLD so the next run captures each external endpoint's exact status/error and which signatures were present. No threshold relaxation or write requests.
