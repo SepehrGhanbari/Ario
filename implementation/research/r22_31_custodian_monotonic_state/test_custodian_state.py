@@ -153,6 +153,29 @@ class CustodianStateTests(unittest.TestCase):
         self.verify_receipt(response2, signature2)
         self.assertEqual(len(self.journal.read_text().splitlines()), 1)
 
+    def test_expected_red_valid_prefix_rollback_is_not_detected_without_external_floor(self):
+        first, _, _ = self.invoke(self.request(), suffix="before-rollback")
+        self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
+        committed = self.journal.read_bytes()
+        self.assertTrue(committed.endswith(b"\\n"))
+
+        # A same-domain administrator deletes the complete tail. Empty is a
+        # valid zero-record prefix, so the signed initial anchor still verifies.
+        self.journal.write_bytes(b"")
+        second_request = self.request(
+            nonce="2" * 64,
+            root=b"rollback-replacement-root",
+            head=b"rollback-replacement-head",
+        )
+        second, _, _ = self.invoke(second_request, suffix="after-valid-prefix-rollback")
+
+        # This PASS means the expected RED was reproduced: local replay accepts
+        # a second 7->8 transition after the prior committed journal was erased.
+        self.assertEqual(second.returncode, 0, second.stdout + second.stderr)
+        self.assertIn("APPROVED epoch=8", second.stdout)
+        self.assertEqual(len(self.journal.read_text().splitlines()), 1)
+        self.assertNotEqual(committed, self.journal.read_bytes())
+
     def test_tampered_journal_is_rejected(self):
         first, _, _ = self.invoke(self.request(), suffix="first")
         self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
