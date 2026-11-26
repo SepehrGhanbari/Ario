@@ -37,3 +37,24 @@ C2SP `tlog-witness` requires the witness to persist the new checkpoint before re
 The `aics-witness` operational guidance says a witness whose database is lost or rolled back must be retired rather than continued with the same identity; its `serve` command refuses to create a missing database: <https://pypi.org/project/aics-witness/>.
 
 This R63 lab is not an implementation of the C2SP HTTP protocol and does not enroll the four local anchors as real operators. The next meaningful test is deployment of the anchor interface across genuinely separate administrative domains, with an out-of-band pinned roster and independently protected monotonic state. Until then, no authority is activated.
+
+## 2026-11-26 — roster and nonce-replay hardening; cross-platform CI
+
+The quorum constructor now rejects: non-exact/duplicate anchor identities, duplicate anchor signing keys, duplicate enrollment keys, and duplicate resolved storage paths. This prevents a nominal 3-of-4 from counting repeated cryptographic identities or the same path more than once. It does not prove different administrators, hosts, cloud accounts, or storage providers.
+
+Seven additional adversarial controls:
+- duplicate anchor signing key rejected;
+- duplicate enrollment key rejected;
+- duplicate store path rejected;
+- duplicate anchor identity rejected;
+- one old nonce-bound response is excluded while the remaining three current anchors still form quorum;
+- two old nonce-bound responses cannot form quorum;
+- one rolled-back anchor is outvoted by three current anchors.
+
+GitHub Actions run 45826456385, exact source head 78938af150a542df639bec1e3ed743cdfb186a0a, dedicated workflow with contents:read only and no network/publication:
+- Ubuntu Python 3.11: 37 tests PASS.
+- Ubuntu Python 3.13: 37 tests PASS, including all three real child-process crash/recovery tests.
+- Windows Python 3.11: 37 tests discovered, 34 PASS, 3 fork-only tests skipped (process API unavailable).
+- Windows Python 3.13: same 34 PASS, 3 fork-only tests skipped.
+
+Original two RED controls remain unchanged. These tests strengthen only the local protocol model. All four anchor stores remain under one host/admin in the lab; independent custody, protected hardware monotonicity, provider-level rollback resistance, operator admission and production integration remain NOT_ESTABLISHED. RESEARCH_ONLY / HOLD / GENESIS NO_GO.
