@@ -188,4 +188,54 @@ class Continuity(unittest.TestCase):
         self.advance(); shutil.copy2(backup,self.anchors[0].path)
         self.assertEqual(self.w.status(),ACTIVE)
 
+    def test_38_independent_verifier_accepts_valid_nonce_bound_proof(self):
+        nonce=secrets.token_hex(32); raw=self.w.read_identity_proof(nonce)
+        cp,names=verify_identity_proof(raw,self.q.pinned,nonce,self.identity,self.policy,self.w.witness_pub)
+        self.assertEqual(cp,self.genesis_cp); self.assertGreaterEqual(len(names),3)
+    def test_39_independent_verifier_rejects_old_nonce_replay(self):
+        old_nonce=secrets.token_hex(32); raw=self.w.read_identity_proof(old_nonce)
+        with self.assertRaises(ContinuityError):
+            verify_identity_proof(raw,self.q.pinned,secrets.token_hex(32),self.identity,self.policy,self.w.witness_pub)
+    def test_40_independent_verifier_rejects_tampered_anchor_read_signature(self):
+        nonce=secrets.token_hex(32); obj=decode(self.w.read_identity_proof(nonce)); body=obj['body']
+        response=decode(body['anchor_read_responses'][0].encode('ascii')); response['signature']='0'*128
+        body['anchor_read_responses'][0]=canon(response).decode('ascii')
+        forged=canon(dict(body=body,signature=sign(self.wkey,b'R63-WITNESS-CONTINUITY',canon(body))))
+        with self.assertRaises(ContinuityError):
+            verify_identity_proof(forged,self.q.pinned,nonce,self.identity,self.policy,self.w.witness_pub)
+    def test_41_independent_verifier_rejects_duplicate_anchor_response(self):
+        nonce=secrets.token_hex(32); obj=decode(self.w.read_identity_proof(nonce)); body=obj['body']
+        body['anchor_read_responses'][1]=body['anchor_read_responses'][0]
+        forged=canon(dict(body=body,signature=sign(self.wkey,b'R63-WITNESS-CONTINUITY',canon(body))))
+        with self.assertRaises(ContinuityError):
+            verify_identity_proof(forged,self.q.pinned,nonce,self.identity,self.policy,self.w.witness_pub)
+    def test_42_independent_verifier_rejects_insufficient_read_quorum(self):
+        nonce=secrets.token_hex(32); obj=decode(self.w.read_identity_proof(nonce)); body=obj['body']
+        body['anchor_read_responses']=body['anchor_read_responses'][:2]
+        forged=canon(dict(body=body,signature=sign(self.wkey,b'R63-WITNESS-CONTINUITY',canon(body))))
+        with self.assertRaises(ContinuityError):
+            verify_identity_proof(forged,self.q.pinned,nonce,self.identity,self.policy,self.w.witness_pub)
+    def test_43_independent_verifier_rejects_same_sequence_fork_response(self):
+        nonce=secrets.token_hex(32); obj=decode(self.w.read_identity_proof(nonce)); body=obj['body']
+        response=decode(body['anchor_read_responses'][0].encode('ascii')); read=response['body']
+        anchor=next(a for a in self.anchors if a.name==read['anchor'])
+        fork=make_checkpoint(self.identity,self.policy,pub(self.wkey),self.genesis_cp['sequence'],
+                             self.genesis_cp['parent_hash'],sha(b'fork-state'),secrets.token_hex(32))
+        read['checkpoint']=fork; read['checkpoint_hash']=cp_hash(fork)
+        read['commit_signature']=sign(anchor.key,b'R63-ANCHOR-COMMIT',canon(fork))
+        response['signature']=sign(anchor.key,b'R63-ANCHOR-READ',canon(read))
+        body['anchor_read_responses'][0]=canon(response).decode('ascii')
+        forged=canon(dict(body=body,signature=sign(self.wkey,b'R63-WITNESS-CONTINUITY',canon(body))))
+        with self.assertRaises(ContinuityError):
+            verify_identity_proof(forged,self.q.pinned,nonce,self.identity,self.policy,self.w.witness_pub)
+    def test_44_independent_verifier_rejects_duplicate_pinned_anchor_keys(self):
+        nonce=secrets.token_hex(32); raw=self.w.read_identity_proof(nonce); pinned=dict(self.q.pinned)
+        pinned['a4']=pinned['a1']
+        with self.assertRaises(ContinuityError):
+            verify_identity_proof(raw,pinned,nonce,self.identity,self.policy,self.w.witness_pub)
+    def test_45_independent_verifier_rejects_wrong_expected_witness_key(self):
+        nonce=secrets.token_hex(32); raw=self.w.read_identity_proof(nonce)
+        with self.assertRaises(ContinuityError):
+            verify_identity_proof(raw,self.q.pinned,nonce,self.identity,self.policy,pub(Ed25519PrivateKey.generate()))
+
 if __name__=='__main__': unittest.main(verbosity=2)
