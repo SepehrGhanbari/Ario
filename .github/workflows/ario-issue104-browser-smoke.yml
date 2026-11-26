@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - research/issue104-demo-completion-20261122
+      - research/demo-accessibility-104-208-20261126
     paths:
       - docs/ario-explainer-demo-2026-11-08/**
       - website/ario-demo.html
@@ -26,7 +27,7 @@ permissions:
 
 jobs:
   static-demo-browser:
-    if: github.repository == 'SepehrGhanbari/Ario' && (github.event_name == 'pull_request' || github.ref == 'refs/heads/research/issue104-demo-completion-20261122')
+    if: github.repository == 'SepehrGhanbari/Ario' && (github.event_name == 'pull_request' || github.ref == 'refs/heads/research/issue104-demo-completion-20261122' || github.ref == 'refs/heads/research/demo-accessibility-104-208-20261126')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

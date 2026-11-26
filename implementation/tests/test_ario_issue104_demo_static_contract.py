@@ -123,17 +123,20 @@ def test_repository_and_ref_guard_contract():
     guards = re.findall(r"^    if: (.+)$", text, re.MULTILINE)
     expected_guard = ("github.repository == 'SepehrGhanbari/Ario' && "
                       "(github.event_name == 'pull_request' || "
-                      "github.ref == 'refs/heads/research/issue104-demo-completion-20261122')")
+                      "github.ref == 'refs/heads/research/issue104-demo-completion-20261122' || "
+                      "github.ref == 'refs/heads/research/demo-accessibility-104-208-20261126')")
     assert guards == [expected_guard]
     for candidate_repo, event, candidate_ref, expected in [
         ("SepehrGhanbari/Ario", "push", "refs/heads/research/issue104-demo-completion-20261122", True),
+        ("SepehrGhanbari/Ario", "push", "refs/heads/research/demo-accessibility-104-208-20261126", True),
         ("SepehrGhanbari/Ario", "pull_request", "refs/pull/399/merge", True),
         ("SepehrGhanbari/Ario", "push", "refs/heads/main", False),
         ("Other/Ario", "pull_request", "refs/pull/399/merge", False),
     ]:
         actual = (candidate_repo == "SepehrGhanbari/Ario" and
-                  (event == "pull_request" or
-                   candidate_ref == "refs/heads/research/issue104-demo-completion-20261122"))
+                  (event == "pull_request" or candidate_ref in (
+                      "refs/heads/research/issue104-demo-completion-20261122",
+                      "refs/heads/research/demo-accessibility-104-208-20261126")))
         assert actual is expected
 
 

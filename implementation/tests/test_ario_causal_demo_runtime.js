@@ -80,6 +80,14 @@ function statuses() {
   return Object.fromEntries(context.NODES.map(node => [node.id, node.status]));
 }
 
+
+test('initial baseline selection agrees with the active scenario and selected graph node', () => {
+  assert.match(html, /<button class="scen-btn active" id="btn-base" type="button" aria-pressed="true">/);
+  assert.equal(context.currentScenario, 'base');
+  assert.equal(context.selectedNodeId, 'N4');
+  assert.deepEqual(svg.nodeElements.filter(node => node.getAttribute('aria-pressed') === 'true').map(node => node.dataId), ['N4']);
+});
+
 test('scenario buttons use listeners rather than inline handlers', () => {
   for (const id of ['btn-base', 'btn-fals', 'btn-self', 'langBtn']) {
     assert.ok(getElementById(id).listeners.click?.length, id + ' must have a click listener');
@@ -161,12 +169,4 @@ test('graph name follows language and language button keeps focus', () => {
   button.listeners.click[0]();
   assert.equal(svg.getAttribute('aria-label'), 'Synthetic evidence dependency graph');
   assert.equal(document.activeElement, button);
-});
-
-
-test('initial baseline selection agrees with the active scenario and selected graph node', () => {
-  assert.match(html, /<button class="scen-btn active" id="btn-base" type="button" aria-pressed="true">/);
-  assert.equal(context.currentScenario, 'base');
-  assert.equal(context.selectedNodeId, 'N4');
-  assert.deepEqual(svg.nodeElements.filter(node => node.getAttribute('aria-pressed') === 'true').map(node => node.dataId), ['N4']);
 });
