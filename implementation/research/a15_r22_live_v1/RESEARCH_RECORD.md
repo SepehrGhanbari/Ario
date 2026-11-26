@@ -1,0 +1,11 @@
+# A15/R22 live synthetic checkpoint v1 — research experiment
+
+RESEARCH_ONLY / DRAFT / HOLD / SYNTHETIC_ONLY / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTION / NO_MERGE.
+
+Stacked on #382 exact head 835dd9e131a63e08f8b41964114a49ea25288aa9 (offline CI 19/19 on each OS). Broker unchanged, pinned by the adapter. This branch publishes two newly generated synthetic checkpoint envelopes only, with random synthetic scope and disposable Nostr/Sigsum TEST keys; no real journal, key, choice text, request ID, or database bytes are published to relays/log. Synthetic state copies are GitHub Actions reveal artifacts, never given to discovery.
+
+R22.20 transport functions and bootstrap adapted from fbb47a4f63c889170bdfabdadbe28dafd9812603; R22.10 scanner checked out at #375 head 4ca8ba373cc687252bc06462986e5323f75a7bcc. R63 direct-monitor helpers checked out at #369 head c4bd0dc8aa04ce0fe0bf4a7b8394b81994a81b14. New domain is A15/R22, not a reuse of R22.15B ancestry.
+
+Three jobs: publish synthetic seq 1 and 2, then publisher exits; cold runner sees first-only artifacts, verifies first inclusion, discovers signed later leaf without the second checksum, recovers exact signed content from relays, and checks R63 direct observations (advisory, separate result). Final reveal runner checks exact bytes, official inclusion proofs, and recomputes Broker state, including joint rollback, same-seq fork and unanchored suffix. Negative network controls use unreachable loopback endpoints, not actual sabotage of relay services. Missing data and any inconsistent proofs HOLD. R63 may HOLD separately; no trusted time, independent administration, long-term retention, nonce-bound freshness or global latestness proven. GitHub artifacts are not independent custody. This experiment does not gate the Broker or establish production authority.
+
+Workflow is intentionally push-triggered only for the new workflow file on this isolated research branch. No automatic live retries. Initial status: NOT_RUN until actual logs are checked.
