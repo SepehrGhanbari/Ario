@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# Stacked on R22.31 PR #411 head f83e8b3948045a426b89ac22404148f85cea9ccc
+# Stacked on latest R22.31 PR #411 head 1dba8ae472d0a0c8d02ab575eb62878fa705f897
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 TMP="$(mktemp -d)"
@@ -20,6 +20,24 @@ trap cleanup EXIT
 
 pass() { printf 'PASS %s\n' "$1"; }
 fail() { printf 'FAIL %s\n' "$1"; exit 1; }
+
+CHALLENGE_NONCE="$(printenv ARIO_R22_33_CHALLENGE_NONCE 2>/dev/null || true)"
+if [[ -n "$CHALLENGE_NONCE" && ! "$CHALLENGE_NONCE" =~ ^[0-9a-f]{64}$ ]]; then
+  fail "ARIO_R22_33_CHALLENGE_NONCE must be 64 lowercase hex characters"
+fi
+
+derive_challenge_nonce() {
+  local domain="$1"
+  python3 - "$CHALLENGE_NONCE" "$domain" <<'PY'
+import hashlib
+import sys
+nonce = bytes.fromhex(sys.argv[1])
+domain = sys.argv[2]
+tag = f"ARIO-R22.33-{domain}-NONCE-V1".encode("ascii") + b"\x00"
+print(hashlib.sha256(tag + nonce).hexdigest())
+PY
+}
+
 
 expect_fail() {
   local label="$1"
@@ -266,7 +284,7 @@ NV_READBACK="$TMP/nv-readback.bin"
 NV_ATTEST="$TMP/nv-attest.bin"
 NV_SIG="$TMP/nv-attest.sig"
 NV_TICKET="$TMP/nv-attest.ticket"
-NV_NONCE="$(openssl rand -hex 32)"
+if [[ -n "$CHALLENGE_NONCE" ]]; then NV_NONCE="$(derive_challenge_nonce NV-ATTESTATION)"; else NV_NONCE="$(openssl rand -hex 32)"; fi
 
 tpm2_nvdefine -C o -s 32 -a "ownerread|ownerwrite|authread|authwrite" "$NV_INDEX" >/dev/null
 tpm2_nvwrite -C o -i "$ROOT_COMMITMENT" "$NV_INDEX" >/dev/null
@@ -351,7 +369,7 @@ expect_reject "new NV attestation rejected against the prior root commitment" \
 
 # TPM2_Certify proves the exact storage object is loaded and binds it to a
 # fresh verifier challenge. The verifier checks the signature and decoded fields.
-CERTIFY_NONCE="$(openssl rand -hex 32)"
+if [[ -n "$CHALLENGE_NONCE" ]]; then CERTIFY_NONCE="$(derive_challenge_nonce CERTIFY-CREATION)"; else CERTIFY_NONCE="$(openssl rand -hex 32)"; fi
 CERTIFY_ATTEST="$TMP/storage-primary.attest"
 CERTIFY_SIG="$TMP/storage-primary.sig"
 CERTIFY_VERIFY_TICKET="$TMP/storage-primary.verify-ticket"
@@ -413,7 +431,7 @@ if after != expected:
 print("PASS PCR 23 independently recomputed from its prior value and event digest")
 PY
 
-QUOTE_NONCE="$(openssl rand -hex 32)"
+if [[ -n "$CHALLENGE_NONCE" ]]; then QUOTE_NONCE="$(derive_challenge_nonce PCR-QUOTE)"; else QUOTE_NONCE="$(openssl rand -hex 32)"; fi
 QUOTE_MSG="$TMP/pcr.quote"
 QUOTE_SIG="$TMP/pcr.quote.sig"
 tpm2_quote -c "$AK_CTX" -l sha256:23 -q "$QUOTE_NONCE" \
@@ -454,5 +472,58 @@ tpm2_pcrread -o "$PCR_CHANGED" sha256:23 >/dev/null
 expect_fail "quote rejected after PCR 23 changes after attestation" \
   tpm2_checkquote -u "$AK_PUB" -m "$QUOTE_MSG" -s "$QUOTE_SIG" \
     -f "$PCR_CHANGED" -l sha256:23 -g sha256 -q "$QUOTE_NONCE"
+
+EVIDENCE_DIR="$(printenv ARIO_R22_32_EVIDENCE_DIR 2>/dev/null || true)"
+if [[ -n "$EVIDENCE_DIR" ]]; then
+  mkdir -p "$EVIDENCE_DIR"
+  cp "$CA_CERT" "$EVIDENCE_DIR/ek-lab-root.crt"
+  cp "$EK_CERT" "$EVIDENCE_DIR/ek-certificate.crt"
+  cp "$EK_PUB" "$EVIDENCE_DIR/ek-public.pem"
+  cp "$AK_PUB" "$EVIDENCE_DIR/ak-public.pem"
+  cp "$AK_NAME" "$EVIDENCE_DIR/ak-name.bin"
+  cp "$AK_QN" "$EVIDENCE_DIR/ak-qualified-name.bin"
+  cp "$AK_TPMT" "$EVIDENCE_DIR/ak-public-area.tpmt"
+  cp "$SRK_NAME" "$EVIDENCE_DIR/storage-name.bin"
+  cp "$SRK_QN" "$EVIDENCE_DIR/storage-qualified-name.bin"
+  cp "$SRK_TPMT" "$EVIDENCE_DIR/storage-public-area.tpmt"
+  cp "$SRK_CREATION_DATA" "$EVIDENCE_DIR/storage-creation-data.bin"
+  cp "$SRK_CREATION_HASH" "$EVIDENCE_DIR/storage-creation-hash.bin"
+  cp "$ROOT_COMMITMENT" "$EVIDENCE_DIR/storage-root-commitment.bin"
+  cp "$NV_PUBLIC" "$EVIDENCE_DIR/nv-public.yaml"
+  cp "$NV_READBACK" "$EVIDENCE_DIR/nv-contents.bin"
+  cp "$NV_ATTEST" "$EVIDENCE_DIR/nv-attestation.bin"
+  cp "$NV_SIG" "$EVIDENCE_DIR/nv-attestation.sig"
+  cp "$CERTIFY_ATTEST" "$EVIDENCE_DIR/creation-attestation.bin"
+  cp "$CERTIFY_SIG" "$EVIDENCE_DIR/creation-attestation.sig"
+  cp "$PCR_BEFORE" "$EVIDENCE_DIR/pcr23-before.bin"
+  cp "$PCR_AFTER" "$EVIDENCE_DIR/pcr23-after.bin"
+  cp "$QUOTE_MSG" "$EVIDENCE_DIR/quote-attestation.bin"
+  cp "$QUOTE_SIG" "$EVIDENCE_DIR/quote-attestation.sig"
+  printf '%s\n' "$NV_INDEX" >"$EVIDENCE_DIR/nv-index.txt"
+  printf '%s\n' "$NV_NONCE" >"$EVIDENCE_DIR/nv-nonce.txt"
+  printf '%s\n' "$CERTIFY_NONCE" >"$EVIDENCE_DIR/creation-nonce.txt"
+  printf '%s\n' "$QUOTE_NONCE" >"$EVIDENCE_DIR/quote-nonce.txt"
+  printf '%s\n' "$MEASUREMENT_HASH" >"$EVIDENCE_DIR/pcr23-event-digest.txt"
+  printf '%s\n' "$EK_FP" >"$EVIDENCE_DIR/ek-spki-sha256.txt"
+  printf '%s\n' "$ROOT_NAME_SHA256" >"$EVIDENCE_DIR/storage-root-sha256.txt"
+  if [[ -n "$CHALLENGE_NONCE" ]]; then
+    printf '%s\n' "$CHALLENGE_NONCE" >"$EVIDENCE_DIR/custodian-challenge-nonce.txt"
+  fi
+  python3 - "$EVIDENCE_DIR" <<'PY'
+import hashlib, json, sys
+from pathlib import Path
+root = Path(sys.argv[1])
+files = sorted(p for p in root.iterdir() if p.is_file() and p.name != "evidence-manifest.json")
+manifest = {
+    "format": "ARIO-R22.32-SWTPM-EVIDENCE-MANIFEST-V1",
+    "files": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in files},
+}
+(root / "evidence-manifest.json").write_text(
+    json.dumps(manifest, sort_keys=True, separators=(",", ":")) + "\n",
+    encoding="utf-8",
+)
+print("PASS raw public TPM evidence bundle exported with SHA-256 manifest")
+PY
+fi
 
 printf 'R22_32_TPM_ATTESTATION_COMPLETE RESEARCH_ONLY SOFTWARE_TPM SYNTHETIC_EK_CA NO_MANUFACTURER_TRUST NO_PHYSICAL_TPM NO_INDEPENDENT_CUSTODY\n'
