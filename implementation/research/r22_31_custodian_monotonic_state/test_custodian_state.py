@@ -252,7 +252,8 @@ class CustodianStateTests(unittest.TestCase):
         first, _, _ = self.invoke(self.request(), suffix="noncanonical-journal-first")
         self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
         record = json.loads(self.journal.read_text().splitlines()[0])
-        noncanonical = json.dumps(record, sort_keys=True, indent=2).encode("utf-8") + b"\n"
+        reordered = {key: record[key] for key in reversed(list(record))}
+        noncanonical = json.dumps(reordered, separators=(",", ":"), ensure_ascii=False).encode("utf-8") + b"\n"
         self.journal.write_bytes(noncanonical)
         second_request = self.request(
             nonce="2" * 64, root=b"noncanonical-journal-root", head=b"noncanonical-journal-head",
