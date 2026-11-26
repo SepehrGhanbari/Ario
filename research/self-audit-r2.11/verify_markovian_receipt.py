@@ -8,7 +8,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 BASE = "https://log.markovianprotocol.com"
 WEB = "https://markovianprotocol.com"
 EXPECTED_LEAF = 14905
-EXPECTED_DIGEST = "79e7b801f802634c4f9546238816a7af0e2c542ce22b39426b991eaf7dba99a"
+EXPECTED_DIGEST = "79e7b801f802634c4f9546238816a7af0e2c542ce22b39426b991eaf47dba99a"
 EXPECTED_TRUST_LEAF = 6112
 
 def get(url):
@@ -156,8 +156,6 @@ def main():
     v2 = json.loads(get(f"{WEB}/.well-known/trust-root/2.json"))
     h1 = verify_manifest(v1)
     print(f"TRUST_ROOT_V1_SIGNATURE=PASS unsigned_sha256={h1}")
-    print(f"TRUST_ROOT_V1_FULL_SHA256={hashlib.sha256(canon(v1)).hexdigest()}")
-    print(f"TRUST_ROOT_V2_PREVIOUS_SHA256={v2.get('previous_manifest_sha256')}")
     h2 = verify_manifest(v2, v1)
     print(f"TRUST_ROOT_V1_SIGNATURE=PASS sha256={h1}")
     print(f"TRUST_ROOT_V2_DUAL_SIGNATURE=PASS sha256={h2}")
