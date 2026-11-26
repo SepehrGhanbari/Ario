@@ -35,7 +35,7 @@ def verify_manifest(m, predecessor=None):
     if m["version"] == 1:
         unsigned = dict(m); sigobj = unsigned.pop("signature")
         name, kid, alg, pub = parse_vkey(m["log_vkeys"]["ed25519"])
-        if sigobj["key_name"] != name or sigobj["key_id"] != kid.hex() or alg != 1:
+        if sigobj["key_id"] != kid.hex() or sigobj["alg"] != "ed25519" or alg != 1:
             raise ValueError("v1 signature key binding mismatch")
         Ed25519PublicKey.from_public_bytes(pub).verify(base64.b64decode(sigobj["sig"]), canon(unsigned))
     elif m["version"] == 2:
