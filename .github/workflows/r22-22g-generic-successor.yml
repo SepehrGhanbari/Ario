@@ -1,0 +1,65 @@
+name: R22.22G generic successor (advisory)
+on:
+  push:
+    branches: [research/r22-22-independent-recovery-root-20261125]
+    paths:
+      - .github/workflows/r22-22g-generic-successor.yml
+      - implementation/research/r22_22_recovery_root/generic_successor/**
+permissions:
+  contents: read
+  actions: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - name: Fetch archived anchor and unpinned candidate (read only)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15047051021/zip" > "$RUNNER_TEMP/anchor.zip"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15045299282/zip" > "$RUNNER_TEMP/candidate.zip"
+          echo "2bedc6d0cc85857cfaed3ceafeb5d7700d78923057e661d9c5675d6925e6262b  $RUNNER_TEMP/anchor.zip" | sha256sum -c -
+          python -m pip install coincurve==21.0.0
+          go install sigsum.org/sigsum-go/cmd/sigsum-verify@v0.14.1
+      - name: Run semantic and official historical proof tests
+        run: |
+          set -euo pipefail
+          test "$(git hash-object implementation/research/r22_22_recovery_root/generic_successor/successor.py)" = 6ca081e0aec9a748dcf9318ce1bc0d3f51caed14
+          test "$(git hash-object implementation/research/r22_22_recovery_root/generic_successor/test_successor.py)" = 203a89a8c35bd722c5c9c43e84af3ef89be219db
+          test "$(git hash-object implementation/research/r22_22_recovery_root/generic_successor/event_codec.py)" = 95a79184d33a81ffd75b2188f5041d7cef345868
+          python implementation/research/r22_22_recovery_root/generic_successor/test_successor.py "$RUNNER_TEMP/anchor.zip" "$RUNNER_TEMP/candidate.zip" "$(go env GOPATH)/bin/sigsum-verify" | tee "$RUNNER_TEMP/tests.log"
+          cmp "$RUNNER_TEMP/tests.log" implementation/research/r22_22_recovery_root/generic_successor/LOCAL_RESULTS.log
+      - name: Verify actual common witnessed head and successor without candidate pin
+        run: |
+          set -euo pipefail
+          mkdir "$RUNNER_TEMP/go"
+          cp implementation/research/r22_22_recovery_root/generic_successor/main.go implementation/research/r22_22_recovery_root/generic_successor/go.mod "$RUNNER_TEMP/go/"
+          (cd "$RUNNER_TEMP/go"; go mod tidy; go build -o "$RUNNER_TEMP/live" .)
+          python implementation/research/r22_22_recovery_root/generic_successor/successor.py "$RUNNER_TEMP/anchor.zip" "$RUNNER_TEMP/candidate.zip" "$(go env GOPATH)/bin/sigsum-verify" "$RUNNER_TEMP/live" | tee "$RUNNER_TEMP/live.jsonl"
+          python - <<'PY'
+          import json,os,pathlib
+          r=json.loads((pathlib.Path(os.environ['RUNNER_TEMP'])/'live.jsonl').read_text())
+          assert r['result']=='LINKED_SUCCESSOR_RESEARCH_ONLY' and r['new_seq']>r['old_seq'] and r['admission'] is False
+          assert r['live']['consistency']=='PASS' and r['global_latest']=='UNKNOWN'
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r22-22g-generic-successor
+          path: |
+            ${{ runner.temp }}/tests.log
+            ${{ runner.temp }}/live.jsonl
+          if-no-files-found: warn
+          retention-days: 30

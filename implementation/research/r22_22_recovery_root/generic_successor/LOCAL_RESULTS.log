@@ -1,0 +1,17 @@
+01_real_archived_proofs_and_link PASS
+02_old_replay PASS
+03_reverse PASS
+04_bad_nostr_sig PASS
+05_old_proof_substitution PASS
+06_tampered_merkle PASS
+07_repacked_unpinned_candidate PASS
+08_synthetic_8_to_10_semantics PASS
+09_synthetic_8_to_11_semantics PASS
+10_wrong_predecessor PASS
+11_wrong_scope PASS
+12_wrong_previous_ledger PASS
+13_wrong_previous_envelope PASS
+14_wrong_prior_anchor PASS
+15_wrong_signer PASS
+16_no_authority PASS
+16/16 EXPECTED CONTROLS PASS; SYNTHETIC_8_TO_10_SEMANTICS_ONLY; NO_ADMISSION
