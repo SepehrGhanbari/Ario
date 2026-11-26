@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import dataclasses
 import hashlib
+import io
 import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
@@ -116,7 +117,16 @@ class EpistemicLedgerBridge:
         reported_task_finishes_count = 0
         triggered_intentions: List[Dict[str, Any]] = []
 
-        with target.open("rb") as stream:
+        # Read at most the existing byte budget. Preflight framing on exactly
+        # the bytes subsequently consumed, before any guard or memory writes.
+        # This is not a publisher-authenticated or durable filesystem snapshot.
+        with target.open("rb") as source:
+            raw = source.read(MAX_LEDGER_BYTES + 1)
+        if len(raw) > MAX_LEDGER_BYTES:
+            raise BridgeError("ledger exceeds byte budget during read")
+        if raw and not raw.endswith(b"\n"):
+            raise BridgeError("HOLD_INCOMPLETE_JSONL_LINE")
+        with io.BytesIO(raw) as stream:
             for line_no, raw_line in enumerate(iter(lambda: stream.readline(MAX_LINE_BYTES + 1), b""), start=1):
                 if line_no > MAX_EVENTS:
                     raise BridgeError(f"event-count limit {MAX_EVENTS} exceeded on line {line_no}")
