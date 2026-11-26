@@ -26,7 +26,7 @@ from core.memory_consolidation import (
     NodeEpistemicStatus,
     SemanticNode,
 )
-from core.source_monitoring import SourceMonitoringGuard
+from core.source_monitoring import SourceMonitoringError, SourceMonitoringGuard
 from core.prospective_memory import (
     DelayedIntention,
     ProspectiveMemoryRegistry,
@@ -141,13 +141,16 @@ class EpistemicLedgerBridge:
                 event_type = event.get("event")
                 total_events += 1
 
-                # 1. TASK_STARTED: Ingest task goal as internal hypothesis
+                # 1. TASK_STARTED: Preserve the historical goal ID on external testimony.
                 if event_type == "TASK_STARTED":
                     task_id = str(event.get("task_id", f"task-{line_no}"))
                     goal = str(event.get("goal", ""))
                     if goal:
-                        self.guard.create_hypothesis(
-                            assertion=f"task_goal:{task_id}:{goal}",
+                        goal_claim = f"task_goal:{task_id}:{goal}"
+                        goal_digest = hashlib.sha256(goal_claim.encode("utf-8")).hexdigest()
+                        self.guard.create_external_testimony(
+                            assertion=goal_claim,
+                            attribution_id=f"ATTR-HYP-{goal_digest[:12]}",
                             falsification_condition=f"task_{task_id}_fails",
                         )
                         self.engine.ingest_event_stream([(
@@ -159,10 +162,13 @@ class EpistemicLedgerBridge:
                             },
                         )])
 
-                # 2. STEP_OBSERVED: Tool execution -> Empirical provenance -> Semantic schema
+                # 2. STEP_OBSERVED: Unverified report -> recorded semantic node
                 elif event_type == "STEP_OBSERVED":
                     steps_observed += 1
                     tool = str(event.get("tool", ""))
+                    # Preserve the injected guard input boundary from #381.
+                    if not tool.strip() or tool not in self.guard._allowlisted_tools:
+                        raise SourceMonitoringError(f"Tool '{tool}' is not allowlisted for ledger import")
                     step_id = str(event.get("step_id", f"step-{line_no}"))
                     task_id = str(event.get("task_id", "unknown"))
                     status = str(event.get("status", "UNKNOWN"))

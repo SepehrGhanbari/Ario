@@ -752,3 +752,9 @@ Base 7365e7a9ac7febb78b34039c7b36469b3344cfff. Windows CPython 3.13, stdlib unit
 - The Windows and CPython 3.14 logs include `ARIO_HTTP403_DIAGNOSTIC`: run metadata was observed as HTTP 200, while the job-log redirect endpoint returned HTTP 403 with `ADMIN_RIGHTS_WORDING`; diagnostic execution attestation remains `NOT_ESTABLISHED`. This is recorded as an infrastructure/attestation limitation, not as a test failure or evidence that the code failed.
 - Exact tested source/test head is `c654d620`. The following log-only commit changes no code or tests. All skips, xfails, and warnings remain visible.
 - **Review/merge status:** no independent review of this exact integrated memory boundary has yet been obtained. Keep the stacked PR DRAFT/HOLD until such review is available; do not ask the owner for another routine permission. No merge, policy adoption, trust activation, signer/key/TPM, Genesis, production, or main-branch change is claimed.
+
+
+## 2026-11-26 — #385 restore two foundation boundaries lost during port
+
+- Compared #385 exact head 22f54103d9b1dadf2c354eac495400095633bef0 with #381 `6b56695a6edd177808a0a56aa2aad0a57b2ee5c1`. The port regressed imported TASK_STARTED into an internal hypothesis and removed the injected tool allowlist check for STEP_OBSERVED. Restore external testimony with preserved legacy goal ID and the previously configured tool input boundary, while keeping the stricter LEDGER_REPORT state and inert TASK_FINISHED behavior.
+- Two focused tests cover legacy ID/replay attribution and empty allowlist rejection plus allowed report positive control. Three paths only; existing history kept. CI pending; research branch remains unmerged. No trust activation or real data.
