@@ -1065,3 +1065,13 @@ Related #379 A15 retained-range experiment covers a different set of three commi
 - Fixed the existing R22.31 workflow artifact path so the test log is actually uploaded.
 - Dedicated CI [run 45853039157](https://github.com/SepehrGhanbari/Ario/actions/runs/45853039157), exact head `19d78881138451a0b75404f96a0d78a8d3155034`, SUCCESS: 9 tests passed on CPython 3.13.18 / OpenSSL 3.0.13; artifact ID `15133349967` (543 bytes) uploaded.
 - Boundary remains explicit: this local prototype cannot prove rollback resistance against its own administrator. A genuine fix requires an authenticated, independently retained floor outside the runner's administrative domain; another same-domain file or synthetic local witness would not close it. No real key, TPM, trust activation, production, merge or prior evidence rewrite.
+
+
+## 2026-11-26 — R22.31 CLI path-alias data-loss fix
+
+- Re-read the current R22.31 source, tests, README and evidence record; reused existing PR #411 and its branch. No Sigsum or witness re-test was started.
+- Found a concrete destructive case: `--response` could alias `--journal`, causing the process to append a durable record and then replace the journal with the receipt. Other aliases could overwrite the signed anchor or response bytes.
+- Added a pre-I/O path distinctness guard for all nine CLI paths. It detects normalized/symlink aliases with `Path.resolve(strict=False)` and existing hard-link aliases with `os.path.samefile`. The guard is explicitly not a defense against a hostile concurrent filesystem race.
+- Added three regressions: response-to-journal, response-signature-to-anchor, and response/response-signature collision. All reject before mutation.
+- Dedicated CI [run 45853154583](https://github.com/SepehrGhanbari/Ario/actions/runs/45853154583), exact head `3eea8bcd642762912c4a3d4b00c1169275d4d0ad`, SUCCESS: 12/12 tests on CPython 3.13.18 / OpenSSL 3.0.13. The count includes the exact-source R22.30 reproduction and expected-RED valid-prefix rollback control; these are reproduced weaknesses, not security passes.
+- No Sigsum call, external witness, real key, TPM, trust activation, production promotion, or merge.
