@@ -63,3 +63,16 @@ Added `test_expected_red_valid_prefix_rollback_is_not_detected_without_external_
 Dedicated CI [run 45853039157](https://github.com/SepehrGhanbari/Ario/actions/runs/45853039157), exact branch head `19d78881138451a0b75404f96a0d78a8d3155034`, completed SUCCESS: **9 tests passed** on CPython 3.13.18 / OpenSSL 3.0.13. The nine comprise seven original prototype controls, one exact-source reproduction of the R22.30 defect, and this expected-RED valid-prefix rollback reproduction. The workflow artifact path was corrected; evidence artifact `r22-31-custodian-monotonic-state-evidence`, ID `15133349967`, 543 bytes, was uploaded successfully.
 
 The local state-machine repair remains bounded: it prevents duplicate epoch consumption while the journal is intact and detects record corruption, but cannot detect restoration of an older valid journal prefix by an administrator who controls the journal. Closing that boundary requires an authenticated floor retained outside the runner's administrative domain. A second same-domain file or another local simulation would not establish that independence. No trust activation, production, real keys, or merge occurred.
+
+
+## 2026-11-26 — prevent destructive path aliases in the R22.31 CLI
+
+A source review found a concrete local data-loss case: before this correction, a caller could set `--response` to the journal path. The process would durably append the signed transition, then `atomic_write(response, receipt)` would replace the journal with the receipt object. Similar aliases could overwrite the signed anchor or cause the response signature to overwrite the response bytes.
+
+Added `validate_distinct_paths(args)` before opening/creating the lock file. It rejects aliases among all nine input/output paths. `Path.resolve(strict=False)` detects lexical and symlink aliases; `os.path.samefile` additionally detects existing hard-link aliases. This is a deterministic caller-path guard, not a defense against a hostile process racing filesystem changes after validation.
+
+Three regressions verify: response→journal is rejected before journal creation; response-signature→anchor is rejected without changing anchor bytes; and response/response-signature must be distinct. Existing expected-RED rollback control remains unchanged.
+
+Dedicated CI [run 45853154583](https://github.com/SepehrGhanbari/Ario/actions/runs/45853154583), head `3eea8bcd642762912c4a3d4b00c1169275d4d0ad`, SUCCESS: **12/12 tests PASS** on CPython 3.13.18 / OpenSSL 3.0.13. This count includes the expected-RED valid-prefix rollback reproduction and exact-source R22.30 regression; neither is a claim that those vulnerabilities are prevented. The three new path-alias tests pass by confirming rejection before mutation.
+
+No Sigsum call, new witness, external publication, real key, TPM, trust activation, production promotion, or merge was performed.
