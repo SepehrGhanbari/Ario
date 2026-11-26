@@ -111,3 +111,18 @@ The expected-RED valid-prefix rollback test remains in the suite as an explicit 
 The existing R22.22I 2-of-4 external test-witness floor is not a floor for R22.31: its signed tree head predates this R22.31 state and does not commit to this journal or branch. Reusing it as though it did would be a false binding. No new Sigsum publication, witness test, external call, key, merge, trust activation, or production action was performed.
 
 The R22.31 valid-prefix rollback finding is therefore **closed as an accepted scope limitation for the current owner-operated research prototype**, not as a cryptographic fix. The original same-epoch defect remains addressed by the R22.31 state-machine correction; PR #411 remains open/Draft pending its normal integration path.
+
+
+## 2026-11-26 — superseding correction: administrator inventory is incomplete
+
+**This section supersedes the immediately preceding ACCEPTED_RISK / OUT_OF_SCOPE disposition.**
+
+The owner has clarified that at least one additional administrator exists and may have relevant administrative capability. Therefore the prior assumption that the owner is the sole trusted administrator is false and must not be used as the threat model.
+
+Current disposition: **OPEN / NOT_ASSESSED — administrator inventory and authority boundaries are not yet established.** The previous same-domain valid-prefix rollback result remains a valid technical observation, but it cannot be closed as an accepted risk on the basis of sole-owner administration.
+
+The connected GitHub integration confirms that its authenticated account has admin permission on this repository. Its current tool surface does not expose a complete collaborator/admin roster; the permission-check action can check a named GitHub login, but no second login has yet been supplied or identified. Thus the existence, identity, exact role, and effective authority of the additional administrator remain unverified here. Do not infer the administrator roster from commit authors, PR reviewers, workflow actors, or the repository owner field.
+
+Next required evidence: enumerate repository administrators and any organization/enterprise owners through an authorized GitHub settings view or a named-user permission check; then map their effective access to repository settings, branch/ruleset changes, Actions/workflow secrets, deployments, external witness accounts, and any independently retained recovery floor. Determine whether the additional administrator can alter both the state and the evidence used to verify it. No access removal or security-setting mutation is authorized by this note.
+
+No new Sigsum publication, witness test, key, merge, trust activation, or production action was performed. PR #411 remains open/Draft.
