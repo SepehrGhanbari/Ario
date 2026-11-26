@@ -126,7 +126,7 @@ print(Path(sys.argv[1]).read_bytes().hex())
 PY
 )"
 openssl rand -out "$CRED_SECRET" 32
-tpm2_makecredential -G rsa -u "$EK_PUB" -s "$CRED_SECRET" -n "$AK_NAME_HEX" -o "$CRED_BLOB"
+TPM2TOOLS_TCTI=none tpm2_makecredential -G rsa -u "$EK_PUB" -s "$CRED_SECRET" -n "$AK_NAME_HEX" -o "$CRED_BLOB"
 tpm2_startauthsession --policy-session -S "$SESSION" >/dev/null
 tpm2_policysecret -S "$SESSION" -c e >/dev/null
 tpm2_activatecredential -c "$AK_CTX" -C "$EK_CTX" -i "$CRED_BLOB" \
@@ -134,6 +134,8 @@ tpm2_activatecredential -c "$AK_CTX" -C "$EK_CTX" -i "$CRED_BLOB" \
 tpm2_flushcontext "$SESSION" >/dev/null
 cmp -s "$CRED_SECRET" "$ACTIVATED_SECRET" || fail "credential activation secret mismatch"
 pass "MakeCredential/ActivateCredential binds AK to the EK TPM"
+tpm2_flushcontext "$EK_CTX" >/dev/null
+pass "EK transient handle released after credential activation"
 
 # Second software TPM: a credential created for TPM 1 must not activate with
 # a different EK and AK on TPM 2.
