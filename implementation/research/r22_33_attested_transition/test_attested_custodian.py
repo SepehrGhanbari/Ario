@@ -139,16 +139,18 @@ class AttestedCustodianTests(unittest.TestCase):
         ak_public_area = b"\x00\x01\x00\x0b" + ak_attrs.to_bytes(4, "big") + b"ak-public-area"
         storage_name = storage_public_area[2:4] + hashlib.sha256(storage_public_area).digest()
         ak_name = ak_public_area[2:4] + hashlib.sha256(ak_public_area).digest()
-        ak_qualified_name = b"\\x00\\x0b" + hashlib.sha256(b"synthetic AK qualified name").digest()
+        ak_qualified_name = b"\x00\x0b" + hashlib.sha256(b"synthetic AK qualified name").digest()
         nv_index_handle = 0x01500020
         nv_name_alg = 0x000B
         nv_attributes = 0x20060006
         nv_data_size = 32
         nv_public_area = (
             struct.pack(">IHI", nv_index_handle, nv_name_alg, nv_attributes)
-            + b"\\x00\\x00"
+            + b"\x00\x00"
             + struct.pack(">H", nv_data_size)
         )
+        assert ak_qualified_name[:2] == b"\x00\x0b"
+        assert nv_public_area[10:12] == b"\x00\x00"
         nv_index_name = struct.pack(">H", nv_name_alg) + hashlib.sha256(nv_public_area).digest()
         storage_root = digest(storage_name)
         nv_contents = bytes.fromhex(storage_root)
@@ -565,7 +567,7 @@ class AttestedCustodianTests(unittest.TestCase):
 
     def test_nv_cerification_signer_must_be_the_receipt_ak_qualified_name(self):
         def mutate(receipt):
-            other = b"\\x00\\x0b" + hashlib.sha256(b"different AK qualified name").digest()
+            other = b"\x00\x0b" + hashlib.sha256(b"different AK qualified name").digest()
             receipt["nv_qualified_signer_b64"] = b64(other)
             receipt["evidence_manifest"]["nv_qualified_signer_sha256"] = digest(other)
             receipt["evidence_bundle_sha256"] = digest(canonical(receipt["evidence_manifest"]))
