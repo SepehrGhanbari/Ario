@@ -27,11 +27,11 @@ The encrypted private key is read locally and never copied into the output direc
 
 Install the dependency if needed:
 
-    py -3 -m pip install cryptography==46.0.4
+    python -m pip install cryptography==46.0.4
 
 From the repository root, run:
 
-    py -3 implementation/research/markovian_test_log_v0_1/markovian_test_log.py prepare
+    python implementation/research/markovian_test_log_v0_1/markovian_test_log.py prepare
 
 This reads the existing encrypted research key at its default path and creates:
 - \`%USERPROFILE%\\Ario-Markovian-Test-v1\\\`
@@ -41,11 +41,11 @@ The command prints the exact vkey line and public checkpoint hashes. It sends no
 
 Verify offline:
 
-    py -3 implementation/research/markovian_test_log_v0_1/markovian_test_log.py verify
+    python implementation/research/markovian_test_log_v0_1/markovian_test_log.py verify
 
 Append a second synthetic leaf only after the first checkpoint has been published and Markovian has cosigned it:
 
-    py -3 implementation/research/markovian_test_log_v0_1/markovian_test_log.py append
+    python implementation/research/markovian_test_log_v0_1/markovian_test_log.py append
 
 The append command signs a larger checkpoint and keeps the previous checkpoint in the local history folder. It sends no network request.
 
@@ -57,7 +57,7 @@ The append command signs a larger checkpoint and keeps the previous checkpoint i
 4. Wait for Colin/Markovian to confirm that the origin/key is manually pinned.
 5. Only then run:
 
-       py -3 implementation/research/markovian_test_log_v0_1/markovian_test_log.py submit
+       python implementation/research/markovian_test_log_v0_1/markovian_test_log.py submit
 
 The submit command first reads the witness's public checkpoint. It checks the witness cosignature against the operator-published Markovian witness vkey, checks that the witness's current root is a prefix of the local log, computes the RFC 6962 consistency proof, and sends one \`add-checkpoint\` POST. It does not retry automatically. A 404 is reported as \`HOLD_ORIGIN_NOT_PINNED_BY_MARKOVIAN\`; a 409 requires a fresh manual review rather than blind retry.
 
@@ -79,6 +79,6 @@ A cosignature means the witness checked the checkpoint signature and append-only
 
 From the repository root:
 
-    py -3 -m pytest -q implementation/tests/test_markovian_test_log_v0_1.py
+    python -m pytest -q implementation/tests/test_markovian_test_log_v0_1.py
 
 No live network request, Markovian submission, Kladje request, real Ario signer key, personal memory, or production state is used by tests.
