@@ -41,6 +41,13 @@ class Reader:
         return self.take(size)
 
 
+def tpm2b_contents(path: str) -> bytes:
+    data = Path(path).read_bytes()
+    if len(data) >= 2 and int.from_bytes(data[:2], "big") == len(data) - 2:
+        return data[2:]
+    return data
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", choices=("quote", "creation"), required=True)
@@ -73,7 +80,7 @@ def main() -> int:
             raise ValueError(f"wrong attestation type: 0x{attest_type:04x}")
         if extra_data != bytes.fromhex(args.nonce):
             raise ValueError("qualifyingData does not match the fresh challenge")
-        if qualified_signer != Path(args.ak_qualified_name).read_bytes():
+        if qualified_signer != tpm2b_contents(args.ak_qualified_name):
             raise ValueError("qualifiedSigner does not match the enrolled AK")
 
         if args.mode == "creation":
@@ -81,9 +88,9 @@ def main() -> int:
                 raise ValueError("creation mode requires object Name and creation hash")
             object_name = reader.tpm2b()
             creation_hash = reader.tpm2b()
-            if object_name != Path(args.object_name).read_bytes():
+            if object_name != tpm2b_contents(args.object_name):
                 raise ValueError("attested object Name mismatch")
-            if creation_hash != Path(args.creation_hash).read_bytes():
+            if creation_hash != tpm2b_contents(args.creation_hash):
                 raise ValueError("attested creation hash mismatch")
             if reader.offset != len(reader.data):
                 raise ValueError("unexpected trailing data in creation attestation")
