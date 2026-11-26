@@ -21,8 +21,8 @@ const (
  logURL="https://test.sigsum.org/barreleye"
  logPublicKeyHex="4644af2abd40f4895a003bca350f9d5912ab301a49c77f13e5b6d905c20a5fe6"
  logKeyHash="4e89cc51651f0d95f3c6127c15e1a42e3ddf7046c5b17b752689c402e773bb4d"
- retainedSize uint64=282811
- retainedRoot="7f5a1fbf808e3a63652c0817a568c50b9965af19d4fd0faf98fe426166b90ff7"
+ retainedSize uint64=282812
+ retainedRoot="77a9fa7f729892730a46fb7219bbe44859bc7a99fac28ff413be5ad6b0f03629"
 )
 const policyText = "log 4644af2abd40f4895a003bca350f9d5912ab301a49c77f13e5b6d905c20a5fe6 https://test.sigsum.org/barreleye\n"+
 "witness poc.sigsum.org/nisse 1c25f8a44c635457e2e391d1efbca7d4c2951a0aef06225a881e46b98962ac6c\n"+

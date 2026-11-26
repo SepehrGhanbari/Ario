@@ -9,7 +9,7 @@ func TestExternalOnlyPolicyRequiresTwoIndependentWitnesses(t *testing.T){
   if got:=policyQuorum(tc.group,tc.external);got!=tc.want{t.Fatalf("group=%v external=%d got=%v want=%v",tc.group,tc.external,got,tc.want)}
  }
 }
-func TestRollbackBelowIndependentFloorHolds(t *testing.T){if got:=floorDecision(282811,"root",282810,"root");got!="HOLD_BELOW_EXTERNAL_FLOOR"{t.Fatal(got)}}
+func TestRollbackBelowIndependentFloorHolds(t *testing.T){if got:=floorDecision(282812,"root",282811,"root");got!="HOLD_BELOW_EXTERNAL_FLOOR"{t.Fatal(got)}}
 func TestSameSizeDifferentRootHolds(t *testing.T){if got:=floorDecision(282811,"root-a",282811,"root-b");got!="HOLD_SAME_SIZE_ROOT_CONFLICT"{t.Fatal(got)}}
 func TestSameSizeSameRootNotClassifiedAsRollback(t *testing.T){if got:=floorDecision(282811,"root",282811,"root");got!="SIZE_AND_ROOT_NOT_BELOW_FLOOR"{t.Fatal(got)}}
 func TestOneExternalWitnessIsNotAQuorum(t *testing.T){if policyQuorum(false,1){t.Fatal("one external witness must not pass")}}
@@ -23,3 +23,5 @@ func TestParseRemoraStatusCheckpoint(t *testing.T) {
 func TestParseRemoraStatusRejectsMissingLog(t *testing.T) {
  if _,_,err:=parseRemoraStatus([]byte("# litewitness\n"));err==nil{t.Fatal("expected missing log reject")}
 }
+
+func TestPreviousRepoSnapshotRollbackAgainstNewFloor(t *testing.T){if got:=floorDecision(282813,"root-new",282812,"root-old");got!="HOLD_BELOW_EXTERNAL_FLOOR"{t.Fatal(got)}}
