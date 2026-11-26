@@ -96,3 +96,8 @@ Six regression tests cover duplicate keys in anchor/request/journal, noncanonica
 Dedicated CI [run 45854444069](https://github.com/SepehrGhanbari/Ario/actions/runs/45854444069), exact tested head `0229727e6b297a1fd13e598f79940c32c2524ca0`, completed SUCCESS: **18/18 tests PASS** on CPython 3.13.18 / OpenSSL 3.0.13. Evidence artifact `r22-31-custodian-monotonic-state-evidence`, ID `15135810639`, 702 bytes.
 
 The same-domain valid-prefix rollback RED remains unresolved by design; no local parser change can create an independent floor. No Sigsum call, new witness, external publication, real key, TPM, trust activation, production promotion, or merge occurred.
+
+
+## R22.33 descendant compatibility note — 2026-11-26
+
+The historical R22.31 caller-supplied gate has been moved unchanged to `custodian_state_legacy.py` in the R22.33 descendant branch. The existing R22.31 tests now explicitly target that legacy path so the original 18-test state-machine result remains reproducible. The default `custodian_state.py` path is replaced by a strict wrapper that rejects requests unless they carry a custodian-signed, unexpired challenge and a receipt signed by a verifier key pinned by a custodian-signed pin file. The legacy implementation is retained for comparison only; it is not the default entrypoint.
