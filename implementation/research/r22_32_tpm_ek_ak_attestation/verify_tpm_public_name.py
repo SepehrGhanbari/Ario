@@ -30,15 +30,21 @@ def main() -> int:
     if args.require_storage_primary:
         if public_type != 0x0023:
             raise SystemExit(f"REJECT public type 0x{public_type:04x}; expected ECC")
-        required = (1 << 1) | (1 << 4) | (1 << 5)
+        required = (1 << 1) | (1 << 4) | (1 << 5) | (1 << 16) | (1 << 17)
+        forbidden = (1 << 18)
         if attributes & required != required:
-            raise SystemExit("REJECT storage primary lacks fixedTPM/fixedParent/sensitiveDataOrigin")
+            raise SystemExit("REJECT storage primary lacks fixedTPM/fixedParent/sensitiveDataOrigin/restricted/decrypt attributes")
+        if attributes & forbidden:
+            raise SystemExit("REJECT storage primary must not have the sign attribute")
     if args.require_ak:
         if public_type != 0x0001:
             raise SystemExit(f"REJECT public type 0x{public_type:04x}; expected RSA AK")
         required = (1 << 1) | (1 << 4) | (1 << 5) | (1 << 16) | (1 << 18)
+        forbidden = (1 << 17)
         if attributes & required != required:
             raise SystemExit("REJECT AK lacks fixedTPM/fixedParent/sensitiveDataOrigin/restricted/sign attributes")
+        if attributes & forbidden:
+            raise SystemExit("REJECT AK must not have the decrypt attribute")
 
     expected_name = raw[2:4] + hashlib.sha256(raw).digest()
     if actual_name != expected_name:

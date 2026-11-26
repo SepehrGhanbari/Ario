@@ -1,11 +1,16 @@
 name: R22.32 TPM EK AK quote and object certification (research)
 on:
   push:
-    branches: [research/r22-32-tpm-ek-ak-attestation-stacked-2026-11-26]
+    branches: [research/r22-32-tpm-ek-ak-attestation-*, research/r22-33-attested-custodian-transition-*]
     paths:
       - .github/workflows/r22-32-tpm-ek-ak-attestation.yml
       - implementation/research/r22_32_tpm_ek_ak_attestation/*.py
       - implementation/research/r22_32_tpm_ek_ak_attestation/run_swtpm_attestation.sh
+      - implementation/research/r22_31_custodian_monotonic_state/custodian_state_legacy.py
+      - implementation/research/r22_33_attested_transition/attested_custodian.py
+      - implementation/research/r22_33_attested_transition/issue_challenge.py
+      - implementation/research/r22_33_attested_transition/verify_r22_32_evidence_bundle.py
+      - implementation/research/r22_33_attested_transition/test_verify_r22_32_evidence_bundle.py
 permissions:
   contents: read
 jobs:
@@ -22,14 +27,61 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends tpm2-tools swtpm swtpm-tools openssl
       - name: Compile verifier and run EK/AK/Quote/Certify adversarial matrix
+        env:
+          ARIO_R22_32_EVIDENCE_DIR: ${{ runner.temp }}/r22-32-raw-evidence
+          ARIO_R22_33_CI_CUSTODIAN_PRIVATE_KEY_PATH: ${{ runner.temp }}/r22-33-ci-custodian.key
         run: |
           set -euo pipefail
-          python3 -m py_compile implementation/research/r22_32_tpm_ek_ak_attestation/verify_attestation.py implementation/research/r22_32_tpm_ek_ak_attestation/verify_nv_attestation.py implementation/research/r22_32_tpm_ek_ak_attestation/verify_tpm_public_name.py
+          python3 -m py_compile implementation/research/r22_32_tpm_ek_ak_attestation/verify_attestation.py implementation/research/r22_32_tpm_ek_ak_attestation/verify_nv_attestation.py \
+            implementation/research/r22_32_tpm_ek_ak_attestation/verify_tpm_public_name.py \
+            implementation/research/r22_33_attested_transition/attested_custodian.py \
+            implementation/research/r22_33_attested_transition/verify_r22_32_evidence_bundle.py \
+            implementation/research/r22_33_attested_transition/test_verify_r22_32_evidence_bundle.py
           bash implementation/research/r22_32_tpm_ek_ak_attestation/run_swtpm_attestation.sh 2>&1 | tee "$RUNNER_TEMP/r22-32-tpm-attestation.log"
+      - name: Verify R22.33 domain-separated challenge nonce derivation
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib
+          import os
+          from pathlib import Path
+          root = Path(os.environ["RUNNER_TEMP"]) / "r22-32-raw-evidence"
+          challenge = bytes.fromhex((root / "custodian-challenge-nonce.txt").read_text().strip())
+          checks = {
+              "NV-ATTESTATION": "nv-nonce.txt",
+              "CERTIFY-CREATION": "creation-nonce.txt",
+              "PCR-QUOTE": "quote-nonce.txt",
+          }
+          for domain, filename in checks.items():
+              tag = f"ARIO-R22.33-{domain}-NONCE-V1".encode("ascii") + b"\x00"
+              expected = hashlib.sha256(tag + challenge).hexdigest()
+              actual = (root / filename).read_text().strip()
+              if actual != expected:
+                  raise SystemExit(f"REJECT nonce derivation mismatch: {domain}")
+          print("PASS NV_Certify, CertifyCreation and PCR Quote nonces bind to the per-run challenge nonce")
+          PY
+      - name: Independently verify exported TPM evidence bundle
+        env:
+          ARIO_R22_32_EVIDENCE_DIR: ${{ runner.temp }}/r22-32-raw-evidence
+        run: |
+          set -euo pipefail
+          python3 implementation/research/r22_33_attested_transition/verify_r22_32_evidence_bundle.py \
+            --bundle-dir "$ARIO_R22_32_EVIDENCE_DIR" \
+            --output "$RUNNER_TEMP/r22-32-offline-verification-summary.json"
+          cat "$RUNNER_TEMP/r22-32-offline-verification-summary.json"
+      - name: Run offline verifier tamper matrix
+        env:
+          ARIO_R22_32_EVIDENCE_DIR: ${{ runner.temp }}/r22-32-raw-evidence
+        run: |
+          set -euo pipefail
+          python3 implementation/research/r22_33_attested_transition/test_verify_r22_32_evidence_bundle.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: r22-32-tpm-attestation-evidence
-          path: ${{ runner.temp }}/r22-32-tpm-attestation.log
+          path: |
+            ${{ runner.temp }}/r22-32-tpm-attestation.log
+            ${{ runner.temp }}/r22-32-offline-verification-summary.json
+            ${{ runner.temp }}/r22-32-raw-evidence/**
           if-no-files-found: warn
           retention-days: 30

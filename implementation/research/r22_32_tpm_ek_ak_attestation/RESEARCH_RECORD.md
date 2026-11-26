@@ -2,7 +2,7 @@
 
 **RESEARCH_ONLY / SOFTWARE_TPM / SYNTHETIC_LAB_CA / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTION / NO_MERGE.**
 
-Parent: R22.31 PR #411, exact head `1dba8ae472d0a0c8d02ab575eb62878fa705f897`.
+Parent: R22.31 PR #411, exact head `39ebaf8c5f043471f09fa56eeedce673ee00085d`.
 
 ## Research question
 
@@ -125,19 +125,29 @@ This remains software-TPM interoperability evidence, not proof of physical-devic
 - **Correction to prior workflow note:** the earlier statement that the branch-local workflow could not run was premature. It did trigger on the exact branch head; run 45857768346 is the evidence. The earlier NOT_RUN statement is superseded by these run results.
 
 
-### 2026-11-26 — R22.32 NV_Certify end-to-end pass and authPolicy fixture correction
-
-- The later exact-head software-TPM run **45858729285** (job **140043831695**, head `a34473339a0ac6540e9e49d1ab6454ef27b38a12`) completed **30/30 PASS**. It includes the NV public Name check, NV_Certify attestation, content/challenge/signer negative controls, and the preceding EK/AK, CertifyCreation and PCR Quote checks. Artifact: `r22-32-tpm-attestation-evidence` (ID **15137281473**; summary evidence only, not a portable raw-TPM bundle). This supersedes the earlier pending-NV_Certify note above.
-- A later generic regression on head `20131a2dc50a6ee7844b34b65f64695f3ced2ff5` exposed one test-fixture defect: `public_yaml()` omitted the authorization-policy line, so the non-empty-policy test's `.replace()` was a no-op. The verifier's non-empty-policy rejection was not disproven; the test never supplied that input.
-- Corrected the test to insert a non-empty 32-byte `authorization policy` before the `size` field and assert that the field is present before invoking the parser.
-- Final generic regression head `09e0c224b9e25a2a2958d2fc52f70b4e4e9e0ddb`: M0 **2111 PASS**; Windows and Python 3.14 differential advisories PASS; manifest/restore/generator matrix PASS; self-audit readback PASS. Run **45859336248** (M0/differential) and **45859336333** (matrix).
-- Scope remains software TPM and synthetic CA only. No physical TPM, OEM trust, independent administrator, external rollback floor, real key, trust activation, production or merge is established.
-
-
 ## AK TPMT_PUBLIC identity extension — 2026-11-26
 
-The harness now reads the persistent RSA AK public area back from the TPM, captures its raw TPMT_PUBLIC and Qualified Name, independently recomputes the AK Name, and checks fixedTPM, fixedParent, sensitiveDataOrigin, restricted and signEncrypt attributes. This closes the earlier asymmetry where the storage-primary Name was recomputed but the AK Name was only captured from tpm2_createak output.
+The R22.32 harness now also reads the persistent AK public area back from the TPM, captures its raw TPMT_PUBLIC and Qualified Name, independently recomputes the AK Name, and checks the expected restricted RSA signing attributes (fixedTPM, fixedParent, sensitiveDataOrigin, restricted, signEncrypt). This closes the earlier asymmetry where the storage-primary Name was recomputed but the AK Name was only captured from tpm2_createak output.
 
-Dedicated R22.32 workflow [run 45858737039](https://github.com/SepehrGhanbari/Ario/actions/runs/45858737039), source head `1fda8008beaa6355344f90404fb45531a9f0fd73`, **SUCCESS: 36 PASS lines**. The subsequent exact-head Repository Implementation Regression on branch head `6b2344c52d26810bc7774b98b149cc3266616b79` [run 45859727760](https://github.com/SepehrGhanbari/Ario/actions/runs/45859727760) also succeeded, including the NV attestation parser tests. Advisory self-audit [run 45859727982](https://github.com/SepehrGhanbari/Ario/actions/runs/45859727982) and Published TXT Restore Security [run 45859727974](https://github.com/SepehrGhanbari/Ario/actions/runs/45859727974) succeeded on the same head.
+Dedicated R22.32 workflow on the R22.33 integration branch: [run 45857398519](https://github.com/SepehrGhanbari/Ario/actions/runs/45857398519), source head `6050263e6075415d5261b876c61a2d9cf5c8a30f`, **SUCCESS: 26/26 PASS**. Environment: Ubuntu 24.04; tpm2-tools 5.6-1build4; swtpm 0.7.3-0ubuntu5.24.04.1; OpenSSL 3.0.13. Evidence artifact [ID 15135289752](https://github.com/SepehrGhanbari/Ario/actions/runs/45857398519/artifacts/15135289752).
 
-This remains software-TPM evidence with a synthetic lab CA, not OEM EK or physical hardware attestation. The AK public-area check strengthens Name binding but does not establish hardware non-extractability, manufacturer identity, independent custody, firmware trust or rollback resistance.
+This is still software-TPM evidence with a synthetic lab CA, not OEM EK or physical hardware attestation. The AK public area check strengthens the Name binding but does not establish hardware non-extractability, manufacturer identity, independent custody, firmware trust, or rollback resistance.
+
+
+## Raw evidence export and cross-stage nonce derivation — 2026-11-26
+
+The R22.32 harness now optionally exports a public-only evidence bundle with a SHA-256 manifest. It includes the synthetic EK chain and SPKI, AK public key/Name/Qualified Name/TPMT_PUBLIC, storage Name/Qualified Name/TPMT_PUBLIC and creation data/hash, NV public metadata and exact contents, NV_Certify attestation/signature, CertifyCreation attestation/signature, PCR 23 before/after values, Quote attestation/signature, and the nonce files. Private keys, TPM state, transient contexts and activation secrets are not exported.
+
+The harness accepts an optional 256-bit R22.33 challenge nonce and derives separate NV_Certify, CertifyCreation and PCR Quote nonces with domain separation. Dedicated CI [run 45860968609](https://github.com/SepehrGhanbari/Ario/actions/runs/45860968609), source commit `f282106823536c0cc3b40c74c1782459e35fce1b`, **SUCCESS: 41 PASS assertions**, including a separate cross-stage check that independently recomputes all three nonce derivations from the exported per-run nonce. Evidence artifact [ID 15138756624](https://github.com/SepehrGhanbari/Ario/actions/runs/45860968609/artifacts/15138756624).
+
+The per-run nonce in this standalone R22.32 workflow is generated by CI and is **not** a custodian-signed challenge. This proves the domain-separation contract and preserves the raw evidence for later verification; it does not yet prove end-to-end issuance by issue_challenge.py or a verifier-signed receipt. Software TPM and synthetic EK CA limitations remain.
+
+
+## 2026-11-26 — R22.32 signed challenge and AK/EK activation evidence (supersedes earlier export-boundary note)
+
+- The earlier raw-export note said activation secrets were not exported. Correction: private keys and TPM state remain excluded, but the **one-time 32-byte ActivateCredential result** is now included as `ak-activation-result.bin` in the research-only evidence bundle so a verifier can compare its SHA-256 to a commitment in the signed custodian challenge.
+- The harness generates this one-time secret before challenge issuance, binds its SHA-256 into the custodian-signed challenge after the EK SPKI is known, and only then creates the AK and performs MakeCredential/ActivateCredential. The verifier rejects a missing, substituted or mismatching activation result.
+- The signed challenge also binds the fresh challenge nonce and the custodian's prior root/epoch/head. NV_Certify, CertifyCreation and PCR Quote use separate domain-derived nonces from that same signed challenge.
+- Dedicated R22.32 workflow [run 45863806014](https://github.com/SepehrGhanbari/Ario/actions/runs/45863806014): **42 PASS assertions**. Evidence artifact [ID 15138639655](https://github.com/SepehrGhanbari/Ario/actions/runs/45863806014/artifacts/15138639655).
+- Full R22.32-to-R22.33 integration [run 45864860441](https://github.com/SepehrGhanbari/Ario/actions/runs/45864860441): **52/52 tests**, **18/18** preserved R22.31 tests, and a signed custodian transition bundle. Artifact [ID 15139537522](https://github.com/SepehrGhanbari/Ario/actions/runs/45864860441/artifacts/15139537522).
+- The activation result is a random, one-use CI challenge value, not a private key or production credential. A production verifier must retain its expected secret privately and compare the returned result internally rather than exporting it. Software TPM, synthetic lab CA and same-runner key custody limitations remain.

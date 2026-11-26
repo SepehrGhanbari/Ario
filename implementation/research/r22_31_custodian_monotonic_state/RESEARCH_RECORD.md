@@ -159,3 +159,7 @@ The owner-provided current GitHub Settings → Collaborators screenshot shows **
 This is not a cryptographic rollback fix. The expected-RED valid-prefix rollback test remains as a documented boundary for a different threat: compromise of the owner's GitHub account/device or an automated credential/app with write authority. One GitHub App installation is visible on the owner's account, but its effective repository permissions were not exposed in the available installation metadata; it is not evidence of a second human administrator and remains a separate machine-credential audit item only if that threat is in scope.
 
 No collaborator removal, ruleset change, key rotation, new witness test, merge, trust activation, or production action was performed.
+
+## R22.33 descendant compatibility note — 2026-11-26
+
+The historical R22.31 caller-supplied gate has been moved unchanged to `custodian_state_legacy.py` in the R22.33 descendant branch. The existing R22.31 tests now explicitly target that legacy path so the original 18-test state-machine result remains reproducible. The default `custodian_state.py` path is replaced by a strict wrapper that rejects requests unless they carry a custodian-signed, unexpired challenge and a receipt signed by a verifier key pinned by a custodian-signed pin file. The legacy implementation is retained for comparison only; it is not the default entrypoint.

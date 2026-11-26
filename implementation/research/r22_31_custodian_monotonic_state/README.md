@@ -126,3 +126,7 @@ The owner-provided current GitHub Settings → Collaborators screenshot shows **
 This is not a cryptographic rollback fix. The expected-RED valid-prefix rollback test remains as a documented boundary for a different threat: compromise of the owner's GitHub account/device or an automated credential/app with write authority. One GitHub App installation is visible on the owner's account, but its effective repository permissions were not exposed in the available installation metadata; it is not evidence of a second human administrator and remains a separate machine-credential audit item only if that threat is in scope.
 
 No collaborator removal, ruleset change, key rotation, new witness test, merge, trust activation, or production action was performed.
+
+## R22.33 default-entrypoint change
+
+The original R22.31 CLI is preserved as `custodian_state_legacy.py` so its 18-test state-machine evidence remains reproducible. The default `custodian_state.py` entrypoint in the R22.33 descendant now delegates to the strict attested wrapper. A bare caller-supplied request is rejected by the default entrypoint; only the explicitly named legacy script accepts the original unattested request schema. See `implementation/research/r22_33_attested_transition/RESEARCH_RECORD.md` for the verifier-pin, signed challenge, TPM Name derivation, evidence receipt, and remaining limitations.

@@ -22,7 +22,7 @@ jobs:
         run: |
           set -euo pipefail
           openssl version
-          python -m py_compile implementation/research/r22_31_custodian_monotonic_state/custodian_state.py implementation/research/r22_31_custodian_monotonic_state/test_custodian_state.py
+          python -m py_compile implementation/research/r22_31_custodian_monotonic_state/custodian_state.py implementation/research/r22_31_custodian_monotonic_state/custodian_state_legacy.py implementation/research/r22_31_custodian_monotonic_state/test_custodian_state.py
       - name: Run monotonic state, crash, tamper and concurrency tests
         run: |
           set -euo pipefail
