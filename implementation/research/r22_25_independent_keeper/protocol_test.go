@@ -4,8 +4,6 @@ import (
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"sync"
@@ -169,4 +167,25 @@ func TestReceiptDigestAndPriorFloor(t *testing.T){
 	got,e:=f.recover(t,&Floor{Generation:3,ReceiptSHA256:h});if e!=nil{t.Fatal(e)}
 	if got.ReceiptSHA256!=h{t.Fatal("receipt digest mismatch")}
 	if _,e=f.recover(t,&Floor{Generation:4,ReceiptSHA256:h});e==nil{t.Fatal("accepted lower generation")}
+}
+
+func TestPriorFloorRejectsForkAboveFloor(t *testing.T){
+ f:=newFixture(t)
+ // A validly signed alternative generation-2 branch is not the locally
+ // retained generation-2 receipt, even if a later generation follows it.
+ r1:=f.chain[0]
+ cp:=f.cps[1];cp.TargetRoot=hex64("fork-root-30");cp.PreviousReceiptSHA256,_=receiptHash(r1);cp.MatchManifestSHA256=matchManifest(cp.Matches)
+ raw,_:=canonicalCheckpoint(cp)
+ proof:=digest([]byte(transitionKey(r1,Receipt{TargetSize:cp.TargetSize,TargetRoot:cp.TargetRoot})))
+ f.trans.accepted[proof]=true
+ r2:=Receipt{Profile:keeperProfile,Scope:cp.Scope,Generation:2,PreviousReceiptSHA256:cp.PreviousReceiptSHA256,CheckpointSHA256:digest(raw),CheckpointBytes:uint64(len(raw)),Cursor:cp.Cursor,TargetSize:cp.TargetSize,TargetRoot:cp.TargetRoot,MatchManifestSHA256:cp.MatchManifestSHA256,TransitionProofSHA256:proof,KeyID:"synthetic-keeper-key"}
+ r2,_=signReceipt(r2,f.priv);h2,_:=receiptHash(r2)
+ cp3:=f.cps[2];cp3.PreviousReceiptSHA256=h2
+ raw3,_:=canonicalCheckpoint(cp3)
+ proof3:=digest([]byte(transitionKey(r2,Receipt{TargetSize:cp3.TargetSize,TargetRoot:cp3.TargetRoot})))
+ r3:=Receipt{Profile:keeperProfile,Scope:cp3.Scope,Generation:3,PreviousReceiptSHA256:h2,CheckpointSHA256:digest(raw3),CheckpointBytes:uint64(len(raw3)),Cursor:cp3.Cursor,TargetSize:cp3.TargetSize,TargetRoot:cp3.TargetRoot,MatchManifestSHA256:cp3.MatchManifestSHA256,TransitionProofSHA256:proof3,KeyID:"synthetic-keeper-key"}
+ r3,_=signReceipt(r3,f.priv);f.trans.accepted[proof3]=true
+ f.cust.objects[r2.CheckpointSHA256]=raw;f.cust.objects[r3.CheckpointSHA256]=raw3;f.cust.latest=r3;f.wit.chain=[]Receipt{r1,r2,r3}
+ floorHash,_:=receiptHash(f.chain[1])
+ if _,e:=f.recover(t,&Floor{Generation:2,ReceiptSHA256:floorHash});e==nil{t.Fatal("accepted alternate chain above retained generation floor")}
 }
