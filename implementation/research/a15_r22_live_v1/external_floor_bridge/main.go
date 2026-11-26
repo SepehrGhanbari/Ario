@@ -151,7 +151,7 @@ func externalPolicy() string {
  "witness remora "+witnessKeys["remora"]+"\n"+
  "witness stagemole "+witnessKeys["stagemole"]+"\n"+
  "witness tillitis "+witnessKeys["tillitis"]+"\n"+
- "group external 2 geomys remora stagemole tillitis\n"+
+ "group external 1 geomys stagemole tillitis\n"+
  "group required 2 remora external\n"+
  "quorum required\n"
 }
