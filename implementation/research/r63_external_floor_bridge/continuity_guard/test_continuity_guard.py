@@ -155,4 +155,37 @@ class Continuity(unittest.TestCase):
             os._exit(99)
         _,st=os.waitpid(pid,0); self.assertEqual(os.waitstatus_to_exitcode(st),77); self.assertEqual(self.w.status(),ACTIVE)
 
+    def test_31_duplicate_anchor_signing_key_rejected(self):
+        duplicate=Anchor('a4',self.root/'a4-duplicate-key.db',self.anchors[0].key,self.operators['a4'])
+        with self.assertRaises(ContinuityError):
+            AnchorQuorum([self.anchors[0],self.anchors[1],self.anchors[2],duplicate])
+    def test_32_duplicate_anchor_enrollment_key_rejected(self):
+        duplicate=Anchor('a4',self.root/'a4-duplicate-operator.db',self.anchors[3].key,self.operators['a1'])
+        with self.assertRaises(ContinuityError):
+            AnchorQuorum([self.anchors[0],self.anchors[1],self.anchors[2],duplicate])
+    def test_33_duplicate_anchor_store_path_rejected(self):
+        duplicate=Anchor('a4',self.anchors[0].path,self.anchors[3].key,self.operators['a4'])
+        with self.assertRaises(ContinuityError):
+            AnchorQuorum([self.anchors[0],self.anchors[1],self.anchors[2],duplicate])
+    def test_34_duplicate_anchor_identity_rejected(self):
+        duplicate=Anchor('a3',self.root/'a3-duplicate-name.db',Ed25519PrivateKey.generate(),self.operators['a4'])
+        with self.assertRaises(ContinuityError):
+            AnchorQuorum([self.anchors[0],self.anchors[1],self.anchors[2],duplicate])
+    def test_35_one_replayed_nonce_response_is_not_counted(self):
+        old_nonce=secrets.token_hex(32); replay=self.anchors[0].read(self.identity,old_nonce)
+        self.anchors[0].read=lambda identity,nonce,replay=replay: replay
+        cp,reads,init_count=self.q.latest(self.identity,secrets.token_hex(32))
+        self.assertEqual(cp,self.genesis_cp); self.assertEqual(len(reads),3); self.assertEqual(init_count,3)
+    def test_36_two_replayed_nonce_responses_cannot_form_quorum(self):
+        old_nonce=secrets.token_hex(32)
+        first=self.anchors[0].read(self.identity,old_nonce); second=self.anchors[1].read(self.identity,old_nonce)
+        self.anchors[0].read=lambda identity,nonce,replay=first: replay
+        self.anchors[1].read=lambda identity,nonce,replay=second: replay
+        with self.assertRaises(ContinuityError):
+            self.q.latest(self.identity,secrets.token_hex(32))
+    def test_37_one_rolled_back_anchor_is_outvoted_by_three_current(self):
+        backup=self.root/'a1-genesis.db'; shutil.copy2(self.anchors[0].path,backup)
+        self.advance(); shutil.copy2(backup,self.anchors[0].path)
+        self.assertEqual(self.w.status(),ACTIVE)
+
 if __name__=='__main__': unittest.main(verbosity=2)
