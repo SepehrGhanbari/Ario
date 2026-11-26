@@ -238,4 +238,30 @@ class Continuity(unittest.TestCase):
         with self.assertRaises(ContinuityError):
             verify_identity_proof(raw,self.q.pinned,nonce,self.identity,self.policy,pub(Ed25519PrivateKey.generate()))
 
+    def test_46_independent_verifier_accepts_exact_three_of_four_proof(self):
+        nonce=secrets.token_hex(32); raw=self.w.read_identity_proof(nonce,available={'a1','a2','a3'})
+        cp,names=verify_identity_proof(raw,self.q.pinned,nonce,self.identity,self.policy,self.w.witness_pub)
+        self.assertEqual(cp,self.genesis_cp); self.assertEqual(len(names),3)
+    def test_47_independent_verifier_rejects_bad_anchor_commit_signature(self):
+        nonce=secrets.token_hex(32); obj=decode(self.w.read_identity_proof(nonce)); body=obj['body']
+        response=decode(body['anchor_read_responses'][0].encode('ascii')); read=response['body']
+        anchor=next(a for a in self.anchors if a.name==read['anchor'])
+        read['commit_signature']='0'*128
+        response['signature']=sign(anchor.key,b'R63-ANCHOR-READ',canon(read))
+        body['anchor_read_responses'][0]=canon(response).decode('ascii')
+        forged=canon(dict(body=body,signature=sign(self.wkey,b'R63-WITNESS-CONTINUITY',canon(body))))
+        with self.assertRaises(ContinuityError):
+            verify_identity_proof(forged,self.q.pinned,nonce,self.identity,self.policy,self.w.witness_pub)
+    def test_48_independent_verifier_requires_three_initialization_markers(self):
+        nonce=secrets.token_hex(32); obj=decode(self.w.read_identity_proof(nonce)); body=obj['body']
+        for wire in body['anchor_read_responses'][:2]:
+            response=decode(wire.encode('ascii')); read=response['body']
+            anchor=next(a for a in self.anchors if a.name==read['anchor'])
+            read['initialized']=False
+            response['signature']=sign(anchor.key,b'R63-ANCHOR-READ',canon(read))
+            body['anchor_read_responses'][body['anchor_read_responses'].index(wire)]=canon(response).decode('ascii')
+        forged=canon(dict(body=body,signature=sign(self.wkey,b'R63-WITNESS-CONTINUITY',canon(body))))
+        with self.assertRaises(ContinuityError):
+            verify_identity_proof(forged,self.q.pinned,nonce,self.identity,self.policy,self.w.witness_pub)
+
 if __name__=='__main__': unittest.main(verbosity=2)
