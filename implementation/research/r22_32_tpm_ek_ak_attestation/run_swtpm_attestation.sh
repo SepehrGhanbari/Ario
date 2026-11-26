@@ -174,7 +174,7 @@ anchor = {
     "head_sha256": sys.argv[3],
 }
 Path(sys.argv[4]).write_bytes(
-    (json.dumps(anchor, sort_keys=True, separators=(",", ":"), ensure_ascii=False) + "\n").encode("utf-8")
+    (json.dumps(anchor, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
 )
 PY
   openssl dgst -sha256 -sign "$CI_CUSTODIAN_PRIVATE" \
