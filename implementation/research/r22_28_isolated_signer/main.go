@@ -40,9 +40,14 @@ func peer(c *net.UnixConn)(uint32,error){raw,e:=c.SyscallConn();if e!=nil{return
 func handle(c *net.UnixConn,uid uint32,dir string,key ed25519.PrivateKey){
  defer c.Close();c.SetDeadline(time.Now().Add(2*time.Second))
  answer:=Reply{"HOLD",nil}
- if u,e:=peer(c);e==nil&&u==uid{
-  b,e:=io.ReadAll(io.LimitReader(c,8193));var q Request
-  if e==nil&&len(b)<=8192&&strict(b,&q)==nil{if r,e:=advance(dir,key,q);e==nil{answer=Reply{"SIGNED_TEST_ONLY",r}}}
+ // Read at most 8193 bytes with the existing deadline, even for an
+ // unauthorized peer, so a well-framed request gets a deterministic HOLD.
+ // No parse, state access or signature operation precedes peer authorization.
+ u,peerErr:=peer(c)
+ b,readErr:=io.ReadAll(io.LimitReader(c,8193))
+ if peerErr==nil&&u==uid&&readErr==nil&&len(b)<=8192{
+  var q Request
+  if strict(b,&q)==nil{if r,e:=advance(dir,key,q);e==nil{answer=Reply{"SIGNED_TEST_ONLY",r}}}
  }
  _,_=c.Write(enc(answer))
 }
