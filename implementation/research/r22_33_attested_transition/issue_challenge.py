@@ -57,6 +57,7 @@ def main() -> int:
                  "journal", "lock", "output", "signature"):
         parser.add_argument("--" + name, required=True, type=Path)
     parser.add_argument("--next-head-sha256", required=True)
+    parser.add_argument("--ak-activation-secret-sha256", required=True)
     parser.add_argument("--ttl-seconds", type=int, default=120)
     args = parser.parse_args()
 
@@ -64,6 +65,7 @@ def main() -> int:
         if not 30 <= args.ttl_seconds <= 300:
             raise legacy.GateError("CHALLENGE_TTL_OUT_OF_RANGE")
         legacy.validate_hash(args.next_head_sha256, "NEXT_HEAD_INVALID")
+        legacy.validate_hash(args.ak_activation_secret_sha256, "AK_ACTIVATION_SECRET_HASH_INVALID")
         if not custodian_keypair_matches(args.public_key, args.private_key):
             raise legacy.GateError("CUSTODIAN_KEYPAIR_MISMATCH")
         reject_aliases([
@@ -96,6 +98,7 @@ def main() -> int:
                 "next_epoch": state["epoch"] + 1,
                 "previous_head_sha256": state["head_sha256"],
                 "next_head_sha256": args.next_head_sha256,
+                "ak_activation_secret_sha256": args.ak_activation_secret_sha256,
                 "reason": "TPM_CLEAR_RECOVERY",
                 "policy_id": POLICY_ID,
                 "issued_at": issued_at,
