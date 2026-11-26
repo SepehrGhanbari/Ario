@@ -26,6 +26,7 @@ func validatePins(p Pins) {
 }
 func main() {
  a:=os.Args
+ if nextMode(a) {return}
  if len(a)==5&&a[1]=="init" {
   dir,id,gen:=a[2],a[3],a[4];if !validhash(gen){fail("genesis")}
   pub,key,e:=ed25519.GenerateKey(rand.Reader);check(e)

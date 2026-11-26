@@ -88,8 +88,8 @@ def validate_op(op, pins):
         "request_id", "payload_sha256"}, "operation schema")
     require(op["profile"] == PROFILE and op["identity"] == pins["identity"]
             and type(op["epoch"]) is int and op["epoch"] == 1
-            and type(op["generation"]) is int and op["generation"] == 1
-            and op["previous"] == pins["genesis"], "identity/epoch/generation/floor")
+            and type(op["generation"]) is int and 1 <= op["generation"] <= 64
+            and validhash(op["previous"]), "identity/epoch/generation/floor")
     require(isinstance(op["request_id"], str) and re.fullmatch(r"req-[0-9a-f]{32}", op["request_id"])
             and validhash(op["payload_sha256"]), "request binding")
     return hash_object(op)
@@ -117,27 +117,60 @@ def verify_approvals(base, approvals, op_hash):
                  "-in", str(scratch / "message"), "-sigfile", str(scratch / "signature")])
     require(seen == {"founder", "ario"}, "approval roles")
 
+def verify_history(base, pins, chain, directory):
+    require(isinstance(chain, list) and len(chain) <= 64, "history bound")
+    previous = pins["genesis"]
+    seen = set()
+    for generation, receipt in enumerate(chain, 1):
+        op = receipt["operation"]
+        validate_op(op, pins)
+        require(op["generation"] == generation and op["previous"] == previous
+                and op["request_id"] not in seen, "history chain or reused request")
+        check_receipt(base, receipt, op, directory)
+        seen.add(op["request_id"])
+        previous = hash_object(receipt)
+    return previous, seen
+
+def require_next(op, chain, previous, seen):
+    require(op["generation"] == len(chain) + 1 and op["previous"] == previous
+            and op["request_id"] not in seen, "stale, skipped, forked or reused request")
+
 def policy_worker(base, bundle, stop):
     directory = base / "policy"
     pins = read_json(base / "public" / "pins.json")
     with locked(directory):
-        require(set(bundle) == {"operation", "approvals", "proofs"}, "bundle schema")
+        require(set(bundle) in ({"operation", "approvals", "proofs"}, {"operation", "approvals", "proofs", "history"}), "bundle schema")
         op = bundle["operation"]
         op_hash = validate_op(op, pins)
+        chain = bundle.get("history", [])
+        previous, seen = verify_history(base, pins, chain, directory)
+        require_next(op, chain, previous, seen)
+        generation = op["generation"]
         verify_approvals(base, bundle["approvals"], op_hash)
         nonce = sha256_hex(op["request_id"].encode())
-        run([str(base / "public" / "bridge"), "verify",
-             str(base / "public" / "witnesses.json"), nonce, op_hash],
-            input_bytes=canonical_bytes(bundle["proofs"]))
+        roots = [hash_object(r["operation"]) for r in chain] + [op_hash]
+        args = [str(base / "public" / "bridge"), "verify",
+                str(base / "public" / "witnesses.json"), nonce, op_hash]
+        if chain:
+            args[1] = "verify-next"
+            args[-1] = canonical_bytes(roots).decode()
+        run(args, input_bytes=canonical_bytes(bundle["proofs"]))
         state = read_json(directory / "state")
-        if state.get("phase") == "ISSUED" and state.get("operation") == op_hash:
-            return state["token"]
-        require(state == {"phase": "EMPTY"}, "authority already reserved or issued")
         tpm = role_tpm(base, "policy")
         require(tpm.key_name().hex() == pins["identity"], "TPM identity")
-        require(tpm.read_counter() == 1, "TPM counter")
+        counter = tpm.read_counter()
+        if state.get("phase") == "ISSUED" and state.get("operation") == op_hash:
+            require(state["history"] == chain and counter in (generation, generation + 1), "stale authority retry")
+            return state["token"]
+        if chain:
+            require(state.get("phase") == "ISSUED" and state.get("history") == chain[:-1]
+                    and state.get("operation") == hash_object(chain[-1]["operation"]),
+                    "authority history missing, forked or uncertain")
+        else:
+            require(state == {"phase": "EMPTY"}, "authority already reserved or issued")
+        require(counter == generation, "TPM counter")
         # Reserve before creation or release of an authorization signature.
-        atomic_write(directory / "state", {"phase": "RESERVED", "operation": op_hash}, mode=0o600)
+        atomic_write(directory / "state", {"phase": "RESERVED", "operation": op_hash, "history": chain}, mode=0o600)
         crash("after-authority-reserve", stop)
         message = directory / "operation"
         message.write_bytes(canonical_bytes(op))
@@ -145,21 +178,22 @@ def policy_worker(base, bundle, stop):
         policy = directory / "operation.policy"
         sig = directory / "operation.sig"
         tpm.cp_hash(message, cp)
-        tpm.trial_policy(1, cp, policy, "integrated-authority")
+        tpm.trial_policy(generation, cp, policy, "integrated-authority")
         tpm.flush_all()
         run(["openssl", "dgst", "-sha256", "-sign", str(directory / "authority.private.pem"),
              "-out", str(sig), str(policy)])
         token = {"profile": PROFILE, "operation": op_hash, "identity": pins["identity"],
-                 "counter": 1, "cp": cp.read_bytes().hex(), "policy": policy.read_bytes().hex(),
+                 "counter": generation, "cp": cp.read_bytes().hex(), "policy": policy.read_bytes().hex(),
                  "signature": sig.read_bytes().hex()}
-        atomic_write(directory / "state", {"phase": "ISSUED", "operation": op_hash, "token": token}, mode=0o600)
+        atomic_write(directory / "state", {"phase": "ISSUED", "operation": op_hash, "token": token, "history": chain}, mode=0o600)
         return token
 
 def check_receipt(base, receipt, op, directory):
     require(isinstance(receipt, dict) and set(receipt) == {
         "profile", "operation", "signature", "counter_after"}, "receipt schema")
     require(receipt["profile"] == PROFILE and receipt["operation"] == op
-            and receipt["counter_after"] == 2, "receipt binding")
+            and type(receipt["counter_after"]) is int
+            and receipt["counter_after"] == op["generation"] + 1, "receipt binding")
     with tempfile.TemporaryDirectory(dir=directory) as name:
         scratch = Path(name)
         message, sig = scratch / "message", scratch / "signature"
@@ -176,27 +210,32 @@ def signer_worker(base, bundle, stop):
         op_hash = validate_op(op, pins)
         tpm = role_tpm(base, "signer")
         state = read_json(directory / "state")
-        if state.get("phase") == "COMMITTED":
-            receipt = state["receipt"]
+        require(state == {"phase": "EMPTY"} or state.get("phase") == "COMMITTED", "uncertain prior signing")
+        chain = state["history"] if state.get("phase") == "COMMITTED" else []
+        previous, seen = verify_history(base, pins, chain, directory)
+        generation = op["generation"]
+        require(tpm.key_name().hex() == pins["identity"] and tpm.read_counter() == len(chain) + 1,
+                "rollback or identity mismatch")
+        if generation <= len(chain):
+            receipt = chain[generation - 1]
             check_receipt(base, receipt, op, directory)
-            require(tpm.key_name().hex() == pins["identity"] and tpm.read_counter() == 2, "rollback or identity mismatch")
             return {"receipt": receipt, "replayed": True}
-        require(state == {"phase": "EMPTY"}, "uncertain prior signing")
+        require_next(op, chain, previous, seen)
         require(isinstance(token, dict) and set(token) == {"profile", "operation", "identity",
             "counter", "cp", "policy", "signature"}, "token schema")
         require(token["profile"] == PROFILE and token["operation"] == op_hash
-                and token["identity"] == pins["identity"] and token["counter"] == 1, "token binding")
-        require(tpm.key_name().hex() == pins["identity"] and tpm.read_counter() == 1, "TPM identity/counter")
+                and token["identity"] == pins["identity"] and type(token["counter"]) is int and token["counter"] == generation, "token binding")
+        require(tpm.key_name().hex() == pins["identity"] and tpm.read_counter() == generation, "TPM identity/counter")
         message = directory / "operation"
         message.write_bytes(canonical_bytes(op))
         cp, policy, sig = (directory / x for x in ("operation.cp", "operation.policy", "operation.sig"))
         tpm.cp_hash(message, cp)
         require(cp.read_bytes().hex() == token["cp"], "cpHash mismatch")
-        tpm.trial_policy(1, cp, policy, "integrated-signer")
+        tpm.trial_policy(generation, cp, policy, "integrated-signer")
         require(policy.read_bytes().hex() == token["policy"], "policy digest mismatch")
         sig.write_bytes(bytes.fromhex(token["signature"]))
         crash("before-reserve", stop)
-        atomic_write(directory / "state", {"phase": "RESERVED", "operation": op_hash}, mode=0o600)
+        atomic_write(directory / "state", {"phase": "RESERVED", "operation": op_hash, "history": chain}, mode=0o600)
         crash("after-reserve", stop)
         authority_ctx, authority_name, ticket = (directory / x for x in ("authority.ctx", "authority.name", "authority.ticket"))
         tpm.flush_all()
@@ -207,7 +246,7 @@ def signer_worker(base, bundle, stop):
                  "-m", str(policy), "-s", str(sig), "-t", str(ticket), "-f", "rsassa"])
         tpm.flush_all()
         session = directory / "authorized.session"
-        tpm.start_policy_session(counter=1, cp_hash=cp, approved_policy=policy,
+        tpm.start_policy_session(counter=generation, cp_hash=cp, approved_policy=policy,
                                  authority_name=authority_name, ticket=ticket, session=session)
         crash("after-policy", stop)
         signature = directory / "operation.signature"
@@ -216,11 +255,11 @@ def signer_worker(base, bundle, stop):
                 and verify_with_openssl(base / "public" / "signer.pem", message, signature), "signature verification")
         tpm.tpm(["tpm2_flushcontext", str(session)], check=False)
         crash("after-sign", stop)
-        require(tpm.increment_counter() == 2, "counter advance")
+        require(tpm.increment_counter() == generation + 1, "counter advance")
         crash("after-increment", stop)
         receipt = {"profile": PROFILE, "operation": op,
-                   "signature": signature.read_bytes().hex(), "counter_after": 2}
-        atomic_write(directory / "state", {"phase": "COMMITTED", "receipt": receipt}, mode=0o600)
+                   "signature": signature.read_bytes().hex(), "counter_after": generation + 1}
+        atomic_write(directory / "state", {"phase": "COMMITTED", "history": chain + [receipt]}, mode=0o600)
         crash("after-receipt", stop)
         return {"receipt": receipt, "replayed": False}
 
@@ -272,9 +311,9 @@ def fixture(bridge):
         finally:
             tpm.stop()
 
-def operation(pins, payload):
-    return {"profile": PROFILE, "identity": pins["identity"], "epoch": 1, "generation": 1,
-            "previous": pins["genesis"], "request_id": "req-" + uuid.uuid4().hex,
+def operation(pins, payload, chain=()):
+    return {"profile": PROFILE, "identity": pins["identity"], "epoch": 1, "generation": len(chain) + 1,
+            "previous": hash_object(chain[-1]) if chain else pins["genesis"], "request_id": "req-" + uuid.uuid4().hex,
             "payload_sha256": sha256_hex(payload)}
 
 def approve(base, role, op, decision="APPROVE"):
@@ -367,6 +406,61 @@ def run_conflicting_request_race(bridge):
         print("PASS distinct concurrent requests serialized; full-quorum winners="
               + str(len(committed)), flush=True)
 
+def next_bundle(base, op, chain, prior_proofs):
+    roots = [hash_object(r["operation"]) for r in chain] + [hash_object(op)]
+    public = base / "public"
+    proofs = []
+    for role in ("w1", "w2", "w3"):
+        proofs.append(json.loads(successful(as_role(role, [
+            public / "bridge", "reserve-next", base / role, public / "witnesses.json",
+            sha256_hex(op["request_id"].encode()), canonical_bytes(roots).decode()],
+            data=canonical_bytes(prior_proofs)))))
+    return {"operation": op, "history": chain, "proofs": proofs,
+            "approvals": [approve(base, role, op) for role in ("founder", "ario")]}
+
+def run_multigeneration(bridge):
+    with fixture(bridge) as (base, pins):
+        chain, bundles, sign_requests = [], [], []
+        for generation in range(1, 4):
+            op = operation(pins, f"generation {generation}".encode(), chain)
+            b = bundle_for(base, op) if generation == 1 else next_bundle(base, op, chain[:], bundles[-1]["proofs"])
+            if generation > 1:
+                denied(worker(base, "policy", dict(b, approvals=[b["approvals"][0], approve(base, "ario", op, "VETO")])), f"generation {generation} veto")
+                denied(worker(base, "policy", dict(b, proofs=bundles[-1]["proofs"])), f"generation {generation} stale witness proofs")
+            token = result(worker(base, "policy", b))
+            request = {"operation": op, "token": token}
+            if generation == 2:
+                killed = worker(base, "signer", request, "after-receipt")
+                require(killed.returncode == -signal.SIGKILL, "second-generation crash missing")
+                signed = result(worker(base, "signer", request))
+                require(signed["replayed"], "second-generation lost response")
+            else:
+                signed = result(worker(base, "signer", request))
+                require(not signed["replayed"], "new generation was replay")
+            receipt = signed["receipt"]
+            check_receipt(base, receipt, op, base)
+            chain.append(receipt)
+            bundles.append(b)
+            sign_requests.append(request)
+            print("PASS multi-generation", generation, "verified linked receipt", flush=True)
+        for request, receipt in zip(sign_requests, chain):
+            retry = result(worker(base, "signer", request))
+            require(retry["replayed"] and retry["receipt"] == receipt, "historical exact retry")
+        print("PASS historical receipts recovered without signing", flush=True)
+        denied(worker(base, "policy", bundles[0]), "stale authority generation")
+        bad = operation(pins, b"fork", chain)
+        bad["previous"] = pins["genesis"]
+        denied(worker(base, "policy", {"operation": bad, "history": chain, "proofs": [], "approvals": []}), "forked predecessor")
+        bad = operation(pins, b"reused id", chain)
+        bad["request_id"] = chain[0]["operation"]["request_id"]
+        denied(worker(base, "policy", {"operation": bad, "history": chain, "proofs": [], "approvals": []}), "cross-generation request ID reuse")
+        saved = read_json(base / "signer" / "state")
+        owned_write(base / "signer" / "state", {"phase": "COMMITTED", "history": chain[:1]}, "signer")
+        denied(worker(base, "signer", sign_requests[0]), "signer-only rollback below TPM counter")
+        owned_write(base / "signer" / "state", saved, "signer")
+        require(result(worker(base, "signer", sign_requests[2]))["receipt"] == chain[2], "restored exact receipt")
+        print("MULTIGENERATION_COMPLETE", flush=True)
+
 def run_matrix(bridge):
     with fixture(bridge) as (base, pins):
         op = operation(pins, b"synthetic approved operation")
@@ -420,6 +514,7 @@ def run_matrix(bridge):
                 denied(retry, "crash " + point + " uncertain, no retry signing")
     run_conflicting_request_race(bridge)
     print("INTEGRATED_FIRST_GENERATION_COMPLETE", flush=True)
+    run_multigeneration(bridge)
 
 def main():
     if len(sys.argv) == 5 and sys.argv[1] == "worker":
