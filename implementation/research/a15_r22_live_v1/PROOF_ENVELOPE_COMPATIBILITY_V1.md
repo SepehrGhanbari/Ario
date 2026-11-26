@@ -16,7 +16,7 @@ R22.20 outer envelope uses `profile/scope/seq/previous_checksum/previous_event_i
 These are intentionally incompatible protocols. Do not feed A15 events to R22.22G's generic-successor verifier, or R22.20 envelopes to the A15 adapter. A future bridge must be an explicitly versioned A15-specific proof contract, not schema coercion.
 
 ## What this read-only job verifies
-- Re-fetch the three existing A15 artifacts from original workflow run 45823494521; no new publication, relay call, signing or deletion.
+- Re-fetch the three exact existing A15 artifacts by ID from original workflow run 45823494521 via the already-used `gh api actions/artifacts/{id}/zip` route; each ZIP SHA256 is checked before bounded safe extraction. The first attempt using `actions/download-artifact` across runs failed with `Bad credentials`; no test ran in that attempt, and that failure is preserved in the PR history.
 - Verify both A15 Nostr event IDs/signatures, exact checkpoint bytes, exact event-id message and Sigsum TEST inclusion proof using pinned Sigsum verifier.
 - Bind each proof leaf index/checksum to the original cold discovery report and bootstrap; enforce strict leaf order and exact seq1→seq2 checkpoint predecessor digest.
 - Compare cold-recovered checkpoint/event bytes to the original seq2 reveal bytes.
