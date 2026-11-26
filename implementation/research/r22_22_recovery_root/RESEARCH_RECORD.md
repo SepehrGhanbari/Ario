@@ -150,3 +150,8 @@ Live run 45836342538 returned cosigned head size 282811/root 7f5a1fbf808e3a63652
 ## R22.22I public witness archive retrieval added (2026-11-26)
 
 The external cosignatures are cryptographically valid, but the two selected witness get-tree-size endpoints returned HTTP 404. Added a strictly read-only fetch of their published cosignatures.json/status/about documents (where available) to determine whether the witnesses expose a separate recoverable checkpoint archive. No POST, state change, or publication.
+
+
+## R22.22I — independent custodian status readback verified (2026-11-26)
+
+Public witness evidence artifact from run 45836998785 contains Remora /status. It lists log key 4e89cc51651f0d95f3c6127c15e1a42e3ddf7046c5b17b752689c402e773bb4d at size 282811 and base64 root f1ofv4COOmNlLAgXpWjFC5llrxnU/Q+vmP5CYWa5D/c=, decoding to 7f5a1fbf808e3a63652c0817a568c50b9965af19d4fd0faf98fe426166b90ff7. This exactly matches the current log tree head and both verified external cosignatures (Remora and Stagemole). Added parser and CI gate requiring exact independent status size+root match. Remora operator Florian Larysch explicitly states no affiliation with entities operating transparency logs; Remora is test-grade VM without HSM/redundancy. Stagemole is operated by Mullvad as a test witness for its production witness, not a second production custodian. Built-in test2 4-of-5 remains NOT_MET; custom external-only 2-of-4 research policy passes. No publication, POST, key, DNS or user resources. TEST_ONLY; data availability/global latest remain UNKNOWN.

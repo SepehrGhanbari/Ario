@@ -1,9 +1,12 @@
 package main
 import (
  "context"
+ "encoding/base64"
  "encoding/hex"
  "encoding/json"
  "fmt"
+ "io"
+ "strconv"
  "net/http"
  "os"
  "strings"
@@ -42,6 +45,44 @@ var external=[]externalWitness{
 }
 func mustHash(s string)crypto.Hash{b,e:=hex.DecodeString(s);if e!=nil||len(b)!=32{panic("bad fixed hash")};var h crypto.Hash;copy(h[:],b);return h}
 func floorDecision(fs uint64,fr string,cs uint64,cr string)string{if cs<fs{return "HOLD_BELOW_EXTERNAL_FLOOR"};if cs==fs&&cr!=fr{return "HOLD_SAME_SIZE_ROOT_CONFLICT"};return "SIZE_AND_ROOT_NOT_BELOW_FLOOR"}
+
+func parseRemoraStatus(raw []byte) (uint64, crypto.Hash, error) {
+ if len(raw)==0 || len(raw)>1<<20 { return 0, crypto.Hash{}, fmt.Errorf("status response bounds") }
+ target := "- sigsum.org/v1/tree/"+logKeyHash
+ lines := strings.Split(string(raw), "\n")
+ found := false
+ var size uint64
+ var root crypto.Hash
+ for i,line := range lines {
+  if strings.TrimSpace(line)!=target { continue }
+  if found || i+1>=len(lines) { return 0, crypto.Hash{}, fmt.Errorf("duplicate or incomplete log entry") }
+  value := strings.TrimSpace(lines[i+1])
+  if !strings.HasPrefix(value,"(size ") || !strings.HasSuffix(value,")") { return 0, crypto.Hash{}, fmt.Errorf("unexpected status line") }
+  value = strings.TrimSuffix(strings.TrimPrefix(value,"("),")")
+  fields := strings.SplitN(value,", root ",2)
+  if len(fields)!=2 { return 0, crypto.Hash{}, fmt.Errorf("missing root") }
+  n,err := strconv.ParseUint(strings.TrimPrefix(fields[0],"size "),10,64)
+  if err!=nil { return 0, crypto.Hash{}, fmt.Errorf("invalid size") }
+  decoded,err := base64.StdEncoding.DecodeString(fields[1])
+  if err!=nil || len(decoded)!=32 { return 0, crypto.Hash{}, fmt.Errorf("invalid root encoding") }
+  size=n;copy(root[:],decoded);found=true
+ }
+ if !found { return 0, crypto.Hash{}, fmt.Errorf("log not listed by remora") }
+ return size,root,nil
+}
+func readRemoraStatus(ctx context.Context) (uint64, crypto.Hash, error) {
+ req,err:=http.NewRequestWithContext(ctx,http.MethodGet,"https://remora.n621.de/status",nil)
+ if err!=nil{return 0,crypto.Hash{},err}
+ req.Header.Set("Cache-Control","no-cache, no-store")
+ resp,err:=(&http.Client{Timeout:12*time.Second,CheckRedirect:func(*http.Request,[]*http.Request)error{return fmt.Errorf("redirect denied")}}).Do(req)
+ if err!=nil{return 0,crypto.Hash{},err}
+ defer resp.Body.Close()
+ if resp.StatusCode!=http.StatusOK{return 0,crypto.Hash{},fmt.Errorf("HTTP %d",resp.StatusCode)}
+ raw,err:=io.ReadAll(io.LimitReader(resp.Body,(1<<20)+1))
+ if err!=nil{return 0,crypto.Hash{},err}
+ return parseRemoraStatus(raw)
+}
+
 func main(){
  p,e:=policy.ParseConfig(strings.NewReader(policyText));if e!=nil{panic(e)}
  logPub,e:=crypto.PublicKeyFromHex(logPublicKeyHex);if e!=nil{panic(e)}
@@ -54,6 +95,10 @@ func main(){
  for _,w:=range external{pub,pe:=crypto.PublicKeyFromHex(w.PublicKeyHex);if pe!=nil{panic(pe)};externalPubs=append(externalPubs,pub)}
  externalPolicy,e:=policy.NewKofNPolicy([]crypto.PublicKey{logPub},externalPubs,2);if e!=nil{panic(e)}
  if e=externalPolicy.VerifyCosignedTreeHead(&logKH,&head);e!=nil{panic("HOLD_EXTERNAL_ONLY_2_OF_4_QUORUM: "+e.Error())}
+ remoraSize,remoraRoot,re:=readRemoraStatus(ctx)
+ if re!=nil{panic("HOLD_REMORA_STATUS_READBACK: "+re.Error())}
+ if remoraSize!=head.Size || remoraRoot!=head.RootHash{panic(fmt.Sprintf("HOLD_REMORA_HEAD_MISMATCH: witness=%d/%x log=%d/%x",remoraSize,remoraRoot,head.Size,head.RootHash))}
+
  retained:=types.TreeHead{Size:retainedSize,RootHash:mustHash(retainedRoot)}
  if head.Size<retained.Size{panic("HOLD_HEAD_BELOW_RETAINED")}
  if head.Size==retained.Size{if head.RootHash!=retained.RootHash{panic("HOLD_SAME_SIZE_ROOT_CONFLICT")}}else{
@@ -90,7 +135,12 @@ func main(){
   "retained_floor_size":retainedSize,"retained_floor_root":retainedRoot,
   "independent_quorum_floor_size":head.Size,"independent_quorum_floor_root":root,
   "rollback_below_floor":"HOLD","same_size_different_root":"HOLD",
-  "witness_state_readback":"NOT_AVAILABLE: get-tree-size returned HTTP 404 for both external signers on prior run; current evidence is their signed cosignatures",
+  "independent_custodian":"remora.n621.de / Florian Larysch",
+  "custodian_readback_source":"https://remora.n621.de/status",
+  "custodian_readback_size":remoraSize,
+  "custodian_readback_root":hex.EncodeToString(remoraRoot[:]),
+  "custodian_readback_matches_signed_head":true,
+  "witness_state_readback":"Remora /status exact size+root match; Stagemole get-tree-size API returned HTTP 404, but its signed cosignature verifies",
   "data_availability":"NOT_PROVEN_BY_WITNESSES","global_latest":"UNKNOWN",
   "network_tier":"TEST_ONLY","trust_activation":"NO_GO","production":"NO_GO","admission":false,
  }

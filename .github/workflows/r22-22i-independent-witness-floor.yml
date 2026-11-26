@@ -43,6 +43,7 @@ jobs:
           curl --silent --show-error --max-time 15 --max-redirs 0 -D witness_capture/stagemole.headers -o witness_capture/stagemole.body -w 'http_code=%{http_code}\n' https://witness.stagemole.eu/cosignatures.json > witness_capture/stagemole.meta
           curl --silent --show-error --max-time 15 --max-redirs 0 -D witness_capture/remora_status.headers -o witness_capture/remora_status.body -w 'http_code=%{http_code}\n' https://remora.n621.de/status > witness_capture/remora_status.meta
           curl --silent --show-error --max-time 15 --max-redirs 0 -D witness_capture/stagemole_about.headers -o witness_capture/stagemole_about.body -w 'http_code=%{http_code}\n' https://witness.stagemole.eu/about > witness_capture/stagemole_about.meta
+          curl --silent --show-error --max-time 15 --max-redirs 0 -D witness_capture/stagemole_status.headers -o witness_capture/stagemole_status.body -w 'http_code=%{http_code}\n' https://witness.stagemole.eu/status > witness_capture/stagemole_status.meta
       - uses: actions/upload-artifact@v4
         if: always()
         with:
