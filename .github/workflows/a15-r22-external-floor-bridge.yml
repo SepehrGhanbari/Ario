@@ -6,6 +6,12 @@ on:
       - .github/workflows/a15-r22-external-floor-bridge.yml
       - implementation/research/a15_r22_live_v1/external_floor_bridge/**
       - implementation/tests/fixtures/a15_r22_run_45823494521/**
+  pull_request:
+    branches: [research/a15-r22-readonly-adapter-20261125]
+    paths:
+      - .github/workflows/a15-r22-external-floor-bridge.yml
+      - implementation/research/a15_r22_live_v1/external_floor_bridge/**
+      - implementation/tests/fixtures/a15_r22_run_45823494521/**
 permissions:
   contents: read
 jobs:
