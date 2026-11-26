@@ -1,0 +1,29 @@
+Ario Self-Audit R2.4 focused tests
+Environment: Linux container, Python 3.13 standard library
+Command: python -m unittest -v
+Result: 19 tests, 19 passed, 0 failed, 0 errors
+
+Cases:
+- valid six-sample baseline
+- one-byte tamper
+- report cannot re-pin tampered bytes
+- wrong checkout SHA with recomputed fixture digest
+- appended fake success summary
+- substituted fake success summary
+- swapped job log
+- wrong job ID
+- wrong run ID
+- attempted execution-attestation upgrade
+- attempted merge/memory/trust enablement
+- duplicate JSON keys
+- altered API/storage event chain
+- mismatched sample bytes
+- wrong Python marker
+- missing UTF-8 BOM
+- symlink log rejection (where supported)
+- missing log => UNKNOWN
+- symlink evidence directory rejection (where supported)
+
+This is synthetic adversarial testing. The exact historical logs were separately
+read twice through the GitHub connector and their hashes matched the user's
+R2.3-D report. The R2.4 Windows execution remains pending owner-side validation.
