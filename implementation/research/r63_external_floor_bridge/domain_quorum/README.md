@@ -42,6 +42,12 @@ Therefore this is a strong candidate rollback-floor component, but its current 4
 
 The public checkpoint was fetched read-only at tree size 14904. The anchor endpoint reported latest stamped size 14903 pending and confirmed size 14899 in Bitcoin block 977669; the endpoint reported 2686 confirmed header checks and zero mismatches at fetch time. These values are a dated observation, not a permanent status claim.
 
+### Source-verification gap
+
+The live `witness.markovianprotocol.com/about` page describes the hourly floor recovery, but the current public `MarkovianProtocol/log-server` `main` source does not contain that mechanism in `witness_server.py` or `witness_poller.py`. `witness_server.py` implements the C2SP per-log monotonic cosign path and commits its SQLite row before returning a cosignature; `witness_poller.py` explicitly does not write witness state. The `witness_server.py` self-test uses an in-memory SQLite database and does not test restart, disk loss, or restoration from the external floor. `log_server.py` implements Bitcoin anchoring for the log's own checkpoints, which is not by itself the witness-state recovery component. The live page also says the service is best-effort and its state may be rolled back.
+
+Therefore the external-floor behavior is a live operational claim, **not yet source-verified against the published repository**. We asked the operator for the exact deployed commit or separate component and an offline verification path. Until that is supplied, treat the recovery mechanism as UNVERIFIED_IMPLEMENTATION and do not admit the service as an R63 custodian.
+
 ## Limitations
 
 The test harness is synthetic. It does not cryptographically verify Ed25519/ML-DSA, authenticate operator identity, inspect cloud-account control planes, validate HSM/backup boundaries, test physical restore, or establish any real operator's willingness. Failure-domain labels must be verified from primary operator evidence and pinned by an independent policy custodian. A common administrator who can alter the roster or its evidence defeats this model. No witness was contacted or configured and no log entry was published.
