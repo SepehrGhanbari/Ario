@@ -153,9 +153,11 @@ def audit(first,second,recovered,report):
     check(classify(second/"matched-state")=="MATCH_OBSERVED_ONLY","match")
     check(classify(second/"rollback-state")=="HOLD_ROLLBACK","joint rollback")
     fork=second/"fork-state";shutil.copytree(second/"rollback-state",fork)
+    fork.chmod(0o700)  # ZIP restores directory modes loosely; only fix the new synthetic copy.
     append(fork,scope,2,"ACCEPT")
     check(classify(fork)=="HOLD_FORK","fork")
     ahead=second/"ahead-state";shutil.copytree(second/"matched-state",ahead)
+    ahead.chmod(0o700)  # Do not change the original reveal artifacts.
     append(ahead,scope,3,"UNKNOWN")
     # UNKNOWN claim must be generated with UNKNOWN preference (broker policy).
     check(classify(ahead)=="HOLD_UNANCHORED_SUFFIX","ahead")
