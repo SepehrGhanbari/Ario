@@ -146,7 +146,6 @@ class AttestedCustodianTests(unittest.TestCase):
         nv_data_size = 32
         nv_public_area = (
             struct.pack(">IHI", nv_index_handle, nv_name_alg, nv_attributes)
-            + b"\x00\x00"
             + struct.pack(">H", nv_data_size)
         )
         assert ak_qualified_name[:2] == b"\x00\x0b"
