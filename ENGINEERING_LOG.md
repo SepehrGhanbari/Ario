@@ -1169,3 +1169,12 @@ Related #379 A15 retained-range experiment covers a different set of three commi
 - Tightened the profiles: storage primary requires ECC + fixedTPM/fixedParent/sensitiveDataOrigin/restricted/decrypt and forbids sign; AK requires RSA + fixedTPM/fixedParent/sensitiveDataOrigin/restricted/sign and forbids decrypt. Other optional attributes remain allowed.
 - Added synthetic R22.33 negative controls that recompute the TPM Name after mutation, so the expected failure specifically exercises usage-policy enforcement. Added live swtpm negative controls to the R22.32 harness for each forbidden bit.
 - Exact-head R22.32/R22.33 CI and artifacts pending. No real TPM, real key, independent administrator, external floor, trust activation, production promotion, or merge.
+
+
+## 2026-11-26 — R22.32 raw evidence export and challenge-derived nonces
+
+- Added optional public-only evidence export with deterministic SHA-256 manifest; private keys, TPM state, transient contexts and activation secrets are excluded.
+- Added optional 256-bit challenge nonce input and domain-separated NV_Certify, CertifyCreation and PCR Quote nonces.
+- R22.32 dedicated CI [run 45860968609](https://github.com/SepehrGhanbari/Ario/actions/runs/45860968609), source `f282106823536c0cc3b40c74c1782459e35fce1b`: **41 PASS assertions** including independent cross-stage nonce derivation check.
+- Raw evidence artifact [ID 15138756624](https://github.com/SepehrGhanbari/Ario/actions/runs/45860968609/artifacts/15138756624).
+- The per-run nonce is a CI test vector, not a custodian-signed challenge. End-to-end challenge issuance and verifier receipt production remain NOT_ESTABLISHED.
