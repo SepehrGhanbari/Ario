@@ -38,6 +38,7 @@ MANIFEST_FORMAT = "ARIO-R22.32-SWTPM-EVIDENCE-MANIFEST-V1"
 HASH_RE = re.compile(r"^[0-9a-f]{64}$")
 EXPECTED_RAW_FILES = {
     "ak-name.bin", "ak-public-area.tpmt", "ak-public.pem", "ak-qualified-name.bin",
+    "ak-activation-result.bin",
     "creation-attestation.bin", "creation-attestation.sig", "creation-nonce.txt",
     "custodian-challenge-nonce.txt", "custodian-public.pem", "custodian-anchor.json",
     "custodian-anchor.sig", "custodian-challenge.json", "custodian-challenge.sig",
