@@ -116,9 +116,9 @@ sign_authorized a message-a.bin
 pass "exact externally authorized TPM signature verified"
 # Same token is tied to counter one; advance the TPM NV counter.
 tpm2_nvincrement -C o "$NV" >/dev/null
-tpm2_nvread -C o -s 8 -o counter-1.bin "$NV" >/dev/null
+tpm2_nvread -C o -s 8 -o counter-2.bin "$NV" >/dev/null
 tpm2_startauthsession --policy-session -S stale-counter.session >/dev/null
-expect_fail "stale authorization rejected after NV counter increment" tpm2_policynv -S stale-counter.session -C o "$NV" eq -i counter-0.bin
+expect_fail "stale authorization rejected after NV counter increment" tpm2_policynv -S stale-counter.session -C o "$NV" eq -i counter-1.bin
 tpm2_flushcontext stale-counter.session >/dev/null
 
 # A new counter value and new exact command hash require a fresh authority signature.
