@@ -78,6 +78,7 @@ make_authorization(){
   openssl dgst -sha256 -sign policy-authority.private.pem -out "$tag.approved.sig" "$tag.approved.policy" >/dev/null 2>&1
   tpm2_verifysignature -c policy-authority.ctx -g sha256 -m "$tag.approved.policy" \
     -s "$tag.approved.sig" -t "$tag.ticket" -f rsassa >/dev/null
+  tpm2_flushcontext -t >/dev/null
 }
 start_policy(){
   local tag="$1" counter="$2"
