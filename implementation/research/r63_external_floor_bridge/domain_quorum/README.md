@@ -30,6 +30,18 @@ Read/write quorum intersection must satisfy `read_q + write_q > n_class + f` **s
 - The public `SIGSUM_GENERIC_2025_1` production policy uses a 2-of-3 threshold over Glasklar, Mullvad and Tillitis, but its own explanatory note warns that they share one parent. This threshold must not be misread as 2-of-3 independent parent-company domains.
 - The public Witness Network currently lists Production as unavailable and Staging as work-in-progress. No R63 operator is admitted by this model.
 
+## Markovian rollback-floor review (2026-11-26)
+
+Markovian's witness documentation describes an unusually relevant recovery design: it writes each per-log high-water mark hourly into its own public transparency log; that log is cosigned by a pinned 4-of-7 external witness policy and timestamped into Bitcoin. On startup it reads the latest qualifying floor, checks inclusion, and retains the higher of the restored and published marks. An empty local database is refused. For logs it can fetch, it also checks their current state; push-only logs retain up to a one-hour recovery gap. The operator explicitly notes that full control of its own server can still edit local files, so the external evidence is what makes rollback detectable.
+
+The current 4-of-7 policy has seven witness keys but, under the conservative R63 corporate grouping, four domains: AMAGICOM (Stagemole/Mullvad, RGDD, SmartIT), Google TrustFabric (two witnesses), Geomys, and Remora. Weighted analysis shows:
+- minimum corporate domains in any four-key quorum: **2**
+- minimum corporate-domain intersection between two four-key quorums: **1**
+
+Therefore this is a strong candidate rollback-floor component, but its current 4-of-7 policy does **not** meet R63's stricter requirement for an intersection greater than one independently controlled domain. A 4-of-7 key threshold is not automatically a 4-domain threshold. We have asked the operator whether a test and a more domain-diverse policy are feasible; no enrollment or log publication has occurred.
+
+The public checkpoint was fetched read-only at tree size 14904. The anchor endpoint reported latest stamped size 14903 pending and confirmed size 14899 in Bitcoin block 977669; the endpoint reported 2686 confirmed header checks and zero mismatches at fetch time. These values are a dated observation, not a permanent status claim.
+
 ## Limitations
 
 The test harness is synthetic. It does not cryptographically verify Ed25519/ML-DSA, authenticate operator identity, inspect cloud-account control planes, validate HSM/backup boundaries, test physical restore, or establish any real operator's willingness. Failure-domain labels must be verified from primary operator evidence and pinned by an independent policy custodian. A common administrator who can alter the roster or its evidence defeats this model. No witness was contacted or configured and no log entry was published.
@@ -46,3 +58,9 @@ Next: obtain written operator answers, document independently controlled failure
 - https://ipng.ch/s/ct/
 - https://remora.n621.de/
 - https://c2sp.org/tlog-policy
+
+- https://markovianprotocol.com/get-witnessed.html
+- https://markovianprotocol.com/witness-policy.html
+- https://log.markovianprotocol.com/policy
+- https://log.markovianprotocol.com/checkpoint
+- https://log.markovianprotocol.com/anchor
