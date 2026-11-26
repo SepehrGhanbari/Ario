@@ -18,7 +18,7 @@ class TpmLab:
         self.base = base
         self.state = base / "tpm-state"
         self.socket = base / "tpm.sock"
-        self.ctrl = base / "tpm.ctrl"
+        self.ctrl = base / "tpm.sock.ctrl"
         self.log = base / "swtpm.log"
         self.work = base / "tpm-work"
         self.nv_index = nv_index
@@ -48,20 +48,29 @@ class TpmLab:
                 "--ctrl",
                 f"type=unixio,path={self.ctrl}",
                 "--flags",
-                "startup-clear",
+                "not-need-init,startup-clear",
             ],
             stdout=log_handle,
             stderr=subprocess.STDOUT,
         )
+        log_handle.close()
         deadline = time.monotonic() + 20
+        last_error = "socket not ready"
         while time.monotonic() < deadline:
-            if self.socket.exists() and run_ok(
-                ["tpm2_getrandom", "8"], env=self.env, timeout=3
-            ):
-                os.chmod(self.socket, 0o660)
-                return
+            if self.process.poll() is not None:
+                last_error = f"swtpm exited with {self.process.returncode}"
+                break
+            if self.socket.exists() and self.ctrl.exists():
+                try:
+                    run(["tpm2_getrandom", "8"], env=self.env, timeout=3)
+                    os.chmod(self.socket, 0o660)
+                    return
+                except (LabError, subprocess.TimeoutExpired) as exc:
+                    last_error = str(exc)
             time.sleep(0.1)
-        raise LabError(f"swtpm failed to start; see {self.log}")
+        diagnostic = self.log.read_text(errors="replace")[-4000:]
+        self.stop()
+        raise LabError(f"swtpm readiness failed: {last_error}\n{diagnostic}")
 
     def stop(self) -> None:
         if self.process is None:
