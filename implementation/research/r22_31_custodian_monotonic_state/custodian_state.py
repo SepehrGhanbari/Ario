@@ -235,7 +235,10 @@ def load_journal(journal_path: Path, public_key: Path, anchor: dict[str, Any]) -
         if nonce in seen_nonces:
             raise GateError("JOURNAL_DUPLICATE_NONCE")
         validate_request(req, state)
-        if record["sequence"] != req["next_epoch"]:
+        sequence = record["sequence"]
+        if isinstance(sequence, bool) or not isinstance(sequence, int):
+            raise GateError("JOURNAL_SEQUENCE_TYPE_INVALID")
+        if sequence != req["next_epoch"]:
             raise GateError("JOURNAL_SEQUENCE_MISMATCH")
 
         receipt = record["receipt"]
