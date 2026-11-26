@@ -1178,3 +1178,14 @@ Related #379 A15 retained-range experiment covers a different set of three commi
 - R22.32 dedicated CI [run 45860968609](https://github.com/SepehrGhanbari/Ario/actions/runs/45860968609), source `f282106823536c0cc3b40c74c1782459e35fce1b`: **41 PASS assertions** including independent cross-stage nonce derivation check.
 - Raw evidence artifact [ID 15138756624](https://github.com/SepehrGhanbari/Ario/actions/runs/45860968609/artifacts/15138756624).
 - The per-run nonce is a CI test vector, not a custodian-signed challenge. End-to-end challenge issuance and verifier receipt production remain NOT_ESTABLISHED.
+
+
+### R22.33 NV_Certify receipt binding and final exact-head verification — 2026-11-26
+
+- Extended the verifier-signed receipt schema to require the NV index handle, NameAlg, attributes, dataSize, empty authPolicy, recomputed NV index Name, exact 32-byte contents, offset zero, AK Qualified Name signer, NV_Certify attestation/signature digests and evidence-manifest bindings.
+- The custodian gate independently recomputes the NV index Name using the same zero-length authPolicy wire encoding as the R22.32 verifier. It requires NV contents to equal the SHA-256 storage-root value derived from the exact storage TPM Name.
+- Required domain-separated nonce derivation from the signed custodian challenge for NV_Certify, CertifyCreation and PCR Quote; the transition nonce remains bound to the exact canonical verifier receipt.
+- R22.33 exact-head CI [run 45861166209](https://github.com/SepehrGhanbari/Ario/actions/runs/45861166209), source `d19af7e6380a54677fb6f927fbd66cb30bbdc862`: **40/40 R22.33 tests**, plus **18/18** preserved R22.31 tests. Evidence artifact [ID 15137653237](https://github.com/SepehrGhanbari/Ario/actions/runs/45861166209/artifacts/15137653237).
+- Exact-head Implementation Regression [run 45861166197](https://github.com/SepehrGhanbari/Ario/actions/runs/45861166197): SUCCESS.
+- R22.32 software-TPM workflow [run 45860968609](https://github.com/SepehrGhanbari/Ario/actions/runs/45860968609): **41 PASS assertions**, including raw public evidence export and cross-stage nonce derivation verification. Artifact [ID 15138756624](https://github.com/SepehrGhanbari/Ario/actions/runs/45860968609/artifacts/15138756624).
+- Explicit limit: the R22.32 workflow's nonce is a per-run CI test vector, not a custodian-signed challenge. No separate verifier has yet consumed the exported raw bundle and signed the R22.33 receipt. No OEM EK trust, physical TPM, independent verifier custody, external rollback floor, trust activation, Genesis, production or merge.
