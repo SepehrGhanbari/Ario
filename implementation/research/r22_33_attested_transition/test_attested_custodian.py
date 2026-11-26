@@ -144,8 +144,11 @@ class AttestedCustodianTests(unittest.TestCase):
         nv_name_alg = 0x000B
         nv_attributes = 0x20060006
         nv_data_size = 32
+        # TPM2B_DIGEST authPolicy is still marshalled as a two-byte zero length.
+        # Keep this wire encoding identical to R22.32 verify_nv_attestation.py.
         nv_public_area = (
             struct.pack(">IHI", nv_index_handle, nv_name_alg, nv_attributes)
+            + b"\x00\x00"
             + struct.pack(">H", nv_data_size)
         )
         assert ak_qualified_name[:2] == b"\x00\x0b"
