@@ -174,11 +174,31 @@ SRK_CTX="$SRK_HANDLE"
 SRK_NAME="$TMP/storage-primary.name"
 SRK_QN="$TMP/storage-primary.qualified-name"
 SRK_TPMT="$TMP/storage-primary.tpmt"
-tpm2_createprimary -C o -G ecc -g sha256 -c "$SRK_TEMP_CTX" >/dev/null
+SRK_CREATION_DATA="$TMP/storage-primary.creation-data"
+SRK_CREATION_HASH="$TMP/storage-primary.creation-hash"
+SRK_CREATION_TICKET="$TMP/storage-primary.creation-ticket"
+tpm2_createprimary -C o -G ecc -g sha256 -c "$SRK_TEMP_CTX" \\
+  --creation-data "$SRK_CREATION_DATA" --creation-hash "$SRK_CREATION_HASH" \\
+  --creation-ticket "$SRK_CREATION_TICKET" >/dev/null
 tpm2_evictcontrol -C o -c "$SRK_TEMP_CTX" "$SRK_HANDLE" >/dev/null
 tpm2_flushcontext -t >/dev/null
 tpm2_readpublic -c "$SRK_CTX" -n "$SRK_NAME" -q "$SRK_QN" \
   -o "$SRK_TPMT" -f tpmt >/dev/null
+python3 "$ROOT/verify_tpm_public_name.py" --public-tpmt "$SRK_TPMT" \
+  --name "$SRK_NAME" --require-storage-primary
+cp "$SRK_TPMT" "$TMP/tampered-storage-primary.tpmt"
+python3 - "$TMP/tampered-storage-primary.tpmt" <<'PY'
+import sys
+from pathlib import Path
+raw=bytearray(Path(sys.argv[1]).read_bytes())
+if not raw:
+    raise SystemExit("empty TPMT_PUBLIC")
+raw[-1] ^= 0x01
+Path(sys.argv[1]).write_bytes(raw)
+PY
+expect_fail "TPM Name verifier rejects a modified TPMT_PUBLIC" \
+  python3 "$ROOT/verify_tpm_public_name.py" \
+    --public-tpmt "$TMP/tampered-storage-primary.tpmt" --name "$SRK_NAME"
 ROOT_NAME_SHA256="$(sha256sum "$SRK_NAME" | awk '{print $1}')"
 printf 'TPM_STORAGE_PRIMARY_NAME_SHA256=%s\n' "$ROOT_NAME_SHA256"
 pass "storage primary Name and Qualified Name captured from TPM"
@@ -188,22 +208,24 @@ pass "storage primary Name and Qualified Name captured from TPM"
 CERTIFY_NONCE="$(openssl rand -hex 32)"
 CERTIFY_ATTEST="$TMP/storage-primary.attest"
 CERTIFY_SIG="$TMP/storage-primary.sig"
-CERTIFY_TICKET="$TMP/storage-primary.ticket"
+CERTIFY_VERIFY_TICKET="$TMP/storage-primary.verify-ticket"
 CERTIFY_YAML="$TMP/storage-primary.yaml"
-tpm2_certify -c "$SRK_CTX" -C "$AK_CTX" -g sha256 -q "$CERTIFY_NONCE" \
-  -o "$CERTIFY_ATTEST" -s "$CERTIFY_SIG" >/dev/null
+tpm2_certifycreation -C "$AK_CTX" -c "$SRK_CTX" \
+  -d "$SRK_CREATION_HASH" -t "$SRK_CREATION_TICKET" -g sha256 \
+  -s rsassa -q "$CERTIFY_NONCE" -o "$CERTIFY_SIG" \
+  --attestation "$CERTIFY_ATTEST" >/dev/null
 tpm2_verifysignature -c "$AK_CTX" -g sha256 -m "$CERTIFY_ATTEST" \
-  -s "$CERTIFY_SIG" -t "$CERTIFY_TICKET" >/dev/null
+  -s "$CERTIFY_SIG" -t "$CERTIFY_VERIFY_TICKET" >/dev/null
 tpm2_print -t TPMS_ATTEST "$CERTIFY_ATTEST" >"$CERTIFY_YAML"
-python3 "$ROOT/verify_attestation_yaml.py" --mode certify --yaml "$CERTIFY_YAML" \
+python3 "$ROOT/verify_attestation_yaml.py" --mode creation --yaml "$CERTIFY_YAML" \
   --nonce "$CERTIFY_NONCE" --ak-qualified-name "$AK_QN" \
-  --object-name "$SRK_NAME" --object-qualified-name "$SRK_QN"
-pass "TPM2_Certify signature, fresh nonce, AK signer, storage Name and Qualified Name verified"
+  --object-name "$SRK_NAME" --creation-hash "$SRK_CREATION_HASH"
+pass "TPM2_CertifyCreation signature, fresh nonce, AK signer, object Name and creation hash verified"
 
 expect_fail "certify attestation rejected with a different challenge" \
-  python3 "$ROOT/verify_attestation_yaml.py" --mode certify --yaml "$CERTIFY_YAML" \
+  python3 "$ROOT/verify_attestation_yaml.py" --mode creation --yaml "$CERTIFY_YAML" \
     --nonce "$(openssl rand -hex 32)" --ak-qualified-name "$AK_QN" \
-    --object-name "$SRK_NAME" --object-qualified-name "$SRK_QN"
+    --object-name "$SRK_NAME" --creation-hash "$SRK_CREATION_HASH"
 
 # A different storage primary must not be accepted as the certified object.
 ALT_SRK_HANDLE="0x81010003"
@@ -217,10 +239,11 @@ tpm2_evictcontrol -C o -c "$ALT_SRK_TEMP_CTX" "$ALT_SRK_HANDLE" >/dev/null
 tpm2_flushcontext -t >/dev/null
 tpm2_readpublic -c "$ALT_SRK_CTX" -n "$ALT_SRK_NAME" -q "$ALT_SRK_QN" \
   -o "$ALT_SRK_TPMT" -f tpmt >/dev/null
+python3 "$ROOT/verify_tpm_public_name.py" --public-tpmt "$ALT_SRK_TPMT" --name "$ALT_SRK_NAME"
 expect_fail "certify attestation rejects substituted storage object Name" \
-  python3 "$ROOT/verify_attestation_yaml.py" --mode certify --yaml "$CERTIFY_YAML" \
+  python3 "$ROOT/verify_attestation_yaml.py" --mode creation --yaml "$CERTIFY_YAML" \
     --nonce "$CERTIFY_NONCE" --ak-qualified-name "$AK_QN" \
-    --object-name "$ALT_SRK_NAME" --object-qualified-name "$ALT_SRK_QN"
+    --object-name "$ALT_SRK_NAME" --creation-hash "$SRK_CREATION_HASH"
 
 # Quote a known application PCR measurement. The expected PCR value is
 # independently recomputed as H(oldPCR || eventDigest), then checked against
