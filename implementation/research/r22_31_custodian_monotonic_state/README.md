@@ -115,3 +115,14 @@ Cross-checks from the connected GitHub account:
 **Remaining distinction:** this does not prove that the owner's account/device is uncompromised, nor does the Collaborators page enumerate GitHub App installation permissions, Actions credentials, deploy keys, or external service credentials. Those are separate machine/credential access paths, not evidence of another human repository administrator. The connected integration shows one GitHub App installation on the owner's user account; its effective repository permissions were not exposed in the returned installation metadata. No claim is made that this app is a second human admin.
 
 No collaborator removal, ruleset change, key rotation, new Sigsum test, merge, trust activation, or production action was performed. The R22.31 same-domain rollback behavior remains a distinct owner-account-compromise / credential-custody boundary; it must not be conflated with a nonexistent second direct collaborator.
+
+
+## 2026-11-26 — final disposition: no second human repository administrator
+
+The owner-provided current GitHub Settings → Collaborators screenshot shows **0 collaborators**, **"Only you can contribute to this repository"**, and no invited collaborators. This is consistent with the connected GitHub account being the repository owner/admin, having no organization memberships, and being the only explicit bypass actor in the active `Protect main` ruleset. The old `Mrxxir` account is not a collaborator; the repository is public and the earlier `read` result did not imply write access.
+
+**Decision:** the threat scenario "a second human repository administrator deliberately rewinds the Ario repository/journal" is **NOT APPLICABLE to the currently observed access configuration**. Stop treating a second human admin as an unresolved blocker; do not build a mock admin, repeat Sigsum, or add another same-domain process for this scenario.
+
+This is not a cryptographic rollback fix. The expected-RED valid-prefix rollback test remains as a documented boundary for a different threat: compromise of the owner's GitHub account/device or an automated credential/app with write authority. One GitHub App installation is visible on the owner's account, but its effective repository permissions were not exposed in the available installation metadata; it is not evidence of a second human administrator and remains a separate machine-credential audit item only if that threat is in scope.
+
+No collaborator removal, ruleset change, key rotation, new witness test, merge, trust activation, or production action was performed.
