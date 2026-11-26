@@ -38,7 +38,7 @@ The current 4-of-7 policy has seven witness keys but, under the conservative R63
 - minimum corporate domains in any four-key quorum: **2**
 - minimum corporate-domain intersection between two four-key quorums: **1**
 
-Therefore this is a strong candidate rollback-floor component, but its current 4-of-7 policy does **not** meet R63's stricter requirement for an intersection greater than one independently controlled domain. A 4-of-7 key threshold is not automatically a 4-domain threshold. We have asked the operator whether a test and a more domain-diverse policy are feasible; no enrollment or log publication has occurred.
+Therefore this is a potentially useful recovery-floor design, but its current 4-of-7 policy does **not** meet R63's stricter requirement for an intersection greater than one independently controlled domain. A 4-of-7 key threshold is not automatically a 4-domain threshold. We have asked the operator whether a test and a more domain-diverse policy are feasible; no enrollment or log publication has occurred.
 
 The public checkpoint was fetched read-only at tree size 14904. The anchor endpoint reported latest stamped size 14903 pending and confirmed size 14899 in Bitcoin block 977669; the endpoint reported 2686 confirmed header checks and zero mismatches at fetch time. These values are a dated observation, not a permanent status claim.
 
