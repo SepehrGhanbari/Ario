@@ -28,6 +28,19 @@ class GateError(Exception):
         self.code = code
 
 
+class DuplicateJSONKeyError(ValueError):
+    pass
+
+
+def reject_duplicate_json_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise DuplicateJSONKeyError(key)
+        result[key] = value
+    return result
+
+
 def canonical(obj: Any) -> bytes:
     return (json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False) + "\n").encode("utf-8")
 
@@ -39,7 +52,9 @@ def sha256(data: bytes) -> str:
 def read_json(path: Path) -> tuple[dict[str, Any], bytes]:
     raw = path.read_bytes()
     try:
-        value = json.loads(raw)
+        value = json.loads(raw, object_pairs_hook=reject_duplicate_json_keys)
+    except DuplicateJSONKeyError as exc:
+        raise GateError("JSON_DUPLICATE_KEY") from exc
     except Exception as exc:
         raise GateError("JSON_INVALID") from exc
     if not isinstance(value, dict):
@@ -187,11 +202,15 @@ def load_journal(journal_path: Path, public_key: Path, anchor: dict[str, Any]) -
         if not line:
             raise GateError("JOURNAL_EMPTY_LINE")
         try:
-            record = json.loads(line)
+            record = json.loads(line, object_pairs_hook=reject_duplicate_json_keys)
+        except DuplicateJSONKeyError as exc:
+            raise GateError(f"JOURNAL_DUPLICATE_KEY_LINE_{line_number}") from exc
         except Exception as exc:
             raise GateError(f"JOURNAL_JSON_INVALID_LINE_{line_number}") from exc
         if not isinstance(record, dict):
             raise GateError("JOURNAL_RECORD_NOT_OBJECT")
+        if line + b"\n" != canonical(record):
+            raise GateError("JOURNAL_RECORD_NOT_CANONICAL")
         required = {
             "sequence", "previous_record_sha256", "request", "request_sha256",
             "receipt", "receipt_signature_b64", "record_sha256",
@@ -216,7 +235,10 @@ def load_journal(journal_path: Path, public_key: Path, anchor: dict[str, Any]) -
         if nonce in seen_nonces:
             raise GateError("JOURNAL_DUPLICATE_NONCE")
         validate_request(req, state)
-        if record["sequence"] != req["next_epoch"]:
+        sequence = record["sequence"]
+        if isinstance(sequence, bool) or not isinstance(sequence, int):
+            raise GateError("JOURNAL_SEQUENCE_TYPE_INVALID")
+        if sequence != req["next_epoch"]:
             raise GateError("JOURNAL_SEQUENCE_MISMATCH")
 
         receipt = record["receipt"]
@@ -306,6 +328,8 @@ def process_request(args: argparse.Namespace) -> int:
         anchor, anchor_raw = read_json(args.anchor)
         if not openssl_verify(args.public_key, anchor_raw, args.anchor_signature.read_bytes()):
             raise GateError("ANCHOR_SIGNATURE_INVALID")
+        if anchor_raw != canonical(anchor):
+            raise GateError("ANCHOR_NOT_CANONICAL")
         anchor = validate_anchor(anchor)
         state, records, previous_record_hash = load_journal(args.journal, args.public_key, anchor)
 

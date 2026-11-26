@@ -1076,9 +1076,20 @@ Related #379 A15 retained-range experiment covers a different set of three commi
 - Dedicated CI [run 45853154583](https://github.com/SepehrGhanbari/Ario/actions/runs/45853154583), exact head `3eea8bcd642762912c4a3d4b00c1169275d4d0ad`, SUCCESS: 12/12 tests on CPython 3.13.18 / OpenSSL 3.0.13. The count includes the exact-source R22.30 reproduction and expected-RED valid-prefix rollback control; these are reproduced weaknesses, not security passes.
 - No Sigsum call, external witness, real key, TPM, trust activation, production promotion, or merge.
 
+
+## 2026-11-26 — R22.31 strict JSON ledger parsing and sequence typing
+
+- Re-read the current branch source and test harness; retained the existing PR #411 and made no main-branch changes.
+- Found that duplicate JSON object keys were silently accepted, journal JSONL records were not required to be canonical after parsing, and a float `8.0` could compare equal to integer sequence `8`.
+- Added duplicate-key rejection for anchors, requests and journal records; canonical-byte enforcement for signed anchors; canonical single-line JSONL enforcement for journal records; and explicit integer-only sequence validation.
+- Added six regressions: duplicate key in anchor, request and journal; noncanonical signed anchor and journal record; and float sequence with a recomputed valid record hash.
+- Dedicated CI [run 45854444069](https://github.com/SepehrGhanbari/Ario/actions/runs/45854444069), exact head `0229727e6b297a1fd13e598f79940c32c2524ca0`, SUCCESS: 18/18 tests on CPython 3.13.18 / OpenSSL 3.0.13. Artifact ID `15135810639` (702 bytes).
+- Earlier intermediate CI failures were preserved in Actions history; the final tested head is green. Same-domain valid-prefix rollback remains an expected RED and still requires an independently retained authenticated floor.
+- No Sigsum call, new witness, external publication, real key, TPM, trust activation, production promotion, or merge.
+
 ## 2026-11-26 — R22.32 TPM EK/AK binding, CertifyCreation and PCR Quote (RESEARCH_ONLY)
 
-- Stacked branch `research/r22-32-tpm-ek-ak-attestation-stacked-2026-11-26` on the latest R22.31 PR #411 head `f83e8b3948045a426b89ac22404148f85cea9ccc`; the feature branch was updated with a merge commit and now has that base as an ancestor. No R22.31 files were changed.
+- Stacked branch `research/r22-32-tpm-ek-ak-attestation-stacked-2026-11-26` on the latest R22.31 PR #411 head `39ebaf8c5f043471f09fa56eeedce673ee00085d`; the feature branch was updated with a merge commit and now has that base as an ancestor. No R22.31 files were changed.
 - Pre-rebase exact-head CI [run 45853404250](https://github.com/SepehrGhanbari/Ario/actions/runs/45853404250), source `7e91aabf4d6bd3763027fead94ee7188b82087e1`, SUCCESS: **24/24 PASS**. A fresh exact-head run after updating to the latest R22.31 parent is pending. Implementation Regression [run 45853404032](https://github.com/SepehrGhanbari/Ario/actions/runs/45853404032) also succeeded on that SHA.
 - Environment: Ubuntu 24.04.5; tpm2-tools 5.6-1build4; swtpm 0.7.3-0ubuntu5.24.04.1; OpenSSL 3.0.13.
 - Tested synthetic EK X.509 path validation and SPKI binding; wrong-root rejection; AK-to-EK MakeCredential/ActivateCredential; cross-simulator credential rejection; TPM Name recomputation from TPMT_PUBLIC and mutation rejection; nonce-bound TPM2_CertifyCreation with signature/object Name/creation-hash validation; PCR 23 recomputation and Quote signature/nonce/selection verification; wrong nonce, wrong AK, tampered signature, substituted storage object, and post-quote PCR-change rejection.
@@ -1089,7 +1100,7 @@ Related #379 A15 retained-range experiment covers a different set of three commi
 
 ### R22.32 restack verification addendum — 2026-11-26
 
-- The feature branch was updated by a fast-forward merge commit `498e3620362cdea1940377c15be3edc611fcd19f` with the latest R22.31 PR #411 head `f83e8b3948045a426b89ac22404148f85cea9ccc` as its second parent. Compare: 8 commits ahead, 0 behind; six changed files.
+- The feature branch was updated by a fast-forward merge commit `498e3620362cdea1940377c15be3edc611fcd19f` with the latest R22.31 PR #411 head `39ebaf8c5f043471f09fa56eeedce673ee00085d` as its second parent. Compare: 8 commits ahead, 0 behind; six changed files.
 - Dedicated exact-head CI [run 45854078266](https://github.com/SepehrGhanbari/Ario/actions/runs/45854078266): **SUCCESS, 24/24 PASS**.
 - Exact-head Repository Implementation Regression [run 45854078244](https://github.com/SepehrGhanbari/Ario/actions/runs/45854078244): **SUCCESS**.
 - Final evidence artifact: [R22.32 TPM attestation evidence](https://github.com/SepehrGhanbari/Ario/actions/runs/45854078266/artifacts/15134911715).

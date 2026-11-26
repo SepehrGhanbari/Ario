@@ -2,7 +2,7 @@
 
 **RESEARCH_ONLY / SOFTWARE_TPM / SYNTHETIC_LAB_CA / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTION / NO_MERGE.**
 
-Parent: R22.31 PR #411, exact head `f83e8b3948045a426b89ac22404148f85cea9ccc`.
+Parent: R22.31 PR #411, exact head `39ebaf8c5f043471f09fa56eeedce673ee00085d`.
 
 ## Research question
 

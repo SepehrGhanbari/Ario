@@ -45,4 +45,21 @@ See RESEARCH_RECORD.md for exact source, tests, and CI evidence.
 
 ## Exact regression reproduction
 
-The dedicated CI also extracts and runs the exact embedded gate from R22.30. It demonstrates that two different nonces can both obtain an epoch-8 approval from the same unchanged epoch-7 anchor. The latest dedicated run [45853154583](https://github.com/SepehrGhanbari/Ario/actions/runs/45853154583) passed **12/12 tests** on CPython 3.13.18 / OpenSSL 3.0.13: the original monotonic-state controls, exact-source R22.30 reproduction, expected-RED valid-prefix rollback reproduction, and three path-alias safety regressions. The expected-RED test passing means the rollback weakness was reproduced; it does not mean rollback is prevented. The path-alias tests confirm that response outputs cannot overwrite the journal or signed anchor and cannot collide with each other.
+The dedicated CI also extracts and runs the exact embedded gate from R22.30. It demonstrates that two different nonces can both obtain an epoch-8 approval from the same unchanged epoch-7 anchor. The earlier path-alias run [45853154583](https://github.com/SepehrGhanbari/Ario/actions/runs/45853154583) passed 12/12 tests. The latest strict-ledger run [45854444069](https://github.com/SepehrGhanbari/Ario/actions/runs/45854444069) passed **18/18 tests** on CPython 3.13.18 / OpenSSL 3.0.13. It includes the exact-source R22.30 reproduction, expected-RED valid-prefix rollback reproduction, path-alias regressions, and strict JSON/canonicalization/type regressions. Expected-RED tests pass by reproducing documented weaknesses, not by preventing them.
+
+
+## Strict JSON ledger parsing — 2026-11-26
+
+A source audit found that Python's default JSON decoder silently accepts duplicate object keys. The journal loader also validated a record hash over the decoded dictionary without requiring the stored JSONL line itself to be canonical. This creates parser ambiguity across implementations even when the decoded dictionary appears valid.
+
+The research prototype now:
+- rejects duplicate JSON keys at every nesting level for signed anchors, requests and journal records;
+- requires the signed anchor bytes to equal the canonical serialization of the decoded anchor;
+- requires each journal record to be exactly one canonical JSON object followed by one newline;
+- requires `sequence` to be an integer and explicitly rejects booleans and floats (Python otherwise treats `8.0 == 8` as true).
+
+Six new regressions cover duplicate keys in anchor/request/journal, noncanonical signed anchors and journal records, and a float sequence whose record hash has been recomputed. The latter confirms the type check is not merely relying on the record hash.
+
+Latest dedicated CI: [run 45854444069](https://github.com/SepehrGhanbari/Ario/actions/runs/45854444069), exact tested head `0229727e6b297a1fd13e598f79940c32c2524ca0`, **18/18 PASS** on CPython 3.13.18 / OpenSSL 3.0.13. Artifact `r22-31-custodian-monotonic-state-evidence`, ID `15135810639` (702 bytes).
+
+This does not close same-domain journal rollback: a valid older prefix can still be restored without an independently retained authenticated floor. The prototype remains RESEARCH_ONLY; no external custodian, TPM attestation, real key, trust activation, production or merge is established.
