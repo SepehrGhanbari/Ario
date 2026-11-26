@@ -160,3 +160,8 @@ def test_browser_workflow_smokes_both_explainer_copies_and_announcement_suppress
     assert "website/ario-demo.html" in text
     assert "ARIO_DEMO_SOURCE: website/ario-demo.html" in text
     assert 'status.textContent = "";' in text
+
+
+def test_browser_smoke_allows_canonical_metadata_but_not_external_assets():
+    assert 'node.rel === "canonical"' in SMOKE.JS
+    assert 'externalAssets.length === 0' in SMOKE.JS

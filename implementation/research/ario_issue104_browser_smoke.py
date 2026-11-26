@@ -35,7 +35,10 @@ JS = r"""
     ck(options().every(x => x.querySelectorAll(".opts button").length === 3), "choice-buttons");
     ck(byId("banner").textContent.includes("SYNTHETIC"), "fictional-banner");
     ck(!document.querySelector("form, input, textarea"), "no-user-upload");
-    ck(document.querySelectorAll("script[src],link[href^='http']").length === 0, "no-external-assets");
+    const externalAssets = Array.from(document.querySelectorAll("script[src],link[href^='http']")).filter(
+      node => !(node.tagName === "LINK" && node.rel === "canonical")
+    );
+    ck(externalAssets.length === 0, "no-external-assets");
     const feedback = options()[0].querySelector(".feedback");
     options()[0].querySelector(".opts button:nth-child(2)").click();
     ck(feedback.textContent.includes("درست"), "fa-feedback-updated");
