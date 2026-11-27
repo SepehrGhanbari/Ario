@@ -650,6 +650,30 @@ def _deliberative_recommendation(proposed, observation, prior_claim, report):
     return recommendation
 
 
+def _deliberation_output_schema():
+    """Constrain wire shape only; the existing choice and evidence gates decide validity."""
+    def obj(properties):
+        return {"type": "object", "properties": properties,
+                "required": list(properties), "additionalProperties": False}
+
+    text = {"type": "string"}
+    nullable_text = {"type": ["string", "null"]}
+    recommendation = obj({key: text for key in (
+        "implementation_path", "test_path", "engineering_question", "rationale")})
+    basis = obj({"path": text, "quote": text})
+    return obj({
+        "intent": {"type": "string", "enum": ["STOP", "CONTINUE"]},
+        "reason": nullable_text,
+        "recommendation": {"anyOf": [{"type": "null"}, recommendation]},
+        "deliberation": obj({
+            "kind": {"type": "string", "enum": [
+                "ORDINARY", "DISSENT", "CORRECTION", "INITIATIVE", "NO_USEFUL_WORK"]},
+            "basis": {"anyOf": [{"type": "null"}, basis]},
+            "replacement_claim": nullable_text,
+        }),
+    })
+
+
 def request_plan(
     goal: str,
     workspace: str | Path,
@@ -767,6 +791,20 @@ def request_plan(
         user_payload["required_rules"][0] = (
             "Return the choice envelope including deliberation; no recommendation is required for STOP."
         )
+    output_format = "json"
+    if deliberate:
+        output_format = _deliberation_output_schema()
+        system_prompt += (
+            "\nReturn exactly ONE top-level JSON object, not just the nested recommendation. "
+            "For example, the following is a valid unreasoned STOP: "
+            '{"intent":"STOP","reason":null,"recommendation":null,'
+            '"deliberation":{"kind":"ORDINARY","basis":null,"replacement_claim":null}}. '
+            "This example illustrates the shape only; choose your own intent. "
+            "For CONTINUE, recommendation must be the full four-field object; "
+            "an ordinary choice uses null basis and null replacement_claim. "
+            "Your output must match this JSON Schema: " +
+            json.dumps(output_format, ensure_ascii=True, separators=(",", ":"))
+        )
     messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": json.dumps(user_payload, ensure_ascii=False)},
@@ -776,7 +814,7 @@ def request_plan(
         body = json.dumps({
             "model": model,
             "stream": False,
-            "format": "json",
+            "format": output_format,
             "options": {"temperature": 0},
             "messages": messages,
         }).encode("utf-8")
