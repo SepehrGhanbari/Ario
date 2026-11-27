@@ -148,3 +148,13 @@ Example:
 ```
 
 This adds a bounded observe-and-decide branch, not an automatic repair loop: failure diagnostics can explain state but cannot modify it or change the failed task to `COMPLETED`.
+
+## Explicit M0 structural audit action (research runtime)
+
+A predeclared task or workflow can run the existing deterministic M0 engine against an existing workspace JSON audit request (the same schema as `ario_cli.py --input`):
+
+```json
+{"step_id":"audit","tool":"audit_m0","path":"request.json","expected_sha256":"<64 hex digits from a separately selected input snapshot>"}
+```
+
+Reads at most 20,000 bytes plus one lookahead, checks the exact input digest, rejects duplicate JSON members, and invokes the existing M0 CLI execution API. The ordinary STEP_OBSERVED ledger entry carries the structural verdict, violation codes, ancestry summary and canonical report digest; the complete report remains available through the existing M0 CLI for the same input. PASS succeeds only as a structural step; FAIL and UNKNOWN stop normal task continuation. It is also available as a read-only failure diagnostic. No raw request, full report, credential, independent evidence admission, signature, truth or source-authentication claim is produced. The caller-selected pin is not freshness or custody proof and grants no authorization for subsequent actions. Planner does not generate this action automatically.
