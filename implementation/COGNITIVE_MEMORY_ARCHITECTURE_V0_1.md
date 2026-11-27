@@ -267,3 +267,5 @@ python .\implementation\ario_memory_cli.py --memory-lineage --snapshot "$HOME\Ar
 ```
 
 Exit 0: local node index or fully matched local WM-event references; 1: partial/unresolved diagnostic (including ledger-reference-only); 2: invalid input or failed validation. The exact-node reader shares the recall lineage algorithm and does not create recall attributions, activate empirical authority, write the input or install a live memory state. Optional `--output` creates a new JSON report exclusively. Pins are byte integrity only; claim truth, source authenticity, freshness and independent admission remain unknown or absent. No snapshot migration or autonomous local-chat activation.
+
+The CLI lineage reader accepts at most 16 MiB per input, the existing W38/W41 read ceiling. Larger valid snapshots remain supported by the pre-existing snapshot API, not this CLI mode.

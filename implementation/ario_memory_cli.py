@@ -36,7 +36,7 @@ def _inspect_memory_lineage(args) -> int:
         if args.node_id is not None and (not args.node_id.strip() or len(args.node_id) > 256):
             raise ValueError("invalid exact node ID")
         if args.snapshot:
-            raw = read_bounded_regular(Path(args.snapshot), MAX_SNAPSHOT_BYTES)
+            raw = read_bounded_regular(Path(args.snapshot), min(MAX_SNAPSHOT_BYTES, 16 * 1024 * 1024))
             engine, guard = decode_cognitive_memory_snapshot(
                 ConsolidationEngine, raw, expected_sha256=pin,
                 allowlisted_tools=set(ALLOWLISTED_TOOLS))

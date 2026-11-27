@@ -101,3 +101,11 @@ def test_pinned_bridge_refuses_mismatch_before_parsing(tmp_path, monkeypatch):
     with pytest.raises(BridgeError, match="LEDGER_PIN_MISMATCH"):
         bridge.ingest_agent_ledger(path, expected_sha256="0"*64)
     assert not bridge.engine.nodes and not bridge.guard.attributions
+
+def test_cli_lineage_retains_existing_reader_size_limit(tmp_path):
+    p = tmp_path / "oversized.json"
+    with p.open("wb") as stream:
+        stream.truncate(16 * 1024 * 1024 + 1)
+    result = call("--snapshot", str(p), "--expected-sha256", "0"*64)
+    assert result.returncode == 2 and not result.stdout
+    assert "INPUT_SIZE_LIMIT" in result.stderr
