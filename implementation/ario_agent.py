@@ -23,7 +23,7 @@ MAX_READ_BYTES = 20_000
 MAX_LOCK_PID = (1 << 32) - 1
 # Research-only history budget; legitimate bounded agent tasks emit <= 26 lifecycle events.
 MAX_TASK_HISTORY_EVENTS = 128
-ALLOWED_TOOLS = {"inspect_directory", "read_text", "file_fingerprint", "inspect_backup", "recovery_preflight", "git_status", "compile_python", "run_tests", "replace_text", "restore_backup", "verify_text", "audit_m0", "inspect_rere_revision"}
+ALLOWED_TOOLS = {"inspect_directory", "read_text", "file_fingerprint", "inspect_backup", "recovery_preflight", "git_status", "compile_python", "run_tests", "replace_text", "restore_backup", "verify_text", "audit_m0", "inspect_rere_revision", "verify_ledger_manifest"}
 
 
 RUN_TEST_MODULES = {
@@ -108,7 +108,7 @@ def parse_task(payload: Any) -> dict:
     seen: set[str] = set()
     normalized = []
     for index, action in enumerate(actions):
-        if not isinstance(action, dict) or set(action) - {"step_id", "tool", "path", "content", "expected_sha256", "backup_path", "expected_text", "start_line", "expected_next_start_line", "expected_truncated", "test_module", "prior_path", "prior_sha256"}:
+        if not isinstance(action, dict) or set(action) - {"step_id", "tool", "path", "content", "expected_sha256", "backup_path", "expected_text", "start_line", "expected_next_start_line", "expected_truncated", "test_module", "prior_path", "prior_sha256", "manifest_path"}:
             raise AgentRequestError(f"actions[{index}] has an invalid shape")
         if not {"step_id", "tool"} <= set(action):
             raise AgentRequestError(f"actions[{index}] requires step_id and tool")
@@ -120,14 +120,24 @@ def parse_task(payload: Any) -> dict:
         if tool not in ALLOWED_TOOLS:
             raise AgentRequestError(f"actions[{index}].tool is not allowlisted")
         _test_target(action)
-        if tool in {"inspect_directory", "read_text", "file_fingerprint", "inspect_backup", "recovery_preflight", "compile_python", "replace_text", "restore_backup", "verify_text", "audit_m0", "inspect_rere_revision"}:
+        if tool in {"inspect_directory", "read_text", "file_fingerprint", "inspect_backup", "recovery_preflight", "compile_python", "replace_text", "restore_backup", "verify_text", "audit_m0", "inspect_rere_revision", "verify_ledger_manifest"}:
             if not isinstance(action.get("path"), str):
                 raise AgentRequestError(f"actions[{index}] requires a relative path")
         elif "path" in action:
             raise AgentRequestError(f"actions[{index}] does not accept path")
         if tool != "inspect_rere_revision" and ("prior_path" in action or "prior_sha256" in action):
             raise AgentRequestError(f"actions[{index}] prior fields are valid only for inspect_rere_revision")
-        if tool == "inspect_rere_revision":
+        if tool != "verify_ledger_manifest" and "manifest_path" in action:
+            raise AgentRequestError("manifest_path is valid only for verify_ledger_manifest")
+        if tool == "verify_ledger_manifest":
+            if set(action) != {"step_id", "tool", "path", "manifest_path", "expected_sha256"}:
+                raise AgentRequestError("verify_ledger_manifest requires ledger path, manifest path and manifest SHA-256")
+            if not all(isinstance(action.get(k), str) and action[k].strip() for k in ("path", "manifest_path")):
+                raise AgentRequestError("ledger and manifest paths must be nonempty strings")
+            pin = action.get("expected_sha256")
+            if not isinstance(pin, str) or len(pin) != 64 or any(c not in "0123456789abcdefABCDEF" for c in pin):
+                raise AgentRequestError("expected_sha256 must be a SHA-256 hex digest")
+        elif tool == "inspect_rere_revision":
             if set(action) != {"step_id", "tool", "path", "expected_sha256", "prior_path", "prior_sha256"}:
                 raise AgentRequestError(f"actions[{index}] inspect_rere_revision requires exactly two paths and two SHA-256 pins")
             if not all(isinstance(action.get(k), str) and action[k].strip() for k in ("path", "prior_path")):
@@ -192,7 +202,7 @@ def parse_task(payload: Any) -> dict:
                 raise AgentRequestError(f"actions[{index}].expected_truncated must be a boolean")
         seen.add(step_id)
         normalized_action = {"step_id": step_id, "tool": tool}
-        for field in ("path", "content", "expected_sha256", "backup_path", "expected_text", "start_line", "expected_next_start_line", "expected_truncated", "test_module", "prior_path", "prior_sha256"):
+        for field in ("path", "content", "expected_sha256", "backup_path", "expected_text", "start_line", "expected_next_start_line", "expected_truncated", "test_module", "prior_path", "prior_sha256", "manifest_path"):
             if field in action:
                 normalized_action[field] = action[field]
         normalized.append(normalized_action)
@@ -234,7 +244,7 @@ def parse_task(payload: Any) -> dict:
         })
         diagnostic_tools = {
             "inspect_directory", "read_text", "file_fingerprint", "inspect_backup",
-            "recovery_preflight", "git_status", "compile_python", "run_tests", "verify_text", "audit_m0", "inspect_rere_revision",
+            "recovery_preflight", "git_status", "compile_python", "run_tests", "verify_text", "audit_m0", "inspect_rere_revision", "verify_ledger_manifest",
         }
         for index, action in enumerate(diagnostic_task["actions"]):
             if action["tool"] not in diagnostic_tools:
@@ -455,6 +465,12 @@ def _validate_read_text_observation(action: dict, observation: dict) -> dict:
 def execute_action(action: dict, root: Path, backup_root: Path | None = None) -> dict:
     test_target = _test_target(action)
     tool = action["tool"]
+    if tool == "verify_ledger_manifest":
+        from agent_ledger_verification import verify_pinned_manifest
+        return verify_pinned_manifest(
+            _inside(root, action["manifest_path"]), action["expected_sha256"],
+            _inside(root, action["path"]),
+        )
     if tool == "inspect_rere_revision":
         from rere_agent_revision import inspect_revision
         return inspect_revision(
@@ -669,6 +685,18 @@ def _ensure_task_id_unused(ledger: Path, task_id: str) -> None:
         raise AgentRequestError(str(exc)) from exc
 
 
+def _preflight_ledger_verification(action: dict, root: Path, active_ledger: Path) -> None:
+    if action["tool"] != "verify_ledger_manifest":
+        return
+    target = _inside(root, action["path"])
+    manifest = _inside(root, action["manifest_path"])
+    for path in (target, manifest):
+        if path == active_ledger or (path.exists() and active_ledger.exists() and path.samefile(active_ledger)):
+            raise AgentRequestError("verify_ledger_manifest cannot inspect the active output ledger")
+    if target == manifest or (target.exists() and manifest.exists() and target.samefile(manifest)):
+        raise AgentRequestError("ledger and manifest must be distinct files")
+
+
 def run_task(payload: Any, workspace: str | Path, ledger_path: str | Path) -> dict:
     task = parse_task(payload)
     root = Path(workspace).resolve()
@@ -685,6 +713,8 @@ def run_task(payload: Any, workspace: str | Path, ledger_path: str | Path) -> di
         if "path" in diagnostic and diagnostic["tool"] not in {"inspect_backup"}:
             _inside(root, diagnostic["path"])
     ledger = Path(ledger_path).resolve()
+    for action in (*task["actions"], *task.get("failure_diagnostics", [])):
+        _preflight_ledger_verification(action, root, ledger)
     ledger.parent.mkdir(parents=True, exist_ok=True)
     lock_path = ledger.with_name(ledger.name + ".lock")
     try:

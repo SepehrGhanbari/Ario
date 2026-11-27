@@ -170,3 +170,13 @@ A predeclared Agent task or Workflow may use the merged RERE-01 v0.4 comparator 
 Both workspace paths and caller pins are required. The action uses the existing bounded regular-file reader (256 KiB per snapshot) and the existing RERE restore/append APIs. It reconstructs the candidate from the prior records plus the candidate's suffix, requiring exact canonical byte equality. It records both input pins, record counts, prior/current laboratory outcomes and the count of previously warranted assessments withdrawn, without logging raw records. An exact replay is valid but reports no appended records. Invalid histories, altered prefixes, changed policy or rollback relative to the supplied prior snapshot stop ordinary continuation.
 
 A successfully inspected revision can legitimately produce event_outcome=UNKNOWN; execution success is not a truth verdict or authorization. Both pins are caller-selected and do not establish freshness or custody. No snapshots are written, no assessment is admitted to real memory, and no new action is automatically selected by Planner. The comparator remains limited to synthetic LAB-E101, not a general belief revision engine.
+
+## Verify prior execution ledger manifest (read-only research runtime)
+
+A predeclared task or workflow may compare a previously saved observation manifest (generated with the existing ledger_observation_adapter CLI/API) with the nominated prior execution ledger:
+
+```json
+{"step_id":"verify","tool":"verify_ledger_manifest","path":"prior.jsonl","manifest_path":"manifest.json","expected_sha256":"<64 hex digits of manifest bytes>"}
+```
+
+The action binds the exact manifest bytes to the supplied pin, reads with the merged W38/W41 bounded reader, rejects duplicate JSON members, and calls the existing ledger_audit_bridge verifier. It logs the two digests and bounded counts on a match, not raw records. REJECTED or UNKNOWN stops ordinary continuation. It is also available for read-only diagnostics. The active output ledger or a known alias is refused at preflight; use an existing closed ledger at its original path, because the manifest binds the nominated absolute source path. Neither file is written by this action. This is a local snapshot consistency check, not authenticated history, freshness, custody, truth, or evidence admission. Concurrent changes and hostile workspace namespace mutation outside the reader contract are not ruled out; no automatic Planner selection.
