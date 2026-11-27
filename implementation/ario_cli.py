@@ -214,16 +214,19 @@ def main(argv=None) -> int:
                       help="Offline review metadata diagnostic; no M0 evidence or merge authority")
     mode.add_argument("--evidence-dossier", nargs=3, metavar=("MANIFEST", "EXECUTION_LOG", "REQUEST"),
                       help="Build and screen one candidate dossier; never admit evidence")
+    parser.add_argument("--reviewer-grant", help="Optional RAC-0.1 preflight record for --evidence-dossier")
     parser.add_argument(
         "--ledger",
         help="Optional append-only JSONL output ledger; existing entries are never replaced",
     )
     args = parser.parse_args(argv)
+    if args.reviewer_grant is not None and args.evidence_dossier is None:
+        parser.error("--reviewer-grant requires --evidence-dossier")
     if args.evidence_dossier is not None:
         if args.ledger is not None:
             parser.error("--ledger is only available for the M0 audit input")
         from evidence_dossier_workflow import inspect_dossier_files
-        report = inspect_dossier_files(*args.evidence_dossier)
+        report = inspect_dossier_files(*args.evidence_dossier, grant_path=args.reviewer_grant)
         print(json.dumps(report, ensure_ascii=True, sort_keys=True))
         return 1 if report["status"] == "SCREENED" else 2
     if args.review_evidence is not None:
