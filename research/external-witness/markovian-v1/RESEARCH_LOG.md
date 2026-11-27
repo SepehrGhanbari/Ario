@@ -27,3 +27,12 @@
 - Origin: `github.com/SepehrGhanbari/Ario/kladje-test-v1`; tree size: 1.
 - Checkpoint SHA-256: `84ef0c4abc6e06033219f3a34b12c5d4b3893e0a8bd3f082bc7fed1d6e5047cd`.
 - Published public artifacts in this research branch only. Markovian manual pinning and witness cosignature remain pending; no add-checkpoint request has been sent.
+
+## 2026-11-27 — MWTL-01 first authorized external cosignature
+
+- Markovian explicitly confirmed manual pinning of origin/key ID 50e6b45c before submission.
+- GitHub Actions run 45981121161, job 140444972429, head 26abdbed0612e86075b6a82a0ab5dbc4fad6511e.
+- Direct precheck HTTP 404; exactly one POST; HTTP 200; witness cosignature verified using pinned Ed25519 witness key ID 41b8827f. Direct readback HTTP 200 and cryptographic verification succeeded.
+- Signed timestamp 2026-11-27T10:19:37Z. Checkpoint size 1, same synthetic leaf. Cosigned note SHA-256: 979b57d71dbf0793d3daab94a82fcb23e03588fc950c04fb90e6e48fdad4d4c2. The returned cosignature was independently reverified offline using cryptography, separate from the runner's OpenSSL verification.
+- Public artifact 15189501785; retained exact cosigned checkpoint bytes in cosigned-checkpoint-size-1.txt. Direct readback URL: https://witness.markovianprotocol.com/70f424d9059d85ac8d4f3f18834cad609f29e1caf60dd9250a0099d81c494702/checkpoint
+- Scope: RESEARCH_ONLY, one synthetic commitment. This is not a proof of full memory recovery, freshness after rollback, administrative quorum independence, payload custody, or production/Genesis/trust readiness. No additional POST authorized by this record.
