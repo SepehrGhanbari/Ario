@@ -41,6 +41,8 @@ from core.prospective_memory import (
 MAX_LEDGER_BYTES = 16 * 1024 * 1024
 MAX_LINE_BYTES = 128 * 1024
 MAX_EVENTS = 10000
+# These inspections report structure, not authenticated empirical execution.
+NATIVE_INSPECTION_REPORT_TOOLS = frozenset({"audit_m0", "inspect_rere_revision", "verify_ledger_manifest"})
 
 
 class BridgeError(ValueError):
@@ -60,6 +62,7 @@ class BridgeAuditSummary:
     triggered_intentions_count: int
     triggered_intentions: Tuple[Dict[str, Any], ...] = ()
     reported_task_finishes_count: int = 0
+    legacy_native_projections_retained: int = 0
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -72,6 +75,7 @@ class BridgeAuditSummary:
             "triggered_intentions_count": self.triggered_intentions_count,
             "triggered_intentions": list(self.triggered_intentions),
             "reported_task_finishes_count": self.reported_task_finishes_count,
+            "legacy_native_projections_retained": self.legacy_native_projections_retained,
         }
 
 
@@ -84,6 +88,8 @@ class EpistemicLedgerBridge:
         source_guard: Optional[SourceMonitoringGuard] = None,
         prospective_registry: Optional[ProspectiveMemoryRegistry] = None,
         node_id_version: str = "v2",
+        *,
+        report_only_tools: Optional[Set[str]] = None,
     ) -> None:
         self.engine = consolidation_engine or ConsolidationEngine(
             node_id_version=node_id_version,
@@ -92,6 +98,14 @@ class EpistemicLedgerBridge:
         self.guard = source_guard or SourceMonitoringGuard()
         self.registry = prospective_registry or ProspectiveMemoryRegistry()
         self.node_id_version = node_id_version
+        # A caller-injected guard retains its existing allowlist by default.
+        # Explicit report-only opt-in is separate from empirical admission and
+        # cannot introduce arbitrary new tools into the replay boundary.
+        extra = (NATIVE_INSPECTION_REPORT_TOOLS if source_guard is None else frozenset()
+                 ) if report_only_tools is None else frozenset(report_only_tools)
+        if not extra <= NATIVE_INSPECTION_REPORT_TOOLS:
+            raise BridgeError("unsupported report-only inspection tool")
+        self._report_only_tools = extra
 
     @staticmethod
     def compute_step_execution_lock(action: Dict[str, Any], result: Dict[str, Any]) -> str:
@@ -185,6 +199,7 @@ class EpistemicLedgerBridge:
         total_events = 0
         steps_observed = 0
         reported_task_finishes_count = 0
+        legacy_native_projections_retained = 0
         triggered_intentions: List[Dict[str, Any]] = []
         for line_no, line_hash, event in records:
             event_type = event.get("event")
@@ -215,11 +230,12 @@ class EpistemicLedgerBridge:
             elif event_type == "STEP_OBSERVED":
                 steps_observed += 1
                 tool = str(event.get("tool", ""))
+                native = "observation" in event
                 # Preserve the injected guard input boundary from #381.
-                if not tool.strip() or tool not in self.guard._allowlisted_tools:
+                # A report-only tool is not added to the empirical allowlist.
+                if not tool.strip() or not (tool in self.guard._allowlisted_tools
+                        or (native and tool in self._report_only_tools)):
                     raise SourceMonitoringError(f"Tool '{tool}' is not allowlisted for ledger import")
-                step_id = str(event.get("step_id", f"step-{line_no}"))
-                task_id = str(event.get("task_id", "unknown"))
                 status = str(event.get("status", "UNKNOWN"))
                 result = event.get("result", {})
                 if not isinstance(result, dict):
@@ -228,6 +244,31 @@ class EpistemicLedgerBridge:
                 path_val = str(result.get("path", event.get("path", "")))
                 target_name = path_val or str(result.get("target", tool))
                 stdout_str = json.dumps(result, sort_keys=True)
+
+                if native:
+                    if "result" in event or type(event["observation"]) is not dict:
+                        raise BridgeError("HOLD_AMBIGUOUS_NATIVE_STEP_OBSERVATION")
+                    task_id, step_id = event.get("task_id"), event.get("step_id")
+                    if not all(type(v) is str and v.strip() for v in (task_id, step_id)):
+                        raise BridgeError("HOLD_INVALID_NATIVE_STEP_IDENTITY")
+                    # An earlier version could have recorded this same native
+                    # line as an empty legacy result. Preserve that historical
+                    # projection; the existing replay check below still must
+                    # validate its exact retained payload digest.
+                    old_concept = f"agent_tool:{tool}:{target_name}"
+                    old_id = self.engine.compute_node_id(
+                        old_concept.strip(), stdout_str.strip(), version=self.engine.node_id_version)
+                    old_node = self.engine.nodes.get(old_id)
+                    if (line_hash in self.engine._event_payload_digests
+                            and old_node is not None and line_hash in old_node.source_event_hashes):
+                        legacy_native_projections_retained += 1
+                    else:
+                        # Different task/step identities may describe different
+                        # times or targets. Do not invent a contradiction merely
+                        # because two audit tools returned different reports.
+                        target_name = "native:" + json.dumps([task_id, step_id],
+                                                               ensure_ascii=True, separators=(",", ":"))
+                        stdout_str = json.dumps(event["observation"], sort_keys=True)
 
                 # A JSONL status and self-hashed result are reports, not
                 # independent evidence that the tool actually executed.
@@ -299,4 +340,5 @@ class EpistemicLedgerBridge:
             triggered_intentions_count=len(triggered_intentions),
             triggered_intentions=tuple(triggered_intentions),
             reported_task_finishes_count=reported_task_finishes_count,
+            legacy_native_projections_retained=legacy_native_projections_retained,
         )
