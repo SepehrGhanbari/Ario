@@ -10,6 +10,7 @@
 **Research identity:** **Ario — Auditable Epistemic Framework for AI**  
 **نام پژوهشی فارسی:** آریو — چارچوب معرفتی ممیزی‌پذیر برای هوش مصنوعی  
 **Official website:** https://ario-research-independent.vercel.app/  
+**Public Research & Evidence Portal:** [English research topics](https://ario-evidence-portal.lilacvanilla3.chatgpt.site/research-topics/) · [موضوعات پژوهشی فارسی](https://ario-evidence-portal.lilacvanilla3.chatgpt.site/research-topics/fa/) — source-linked explanations of auditable AI, epistemic AI, AI memory integrity, independent verification, and AI governance and ethics. These are research resources, not independently peer-reviewed findings or production capabilities.    
 **Public traffic dashboard / داشبورد عمومی ترافیک:** https://ario-public-traffic.vercel.app/ — dated aggregate clone/view counts, not unique people or verified adoption.  
 
 ## Latest verified research corpus / کامل‌ترین بستهٔ پژوهشی — 14 November 2026
