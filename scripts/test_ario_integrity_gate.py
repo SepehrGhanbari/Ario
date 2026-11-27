@@ -159,4 +159,59 @@ class GateTests(unittest.TestCase):
             self.assertIn('core.autocrlf=false',args);self.assertTrue(any(a.startswith('core.hooksPath=') for a in args));self.assertEqual(kw['env']['GIT_CONFIG_NOSYSTEM'],'1');self.assertEqual(kw['env']['GIT_ALLOW_PROTOCOL'],'https')
         self.assertIn('--no-recurse-submodules',calls[1][0]);self.assertIn('--no-recurse-submodules',calls[3][0]);self.assertIn(g.REPO,calls[1][0])
 
+    def runtime_request(self):
+        return json.dumps({'audit_id':'USER-AUDIT','rule_versions':['M0-1.0'],
+            'configuration_id':'EXPLICIT','execution_timestamp':'TEST-TIME','artifacts':{}}).encode()
+
+    def runtime_report(self):
+        return {'status':'TRACKED_FILE_BYTES_MATCH_GITHUB_TREE','commit':g.RUNTIME_COMMIT,
+                'tree':g.RUNTIME_TREE,'expected_files':g.RUNTIME_COUNT,
+                'expected_bytes':g.RUNTIME_TOTAL,'matched_files':g.RUNTIME_COUNT,
+                'problems':[],'extra_paths':[]}
+
+    def test_runtime_audit_runs_actual_merged_m0_cli(self):
+        raw=self.runtime_request()
+        result=g.run_runtime_audit(g.HERE.parent,raw)
+        self.assertEqual(result['audit_id'],'USER-AUDIT')
+        self.assertEqual(result['verdict'],'UNKNOWN')
+        self.assertIsInstance(result['violations'],list)
+
+    def test_runtime_audit_order_and_exact_data_copy(self):
+        raw=self.runtime_request(); request=self.root/'request.json'; request.write_bytes(raw)
+        order=[]
+        with patch.object(g,'safe_git',side_effect=lambda *_:order.append('clone')),patch.object(self.cov,'check_checkout',side_effect=lambda *_:(order.append('verify') or self.runtime_report())),self.deps(),patch.object(g,'run_runtime_audit',side_effect=lambda root,data:(order.append('audit') or self.assertEqual(data,raw) or {'verdict':'UNKNOWN'})):
+            code,report=g.gate('runtime-audit',request,self.output,g.RUNTIME_COMMIT)
+        self.assertEqual(code,0);self.assertEqual(order,['clone','verify','audit'])
+        self.assertEqual(report['status'],'MATCH_RUNTIME_AUDIT_COMPLETED')
+        self.assertEqual(report['request_sha256'],g.sha(raw))
+        self.assertEqual(report['claim_truth'],'UNKNOWN')
+        self.assertEqual(request.read_bytes(),raw)
+
+    def test_runtime_audit_wrong_tree_never_executes(self):
+        request=self.root/'request.json';request.write_bytes(self.runtime_request())
+        with self.deps(),patch.object(g,'safe_git'),patch.object(self.cov,'check_checkout',return_value=dict(self.runtime_report(),tree='0'*40)),patch.object(g,'run_runtime_audit') as audit:
+            code,report=g.gate('runtime-audit',request,self.output,g.RUNTIME_COMMIT)
+        self.assertEqual(code,3);audit.assert_not_called();self.assertEqual(list(self.output.iterdir()),[])
+
+    def test_runtime_audit_refuses_unselected_commit_and_invalid_input(self):
+        request=self.root/'request.json';request.write_bytes(self.runtime_request())
+        with patch.object(g,'safe_git') as clone:
+            self.assertEqual(g.gate('runtime-audit',request,self.output,'0'*40)[0],3)
+            request.write_bytes(b'{"audit_id":"x","audit_id":"y"}')
+            self.assertEqual(g.gate('runtime-audit',request,self.output,g.RUNTIME_COMMIT)[0],2)
+            request.write_bytes(b' '* (g.RUNTIME_INPUT_MAX+1))
+            self.assertEqual(g.gate('runtime-audit',request,self.output,g.RUNTIME_COMMIT)[0],2)
+            clone.assert_not_called()
+
+    def test_runtime_audit_cleans_stage_on_execution_error(self):
+        request=self.root/'request.json';request.write_bytes(self.runtime_request())
+        with self.deps(),patch.object(g,'safe_git'),patch.object(self.cov,'check_checkout',return_value=self.runtime_report()),patch.object(g,'run_runtime_audit',side_effect=g.Unknown('child failed')):
+            code,report=g.gate('runtime-audit',request,self.output,g.RUNTIME_COMMIT)
+        self.assertEqual(code,3);self.assertEqual(list(self.output.iterdir()),[])
+
+    def test_runtime_audit_cli_selects_fixed_pin(self):
+        with patch.object(g,'gate',return_value=(0,{})) as gate:
+            self.assertEqual(g.main(['runtime-audit','--input',str(self.root/'input.json'),'--output-parent',str(self.output)]),0)
+        self.assertEqual(gate.call_args.args[3],g.RUNTIME_COMMIT)
+
 if __name__=='__main__':unittest.main()

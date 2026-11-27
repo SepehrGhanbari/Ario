@@ -27,3 +27,13 @@ RESEARCH_ONLY / NO_REAL_KEYS / NO_TRUST_ACTIVATION / NO_PRODUCTION / NO_AUTOMATI
 ## Admission and subsequent live Windows evidence
 
 See [bounded closeout](integrity-gate-v1-evidence/README.md). Both explicit startup-probe (473/473) and download-restore ZIP (204/204) succeeded in owner-supplied Windows reports. The earlier live UNKNOWN is retained. The `import` command stages verified archive bytes only; `restore` extracts verified source members. Use `restore` for a local ZIP or TXT if restoration is desired. The fixed startup pin remains the tested pre-admission commit, not the new main. No blanket runtime enforcement or new signature authority.
+
+## Explicit verified runtime audit (non-memory integration)
+
+The original fixed 473-file startup probe and release pins remain unchanged. The new `runtime-audit` operation selects the separate exact merged runtime commit `f158695b60bd2c10061531f6cc56e2ed12db1ca0`, tree `c5c374fce05e0bbc17193ae00dffc67525ed201b`, 636 regular tracked blobs / 97,610,980 bytes, as enumerated from GitHub. From a separately trusted copy of the gate:
+
+```powershell
+python -I -B scripts/ario_integrity_gate.py runtime-audit --input request.json --output-parent .
+```
+
+Windows menu option 7 uses the same operation. The gate reads an explicit M0 JSON request (up to 20,000 bytes), retains its exact SHA-256, prepares a fresh isolated-directory checkout of the fixed pin, checks its complete raw tracked-byte coverage, and invokes only the existing deterministic `implementation/ario_cli.py` with a private copy of the request. No caller-selected script, arbitrary command, ledger, memory, signer or model execution. An unavailable or mismatched checkout never starts the audit. No automatic launch on clone/download. Output distinguishes preparation/execution success (`MATCH_RUNTIME_AUDIT_COMPLETED`, exit 0) from M0's own PASS/FAIL/UNKNOWN result; even FAIL or UNKNOWN can be a correctly completed audit. Invalid input/read or failed execution is rejected or unknown; an unfinished stage is not accepted. The fixed pin is not a moving main and must not be interpreted as signed, latest, independently trusted or production-authorized. The same environmental assumptions as V1 apply, including no hostile-local-OS sandbox guarantee. The new mode uses the existing checked helper bytes without changing their pins.

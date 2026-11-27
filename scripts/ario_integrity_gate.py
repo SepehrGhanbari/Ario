@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """ARIO INTEGRITY GATE V1: explicit research-only acquisition and restore.
 Run from a separately trusted package with python -I -B. Received archives are never executed.
-Only the explicit startup probe runs the fixed, verified official checkout on synthetic input.
+Only explicit startup-probe and runtime-audit modes run fixed pinned checkouts; runtime-audit accepts data-only M0 input.
 """
 from __future__ import annotations
 import argparse
@@ -25,6 +25,11 @@ HERE = Path(__file__).resolve().parent
 COMMIT = '89ef7ba466db2e7a267ee7780df348ee9e5920e6'
 TREE = '7b1566d33a52b5bb609976f94501bc63f69d2a09'
 COUNT, TOTAL = 473, 96396968
+# Preserve the tested V1 pin. This separate pin selects the existing merged runtime.
+RUNTIME_COMMIT = 'f158695b60bd2c10061531f6cc56e2ed12db1ca0'
+RUNTIME_TREE = 'c5c374fce05e0bbc17193ae00dffc67525ed201b'
+RUNTIME_COUNT, RUNTIME_TOTAL = 636, 97610980
+RUNTIME_INPUT_MAX = 20_000
 SOURCE = '05ba5c960aaea96fc6bb80504b53b4d47e7d42f5'
 SOURCE_TREE = '8a9429d396c09fe17682a61dd91cb43672d3cb79'
 SOURCE_COUNT, SOURCE_TOTAL = 204, 16183258
@@ -37,7 +42,7 @@ ASSETS = {'ario-full.zip': (6524694,'d11269dc593f9cbb70e7d622a8acc31d0fe36d292a9
 QUAL = ('RESEARCH_ONLY; verified preparation, not execution authorization, publisher identity, '
         'independent custody, atomic filesystem snapshot, freshness, or protection against hostile local OS/runtime. '
         'Checkout checks Git SHA-1 raw worktree bytes, excludes .git and does not attest modes/history. '
-        'Explicit startup probe is synthetic M0 only; no general runtime enforcement or sandbox guarantee.')
+        'Explicit startup probe is synthetic M0; runtime-audit is bounded M0 only. No general runtime enforcement or sandbox guarantee.')
 class Unknown(Exception): pass
 class Rejected(Exception): pass
 
@@ -106,7 +111,8 @@ def require_checkout(cov,root,commit):
         not cov.hex40(report.get('tree')) or type(n) is not int or n<=0 or type(b) is not int or b<0 or
         type(report.get('matched_files')) is not int or report['matched_files']!=n or
         report.get('problems')!=[] or report.get('extra_paths')!=[]): raise Unknown('incomplete checkout evidence')
-    expected={COMMIT:(TREE,COUNT,TOTAL),SOURCE:(SOURCE_TREE,SOURCE_COUNT,SOURCE_TOTAL)}.get(commit)
+    expected={COMMIT:(TREE,COUNT,TOTAL),SOURCE:(SOURCE_TREE,SOURCE_COUNT,SOURCE_TOTAL),
+              RUNTIME_COMMIT:(RUNTIME_TREE,RUNTIME_COUNT,RUNTIME_TOTAL)}.get(commit)
     if expected and (report['tree'],n,b)!=expected: raise Unknown('checkout differs from pinned tree/count/bytes')
     return report
 
@@ -164,6 +170,38 @@ def run_synthetic_audit(root):
                 raise Unknown('unexpected synthetic audit result')
         except (OSError,subprocess.TimeoutExpired) as e: raise Unknown('synthetic startup unavailable') from e
         return {'audit_id':audit_id,'verdict':'UNKNOWN','scope':'SYNTHETIC_M0_NO_LEDGER'}
+
+def run_runtime_audit(root, raw):
+    """Run only the pinned M0 CLI on a private copy of explicitly supplied JSON."""
+    if type(raw) is not bytes or len(raw)>RUNTIME_INPUT_MAX:
+        raise Rejected('runtime audit input size exceeds bound')
+    request_data=parse_json(raw)
+    if not isinstance(request_data,dict) or type(request_data.get('audit_id')) is not str:
+        raise Rejected('runtime audit requires an M0 request object with audit_id')
+    with tempfile.TemporaryDirectory(prefix='ario-runtime-audit-') as d:
+        scratch=Path(d); request=scratch/'request.json'
+        with request.open('xb') as f: f.write(raw)
+        bootstrap=('import runpy,sys,pathlib; p=pathlib.Path(sys.argv[1]); '
+                   'sys.path.insert(0,str(p.parent)); sys.argv=[str(p),"--input",sys.argv[2]]; '
+                   'runpy.run_path(str(p),run_name="__main__")')
+        env={k:v for k,v in os.environ.items() if k.upper() in {'SYSTEMROOT','WINDIR','PATH','COMSPEC','PATHEXT','LANG','LC_ALL'}}
+        env.update(HOME=str(scratch),USERPROFILE=str(scratch),TMP=str(scratch),TEMP=str(scratch),TMPDIR=str(scratch),
+                   PYTHONIOENCODING='utf-8')
+        try:
+            child=subprocess.run([sys.executable,'-I','-B','-S','-X','utf8','-c',bootstrap,
+                                  str(root/'implementation/ario_cli.py'),str(request)],
+                                 cwd=scratch,env=env,stdin=subprocess.DEVNULL,capture_output=True,timeout=60,check=False)
+        except (OSError,subprocess.TimeoutExpired) as e:
+            raise Unknown('runtime audit unavailable') from e
+        if child.returncode or len(child.stdout)>1024*1024:
+            raise Unknown('runtime audit did not return a bounded result')
+        result=parse_json(child.stdout)
+        if (not isinstance(result,dict) or result.get('audit_id')!=request_data['audit_id']
+                or result.get('verdict') not in ('PASS','FAIL','UNKNOWN')
+                or type(result.get('violations')) is not list
+                or type(result.get('verdict_basis')) is not str):
+            raise Unknown('unexpected runtime audit result')
+        return result
 
 def unique(pairs):
     d={}
@@ -279,8 +317,15 @@ def gate(mode, path, parent, commit=COMMIT, record=None):
         rel=load_dep('ario_verified_release'); cov=load_dep('ario_verify_coverage')
         if mode=='check': report['evidence']=require_checkout(cov,path,commit)
         elif mode=='doi-check': report['evidence']=require_doi(cov,path,record)
-        elif mode in ('clone','startup-probe'):
+        elif mode in ('clone','startup-probe','runtime-audit'):
             if mode=='startup-probe' and commit!=COMMIT: raise Unknown('startup probe requires exact fixed official commit')
+            if mode=='runtime-audit':
+                if commit!=RUNTIME_COMMIT: raise Unknown('runtime audit requires exact fixed runtime commit')
+                raw=read_regular(path,RUNTIME_INPUT_MAX)
+                data=parse_json(raw)
+                if not isinstance(data,dict) or type(data.get('audit_id')) is not str:
+                    raise Rejected('runtime audit requires an M0 request object with audit_id')
+                report['request_sha256']=sha(raw)
             stage=Path(tempfile.mkdtemp(prefix='ario-gate-stage-',dir=real_dir(parent)))
             with tempfile.TemporaryDirectory(prefix='ario-git-control-') as control:
                 safe_git(stage,Path(control),commit)
@@ -288,6 +333,12 @@ def gate(mode, path, parent, commit=COMMIT, record=None):
             if mode=='startup-probe':
                 report['startup_attempted']=True
                 report['startup_result']=run_synthetic_audit(stage)
+            if mode=='runtime-audit':
+                report['runtime_attempted']=True
+                report['runtime_result']=run_runtime_audit(stage,raw)
+                report['runtime_scope']='EXPLICIT_M0_DATA_ONLY_NO_LEDGER'
+                report['claim_truth']='UNKNOWN'
+                report['independent_admission_authority']='NONE'
         elif mode in ('import','restore','download-restore'):
             with tempfile.TemporaryDirectory(prefix='ario-integrity-private-') as s:
                 scratch=Path(s)
@@ -312,7 +363,8 @@ def gate(mode, path, parent, commit=COMMIT, record=None):
                         restore_txt(cov,data,manifest,stage)
                     report['evidence']=require_checkout(cov,stage,SOURCE)
         else: raise Unknown('unsupported gate mode')
-        report['status']='MATCH_RESEARCH_STARTUP_PROBE' if mode=='startup-probe' else 'MATCH_PREPARATION_ONLY'; passed=True
+        report['status']={'startup-probe':'MATCH_RESEARCH_STARTUP_PROBE',
+                          'runtime-audit':'MATCH_RUNTIME_AUDIT_COMPLETED'}.get(mode,'MATCH_PREPARATION_ONLY'); passed=True
         if stage is not None: report['directory']=str(stage)
         return 0,report
     except Exception as e:
@@ -339,8 +391,9 @@ def interactive():
     print("4. Clone + verify only (official fixed commit; no execution)")
     print("5. Verify an existing checkout (enter exact commit)")
     print("6. Verify a local Zenodo record folder (no execution)")
+    print("7. Clone + verify fixed runtime + execute an explicit M0 JSON audit (no ledger)")
     try:
-        choice=input("Choose 1-6: ").strip(); path=None; commit=COMMIT; record=None
+        choice=input("Choose 1-7: ").strip(); path=None; commit=COMMIT; record=None
         if choice=='1': mode='startup-probe'
         elif choice=='2': mode='download-restore'
         elif choice=='3':
@@ -352,6 +405,9 @@ def interactive():
         elif choice=='6':
             mode='doi-check'; path=Path(input('Parent folder containing the record-ID directory: ').strip().strip('"'))
             record=input('Zenodo record ID: ').strip()
+        elif choice=='7':
+            mode='runtime-audit'; commit=RUNTIME_COMMIT
+            path=Path(input('M0 JSON request path: ').strip().strip('"'))
         else: print('No operation selected.'); return 3
         code,report=gate(mode,path,parent,commit,record)
         report['exit_code']=code
@@ -366,14 +422,14 @@ def main(argv=None):
     if (sys.argv[1:] if argv is None else argv)==['--menu']: return interactive()
     p=argparse.ArgumentParser(description=__doc__)
     sub=p.add_subparsers(dest='mode',required=True)
-    for name in ('check','clone','import','restore','doi-check','startup-probe','download-restore'):
+    for name in ('check','clone','import','restore','doi-check','startup-probe','download-restore','runtime-audit'):
         q=sub.add_parser(name)
         if name in ('check','doi-check'): q.add_argument('--directory',type=Path,required=True)
         if name in ('check','clone'): q.add_argument('--commit',default=COMMIT)
-        if name in ('clone','import','restore','startup-probe','download-restore'): q.add_argument('--output-parent',type=Path,required=True)
-        if name in ('import','restore'): q.add_argument('--input',type=Path,required=True)
+        if name in ('clone','import','restore','startup-probe','download-restore','runtime-audit'): q.add_argument('--output-parent',type=Path,required=True)
+        if name in ('import','restore','runtime-audit'): q.add_argument('--input',type=Path,required=True)
         if name=='doi-check': q.add_argument('--record',required=True)
     a=p.parse_args(argv)
-    code,report=gate(a.mode,getattr(a,'directory',getattr(a,'input',None)),getattr(a,'output_parent',None),getattr(a,'commit',COMMIT),getattr(a,'record',None))
+    code,report=gate(a.mode,getattr(a,'directory',getattr(a,'input',None)),getattr(a,'output_parent',None),getattr(a,'commit',RUNTIME_COMMIT if a.mode=='runtime-audit' else COMMIT),getattr(a,'record',None))
     report['exit_code']=code; print(json.dumps(report,ensure_ascii=True,sort_keys=True)); return code
 if __name__=='__main__': raise SystemExit(main())
