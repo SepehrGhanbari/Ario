@@ -355,7 +355,12 @@ class WorkingMemoryBuffer:
                 assertion=node.assertion,
                 source_attribution=attribution,
                 salience=node.saliency_score,
-                metadata={"recalled_from_ltm": True, "ltm_node_id": node.node_id},
+                metadata={
+                    "recalled_from_ltm": True,
+                    "ltm_node_id": node.node_id,
+                    "ltm_status_at_recall": node.status.value,
+                    "ltm_source_event_hashes_at_recall": node.source_event_hashes,
+                },
             )
             self._recalled_chunk_ids.add(chunk.chunk_id)
             recalled_chunks.append(chunk)
@@ -434,11 +439,46 @@ class WorkingMemoryBuffer:
                         ):
                             contradiction_pairs.append((group[i].chunk_id, group[j].chunk_id))
 
+        # Recalled material is historical, not a new observation. Consult the
+        # actual LTM record, not caller-editable metadata, because contestation
+        # may change after the chunk was recalled or after snapshot recovery.
+        contested_concepts: Set[str] = set()
+        unresolved_recall = 0
+        for chunk in chunks:
+            if chunk.chunk_id not in self._recalled_chunk_ids:
+                continue
+            attr = chunk.source_attribution
+            parents = attr.parent_attribution_ids
+            node = (self.consolidation_engine.get_node(parents[0])
+                    if self.consolidation_engine is not None and len(parents) == 1
+                    else None)
+            if (node is None or node.node_id != parents[0]
+                    or attr.attribution_id != "recall_" + node.node_id
+                    or node.concept != chunk.concept or node.assertion != chunk.assertion):
+                unresolved_recall += 1
+            elif node.status == NodeEpistemicStatus.CONTESTED:
+                contested_concepts.add(node.concept.strip().lower())
+
+        # Count existing local pairs plus distinct historical contested
+        # concepts not already represented by a local pair.
+        paired_concepts = {
+            self._active_chunks[left].concept.strip().lower()
+            for left, _ in contradiction_pairs
+        }
+        historical_conflicts = len(contested_concepts - paired_concepts)
+        contradiction_count = len(contradiction_pairs) + historical_conflicts
         diagnostics: List[str] = []
-        if contradiction_pairs:
+        if contested_concepts:
+            diagnostics.append(f"RECALLED_CONTESTED_CONCEPTS: {len(contested_concepts)}")
+        if unresolved_recall:
+            diagnostics.append(f"UNRESOLVED_RECALL_LINEAGE: {unresolved_recall}")
+        if contradiction_count:
             verdict = MetacognitiveVerdict.CONTRADICTION_DETECTED
             recommended = "Halt automated action; resolve active contradictions in working memory."
-            diagnostics.append(f"CONTRADICTIONS_DETECTED: {len(contradiction_pairs)} pair(s)")
+            diagnostics.append(f"CONTRADICTIONS_DETECTED: {contradiction_count} signal(s)")
+        elif unresolved_recall:
+            verdict = MetacognitiveVerdict.PARTIAL_NEEDS_RECALL
+            recommended = "Re-establish historical memory references before relying on recalled material."
         elif empirical_ratio >= 0.5 and avg_salience >= 0.4:
             verdict = MetacognitiveVerdict.FOCUSED_SUFFICIENCY
             recommended = "Sufficient grounded empirical focus; proceed with planned task."
@@ -457,7 +497,7 @@ class WorkingMemoryBuffer:
             active_chunk_count=total,
             empirical_ratio=round(empirical_ratio, 3),
             average_salience=round(avg_salience, 3),
-            contradiction_count=len(contradiction_pairs),
+            contradiction_count=contradiction_count,
             recommended_action=recommended,
             diagnostics=diagnostics,
         )
