@@ -41,6 +41,23 @@ def unique(pairs):
     return out
 
 
+def native_events(raw, before, end, workflow_id, status):
+    if (type(before) is not int or type(end) is not int or
+            not 0 <= before < end <= len(raw)):
+        raise ValueError("invalid native ledger range")
+    if (before and raw[before-1:before] != b"\n") or raw[end-1:end] != b"\n":
+        raise ValueError("incomplete native ledger range")
+    events = [json.loads(line, object_pairs_hook=unique)
+              for line in raw[before:end].splitlines() if line.strip()]
+    if (not events or events[-1].get("event") != "WORKFLOW_FINISHED" or
+            events[-1].get("workflow_id") != workflow_id or
+            events[-1].get("status") != status):
+        raise ValueError("native workflow finish is not bound to retained outcome")
+    stages = [e for e in events if e.get("event") == "WORKFLOW_STAGE_OBSERVED"
+              and e.get("workflow_id") == workflow_id]
+    return stages
+
+
 def fingerprint(root, paths):
     """Bounded observable condition, not a proof of all environmental conditions."""
     if tuple(sorted(paths)) not in tuple(tuple(sorted(p)) for p in PAIRS):
@@ -152,18 +169,39 @@ class Experience:
             if (type(n) is not int or n <= 0 or n > len(self.raw_ledger)
                     or digest(self.raw_ledger[:n]) != p.get("ledger_sha256")):
                 continue
+            if p.get("workflow_id") != d.get("workflow_id"):
+                continue
+            before = d.get("ledger_before_bytes")
+            if (type(before) is not int or before < 0 or before >= n or
+                    digest(self.raw_ledger[:before]) != d.get("ledger_before_sha256")):
+                continue
+            try:
+                stages = native_events(self.raw_ledger, before, n, d["workflow_id"], p["status"])
+            except (ValueError, KeyError, TypeError):
+                continue
             paths = d.get("paths")
             if type(paths) is not list or tuple(paths) not in tuple(tuple(sorted(x)) for x in PAIRS):
                 continue
             fb = p.get("feedback")
             failure = (fb.get("failure_kind") if type(fb) is dict else None)
-            if failure not in ("READ_FAILED", "READ_BOUNDARY_CHANGED"):
+            if failure not in ("READ_FAILED", "READ_BOUNDARY_CHANGED") or p["status"] != "STOPPED":
                 failure = None
+            if failure:
+                observed = fb.get("observations")
+                native_steps = stages[-1].get("task_result", {}).get("steps", []) if stages else []
+                last = native_steps[-1] if native_steps else {}
+                if (not isinstance(observed, list) or not observed or
+                        last.get("status") != "FAILED" or last.get("tool") != "read_text" or
+                        last.get("step_id") != observed[-1].get("step_id") or
+                        last.get("observation", {}).get("ok") is not False):
+                    failure = None
             now = fingerprint(self.root, paths)
             same = now is not None and now == d.get("conditions")
             report = {"record_sha256": row["sha256"], "decision_sha256": p["decision"],
                       "paths": paths, "status": p["status"], "failure_kind": failure,
-                      "same_observed_conditions": same, "cause": "UNKNOWN",
+                      "same_observed_conditions": same,
+                      "failed_step": fb["observations"][-1] if failure else None,
+                      "cause": "UNKNOWN",
                       "repair_verified": "UNKNOWN", "source": "REPORTED_UNVERIFIED",
                       "workflow_id": d["workflow_id"]}
             assertion = canonical(report).decode("ascii")
@@ -188,8 +226,7 @@ class Experience:
         if current is None:
             return []
         return [r["record_sha256"] for r in self.relevant
-                if r["failure_kind"] and r["same_observed_conditions"]
-                and r["paths"] == sorted(paths)
+                if r["failure_kind"] and r["paths"] == sorted(paths)
                 # Re-evaluate the exact fingerprint used by the retained decision.
                 and any(x["sha256"] == r["decision_sha256"] and
                         x["payload"].get("conditions") == current for x in self.rows)]
@@ -201,7 +238,11 @@ class Experience:
                             "failure": False})
 
     def begin(self, workflow, choice, paths, *, prior=None):
+        if len(self.rows) + 2 > MAX_RECORDS:
+            raise ValueError("insufficient retained experience capacity for decision and outcome")
+        raw = self._ledger_bytes()
         return self._write({"kind": "DECISION", "run": uuid.uuid4().hex,
+                            "ledger_before_bytes": len(raw), "ledger_before_sha256": digest(raw),
                             "workflow_id": workflow["workflow_id"], "workflow": workflow,
                             "choice": choice, "paths": sorted(paths or ()),
                             "conditions": fingerprint(self.root, paths or ()),
@@ -210,6 +251,11 @@ class Experience:
 
     def finish(self, decision, outcome, feedback):
         raw = self._ledger_bytes()
+        d = next(r["payload"] for r in self.rows if r["sha256"] == decision)
+        before = d["ledger_before_bytes"]
+        if digest(raw[:before]) != d["ledger_before_sha256"]:
+            raise ValueError("execution ledger prefix changed during attempt")
+        native_events(raw, before, len(raw), d["workflow_id"], outcome["status"])
         return self._write({"kind": "OUTCOME", "decision": decision,
                             "status": outcome["status"], "workflow_id": outcome["workflow_id"],
                             "feedback": feedback, "result_sha256": digest(canonical(outcome)),
