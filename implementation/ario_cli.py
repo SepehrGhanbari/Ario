@@ -212,11 +212,20 @@ def main(argv=None) -> int:
     mode.add_argument("--input", help="Path to the JSON M0 audit request")
     mode.add_argument("--review-evidence", nargs=3, metavar=("PIN", "FIRST", "LAST"),
                       help="Offline review metadata diagnostic; no M0 evidence or merge authority")
+    mode.add_argument("--evidence-dossier", nargs=3, metavar=("MANIFEST", "EXECUTION_LOG", "REQUEST"),
+                      help="Build and screen one candidate dossier; never admit evidence")
     parser.add_argument(
         "--ledger",
         help="Optional append-only JSONL output ledger; existing entries are never replaced",
     )
     args = parser.parse_args(argv)
+    if args.evidence_dossier is not None:
+        if args.ledger is not None:
+            parser.error("--ledger is only available for the M0 audit input")
+        from evidence_dossier_workflow import inspect_dossier_files
+        report = inspect_dossier_files(*args.evidence_dossier)
+        print(json.dumps(report, ensure_ascii=True, sort_keys=True))
+        return 1 if report["status"] == "SCREENED" else 2
     if args.review_evidence is not None:
         if args.ledger is not None:
             parser.error("--ledger is only available for the M0 audit input")
