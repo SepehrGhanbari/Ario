@@ -1,0 +1,25 @@
+name: Markovian first synthetic checkpoint
+on:
+  push:
+    branches:
+      - research/markovian-synthetic-log-v0-1-20261127
+    paths:
+      - '.github/workflows/markovian-first-checkpoint.yml'
+permissions:
+  contents: read
+jobs:
+  submit-once:
+    if: github.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify and submit public synthetic checkpoint once
+        run: python3 research/external-witness/markovian-v1/submit_first_checkpoint.py
+      - name: Retain public receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: markovian-first-receipt
+          path: markovian-first-receipt/
+          if-no-files-found: warn
