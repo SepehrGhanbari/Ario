@@ -80,3 +80,13 @@ FAILED (failures=2)
 ```
 
 Candidate command from `implementation`: `python -B -m unittest discover -s tests -p test_review_evidence.py -v`. The same historical fixtures and the full-reader, readback and CLI controls passed locally. The Draft PR records the final revision, hosted jobs, skips and execution evidence.
+
+## Existing audit CLI consumer (explicit offline diagnostic)
+
+From the repository root:
+
+```sh
+python -B implementation/ario_cli.py --review-evidence pin.json first.json last.json
+```
+
+This mode reuses the unchanged `assess` and decoder above, reads each of the three bounded files once through the existing W38/W41 reader (which internally checks repeat reads), and reports SHA-256 of the exact byte images consumed. The original module CLI and all its outcomes remain unchanged. The main CLI's M0 `--input` mode is separate; `--ledger` is refused for review diagnostics. A diagnostic does not construct Evidence or alter an M0 verdict, and exits 1 even when metadata is CONSISTENT. The input hashes are observations, not independent pins, freshness or source authentication. No collection, merge status, policy or review authority is added. Current parser coverage remains limited to the supported log vocabulary; unsupported log summaries remain UNKNOWN.

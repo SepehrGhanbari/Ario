@@ -171,16 +171,58 @@ def execute_request(payload):
     return result_to_dict(result)
 
 
+def execute_review_diagnostic(paths) -> dict:
+    """Inspect supplied review captures; never create M0 evidence or approval."""
+    import hashlib
+    from bounded_json import MAX_JSON_FILE_BYTES
+    from research.review_evidence import assess, decode
+    from research.w38_receipt_fd_guard import read_bounded_regular
+
+    roles = ("pin", "first", "last")
+    hashes = {}
+    values = []
+    try:
+        if len(paths) != len(roles):
+            raise ValueError("three review inputs required")
+        for role, path in zip(roles, paths):
+            raw = read_bounded_regular(Path(path), MAX_JSON_FILE_BYTES)
+            hashes[role] = hashlib.sha256(raw).hexdigest()
+            values.append(decode(raw.decode("utf-8")))
+        result = assess(*values)
+    except (OSError, ValueError, UnicodeError, RecursionError, OverflowError):
+        result = {"gate": "HOLD", "metadata": "UNKNOWN", "merge_authorized": False,
+                  "execution_attestation": "UNKNOWN", "review_states": [],
+                  "reason": "unreadable or invalid review input"}
+    return {
+        "operation": "OFFLINE_REVIEW_EVIDENCE_DIAGNOSTIC",
+        "input_sha256": hashes,
+        "diagnostic": result,
+        "claim_truth": "UNKNOWN",
+        "source_authentication": "UNKNOWN",
+        "freshness": "UNKNOWN",
+        "independent_admission_authority": "NONE",
+    }
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(
         description="Run Ario's deterministic M0 audit from a JSON request."
     )
-    parser.add_argument("--input", required=True, help="Path to the JSON audit request")
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--input", help="Path to the JSON M0 audit request")
+    mode.add_argument("--review-evidence", nargs=3, metavar=("PIN", "FIRST", "LAST"),
+                      help="Offline review metadata diagnostic; no M0 evidence or merge authority")
     parser.add_argument(
         "--ledger",
         help="Optional append-only JSONL output ledger; existing entries are never replaced",
     )
     args = parser.parse_args(argv)
+    if args.review_evidence is not None:
+        if args.ledger is not None:
+            parser.error("--ledger is only available for the M0 audit input")
+        report = execute_review_diagnostic(args.review_evidence)
+        print(json.dumps(report, ensure_ascii=True, sort_keys=True))
+        return 1  # Preserve the original diagnostic's non-passing gate status.
 
     try:
         payload = load_json_file_bounded(args.input)
