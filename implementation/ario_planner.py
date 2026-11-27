@@ -15,9 +15,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from ario_agent import MAX_READ_BYTES, MAX_STEPS, AgentRequestError, _inside, execute_action
+from ario_agent import MAX_READ_BYTES, MAX_STEPS, AgentRequestError, _inside, _preflight_ledger_verification, execute_action
 from ario_workflow import parse_workflow, run_workflow
 from bounded_json import loads_bounded
+from research.w38_receipt_fd_guard import read_bounded_regular
 
 
 MAX_GOAL_CHARS = 2_000
@@ -637,11 +638,78 @@ def request_plan(
     return workflow
 
 
+INSPECTION_REQUEST_MAX_BYTES = 16_384
+# Fixed sequence: establish local ledger consistency, then structural audit,
+# then inspect an explicitly supplied synthetic revision. No implicit admission.
+_INSPECTION_SPECS = (
+    ("ledger", "verify_ledger_manifest", {"path", "manifest_path", "expected_sha256"}),
+    ("audit", "audit_m0", {"path", "expected_sha256"}),
+    ("revision", "inspect_rere_revision", {"path", "expected_sha256", "prior_path", "prior_sha256"}),
+)
+
+
+def _inspection_unique_pairs(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate inspection request member")
+        result[key] = value
+    return result
+
+
+def read_inspection_request(path: str | Path) -> dict:
+    try:
+        raw = read_bounded_regular(Path(path), INSPECTION_REQUEST_MAX_BYTES)
+        return loads_bounded(raw.decode("utf-8-sig"), object_pairs_hook=_inspection_unique_pairs)
+    except (OSError, ValueError, UnicodeError) as exc:
+        raise AgentRequestError("inspection request unreadable or invalid") from exc
+
+
+def plan_inspections(payload: Any, workspace: str | Path, ledger_path: str | Path) -> dict:
+    """Compile caller-supplied inspection inputs, not model-authored actions."""
+    root = Path(workspace).resolve()
+    if not root.is_dir():
+        raise AgentRequestError("workspace must be an existing directory")
+    if not isinstance(payload, dict) or set(payload) - {"goal", "ledger", "audit", "revision"}:
+        raise AgentRequestError("inspection request accepts only goal, ledger, audit and revision")
+    goal = payload.get("goal")
+    if not isinstance(goal, str) or not goal.strip() or len(goal) > MAX_GOAL_CHARS:
+        raise AgentRequestError("inspection goal is missing or exceeds its bound")
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    stages = []
+    for name, tool, required in _INSPECTION_SPECS:
+        if name not in payload:
+            continue
+        inputs = payload[name]
+        if not isinstance(inputs, dict) or set(inputs) != required:
+            raise AgentRequestError(f"inspection input {name} has an invalid shape")
+        stages.append({"stage_id": f"stage-{name}", "task": {
+            "task_id": f"TASK-INSPECT-{stamp}-{name}",
+            "goal": f"Inspect supplied {name} snapshot within its declared scope",
+            "actions": [{"step_id": f"step-{name}", "tool": tool, **inputs}],
+        }})
+    if not stages:
+        raise AgentRequestError("at least one inspection input is required")
+    workflow = parse_workflow({"workflow_id": f"WF-INSPECT-{stamp}", "goal": goal.strip(), "stages": stages})
+    active_ledger = Path(ledger_path).resolve()
+    for stage in workflow["stages"]:
+        action = stage["task"]["actions"][0]
+        for field in ("path", "prior_path", "manifest_path"):
+            if field in action:
+                target = _inside(root, action[field])
+                if target == active_ledger or (target.exists() and active_ledger.exists() and target.samefile(active_ledger)):
+                    raise AgentRequestError("inspection input cannot be the active output ledger")
+        _preflight_ledger_verification(action, root, active_ledger)
+    return workflow
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Plan a bounded Ario workflow with local Ollama; execution is opt-in."
     )
-    parser.add_argument("--goal", required=True, help="The outcome to pursue")
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--goal", help="The outcome to pursue with local Ollama")
+    mode.add_argument("--inspection-request", help="Data-only JSON with explicit pinned inspection inputs; no Ollama")
     parser.add_argument("--workspace", required=True, help="Existing workspace root")
     parser.add_argument("--ledger", required=True, help="Append-only JSONL execution ledger")
     parser.add_argument("--model", default=DEFAULT_MODEL, help="Local Ollama model name")
@@ -651,7 +719,10 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         root = Path(args.workspace).resolve()
-        workflow = request_plan(args.goal, root, args.model, args.ollama_url, args.timeout)
+        if args.inspection_request is not None:
+            workflow = plan_inspections(read_inspection_request(args.inspection_request), root, args.ledger)
+        else:
+            workflow = request_plan(args.goal, root, args.model, args.ollama_url, args.timeout)
         result: dict[str, Any] = {
             "status": "PLAN_READY",
             "execution_requested": args.execute,
