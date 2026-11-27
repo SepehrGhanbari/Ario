@@ -1,0 +1,24 @@
+name: Markovian phase 2 external floor
+on:
+  push:
+    branches:
+      - research/markovian-synthetic-log-v0-1-20261127
+    paths:
+      - '.github/workflows/markovian-phase2-once.yml'
+permissions:
+  contents: read
+jobs:
+  phase2:
+    if: github.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - name: Authorized size-2 submission and cold readback
+        run: python3 research/external-witness/markovian-v1/phase2_once.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: markovian-phase2-evidence
+          path: markovian-phase2-evidence/
+          if-no-files-found: warn
