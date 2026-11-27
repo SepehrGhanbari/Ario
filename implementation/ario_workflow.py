@@ -17,7 +17,7 @@ from ledger_streaming import LedgerLineLimitExceeded, iter_bounded_ledger_lines
 MAX_WORKFLOW_STAGES = 8
 READ_ONLY_TOOLS = {
     "inspect_directory", "read_text", "file_fingerprint", "inspect_backup",
-    "recovery_preflight", "git_status", "compile_python", "run_tests", "verify_text", "audit_m0",
+    "recovery_preflight", "git_status", "compile_python", "run_tests", "verify_text", "audit_m0", "inspect_rere_revision",
 }
 
 
@@ -129,11 +129,15 @@ def run_workflow(payload: Any, workspace: str | Path, ledger_path: str | Path) -
         for action in task["actions"]:
             if "path" in action and action["tool"] != "inspect_backup":
                 _inside(root, action["path"])
+            if action["tool"] == "inspect_rere_revision":
+                _inside(root, action["prior_path"])
         for criterion in task.get("success_criteria", []):
             _inside(root, criterion["path"])
         for diagnostic in task.get("failure_diagnostics", []):
             if "path" in diagnostic and diagnostic["tool"] != "inspect_backup":
                 _inside(root, diagnostic["path"])
+            if diagnostic["tool"] == "inspect_rere_revision":
+                _inside(root, diagnostic["prior_path"])
 
     ledger = Path(ledger_path).resolve()
     ledger.parent.mkdir(parents=True, exist_ok=True)
