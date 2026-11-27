@@ -1,0 +1,3 @@
+# Optional, separately pinned adapters. Install with Python >= 3.11.
+prov==3.3.0
+ltms @ git+https://github.com/pisanuw/ltms.git@738161f2bdc2a938d97c40f974f51766f45d4c0c
