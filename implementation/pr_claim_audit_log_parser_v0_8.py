@@ -26,6 +26,12 @@ SETUP_CPYTHON_LINE = re.compile(
     r"Successfully set up CPython \((?P<version>\d+\.\d+\.\d+)\)\Z"
 )
 COUNT_KEYS = ("passed", "failed", "skipped", "subtests_passed")
+# Explicit opt-in current log vocabulary. Legacy v0.8 behavior is unchanged.
+EXTENDED_SCHEMA = "ARIO-PR-CI-0.8-EXTENDED-COUNTS-1"
+EXTENDED_COUNT_PART = re.compile(
+    r"(?P<count>0|[1-9]\d*) (?P<name>subtests passed|passed|failed|skipped|warnings|warning|xfailed|xpassed)\Z"
+)
+EXTRA_COUNT_KEYS = ("xfailed", "xpassed", "warnings")
 RUN_COMMAND = v01.RUN_COMMAND
 LIMITATIONS = (
     "A matching supplied log is not independent execution attestation",
@@ -35,7 +41,7 @@ LIMITATIONS = (
 )
 
 
-def extract_log(log: str) -> dict[str, Any]:
+def extract_log(log: str, *, extended_counts: bool = False) -> dict[str, Any]:
     """Fail closed on malformed/ambiguous pytest summaries and Python versions.
 
     Accept only the exact historical pytest summary vocabulary plus a bounded
@@ -44,17 +50,19 @@ def extract_log(log: str) -> dict[str, Any]:
     """
     if not isinstance(log, str) or len(log) > v01.MAX_LOG_CHARS:
         raise v01.Invalid("missing or oversize job log")
+    count_keys = (*COUNT_KEYS, *EXTRA_COUNT_KEYS) if extended_counts else COUNT_KEYS
+    count_pattern = EXTENDED_COUNT_PART if extended_counts else COUNT_PART
     lines = [v01._strip_log_prefix(x) for x in log.splitlines()]
     summaries: list[tuple[int, dict[str, int]]] = []
     for index, line in enumerate(lines):
         match = SUMMARY_LINE.fullmatch(line)
         if not match:
             continue
-        stats = {k: 0 for k in COUNT_KEYS}
+        stats = {k: 0 for k in count_keys}
         seen: set[str] = set()
         pieces = match.group("counts").split(",")
         for piece in pieces:
-            parsed = COUNT_PART.fullmatch(piece.strip())
+            parsed = count_pattern.fullmatch(piece.strip())
             if parsed is None:
                 raise v01.Invalid("unsupported pytest summary component")
             key = parsed.group("name")
@@ -64,7 +72,7 @@ def extract_log(log: str) -> dict[str, Any]:
                 raise v01.Invalid("duplicate pytest summary field")
             seen.add(key)
             count = v01._parse_count(parsed.group("count"))
-            if key in COUNT_KEYS:
+            if key in count_keys:
                 stats[key] = count
         if not ({"passed", "failed"} & seen):
             raise v01.Invalid("no test outcome count")
@@ -91,7 +99,7 @@ def extract_log(log: str) -> dict[str, Any]:
     return {**stats, "python_version": next(iter(versions)), "pytest_command": RUN_COMMAND}
 
 
-def _compare_bound_snapshot(pr_text: str, evidence: Any) -> dict[str, Any]:
+def _compare_bound_snapshot(pr_text: str, evidence: Any, *, extended_counts: bool = False) -> dict[str, Any]:
     """Offline correspondence only; all untrusted/partial snapshots => UNKNOWN."""
     claim = v01.read_claim(pr_text)
     e = v01._object(evidence)
@@ -118,7 +126,7 @@ def _compare_bound_snapshot(pr_text: str, evidence: Any) -> dict[str, Any]:
             ("run_attempt" in job and not v01.matches_id(job["run_attempt"], claim["run_attempt"])) or
             ("head_sha" in job and job["head_sha"] != claim["head_sha"])):
         raise v01.Invalid("job identity or status unavailable")
-    observed = extract_log(raw)
+    observed = extract_log(raw, extended_counts=extended_counts)
     observed["job_conclusion"] = job["conclusion"]
     keys = (*COUNT_KEYS, "python_version", "pytest_command", "job_conclusion")
     differences = [k for k in keys if claim[k] != observed[k]]
@@ -137,10 +145,10 @@ def _compare_bound_snapshot(pr_text: str, evidence: Any) -> dict[str, Any]:
     }
 
 
-def assess(pr_text: str, evidence: Any) -> dict[str, Any]:
+def assess(pr_text: str, evidence: Any, *, extended_counts: bool = False) -> dict[str, Any]:
     """Public facade. Intentionally NEVER returns MATCH as the final status."""
     out: dict[str, Any] = {
-        "schema": SCHEMA,
+        "schema": EXTENDED_SCHEMA if extended_counts else SCHEMA,
         "status": "UNKNOWN",
         "claim_correspondence": "UNKNOWN",
         "source_delivery": "UNVERIFIED",
@@ -151,11 +159,17 @@ def assess(pr_text: str, evidence: Any) -> dict[str, Any]:
         "differences": [],
         "limitations": list(LIMITATIONS),
     }
+    if extended_counts:
+        out["correspondence_scope"] = "DECLARED_V01_FIELDS_ONLY"
+        out["unclaimed_counts"] = None
+        out["limitations"].append("V0.1 claim schema does not declare xfailed, xpassed or warnings; these are reported separately, not compared or counted as passed.")
     try:
-        result = _compare_bound_snapshot(pr_text, evidence)
+        result = _compare_bound_snapshot(pr_text, evidence, extended_counts=extended_counts)
     except (v01.Invalid, ValueError, TypeError, UnicodeError, OverflowError, RecursionError) as exc:
         out["reason"] = str(exc) if isinstance(exc, v01.Invalid) else "invalid input"
         return out
     out.update(result)
+    if extended_counts:
+        out["unclaimed_counts"] = {key: result["observed"][key] for key in EXTRA_COUNT_KEYS}
     out["reason"] = "BOUNDED_SNAPSHOT_COMPARISON_NOT_EXECUTION_ATTESTATION"
     return out

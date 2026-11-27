@@ -204,6 +204,36 @@ def execute_review_diagnostic(paths) -> dict:
     }
 
 
+def execute_pr_claim_diagnostic(body_path, evidence_path) -> dict:
+    """Compare only declared CI fields against supplied snapshot bytes."""
+    import hashlib
+    from pr_claim_audit import MAX_PR_BYTES, MAX_EVIDENCE_BYTES
+    from pr_claim_audit_log_parser_v0_8 import assess
+    from research.review_evidence import decode
+    from research.w38_receipt_fd_guard import read_bounded_regular
+
+    hashes = {}
+    try:
+        body = read_bounded_regular(Path(body_path), MAX_PR_BYTES)
+        hashes["pr_body"] = hashlib.sha256(body).hexdigest()
+        raw = read_bounded_regular(Path(evidence_path), MAX_EVIDENCE_BYTES)
+        hashes["snapshot"] = hashlib.sha256(raw).hexdigest()
+        result = assess(body.decode("utf-8"), decode(raw.decode("utf-8")),
+                        extended_counts=True)
+    except (OSError, ValueError, UnicodeError, OverflowError, RecursionError):
+        result = assess("", {}, extended_counts=True)
+        result["reason"] = "unreadable or invalid bounded claim input"
+    return {
+        "operation": "OFFLINE_PR_CLAIM_DIAGNOSTIC",
+        "input_sha256": hashes,
+        "diagnostic": result,
+        "claim_truth": "UNKNOWN",
+        "freshness": "UNKNOWN",
+        "merge_authorized": False,
+        "independent_admission_authority": "NONE",
+    }
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(
         description="Run Ario's deterministic M0 audit from a JSON request."
@@ -214,6 +244,8 @@ def main(argv=None) -> int:
                       help="Offline review metadata diagnostic; no M0 evidence or merge authority")
     mode.add_argument("--evidence-dossier", nargs=3, metavar=("MANIFEST", "EXECUTION_LOG", "REQUEST"),
                       help="Build and screen one candidate dossier; never admit evidence")
+    mode.add_argument("--pr-claim", nargs=2, metavar=("PR_BODY", "SNAPSHOT"),
+                      help="Compare declared CI counts with supplied snapshot; no attestation")
     parser.add_argument("--reviewer-grant", help="Optional RAC-0.1 preflight record for --evidence-dossier")
     parser.add_argument(
         "--ledger",
@@ -229,6 +261,12 @@ def main(argv=None) -> int:
         report = inspect_dossier_files(*args.evidence_dossier, grant_path=args.reviewer_grant)
         print(json.dumps(report, ensure_ascii=True, sort_keys=True))
         return 1 if report["status"] == "SCREENED" else 2
+    if args.pr_claim is not None:
+        if args.ledger is not None:
+            parser.error("--ledger is only available for the M0 audit input")
+        report = execute_pr_claim_diagnostic(*args.pr_claim)
+        print(json.dumps(report, ensure_ascii=True, sort_keys=True))
+        return 1  # A correspondence diagnostic is not a passing audit.
     if args.review_evidence is not None:
         if args.ledger is not None:
             parser.error("--ledger is only available for the M0 audit input")
