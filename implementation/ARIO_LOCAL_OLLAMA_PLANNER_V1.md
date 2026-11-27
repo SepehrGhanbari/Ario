@@ -49,3 +49,24 @@ python .\implementation\ario_planner.py --goal "Inspect the Ario implementation 
 - The planner prioritizes `ario_planner.py` and its regression tests in the bounded context. Its prompt now requires exactly one stage with two distinct `read_text` actions: an observed implementation module and its relevant test file. Directory listings are disallowed for this request because inventory is already supplied. The task goal must name both paths and one concrete bounded engineering question. A post-schema quality gate still rejects repeated identical actions and directory-only plans; these constraints improve evidence quality but do not establish that the proposed task is the best possible task.
 - The plan may still be wrong, incomplete, or semantically inadequate. Exact postconditions and the append-only application ledger provide bounded checks, not proof of general correctness or tamper-proof history.
 - This is local model-assisted planning, not unrestricted autonomy. There is no arbitrary shell tool, arbitrary network tool, automatic retry, or automatic repair loop.
+
+## Deterministic inspection planning (no Ollama required)
+
+The existing local-model engineering recommendation mode is unchanged. For explicit audit/ledger/revision goals, a second input mode compiles the already merged Agent consumers (#431–#433) into an ordered read-only Workflow. The request is a bounded JSON object with a goal and one or more of the following optional input groups:
+
+```json
+{
+  "goal": "Check prior execution and supplied assessment revision",
+  "ledger": {"path": "prior.jsonl", "manifest_path": "manifest.json", "expected_sha256": "<manifest SHA-256>"},
+  "audit": {"path": "audit.json", "expected_sha256": "<audit input SHA-256>"},
+  "revision": {"path": "after.json", "expected_sha256": "<after SHA-256>", "prior_path": "before.json", "prior_sha256": "<before SHA-256>"}
+}
+```
+
+All hashes are real caller-supplied 64-hex pins; placeholders above are not executable. Omit a group if its inputs are unavailable or the inspection is not wanted. No model is called, no hashes are guessed, and no data file is submitted to a model. The planner selects the fixed tool for each supplied group and executes stages in ledger → audit → revision order, stopping normal continuation on failure. A successful synthetic revision can still return epistemic UNKNOWN. The three groups need not describe the same claim; this sequence proves neither cross-input identity nor causal linkage. Planning alone only validates schema and paths; the tools check bytes at execution. The active output ledger is not accepted as an input. The request file itself is limited to 16 KiB.
+
+```powershell
+python .\implementation\ario_planner.py --inspection-request "$env:TEMP\inspection.json" --workspace "$HOME\Ario" --ledger "$HOME\Ario\runtime\inspection-events.jsonl"
+```
+
+Add the existing explicit `--execute` flag to execute the generated workflow. No automatic action from free-form model output, generalized belief revision, evidence admission or production authority is introduced.
