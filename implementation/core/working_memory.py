@@ -29,6 +29,7 @@ from core.memory_consolidation import (
     ConsolidationEngine,
     NodeEpistemicStatus,
     SemanticNode,
+    _event_digest,
 )
 from core.source_monitoring import (
     SourceAttribution,
@@ -96,6 +97,48 @@ class MetacognitiveAssessment:
     contradiction_count: int
     recommended_action: str
     diagnostics: List[str] = dataclasses.field(default_factory=list)
+
+
+def _working_memory_event(concept: str, assertion: str, attr: SourceAttribution,
+                          salience: float) -> tuple[str, dict]:
+    """Existing WM event identity and payload; shared by write and read paths."""
+    event_payload = {
+        # Structural recording has no implied proof/support.
+        "status": NodeEpistemicStatus.RECORDED.value,
+        "concept": concept,
+        "assertion": assertion,
+        "saliency_score": salience,
+        "attribution_id": attr.attribution_id,
+        "source_type": attr.source_type.value,
+        "veracity_state": attr.veracity_state.value,
+        "promoted_from_working_memory": True,
+        # A repeated flush must not manufacture a new independent event.
+        "timestamp": attr.created_at,
+    }
+    # Salience is an attentional score, NOT a new empirical source.
+    # Stable identity is independent of rehearsal/decay.
+    prov = attr.provenance
+    identity = {
+        "concept": concept,
+        "assertion": assertion,
+        "attribution_id": attr.attribution_id,
+        "source_type": attr.source_type.value,
+        "veracity_state": attr.veracity_state.value,
+        "source_created_at": attr.created_at,
+        "provenance": None if prov is None else {
+            "tool": prov.tool,
+            "target": prov.target,
+            "exit_code": prov.exit_code,
+            "execution_lock_sha256": prov.execution_lock_sha256,
+            "stdout_sha256": prov.stdout_sha256,
+            "recorded_at": prov.recorded_at,
+        },
+    }
+    event_hash = hashlib.sha256(
+        json.dumps(identity, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+
+    return event_hash, event_payload
 
 
 class WorkingMemoryBuffer:
@@ -383,6 +426,88 @@ class WorkingMemoryBuffer:
 
         return recalled_chunks
 
+    def inspect_recalled_lineage(self, chunk_id: str) -> dict:
+        """Resolve historical source references without granting admission authority.
+
+        Read only, bounded, using the existing event identity and stable payload
+        digest. A ledger-ID match is a reference, not a reconstruction of bytes.
+        """
+        report = {"status": "UNKNOWN", "node_id": None, "sources": [],
+                  "claim_truth": "UNKNOWN", "source_authentication": "UNKNOWN",
+                  "independent_admission_authority": "NONE"}
+        chunk = self._active_chunks.get(chunk_id)
+        engine, guard = self.consolidation_engine, self.source_guard
+        if chunk is None or chunk_id not in self._recalled_chunk_ids or engine is None or guard is None:
+            return {**report, "reason": "RECALL_OR_SOURCE_REGISTRY_UNAVAILABLE"}
+        attr = chunk.source_attribution
+        parents = attr.parent_attribution_ids
+        if len(parents) != 1 or attr.attribution_id != "recall_" + parents[0]:
+            return {**report, "reason": "UNRESOLVED_RECALL_PARENT"}
+        locks = sorted((engine._batch_lock, guard._lock), key=id)
+        with locks[0], locks[1]:
+            node = engine.get_node(parents[0])
+            if (node is None or node.node_id != parents[0] or node.concept != chunk.concept
+                    or node.assertion != chunk.assertion):
+                return {**report, "reason": "UNRESOLVED_RECALL_PARENT"}
+            report["node_id"] = node.node_id
+            report["node_status"] = node.status.value
+            hashes = node.source_event_hashes
+            # Bound work before scanning a potentially large source registry.
+            if len(hashes) > 256 or len(guard._revisions) > 4096:
+                return {**report, "reason": "LINEAGE_INSPECTION_LIMIT"}
+            if sum(len(history) for history in guard._revisions.values()) > 4096:
+                return {**report, "reason": "LINEAGE_INSPECTION_LIMIT"}
+            matches = {h: [] for h in hashes}
+            counts = {h: 0 for h in hashes}
+            # Hashing the same long assertion repeatedly must also be bounded.
+            if len(node.assertion) + len(node.concept) > 16384:
+                return {**report, "reason": "LINEAGE_INSPECTION_LIMIT"}
+            budget = 2_000_000
+            for aid, history in guard._revisions.items():
+                for index, revision in enumerate(history):
+                    if revision.assertion.strip() != node.assertion:
+                        continue
+                    # Legacy event identity does not bind parent edges. Report
+                    # all matching revisions rather than guessing which one.
+                    budget -= len(node.assertion) + len(node.concept) + len(aid)
+                    if budget < 0:
+                        return {**report, "reason": "LINEAGE_INSPECTION_LIMIT"}
+                    event_hash, payload = _working_memory_event(
+                        node.concept, node.assertion, revision, 0.0)
+                    if event_hash not in matches:
+                        continue
+                    payload.pop("saliency_score")
+                    if engine._event_stable_digests.get(event_hash) != _event_digest(payload):
+                        continue
+                    counts[event_hash] += 1
+                    if len(matches[event_hash]) < 8:
+                        matches[event_hash].append({"attribution_id": aid, "revision_index": index,
+                                                    "historical_veracity": revision.veracity_state.value})
+            for h in hashes:
+                ledger_id = "ATTR-LEDGER-" + h
+                ledger = guard._attributions.get(ledger_id)
+                ledger_ref = (ledger_id if ledger is not None
+                              and ledger.source_type == SourceType.LEDGER_REPORT
+                              and ledger.veracity_state == VeracityState.REPORTED_UNVERIFIED
+                              and ledger.provenance is None else None)
+                if counts[h] and ledger_ref:
+                    status = "AMBIGUOUS_LOCAL_REFERENCES"
+                elif counts[h] > 1:
+                    status = "AMBIGUOUS_HISTORICAL_REVISION"
+                elif counts[h] == 1:
+                    status = "MATCHED_WM_EVENT"
+                elif ledger_ref:
+                    status = "LEDGER_REFERENCE_ONLY"
+                else:
+                    status = "UNKNOWN"
+                report["sources"].append({"event_sha256": h, "status": status,
+                    "matching_revision_count": counts[h], "revision_candidates": matches[h],
+                    "ledger_report_id": ledger_ref})
+            report["status"] = ("LOCAL_REFERENCES_INSPECTED" if all(
+                item["status"] == "MATCHED_WM_EVENT" for item in report["sources"])
+                else "PARTIAL_OR_UNRESOLVED")
+            return report
+
     def flush_to_long_term(self, min_salience: float = 0.0) -> List[str]:
         """Explicitly flushes/consolidates qualifying active chunks into Long-Term Memory."""
         if not self.consolidation_engine:
@@ -573,41 +698,8 @@ class WorkingMemoryBuffer:
             # Remembering is not re-observing: never re-submit a recall as a new event.
             return
 
-        event_payload = {
-            # Structural recording has no implied proof/support.
-            "status": NodeEpistemicStatus.RECORDED.value,
-            "concept": chunk.concept,
-            "assertion": chunk.assertion,
-            "saliency_score": chunk.salience,
-            "attribution_id": chunk.source_attribution.attribution_id,
-            "source_type": chunk.source_attribution.source_type.value,
-            "veracity_state": chunk.source_attribution.veracity_state.value,
-            "promoted_from_working_memory": True,
-            # A repeated flush must not manufacture a new independent event.
-            "timestamp": chunk.source_attribution.created_at,
-        }
-        # Salience is an attentional score, NOT a new empirical source.
-        # Stable identity is independent of rehearsal/decay.
-        prov = chunk.source_attribution.provenance
-        identity = {
-            "concept": chunk.concept,
-            "assertion": chunk.assertion,
-            "attribution_id": chunk.source_attribution.attribution_id,
-            "source_type": chunk.source_attribution.source_type.value,
-            "veracity_state": chunk.source_attribution.veracity_state.value,
-            "source_created_at": chunk.source_attribution.created_at,
-            "provenance": None if prov is None else {
-                "tool": prov.tool,
-                "target": prov.target,
-                "exit_code": prov.exit_code,
-                "execution_lock_sha256": prov.execution_lock_sha256,
-                "stdout_sha256": prov.stdout_sha256,
-                "recorded_at": prov.recorded_at,
-            },
-        }
-        event_hash = hashlib.sha256(
-            json.dumps(identity, sort_keys=True, separators=(",", ":")).encode("utf-8")
-        ).hexdigest()
+        event_hash, event_payload = _working_memory_event(
+            chunk.concept, chunk.assertion, chunk.source_attribution, chunk.salience)
 
         # A new WM instance must not manufacture an independent source when
         # the receiving engine has already seen this evidence identity.
