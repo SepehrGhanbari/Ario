@@ -293,6 +293,12 @@ def _validate_paths(workflow: dict, root: Path) -> None:
                 _inside(root, diagnostic["path"])
 
 
+_APPROVED_REVIEW_PAIRS = (
+    ("implementation/ario_planner.py", "implementation/tests/test_planner_runtime.py"),
+    ("implementation/ario_workflow.py", "implementation/tests/test_workflow_runtime.py"),
+)
+
+
 def _parse_recommendation(payload: Any, observation: dict) -> dict:
     """Validate the model's narrow recommendation; never accept model-authored workflow structure."""
     if not isinstance(payload, dict) or set(payload) != {
@@ -306,10 +312,7 @@ def _parse_recommendation(payload: Any, observation: dict) -> dict:
     if not isinstance(implementation_path, str) or not isinstance(test_path, str):
         raise AgentRequestError("recommendation paths must be strings")
     available = {item.get("path") for item in observation.get("planning_context", [])}
-    allowed_pairs = {
-        ("implementation/ario_planner.py", "implementation/tests/test_planner_runtime.py"),
-        ("implementation/ario_workflow.py", "implementation/tests/test_workflow_runtime.py"),
-    }
+    allowed_pairs = _APPROVED_REVIEW_PAIRS
     pair = (implementation_path, test_path)
     if pair not in allowed_pairs:
         raise AgentRequestError("recommendation must select one approved implementation/test pair")
@@ -655,7 +658,7 @@ def _deliberative_recommendation(proposed, observation, prior_claim, report):
     return recommendation
 
 
-def _deliberation_output_schema(observation, prior_claim):
+def _deliberation_output_schema(observation, prior_claim, execution_feedback=None):
     """Offer valid decision shapes; never supply a reason or select intent for the model."""
     def obj(properties):
         return {"type": "object", "properties": properties,
@@ -697,6 +700,22 @@ def _deliberation_output_schema(observation, prior_claim):
                 shape("CONTINUE", "CORRECTION", explanation, recommendation, basis, explanation),
                 shape("STOP", "CORRECTION", explanation, null, basis, explanation),
             ])
+    if execution_feedback is not None:
+        # Only offer actually available, disjoint alternatives. This is a
+        # selection boundary, not a claim of repair or a forced CONTINUE.
+        excluded = set(execution_feedback["excluded_paths"])
+        choices = [x for x in choices
+                   if x["properties"]["intent"]["enum"] == ["STOP"]]
+        for impl, test in _APPROVED_REVIEW_PAIRS:
+            pair = {impl, test}
+            if prior_claim is None or not pair <= set(paths) or pair & excluded:
+                continue
+            rec = obj({"implementation_path": enum(impl), "test_path": enum(test),
+                       "engineering_question": text, "rationale": text})
+            support = obj({"path": enum(impl, test),
+                           "quote": {"type": "string", "minLength": 8, "maxLength": 512}})
+            choices.append(shape("CONTINUE", "CORRECTION", explanation,
+                                 rec, support, explanation))
     return {"anyOf": choices}
 
 
@@ -832,7 +851,7 @@ def request_plan(
         )
     output_format = "json"
     if deliberate:
-        output_format = _deliberation_output_schema(observation, prior_claim)
+        output_format = _deliberation_output_schema(observation, prior_claim, execution_feedback)
         user_payload["basis_examples"] = _deliberation_basis_examples(observation)
         system_prompt += (
             "\nReturn exactly ONE top-level JSON object, not just the nested recommendation. "
@@ -848,6 +867,13 @@ def request_plan(
             "an ordinary choice uses null basis and null replacement_claim. "
             "Your output must match this JSON Schema: " +
             json.dumps(output_format, ensure_ascii=True, separators=(",", ":"))
+        )
+    if execution_feedback is not None:
+        system_prompt += (
+            "\nFor this revision ONLY: either STOP or CONTINUE with CORRECTION. "
+            "A normal CONTINUE is not a valid revision. The schema lists only "
+            "available disjoint source pairs for a continuing correction. "
+            "If no useful grounded correction is available, STOP remains valid."
         )
     messages = [
         {"role": "system", "content": system_prompt},
@@ -1094,9 +1120,13 @@ def revise_after_result(result, root, ledger, *, model, ollama_url, timeout,
     new_paths = _source_review_paths(revised)
     if not new_paths or new_paths.intersection(feedback["excluded_paths"]):
         revision["status"] = "REPEATED_SOURCE_REVIEW_BLOCKED"
+        if experience is not None:
+            revision["experience_record"] = experience.choice_only(choice, revision["status"], prior=prior_outcome)
         return revision
     if choice.get("deliberation", {}).get("kind") != "CORRECTION":
         revision["status"] = "CORRECTION_REQUIRED"
+        if experience is not None:
+            revision["experience_record"] = experience.choice_only(choice, revision["status"], prior=prior_outcome)
         return revision
     if experience is not None:
         blocked = experience.blocks(new_paths)
