@@ -256,3 +256,14 @@ The test suite is enforced on every push and pull request via `.github/workflows
 1. `m0-regression`: Full repository test suite (1,217 tests).
 2. `cognitive-memory-invariants`: Dedicated check verifying all 76 memory consolidation, source monitoring, prospective registry, security boundary, and crash recovery tests.
 3. `windows-differential-advisory`: Cross-platform Windows execution ensuring canonical path handling.
+
+## Local source-lineage inspection (opt-in research CLI)
+
+The existing memory CLI can inspect a disposable, caller-pinned Agent JSONL ledger or a combined memory/source-history snapshot. Use a retained SHA-256 pin; computing a fresh self-pin does not establish historical integrity. With no node ID, list at most 100 exact semantic node IDs; pass an exact ID for source resolution. Output is always JSON. Example from repository root:
+
+```powershell
+python .\implementation\ario_memory_cli.py --memory-lineage --ledger "$HOME\Ario\runtime\inspection-events.jsonl" --expected-sha256 "<retained digest>"
+python .\implementation\ario_memory_cli.py --memory-lineage --snapshot "$HOME\Ario\runtime\memory.json" --expected-sha256 "<retained digest>" --node-id "<exact node ID>"
+```
+
+Exit 0: local node index or fully matched local WM-event references; 1: partial/unresolved diagnostic (including ledger-reference-only); 2: invalid input or failed validation. The exact-node reader shares the recall lineage algorithm and does not create recall attributions, activate empirical authority, write the input or install a live memory state. Optional `--output` creates a new JSON report exclusively. Pins are byte integrity only; claim truth, source authenticity, freshness and independent admission remain unknown or absent. No snapshot migration or autonomous local-chat activation.
