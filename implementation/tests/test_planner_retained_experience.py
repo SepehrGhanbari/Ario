@@ -161,3 +161,38 @@ def test_correction_shape_available_only_with_prior_claim():
     for shape in corrected_shapes:
         assert shape["properties"]["reason"]["type"] == "string"
         assert shape["properties"]["deliberation"]["properties"]["replacement_claim"]["type"] == "string"
+
+
+def test_revision_schema_only_offers_disjoint_grounded_correction_or_stop(tmp_path, monkeypatch, capsys):
+    ledger = prepare_both(tmp_path)
+    transport = responses(monkeypatch, payload("INITIATIVE"), corrected(False))
+    calls = changed_source_once(monkeypatch, tmp_path)
+    assert run(tmp_path, ledger, "--revise-after-result") == 1
+    result = json.loads(capsys.readouterr().out)
+    assert result["revision"]["status"] == "REPEATED_SOURCE_REVIEW_BLOCKED"
+    assert len(calls) == 1
+    request = json.loads(transport.call_args_list[1].args[0].data)
+    continuing = [x["properties"] for x in request["format"]["anyOf"]
+                  if x["properties"]["intent"]["enum"] == ["CONTINUE"]]
+    assert len(continuing) == 1
+    props = continuing[0]
+    assert props["deliberation"]["properties"]["kind"]["enum"] == ["CORRECTION"]
+    rec = props["recommendation"]["properties"]
+    assert rec["implementation_path"]["enum"] == [ALT["implementation_path"]]
+    assert rec["test_path"]["enum"] == [ALT["test_path"]]
+    assert set(props["deliberation"]["properties"]["basis"]["properties"]["path"]["enum"]) == {
+        ALT["implementation_path"], ALT["test_path"]}
+    assert any(x["properties"]["intent"]["enum"] == ["STOP"]
+               for x in request["format"]["anyOf"])
+    saved = [r for r in records(tmp_path) if r["kind"] == "CHOICE"]
+    assert len(saved) == 1 and saved[0]["status"] == "REPEATED_SOURCE_REVIEW_BLOCKED"
+
+
+def test_revision_without_disjoint_pair_offers_stop_only():
+    observation = {"planning_context": [
+        {"path": REC["implementation_path"], "content": "# bounded planner fixture"},
+        {"path": REC["test_path"], "content": "# bounded planner test fixture"}]}
+    schema = ario_planner._deliberation_output_schema(
+        observation, "prior claim", {"excluded_paths": [REC["implementation_path"], REC["test_path"]]})
+    assert schema["anyOf"]
+    assert all(x["properties"]["intent"]["enum"] == ["STOP"] for x in schema["anyOf"])
