@@ -86,15 +86,51 @@ def run_phase(args, root, name, fault=False):
     return result
 
 
+def revision_probe(args):
+    """New plan-only diagnostic from an existing disposable acceptance report."""
+    import ario_planner
+    from research.w38_receipt_fd_guard import read_bounded_regular
+
+    path = Path(args.revision_report).resolve()
+    root = path.parent
+    if path.name != "01-initial.stdout.json" or not root.name.startswith("ario-planner-real-"):
+        raise ValueError("expected a retained disposable acceptance report")
+    first = json.loads(read_bounded_regular(path, 1024 * 1024))
+    workflow, outcome = first["workflow"], first["execution_result"]
+    feedback = ario_planner._failed_review_feedback(workflow, outcome)
+    if feedback is None or workflow["goal"] != GOAL:
+        raise ValueError("no matching concrete fixture failure")
+    choice = {}
+    try:
+        revised = ario_planner.request_plan(
+            workflow["goal"], root, args.model, args.ollama_url, args.timeout,
+            deliberate=True, prior_claim=workflow["stages"][0]["task"]["goal"],
+            choice_report=choice, execution_feedback=feedback)
+    except ario_planner.PlannerChoiceEnded as exc:
+        print(json.dumps({"status": exc.report["state"], "choice": exc.report,
+                          "execution_requested": False}, ensure_ascii=True))
+        return 1
+    paths = ario_planner._source_review_paths(revised)
+    valid = (paths and not paths.intersection(feedback["excluded_paths"])
+             and choice["deliberation"]["kind"] == "CORRECTION")
+    print(json.dumps({"status": "CORRECTION_PLAN_READY" if valid else "CORRECTION_UNRESOLVED",
+                      "choice": choice, "paths": sorted(paths or ()),
+                      "execution_requested": False, "repair_verified": "UNKNOWN"}, ensure_ascii=True))
+    return 0 if valid else 1
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", default="qwen2.5:3b")
     parser.add_argument("--ollama-url", default="http://127.0.0.1:11600")
     parser.add_argument("--timeout", type=int, default=180)
+    parser.add_argument("--revision-report", help="Plan-only probe from a retained fixture failure; no execution or writes")
     parser.add_argument("--child", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--workspace", help=argparse.SUPPRESS)
     parser.add_argument("--fault", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
+    if args.revision_report:
+        return revision_probe(args)
     if args.child:
         return child(args)
     root = Path(tempfile.mkdtemp(prefix="ario-planner-real-")).resolve()
