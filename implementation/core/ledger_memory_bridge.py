@@ -117,25 +117,39 @@ class EpistemicLedgerBridge:
         self,
         ledger_path: str | Path,
         current_epoch: Optional[float] = None,
+        *,
+        expected_sha256: Optional[str] = None,
     ) -> BridgeAuditSummary:
         """Parse first, then atomically apply to engine and guard in-process."""
         target = Path(ledger_path)
-        if target.is_symlink():
-            raise BridgeError(f"symbolic-link ledger refused: {target}")
-        if not target.exists():
-            raise BridgeError(f"ledger file not found: {target}")
+        if expected_sha256 is not None:
+            from research.w38_receipt_fd_guard import read_bounded_regular
+            if (not isinstance(expected_sha256, str) or len(expected_sha256) != 64
+                    or any(c not in "0123456789abcdefABCDEF" for c in expected_sha256)):
+                raise BridgeError("INVALID_LEDGER_PIN")
+            try:
+                raw = read_bounded_regular(target, MAX_LEDGER_BYTES)
+            except (OSError, ValueError) as exc:
+                raise BridgeError("PINNED_LEDGER_READ_FAILED") from exc
+            if hashlib.sha256(raw).hexdigest() != expected_sha256.lower():
+                raise BridgeError("LEDGER_PIN_MISMATCH")
+        else:
+            if target.is_symlink():
+                raise BridgeError(f"symbolic-link ledger refused: {target}")
+            if not target.exists():
+                raise BridgeError(f"ledger file not found: {target}")
 
-        file_size = target.stat().st_size
-        if file_size > MAX_LEDGER_BYTES:
-            raise BridgeError(f"ledger size {file_size} exceeds bound {MAX_LEDGER_BYTES}")
+            file_size = target.stat().st_size
+            if file_size > MAX_LEDGER_BYTES:
+                raise BridgeError(f"ledger size {file_size} exceeds bound {MAX_LEDGER_BYTES}")
 
-        # Read at most the existing byte budget. Preflight framing on exactly
-        # the bytes subsequently consumed, before any guard or memory writes.
-        # This is not a publisher-authenticated or durable filesystem snapshot.
-        with target.open("rb") as source:
-            raw = source.read(MAX_LEDGER_BYTES + 1)
-        if len(raw) > MAX_LEDGER_BYTES:
-            raise BridgeError("ledger exceeds byte budget during read")
+            # Read at most the existing byte budget. Preflight framing on exactly
+            # the bytes subsequently consumed, before any guard or memory writes.
+            # This is not a publisher-authenticated or durable filesystem snapshot.
+            with target.open("rb") as source:
+                raw = source.read(MAX_LEDGER_BYTES + 1)
+            if len(raw) > MAX_LEDGER_BYTES:
+                raise BridgeError("ledger exceeds byte budget during read")
         if raw and not raw.endswith(b"\n"):
             raise BridgeError("HOLD_INCOMPLETE_JSONL_LINE")
         records, ledger_sha256 = self._parse_agent_ledger(raw)

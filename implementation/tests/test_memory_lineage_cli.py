@@ -88,3 +88,16 @@ def test_exact_inspection_has_no_recall_side_effect():
     assert result["sources"][0]["status"] == "UNKNOWN"
     assert wm.active_count == 0
     assert encode_cognitive_memory_snapshot(engine, guard) == before
+
+def test_pinned_bridge_refuses_mismatch_before_parsing(tmp_path, monkeypatch):
+    import pytest
+    from core.ledger_memory_bridge import EpistemicLedgerBridge, BridgeError
+    bridge = EpistemicLedgerBridge()
+    path = tmp_path / "ledger.jsonl"
+    path.write_bytes(b'not valid JSON\n')
+    def forbidden(*args, **kwargs):
+        pytest.fail("wrong pin must be refused before parsing")
+    monkeypatch.setattr(bridge, "_parse_agent_ledger", forbidden)
+    with pytest.raises(BridgeError, match="LEDGER_PIN_MISMATCH"):
+        bridge.ingest_agent_ledger(path, expected_sha256="0"*64)
+    assert not bridge.engine.nodes and not bridge.guard.attributions

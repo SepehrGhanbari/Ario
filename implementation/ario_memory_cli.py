@@ -45,9 +45,7 @@ def _inspect_memory_lineage(args) -> int:
             # Bridge candidates are isolated and never installed or exported.
             # The digest covers exactly the ledger bytes consumed by the bridge.
             bridge = EpistemicLedgerBridge()
-            summary = bridge.ingest_agent_ledger(Path(args.ledger))
-            if summary.ledger_sha256 != pin:
-                raise ValueError("LEDGER_PIN_MISMATCH")
+            bridge.ingest_agent_ledger(Path(args.ledger), expected_sha256=pin)
             engine, guard = bridge.engine, bridge.guard
             kind = "AGENT_LEDGER"
         if args.node_id is None:
