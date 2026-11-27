@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from ario_agent import AgentRequestError, _append_event, _ensure_task_id_unused, _inside, parse_task, run_task
+from ario_agent import AgentRequestError, _append_event, _ensure_task_id_unused, _inside, _preflight_ledger_verification, parse_task, run_task
 from bounded_json import loads_bounded
 from bounded_json import load_json_file_bounded
 from ledger_streaming import LedgerLineLimitExceeded, iter_bounded_ledger_lines
@@ -17,7 +17,7 @@ from ledger_streaming import LedgerLineLimitExceeded, iter_bounded_ledger_lines
 MAX_WORKFLOW_STAGES = 8
 READ_ONLY_TOOLS = {
     "inspect_directory", "read_text", "file_fingerprint", "inspect_backup",
-    "recovery_preflight", "git_status", "compile_python", "run_tests", "verify_text", "audit_m0", "inspect_rere_revision",
+    "recovery_preflight", "git_status", "compile_python", "run_tests", "verify_text", "audit_m0", "inspect_rere_revision", "verify_ledger_manifest",
 }
 
 
@@ -140,6 +140,10 @@ def run_workflow(payload: Any, workspace: str | Path, ledger_path: str | Path) -
                 _inside(root, diagnostic["prior_path"])
 
     ledger = Path(ledger_path).resolve()
+    for stage in workflow["stages"]:
+        task = stage["task"]
+        for action in (*task["actions"], *task.get("failure_diagnostics", [])):
+            _preflight_ledger_verification(action, root, ledger)
     ledger.parent.mkdir(parents=True, exist_ok=True)
     lock_path = ledger.with_name(ledger.name + ".workflow.lock")
     try:
