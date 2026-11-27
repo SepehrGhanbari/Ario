@@ -89,3 +89,30 @@ def test_missing_native_prefix_does_not_authorize_retained_failure(tmp_path, mon
     assert not result["experience"]["blocked_by"]
     assert not result["experience"]["recalled"]
     assert len(calls) == 2
+
+
+def test_deliberation_schema_preserves_stop_and_rejects_bad_envelope(tmp_path, monkeypatch, capsys):
+    ledger = prepare_both(tmp_path)
+    transport = responses(monkeypatch, payload("NO_USEFUL_WORK", "STOP", None))
+    assert run(tmp_path, ledger) == 1
+    assert json.loads(capsys.readouterr().out)["status"] == "STOPPED_BY_AGENT_OUTPUT"
+    request = json.loads(transport.call_args.args[0].data)
+    schema = request["format"]
+    assert schema["type"] == "object" and schema["additionalProperties"] is False
+    assert set(schema["required"]) == {"intent", "reason", "recommendation", "deliberation"}
+    assert schema["properties"]["intent"]["enum"] == ["STOP", "CONTINUE"]
+    assert {"type": "null"} in schema["properties"]["recommendation"]["anyOf"]
+    detail = schema["properties"]["deliberation"]
+    assert set(detail["required"]) == {"kind", "basis", "replacement_claim"}
+    assert detail["additionalProperties"] is False
+    assert transport.call_count == 1 and not ledger.exists()
+
+    # Even if the server ignores the requested schema, never repair or execute
+    # a malformed response, and never retry it as presumed consent.
+    transport = responses(monkeypatch, REC)
+    assert run(tmp_path, ledger) == 1
+    result = json.loads(capsys.readouterr().out)
+    assert result["choice"]["reason"] == "INVALID_DELIBERATION_ENVELOPE"
+    assert result["status"] == "PAUSED_FOR_REVIEW"
+    assert not result["execution_started"]
+    assert transport.call_count == 1 and not ledger.exists()
