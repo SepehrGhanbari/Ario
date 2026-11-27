@@ -228,6 +228,8 @@ class WorkingMemoryBuffer:
         # Dataclass shape is not provenance. A configured guard must recognize
         # the *exact* attribution and accept it before eviction or rehearsal.
         if self.source_guard is not None:
+            if source_attribution.assertion.strip() != assertion.strip():
+                raise SourceMonitoringError("Working memory assertion differs from admitted source assertion")
             canonical = self.source_guard.attributions.get(source_attribution.attribution_id)
             if canonical is None or canonical != source_attribution:
                 raise SourceMonitoringError("Source attribution not admitted by configured guard")
@@ -243,6 +245,12 @@ class WorkingMemoryBuffer:
         effective_step = max(self._current_step, step) if step is not None else self._current_step
 
         chunk_id = WorkingMemoryChunk.compute_chunk_id(concept, assertion, source_attribution.attribution_id)
+        # Recall identity survives transfer to another buffer. A reserved recall
+        # identity is never a new evidence event, even without an available LTM.
+        parents = source_attribution.parent_attribution_ids
+        is_recall = (source_attribution.source_type == SourceType.INTERNAL_HYPOTHESIS
+                     and bool(parents)
+                     and source_attribution.attribution_id == "recall_" + parents[0])
 
         # Re-ingestion / Rehearsal of existing active chunk
         if chunk_id in self._active_chunks:
@@ -252,11 +260,17 @@ class WorkingMemoryBuffer:
             staged.access_count += 1
             staged.last_accessed_step = effective_step
             staged.salience = min(1.0, max(staged.salience, clamped_salience) + self.REHEARSAL_SALIENCE_BOOST)
+            if self.source_guard is not None:
+                # The canonical source may have an explicit newer revision.
+                # Preserve prior versions in SourceMonitoringGuard history.
+                staged.source_attribution = attribution_copy
             if metadata_copy:
                 staged.metadata.update(metadata_copy)
             returned = copy.deepcopy(staged)
             self._current_step = effective_step
             self._active_chunks[chunk_id] = staged
+            if is_recall:
+                self._recalled_chunk_ids.add(chunk_id)
             return returned
 
         # Prepare the return value before any capacity eviction or LTM write.
@@ -277,6 +291,8 @@ class WorkingMemoryBuffer:
         if len(self._active_chunks) >= self.capacity:
             self._evict_least_salient()
         self._active_chunks[chunk_id] = chunk
+        if is_recall:
+            self._recalled_chunk_ids.add(chunk_id)
         return returned
 
     def access(self, chunk_id: str, step: Optional[int] = None) -> Optional[WorkingMemoryChunk]:
@@ -410,6 +426,8 @@ class WorkingMemoryBuffer:
                     attr.source_type == SourceType.EMPIRICAL_OBSERVATION
                     and attr.veracity_state == VeracityState.VERIFIED_EMPIRICAL
                     and canonical == attr
+                    and attr.assertion.strip() == chunk.assertion
+                    and chunk.chunk_id not in self._recalled_chunk_ids
                     and self.source_guard.filter_working_memory_candidates(
                         [attr.attribution_id], require_verified=True
                     )
