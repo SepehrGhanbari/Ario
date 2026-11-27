@@ -17,7 +17,7 @@ from ledger_streaming import LedgerLineLimitExceeded, iter_bounded_ledger_lines
 MAX_WORKFLOW_STAGES = 8
 READ_ONLY_TOOLS = {
     "inspect_directory", "read_text", "file_fingerprint", "inspect_backup",
-    "recovery_preflight", "git_status", "compile_python", "run_tests", "verify_text",
+    "recovery_preflight", "git_status", "compile_python", "run_tests", "verify_text", "audit_m0",
 }
 
 

@@ -23,7 +23,7 @@ MAX_READ_BYTES = 20_000
 MAX_LOCK_PID = (1 << 32) - 1
 # Research-only history budget; legitimate bounded agent tasks emit <= 26 lifecycle events.
 MAX_TASK_HISTORY_EVENTS = 128
-ALLOWED_TOOLS = {"inspect_directory", "read_text", "file_fingerprint", "inspect_backup", "recovery_preflight", "git_status", "compile_python", "run_tests", "replace_text", "restore_backup", "verify_text"}
+ALLOWED_TOOLS = {"inspect_directory", "read_text", "file_fingerprint", "inspect_backup", "recovery_preflight", "git_status", "compile_python", "run_tests", "replace_text", "restore_backup", "verify_text", "audit_m0"}
 
 
 RUN_TEST_MODULES = {
@@ -120,12 +120,18 @@ def parse_task(payload: Any) -> dict:
         if tool not in ALLOWED_TOOLS:
             raise AgentRequestError(f"actions[{index}].tool is not allowlisted")
         _test_target(action)
-        if tool in {"inspect_directory", "read_text", "file_fingerprint", "inspect_backup", "recovery_preflight", "compile_python", "replace_text", "restore_backup", "verify_text"}:
+        if tool in {"inspect_directory", "read_text", "file_fingerprint", "inspect_backup", "recovery_preflight", "compile_python", "replace_text", "restore_backup", "verify_text", "audit_m0"}:
             if not isinstance(action.get("path"), str):
                 raise AgentRequestError(f"actions[{index}] requires a relative path")
         elif "path" in action:
             raise AgentRequestError(f"actions[{index}] does not accept path")
-        if tool == "replace_text":
+        if tool == "audit_m0":
+            expected = action.get("expected_sha256")
+            if not isinstance(expected, str) or len(expected) != 64 or any(ch not in "0123456789abcdefABCDEF" for ch in expected):
+                raise AgentRequestError(f"actions[{index}].expected_sha256 must be a 64-character SHA-256 hex digest")
+            if any(field in action for field in ("content", "backup_path", "expected_text")):
+                raise AgentRequestError(f"actions[{index}] audit_m0 accepts only path and expected_sha256")
+        elif tool == "replace_text":
             if not isinstance(action.get("content"), str):
                 raise AgentRequestError(f"actions[{index}].content must be a string")
             expected = action.get("expected_sha256")
@@ -217,7 +223,7 @@ def parse_task(payload: Any) -> dict:
         })
         diagnostic_tools = {
             "inspect_directory", "read_text", "file_fingerprint", "inspect_backup",
-            "recovery_preflight", "git_status", "compile_python", "run_tests", "verify_text",
+            "recovery_preflight", "git_status", "compile_python", "run_tests", "verify_text", "audit_m0",
         }
         for index, action in enumerate(diagnostic_task["actions"]):
             if action["tool"] not in diagnostic_tools:
@@ -438,6 +444,9 @@ def _validate_read_text_observation(action: dict, observation: dict) -> dict:
 def execute_action(action: dict, root: Path, backup_root: Path | None = None) -> dict:
     test_target = _test_target(action)
     tool = action["tool"]
+    if tool == "audit_m0":
+        from m0_agent_audit import audit_request_file
+        return audit_request_file(_inside(root, action["path"]), action.get("expected_sha256"), max_bytes=MAX_READ_BYTES)
     if tool == "file_fingerprint":
         target = _inside(root, action["path"])
         if not target.is_file() or target.is_symlink():
