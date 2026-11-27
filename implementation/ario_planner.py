@@ -602,19 +602,24 @@ def _deliberation_record(proposed, observation, prior_claim):
         if basis is None and replacement is None:
             record["status"] = "ORDINARY_CHOICE"
         return record
-    if (type(reason) is not str or not reason.strip() or len(reason) > 2000
-            or type(basis) is not dict or set(basis) != {"path", "quote"}
+    if type(reason) is not str or not reason.strip() or len(reason) > 2000:
+        record["diagnostic"] = "GROUNDED_REASON_MISSING_OR_INVALID"
+        return record
+    if (type(basis) is not dict or set(basis) != {"path", "quote"}
             or type(basis["path"]) is not str or type(basis["quote"]) is not str
             or not 8 <= len(basis["quote"]) <= 512 or not basis["quote"].strip()):
+        record["diagnostic"] = "BASIS_SHAPE_INVALID"
         return record
     matches = [item for item in observation.get("planning_context", [])
                if item["path"] == basis["path"] and basis["quote"] in item["content"]]
     if len(matches) != 1:
+        record["diagnostic"] = "BASIS_NOT_IN_SENT_CONTEXT"
         return record
     if intent == "CONTINUE":
         rec = proposed.get("recommendation")
         if type(rec) is not dict or basis["path"] not in (
                 rec.get("implementation_path"), rec.get("test_path")):
+            record["diagnostic"] = "BASIS_OUTSIDE_SELECTED_PAIR"
             return record
     if kind == "INITIATIVE" and intent != "CONTINUE":
         return record
@@ -650,28 +655,62 @@ def _deliberative_recommendation(proposed, observation, prior_claim, report):
     return recommendation
 
 
-def _deliberation_output_schema():
-    """Constrain wire shape only; the existing choice and evidence gates decide validity."""
+def _deliberation_output_schema(observation, prior_claim):
+    """Offer valid decision shapes; never supply a reason or select intent for the model."""
     def obj(properties):
         return {"type": "object", "properties": properties,
                 "required": list(properties), "additionalProperties": False}
 
-    text = {"type": "string"}
-    nullable_text = {"type": ["string", "null"]}
+    def enum(*values):
+        return {"type": "string", "enum": list(values)}
+
+    text = {"type": "string", "minLength": 1}
+    explanation = {"type": "string", "minLength": 1, "maxLength": 2000}
+    nullable_text = {"anyOf": [{"type": "null"}, explanation]}
+    null = {"type": "null"}
     recommendation = obj({key: text for key in (
         "implementation_path", "test_path", "engineering_question", "rationale")})
-    basis = obj({"path": text, "quote": text})
-    return obj({
-        "intent": {"type": "string", "enum": ["STOP", "CONTINUE"]},
-        "reason": nullable_text,
-        "recommendation": {"anyOf": [{"type": "null"}, recommendation]},
-        "deliberation": obj({
-            "kind": {"type": "string", "enum": [
-                "ORDINARY", "DISSENT", "CORRECTION", "INITIATIVE", "NO_USEFUL_WORK"]},
-            "basis": {"anyOf": [{"type": "null"}, basis]},
-            "replacement_claim": nullable_text,
-        }),
-    })
+    paths = sorted({item["path"] for item in observation.get("planning_context", [])})
+    basis = obj({"path": enum(*paths),
+                 "quote": {"type": "string", "minLength": 8, "maxLength": 512}})
+
+    def shape(intent, kind, reason, rec, support, replacement):
+        return obj({"intent": enum(intent), "reason": reason, "recommendation": rec,
+                    "deliberation": obj({"kind": enum(kind), "basis": support,
+                                         "replacement_claim": replacement})})
+
+    # Full disjoint alternatives avoid independently nullable fields that allowed
+    # INITIATIVE + null reason. All branches still pass the original validator.
+    choices = [
+        shape("CONTINUE", "ORDINARY", nullable_text, recommendation, null, null),
+        shape("STOP", "ORDINARY", nullable_text, null, null, null),
+        shape("STOP", "NO_USEFUL_WORK", nullable_text, null, null, null),
+    ]
+    if paths:
+        choices.extend([
+            shape("CONTINUE", "INITIATIVE", explanation, recommendation, basis, null),
+            shape("CONTINUE", "DISSENT", explanation, recommendation, basis, null),
+            shape("STOP", "DISSENT", explanation, null, basis, null),
+        ])
+        if prior_claim is not None:
+            choices.extend([
+                shape("CONTINUE", "CORRECTION", explanation, recommendation, basis, explanation),
+                shape("STOP", "CORRECTION", explanation, null, basis, explanation),
+            ])
+    return {"anyOf": choices}
+
+
+def _deliberation_basis_examples(observation):
+    """A small list of exact excerpt lines; examples, not an asserted proof."""
+    examples = []
+    for item in observation.get("planning_context", []):
+        lines = [line.strip() for line in item["content"].splitlines()
+                 if 8 <= len(line.strip()) <= 160]
+        for quote in dict.fromkeys(lines):
+            examples.append({"path": item["path"], "quote": quote})
+            if sum(e["path"] == item["path"] for e in examples) >= 3:
+                break
+    return examples
 
 
 def request_plan(
@@ -793,13 +832,18 @@ def request_plan(
         )
     output_format = "json"
     if deliberate:
-        output_format = _deliberation_output_schema()
+        output_format = _deliberation_output_schema(observation, prior_claim)
+        user_payload["basis_examples"] = _deliberation_basis_examples(observation)
         system_prompt += (
             "\nReturn exactly ONE top-level JSON object, not just the nested recommendation. "
             "For example, the following is a valid unreasoned STOP: "
             '{"intent":"STOP","reason":null,"recommendation":null,'
             '"deliberation":{"kind":"ORDINARY","basis":null,"replacement_claim":null}}. '
             "This example illustrates the shape only; choose your own intent. "
+            "Choose ORDINARY for a normal review; INITIATIVE, DISSENT and CORRECTION "
+            "require a nonempty reason and an actual source quote. "
+            "You may copy a suitable path and quote from basis_examples, or choose another exact excerpt. "
+            "If you cannot ground a special deliberation, choose ORDINARY or STOP; do not claim a basis you lack. "
             "For CONTINUE, recommendation must be the full four-field object; "
             "an ordinary choice uses null basis and null replacement_claim. "
             "Your output must match this JSON Schema: " +
