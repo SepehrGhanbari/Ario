@@ -310,7 +310,7 @@ def require_doi(cov,root,record):
     if len(names)!=len(set(names)) or set(names)!={p.name for p in (root/record).iterdir()}: raise Rejected('extra or duplicate DOI files')
     return report
 
-def gate(mode, path, parent, commit=COMMIT, record=None):
+def gate(mode, path, parent, commit=COMMIT, record=None, *, archive_format='zip'):
     """Return a scoped verdict. No caller-supplied evidence or bypass switch."""
     report={'mode':mode,'status':'UNKNOWN','qualification':QUAL}; stage=None; passed=False
     try:
@@ -339,6 +339,28 @@ def gate(mode, path, parent, commit=COMMIT, record=None):
                 report['runtime_scope']='EXPLICIT_M0_DATA_ONLY_NO_LEDGER'
                 report['claim_truth']='UNKNOWN'
                 report['independent_admission_authority']='NONE'
+        elif mode=='restore-bundle':
+            if archive_format not in ('zip','txt'):
+                raise Rejected('unsupported bundle restore format')
+            bundle=real_dir(path)
+            # Read all three pinned local assets before any network call or
+            # output creation. Use these exact retained byte images throughout.
+            assets={name:exact_asset(name,read_regular(bundle/name,size,size))
+                    for name,(size,_) in ASSETS.items()}
+            with tempfile.TemporaryDirectory(prefix='ario-integrity-bundle-') as s:
+                scratch=Path(s)
+                report['bundle_evidence']=[verify_release_bytes(rel,name,data,scratch)
+                                           for name,data in assets.items()]
+                manifest=assets['ario-manifest.json']
+                manifest_entries(cov,manifest)
+                stage=Path(tempfile.mkdtemp(prefix='ario-gate-stage-',dir=real_dir(parent)))
+                if archive_format=='zip':
+                    restore_zip(cov,assets['ario-full.zip'],stage)
+                else:
+                    restore_txt(cov,assets['ario-full.txt'],manifest,stage)
+                report['evidence']=require_checkout(cov,stage,SOURCE)
+                report['archive_format']=archive_format
+                report['bundle_scope']='THREE_PINNED_11_NOV_ASSETS; SELECTED_RESTORE_ONLY'
         elif mode in ('import','restore','download-restore'):
             with tempfile.TemporaryDirectory(prefix='ario-integrity-private-') as s:
                 scratch=Path(s)
@@ -364,7 +386,8 @@ def gate(mode, path, parent, commit=COMMIT, record=None):
                     report['evidence']=require_checkout(cov,stage,SOURCE)
         else: raise Unknown('unsupported gate mode')
         report['status']={'startup-probe':'MATCH_RESEARCH_STARTUP_PROBE',
-                          'runtime-audit':'MATCH_RUNTIME_AUDIT_COMPLETED'}.get(mode,'MATCH_PREPARATION_ONLY'); passed=True
+                          'runtime-audit':'MATCH_RUNTIME_AUDIT_COMPLETED',
+                          'restore-bundle':'MATCH_VERIFIED_BUNDLE_RESTORE'}.get(mode,'MATCH_PREPARATION_ONLY'); passed=True
         if stage is not None: report['directory']=str(stage)
         return 0,report
     except Exception as e:
@@ -392,8 +415,9 @@ def interactive():
     print("5. Verify an existing checkout (enter exact commit)")
     print("6. Verify a local Zenodo record folder (no execution)")
     print("7. Clone + verify fixed runtime + execute an explicit M0 JSON audit (no ledger)")
+    print("8. Verify a downloaded three-file release bundle and restore ZIP or TXT (no execution)")
     try:
-        choice=input("Choose 1-7: ").strip(); path=None; commit=COMMIT; record=None
+        choice=input("Choose 1-8: ").strip(); path=None; commit=COMMIT; record=None
         if choice=='1': mode='startup-probe'
         elif choice=='2': mode='download-restore'
         elif choice=='3':
@@ -408,8 +432,15 @@ def interactive():
         elif choice=='7':
             mode='runtime-audit'; commit=RUNTIME_COMMIT
             path=Path(input('M0 JSON request path: ').strip().strip('"'))
+        elif choice=='8':
+            mode='restore-bundle'
+            path=Path(input('Downloaded bundle directory: ').strip().strip('"'))
+            archive_format=input('Restore format (zip/txt): ').strip().lower()
         else: print('No operation selected.'); return 3
-        code,report=gate(mode,path,parent,commit,record)
+        if mode=='restore-bundle':
+            code,report=gate(mode,path,parent,commit,record,archive_format=archive_format)
+        else:
+            code,report=gate(mode,path,parent,commit,record)
         report['exit_code']=code
         body=json.dumps(report,ensure_ascii=True,sort_keys=True)
         print(body)
@@ -422,14 +453,18 @@ def main(argv=None):
     if (sys.argv[1:] if argv is None else argv)==['--menu']: return interactive()
     p=argparse.ArgumentParser(description=__doc__)
     sub=p.add_subparsers(dest='mode',required=True)
-    for name in ('check','clone','import','restore','doi-check','startup-probe','download-restore','runtime-audit'):
+    for name in ('check','clone','import','restore','doi-check','startup-probe','download-restore','runtime-audit','restore-bundle'):
         q=sub.add_parser(name)
-        if name in ('check','doi-check'): q.add_argument('--directory',type=Path,required=True)
+        if name in ('check','doi-check','restore-bundle'): q.add_argument('--directory',type=Path,required=True)
         if name in ('check','clone'): q.add_argument('--commit',default=COMMIT)
-        if name in ('clone','import','restore','startup-probe','download-restore','runtime-audit'): q.add_argument('--output-parent',type=Path,required=True)
+        if name in ('clone','import','restore','startup-probe','download-restore','runtime-audit','restore-bundle'): q.add_argument('--output-parent',type=Path,required=True)
         if name in ('import','restore','runtime-audit'): q.add_argument('--input',type=Path,required=True)
         if name=='doi-check': q.add_argument('--record',required=True)
+        if name=='restore-bundle': q.add_argument('--format',choices=('zip','txt'),default='zip')
     a=p.parse_args(argv)
-    code,report=gate(a.mode,getattr(a,'directory',getattr(a,'input',None)),getattr(a,'output_parent',None),getattr(a,'commit',RUNTIME_COMMIT if a.mode=='runtime-audit' else COMMIT),getattr(a,'record',None))
+    if a.mode=='restore-bundle':
+        code,report=gate(a.mode,a.directory,a.output_parent,archive_format=a.format)
+    else:
+        code,report=gate(a.mode,getattr(a,'directory',getattr(a,'input',None)),getattr(a,'output_parent',None),getattr(a,'commit',RUNTIME_COMMIT if a.mode=='runtime-audit' else COMMIT),getattr(a,'record',None))
     report['exit_code']=code; print(json.dumps(report,ensure_ascii=True,sort_keys=True)); return code
 if __name__=='__main__': raise SystemExit(main())

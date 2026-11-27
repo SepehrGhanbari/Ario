@@ -39,3 +39,13 @@ python -I -B scripts/ario_integrity_gate.py runtime-audit --input request.json -
 Windows menu option 7 uses the same operation. The gate reads an explicit M0 JSON request (up to 20,000 bytes), retains its exact SHA-256, prepares a fresh isolated-directory checkout of the fixed pin, checks its complete raw tracked-byte coverage, and invokes only the existing deterministic `implementation/ario_cli.py` with a private copy of the request. No caller-selected script, arbitrary command, ledger, memory, signer or model execution. An unavailable or mismatched checkout never starts the audit. No automatic launch on clone/download. Output distinguishes preparation/execution success (`MATCH_RUNTIME_AUDIT_COMPLETED`, exit 0) from M0's own PASS/FAIL/UNKNOWN result; even FAIL or UNKNOWN can be a correctly completed audit. Invalid input/read or failed execution is rejected or unknown; an unfinished stage is not accepted. The fixed pin is not a moving main and must not be interpreted as signed, latest, independently trusted or production-authorized. The same environmental assumptions as V1 apply, including no hostile-local-OS sandbox guarantee. The new mode uses the existing checked helper bytes without changing their pins.
 
 The two byte-pinned helper files use exact checkout bytes via root `.gitattributes` (`-text`); do not normalize CRLF/LF in the verifier or change the retained helper hashes. Other file checkout policy and historical source snapshots are unchanged.
+
+## Restore a complete downloaded release bundle
+
+The existing verified-release download command produces a directory containing the three pinned 11-Nov-2026 assets. To consume that directory directly, from separately trusted Integrity Gate tools run:
+
+```sh
+python -I -B scripts/ario_integrity_gate.py restore-bundle --directory /path/to/ario-release-directory --output-parent . --format txt
+```
+
+Use `--format zip` (default) or Windows menu option 8. This operation checks the exact pinned local bytes of all three assets before any reference request or output creation, then repeats the existing R1.4 live comparisons. The selected archive is restored using the retained bytes and existing manifest parser; TXT uses the supplied manifest, not another downloaded copy. The fresh output is compared with the historical GitHub source tree before it is returned. The other archive is verified as a release asset, not separately extracted. Input files are never modified, extra files in the download directory are outside scope, and there is no execution. A missing, changed or unverifiable asset prevents handoff. This is not an offline verification mode: the live R1.4 and source-tree checks remain required. Fixed historical release only; no new publication, authority, memory or signature.

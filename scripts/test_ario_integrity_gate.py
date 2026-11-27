@@ -214,4 +214,51 @@ class GateTests(unittest.TestCase):
             self.assertEqual(g.main(['runtime-audit','--input',str(self.root/'input.json'),'--output-parent',str(self.output)]),0)
         self.assertEqual(gate.call_args.args[3],g.RUNTIME_COMMIT)
 
+    def local_bundle(self):
+        bundle=self.root/'downloaded'; bundle.mkdir()
+        for name,data in (('ario-full.zip',self.z),('ario-full.txt',self.t),('ario-manifest.json',self.m)):
+            (bundle/name).write_bytes(data)
+        return bundle
+
+    def test_bundle_restore_both_formats_without_redownloading_manifest(self):
+        bundle=self.local_bundle()
+        before={p.name:p.read_bytes() for p in bundle.iterdir()}
+        for fmt in ('zip','txt'):
+            with self.subTest(fmt=fmt),self.fixture_pins(),self.deps(),patch.object(g,'verify_release_bytes',side_effect=lambda rel,name,data,scratch:{'asset':name,'sha256':g.sha(data)}) as v,patch.object(self.rel,'download_asset') as download,patch.object(self.cov,'check_checkout',return_value=self.report(g.SOURCE)):
+                code,result=g.gate('restore-bundle',bundle,self.output,archive_format=fmt)
+            self.assertEqual(code,0,result)
+            self.assertEqual(result['status'],'MATCH_VERIFIED_BUNDLE_RESTORE')
+            self.assertEqual(result['archive_format'],fmt)
+            self.assertEqual(v.call_count,3);download.assert_not_called()
+            self.assertEqual({str(p.relative_to(result['directory'])).replace(os.sep,'/'):p.read_bytes() for p in Path(result['directory']).rglob('*') if p.is_file()},self.raw)
+            self.assertEqual({p.name:p.read_bytes() for p in bundle.iterdir()},before)
+
+    def test_bundle_invalid_unused_asset_rejected_before_network(self):
+        bundle=self.local_bundle()
+        (bundle/'ario-full.txt').write_bytes(b'X'+self.t[1:])
+        with self.fixture_pins(),self.deps(),patch.object(g,'verify_release_bytes') as verify:
+            code,result=g.gate('restore-bundle',bundle,self.output)
+        self.assertEqual(code,2);verify.assert_not_called();self.assertEqual(list(self.output.iterdir()),[])
+
+    def test_bundle_missing_manifest_does_not_restore_or_download(self):
+        bundle=self.local_bundle();(bundle/'ario-manifest.json').unlink()
+        with self.fixture_pins(),self.deps(),patch.object(g,'verify_release_bytes') as verify,patch.object(self.rel,'download_asset') as download:
+            code,result=g.gate('restore-bundle',bundle,self.output,archive_format='txt')
+        self.assertEqual(code,3);verify.assert_not_called();download.assert_not_called()
+        self.assertEqual(list(self.output.iterdir()),[])
+
+    def test_bundle_failed_reference_or_postcheck_cannot_handoff(self):
+        bundle=self.local_bundle()
+        with self.fixture_pins(),self.deps(),patch.object(g,'verify_release_bytes',side_effect=[{},g.Unknown('offline')]),patch.object(g,'restore_zip') as restore:
+            code,result=g.gate('restore-bundle',bundle,self.output)
+        self.assertEqual(code,3);restore.assert_not_called();self.assertEqual(list(self.output.iterdir()),[])
+        with self.fixture_pins(),self.deps(),patch.object(g,'verify_release_bytes',return_value={}),patch.object(g,'require_checkout',side_effect=g.Rejected('mismatch')):
+            code,result=g.gate('restore-bundle',bundle,self.output)
+        self.assertEqual(code,2);self.assertEqual(list(self.output.iterdir()),[])
+
+    def test_bundle_cli_uses_selected_format(self):
+        with patch.object(g,'gate',return_value=(0,{})) as gate:
+            self.assertEqual(g.main(['restore-bundle','--directory',str(self.root),'--output-parent',str(self.output),'--format','txt']),0)
+        gate.assert_called_once_with('restore-bundle',self.root,self.output,archive_format='txt')
+
 if __name__=='__main__':unittest.main()

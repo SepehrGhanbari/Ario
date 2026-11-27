@@ -32,3 +32,7 @@ Run focused tests from `scripts/`: `python -B -m unittest -v test_ario_verified_
 ## Subsequent Windows validation (2026-11-24)
 
 The owner-supplied Windows terminal result for the unchanged launcher reported `ALL_SELECTED_RELEASE_ASSETS_MATCH`, exit 0, all three exact SHA-256 values and `HTTPS_GITHUB`. The earlier unavailable-HTTPS observation above is historical. See [combined closeout](verification-coverage-evidence/README.md). This does not authorize execution or restore of the received archive.
+
+## Use the verified download as a restore input
+
+To restore the selected ZIP or TXT from the complete three-file download directory without re-downloading its manifest, use the separate [Integrity Gate bundle restore](ARIO_INTEGRITY_GATE_V1.md#restore-a-complete-downloaded-release-bundle). The original verified-release launcher remains byte-identical and does not restore anything. The new consumer rechecks all three local asset pins and the existing live references before returning a fresh restored directory; no archive code is executed.
