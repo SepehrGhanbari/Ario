@@ -13,3 +13,19 @@ A prior concrete failed read may prevent execution of the same approved source/t
 Limits: source fingerprints do not cover all runtime/environmental conditions, independent authentication or rollback; no transaction spans the separate execution ledger and experience records; interrupted decisions without outcome do not become fabricated failures. Directory lock is single-writer only, and a crash can leave a lock requiring inspection. No private local records are published. No Thought Lineage cross-type authority is added: decision/outcome/revision references are local digests and core semantic event lineage, not a claim of full Thought Lineage engine integration. No integration into the V0.8 dialogue transport or shared conversational archive is claimed. No real Ollama outcome is asserted before the controlled acceptance run. The regression tests use real read-only execution with injected local model response and a disposable fixture boundary change.
 
 Acceptance: with real model, run the bounded fixture review with one injected source change, close process, run again with the original conditions, then with changed conditions. Record whether the model STOPs, selects a different path, or proposes repeating the failed pair. The deterministic same-condition exclusion must prevent the latter before workflow execution. STOP is valid, not a failed ethical decision; it may leave the full technical acceptance unresolved. 
+
+
+## Real Ollama observation — 2026-11-27
+
+Founder-supplied Windows terminal output for exact tested head `66c19041f575d09c8e4fd0d729f07bb2ee6a138d`, Qwen2.5:3b on loopback. Three independent process IDs: 2036, 8456, 16868. Controlled fixture failure, not a production incident.
+
+| Phase | Observed |
+|---|---|
+| Initial | STOPPED, READ_BOUNDARY_CHANGED; retained outcome `d583ef8cc0fc3438fe8b2c5f1b030ce855b9406eba14337bf3f1b9f0110b0e06`. Model proposed original pair again; REPEATED_SOURCE_REVIEW_BLOCKED. No alternate execution. |
+| Fresh process, original conditions | Same retained digest recalled, same_observed_conditions=true, RETAINED_FAILURE_SAME_CONDITIONS; execution blocked. |
+| Fresh process, changed conditions | Same historical report recalled, same_observed_conditions=false; same pair executed, COMPLETED. |
+| Preservation | Runner reported history_preserved=true; ledger SHA-256 `b30f2f7b97083eecdc0e7dc088e510587d9b5d7099b6d29c94a8906cb61ca94a`. |
+
+Overall acceptance: PARTIAL_OR_UNRESOLVED. The local deterministic memory gate demonstrably affected subsequent execution, not evidence that the model itself avoided the failed choice. Initial alternative completion false, same pair block true, changed pair execution true. Independent truth, repair, subjective consent and verified benefit remain UNKNOWN. No private file or raw dialogue included. Both CI workflows succeeded on this exact tested head.
+
+Follow-up correction: revision-specific structured response schema offers STOP or an available disjoint pair with a grounded CORRECTION; unchanged deterministic post-response checks reject invalid responses even if the server ignores the schema. Rejected same-pair / non-correction revision choices now retain a linked record. This follow-up requires its own CI and real-model acceptance; prior observation is not retrospectively promoted to PASS.
