@@ -158,3 +158,15 @@ A predeclared task or workflow can run the existing deterministic M0 engine agai
 ```
 
 Reads at most 20,000 bytes plus one lookahead, checks the exact input digest, rejects duplicate JSON members, and invokes the existing M0 CLI execution API. The ordinary STEP_OBSERVED ledger entry carries the structural verdict, violation codes, ancestry summary and canonical report digest; the complete report remains available through the existing M0 CLI for the same input. PASS succeeds only as a structural step; FAIL and UNKNOWN stop normal task continuation. It is also available as a read-only failure diagnostic. No raw request, full report, credential, independent evidence admission, signature, truth or source-authentication claim is produced. The caller-selected pin is not freshness or custody proof and grants no authorization for subsequent actions. Planner does not generate this action automatically.
+
+## Inspect RERE-01 revision (synthetic research runtime)
+
+A predeclared Agent task or Workflow may use the merged RERE-01 v0.4 comparator (#430) to compare two existing canonical LAB-E101 assessment-history snapshots:
+
+```json
+{"step_id":"revision","tool":"inspect_rere_revision","prior_path":"before.json","prior_sha256":"<64 hex digits>","path":"after.json","expected_sha256":"<64 hex digits>"}
+```
+
+Both workspace paths and caller pins are required. The action uses the existing bounded regular-file reader (256 KiB per snapshot) and the existing RERE restore/append APIs. It reconstructs the candidate from the prior records plus the candidate's suffix, requiring exact canonical byte equality. It records both input pins, record counts, prior/current laboratory outcomes and the count of previously warranted assessments withdrawn, without logging raw records. An exact replay is valid but reports no appended records. Invalid histories, altered prefixes, changed policy or rollback relative to the supplied prior snapshot stop ordinary continuation.
+
+A successfully inspected revision can legitimately produce event_outcome=UNKNOWN; execution success is not a truth verdict or authorization. Both pins are caller-selected and do not establish freshness or custody. No snapshots are written, no assessment is admitted to real memory, and no new action is automatically selected by Planner. The comparator remains limited to synthetic LAB-E101, not a general belief revision engine.

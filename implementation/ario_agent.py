@@ -23,7 +23,7 @@ MAX_READ_BYTES = 20_000
 MAX_LOCK_PID = (1 << 32) - 1
 # Research-only history budget; legitimate bounded agent tasks emit <= 26 lifecycle events.
 MAX_TASK_HISTORY_EVENTS = 128
-ALLOWED_TOOLS = {"inspect_directory", "read_text", "file_fingerprint", "inspect_backup", "recovery_preflight", "git_status", "compile_python", "run_tests", "replace_text", "restore_backup", "verify_text", "audit_m0"}
+ALLOWED_TOOLS = {"inspect_directory", "read_text", "file_fingerprint", "inspect_backup", "recovery_preflight", "git_status", "compile_python", "run_tests", "replace_text", "restore_backup", "verify_text", "audit_m0", "inspect_rere_revision"}
 
 
 RUN_TEST_MODULES = {
@@ -108,7 +108,7 @@ def parse_task(payload: Any) -> dict:
     seen: set[str] = set()
     normalized = []
     for index, action in enumerate(actions):
-        if not isinstance(action, dict) or set(action) - {"step_id", "tool", "path", "content", "expected_sha256", "backup_path", "expected_text", "start_line", "expected_next_start_line", "expected_truncated", "test_module"}:
+        if not isinstance(action, dict) or set(action) - {"step_id", "tool", "path", "content", "expected_sha256", "backup_path", "expected_text", "start_line", "expected_next_start_line", "expected_truncated", "test_module", "prior_path", "prior_sha256"}:
             raise AgentRequestError(f"actions[{index}] has an invalid shape")
         if not {"step_id", "tool"} <= set(action):
             raise AgentRequestError(f"actions[{index}] requires step_id and tool")
@@ -120,12 +120,23 @@ def parse_task(payload: Any) -> dict:
         if tool not in ALLOWED_TOOLS:
             raise AgentRequestError(f"actions[{index}].tool is not allowlisted")
         _test_target(action)
-        if tool in {"inspect_directory", "read_text", "file_fingerprint", "inspect_backup", "recovery_preflight", "compile_python", "replace_text", "restore_backup", "verify_text", "audit_m0"}:
+        if tool in {"inspect_directory", "read_text", "file_fingerprint", "inspect_backup", "recovery_preflight", "compile_python", "replace_text", "restore_backup", "verify_text", "audit_m0", "inspect_rere_revision"}:
             if not isinstance(action.get("path"), str):
                 raise AgentRequestError(f"actions[{index}] requires a relative path")
         elif "path" in action:
             raise AgentRequestError(f"actions[{index}] does not accept path")
-        if tool == "audit_m0":
+        if tool != "inspect_rere_revision" and ("prior_path" in action or "prior_sha256" in action):
+            raise AgentRequestError(f"actions[{index}] prior fields are valid only for inspect_rere_revision")
+        if tool == "inspect_rere_revision":
+            if set(action) != {"step_id", "tool", "path", "expected_sha256", "prior_path", "prior_sha256"}:
+                raise AgentRequestError(f"actions[{index}] inspect_rere_revision requires exactly two paths and two SHA-256 pins")
+            if not all(isinstance(action.get(k), str) and action[k].strip() for k in ("path", "prior_path")):
+                raise AgentRequestError(f"actions[{index}] revision paths must be nonempty strings")
+            for key in ("expected_sha256", "prior_sha256"):
+                pin = action.get(key)
+                if not isinstance(pin, str) or len(pin) != 64 or any(ch not in "0123456789abcdefABCDEF" for ch in pin):
+                    raise AgentRequestError(f"actions[{index}].{key} must be a SHA-256 hex digest")
+        elif tool == "audit_m0":
             expected = action.get("expected_sha256")
             if not isinstance(expected, str) or len(expected) != 64 or any(ch not in "0123456789abcdefABCDEF" for ch in expected):
                 raise AgentRequestError(f"actions[{index}].expected_sha256 must be a 64-character SHA-256 hex digest")
@@ -181,7 +192,7 @@ def parse_task(payload: Any) -> dict:
                 raise AgentRequestError(f"actions[{index}].expected_truncated must be a boolean")
         seen.add(step_id)
         normalized_action = {"step_id": step_id, "tool": tool}
-        for field in ("path", "content", "expected_sha256", "backup_path", "expected_text", "start_line", "expected_next_start_line", "expected_truncated", "test_module"):
+        for field in ("path", "content", "expected_sha256", "backup_path", "expected_text", "start_line", "expected_next_start_line", "expected_truncated", "test_module", "prior_path", "prior_sha256"):
             if field in action:
                 normalized_action[field] = action[field]
         normalized.append(normalized_action)
@@ -223,7 +234,7 @@ def parse_task(payload: Any) -> dict:
         })
         diagnostic_tools = {
             "inspect_directory", "read_text", "file_fingerprint", "inspect_backup",
-            "recovery_preflight", "git_status", "compile_python", "run_tests", "verify_text", "audit_m0",
+            "recovery_preflight", "git_status", "compile_python", "run_tests", "verify_text", "audit_m0", "inspect_rere_revision",
         }
         for index, action in enumerate(diagnostic_task["actions"]):
             if action["tool"] not in diagnostic_tools:
@@ -444,6 +455,12 @@ def _validate_read_text_observation(action: dict, observation: dict) -> dict:
 def execute_action(action: dict, root: Path, backup_root: Path | None = None) -> dict:
     test_target = _test_target(action)
     tool = action["tool"]
+    if tool == "inspect_rere_revision":
+        from rere_agent_revision import inspect_revision
+        return inspect_revision(
+            _inside(root, action["prior_path"]), action["prior_sha256"],
+            _inside(root, action["path"]), action["expected_sha256"],
+        )
     if tool == "audit_m0":
         from m0_agent_audit import audit_request_file
         return audit_request_file(_inside(root, action["path"]), action.get("expected_sha256"), max_bytes=MAX_READ_BYTES)
@@ -658,6 +675,10 @@ def run_task(payload: Any, workspace: str | Path, ledger_path: str | Path) -> di
     if not root.is_dir():
         raise AgentRequestError("workspace must be an existing directory")
     # Validate all declared goal paths before acquiring the lock or running any action.
+    for action in (*task["actions"], *task.get("failure_diagnostics", [])):
+        if action["tool"] == "inspect_rere_revision":
+            _inside(root, action["path"])
+            _inside(root, action["prior_path"])
     for criterion in task.get("success_criteria", []):
         _inside(root, criterion["path"])
     for diagnostic in task.get("failure_diagnostics", []):
