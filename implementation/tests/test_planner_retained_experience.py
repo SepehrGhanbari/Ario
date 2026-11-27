@@ -98,13 +98,31 @@ def test_deliberation_schema_preserves_stop_and_rejects_bad_envelope(tmp_path, m
     assert json.loads(capsys.readouterr().out)["status"] == "STOPPED_BY_AGENT_OUTPUT"
     request = json.loads(transport.call_args.args[0].data)
     schema = request["format"]
-    assert schema["type"] == "object" and schema["additionalProperties"] is False
-    assert set(schema["required"]) == {"intent", "reason", "recommendation", "deliberation"}
-    assert schema["properties"]["intent"]["enum"] == ["STOP", "CONTINUE"]
-    assert {"type": "null"} in schema["properties"]["recommendation"]["anyOf"]
-    detail = schema["properties"]["deliberation"]
-    assert set(detail["required"]) == {"kind", "basis", "replacement_claim"}
-    assert detail["additionalProperties"] is False
+    shapes = schema["anyOf"]
+    assert all(x["type"] == "object" and x["additionalProperties"] is False
+               and set(x["required"]) == {"intent", "reason", "recommendation", "deliberation"}
+               for x in shapes)
+    def kind(x):
+        return x["properties"]["deliberation"]["properties"]["kind"]["enum"][0]
+    def intent(x):
+        return x["properties"]["intent"]["enum"][0]
+    assert {intent(x) for x in shapes} == {"STOP", "CONTINUE"}
+    assert any(intent(x) == "STOP" and kind(x) == "ORDINARY" and
+               {"type": "null"} in x["properties"]["reason"]["anyOf"]
+               for x in shapes)
+    assert not any(kind(x) == "CORRECTION" for x in shapes)
+    for x in shapes:
+        props = x["properties"]
+        detail = props["deliberation"]
+        assert set(detail["required"]) == {"kind", "basis", "replacement_claim"}
+        assert detail["additionalProperties"] is False
+        if kind(x) in {"INITIATIVE", "DISSENT", "CORRECTION"}:
+            assert props["reason"]["type"] == "string" and props["reason"]["minLength"] == 1
+            assert detail["properties"]["basis"]["type"] == "object"
+    sent = json.loads(request["messages"][1]["content"])
+    excerpts = {e["path"]: e["content"] for e in sent["workspace_observation"]["planning_context"]}
+    assert sent["basis_examples"]
+    assert all(e["quote"] in excerpts[e["path"]] for e in sent["basis_examples"])
     assert transport.call_count == 1 and not ledger.exists()
 
     # Even if the server ignores the requested schema, never repair or execute
@@ -116,3 +134,30 @@ def test_deliberation_schema_preserves_stop_and_rejects_bad_envelope(tmp_path, m
     assert result["status"] == "PAUSED_FOR_REVIEW"
     assert not result["execution_started"]
     assert transport.call_count == 1 and not ledger.exists()
+
+
+def test_null_reason_initiative_pauses_with_precise_diagnostic(tmp_path, monkeypatch, capsys):
+    ledger = prepare_both(tmp_path)
+    data = payload("INITIATIVE")
+    data["reason"] = None
+    transport = responses(monkeypatch, data)
+    assert run(tmp_path, ledger) == 1
+    result = json.loads(capsys.readouterr().out)
+    assert result["status"] == "PAUSED_FOR_REVIEW"
+    assert result["choice"]["reason"] == "UNRESOLVED_DELIBERATION"
+    assert result["choice"]["deliberation"]["diagnostic"] == "GROUNDED_REASON_MISSING_OR_INVALID"
+    assert transport.call_count == 1 and not ledger.exists()
+
+
+def test_correction_shape_available_only_with_prior_claim():
+    observation = {"planning_context": [{"path": "implementation/ario_planner.py",
+                                         "content": "# bounded planner fixture"}]}
+    schema = ario_planner._deliberation_output_schema(observation, "prior claim")
+    corrected_shapes = [
+        x for x in schema["anyOf"]
+        if x["properties"]["deliberation"]["properties"]["kind"]["enum"] == ["CORRECTION"]
+    ]
+    assert corrected_shapes
+    for shape in corrected_shapes:
+        assert shape["properties"]["reason"]["type"] == "string"
+        assert shape["properties"]["deliberation"]["properties"]["replacement_claim"]["type"] == "string"
