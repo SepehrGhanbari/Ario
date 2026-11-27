@@ -246,6 +246,8 @@ def main(argv=None) -> int:
                       help="Build and screen one candidate dossier; never admit evidence")
     mode.add_argument("--pr-claim", nargs=2, metavar=("PR_BODY", "SNAPSHOT"),
                       help="Compare declared CI counts with supplied snapshot; no attestation")
+    mode.add_argument("--source-dependence", metavar="REQUEST",
+                      help="Report reference-conditioned shared discordance; no independence verdict")
     parser.add_argument("--reviewer-grant", help="Optional RAC-0.1 preflight record for --evidence-dossier")
     parser.add_argument(
         "--ledger",
@@ -261,6 +263,13 @@ def main(argv=None) -> int:
         report = inspect_dossier_files(*args.evidence_dossier, grant_path=args.reviewer_grant)
         print(json.dumps(report, ensure_ascii=True, sort_keys=True))
         return 1 if report["status"] == "SCREENED" else 2
+    if args.source_dependence is not None:
+        if args.ledger is not None:
+            parser.error("--ledger is only available for the M0 audit input")
+        from source_dependence_diagnostic import inspect_file
+        report = inspect_file(args.source_dependence)
+        print(json.dumps(report, ensure_ascii=True, sort_keys=True))
+        return 1 if report["status"] == "DIAGNOSTIC" else 2
     if args.pr_claim is not None:
         if args.ledger is not None:
             parser.error("--ledger is only available for the M0 audit input")
