@@ -53,7 +53,8 @@ def test_later_contestation_overrides_old_recall_metadata():
     assert wm.metacognitive_assessment().verdict == MetacognitiveVerdict.FOCUSED_SUFFICIENCY
     dispute(engine, node)
     assert wm.metacognitive_assessment().verdict == MetacognitiveVerdict.CONTRADICTION_DETECTED
-    assert wm.active_chunks[0].metadata["ltm_status_at_recall"] == "RECORDED"
+    recalled = next(c for c in wm.active_chunks if c.chunk_id == chunk.chunk_id)
+    assert recalled.metadata["ltm_status_at_recall"] == "RECORDED"
 
 
 def test_recovered_memory_retains_historical_dispute_without_empirical_promotion():
