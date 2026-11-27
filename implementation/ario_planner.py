@@ -613,6 +613,9 @@ def request_plan(
         system_prompt = SYSTEM_PROMPT.replace(
             "Return ONLY one JSON object with exactly these keys:",
             "If you choose CONTINUE, your recommendation must have exactly these keys:")
+        system_prompt = system_prompt.replace(
+            "Choose exactly one implementation/test pair",
+            "Only if you choose CONTINUE, choose exactly one implementation/test pair")
         system_prompt += (
             "\nYou may decline this planning task without penalty or explanation. "
             "Return only an object with exactly intent, reason, recommendation. "
@@ -625,6 +628,8 @@ def request_plan(
         user_payload["required_rules"][0] = (
             "Return the choice envelope; a recommendation is required only for CONTINUE."
         )
+        user_payload["required_rules"][1] = "If you choose CONTINUE, " + user_payload["required_rules"][1]
+        user_payload["required_rules"][2] = "If you choose CONTINUE, " + user_payload["required_rules"][2]
         report = choice_report if choice_report is not None else {}
         report.clear()
         report.update(schema="ARIO-PLANNER-CHOICE-0.1",

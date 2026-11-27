@@ -95,6 +95,28 @@ def test_explicit_continue_constructs_real_workflow(tmp_path, monkeypatch, capsy
     assert not ledger.exists() and transport.call_count == 1
 
 
+def test_continue_executes_existing_workflow_on_explicit_request(tmp_path, monkeypatch, capsys):
+    ledger = prepare(tmp_path)
+    recommendation = {"implementation_path": "implementation/ario_planner.py",
+                      "test_path": "implementation/tests/test_planner_runtime.py",
+                      "engineering_question": "Which missing regression checks the bounded planner fixture?",
+                      "rationale": "The bounded planner fixture is present in both source and test excerpts."}
+    transport, _ = reply(monkeypatch, {"intent": "CONTINUE",
+                                      "reason": "A bounded source review is useful",
+                                      "recommendation": recommendation})
+    before = {p: p.read_bytes() for p in (tmp_path / "implementation").rglob("*.py")}
+    assert ario_planner.main(args(tmp_path, ledger)) == 0
+    report = json.loads(capsys.readouterr().out)
+    assert report["status"] == "COMPLETED"
+    assert report["execution_result"]["status"] == "COMPLETED"
+    assert transport.call_count == 1 and ledger.exists()
+    assert {p: p.read_bytes() for p in before} == before
+    rows = [json.loads(line) for line in ledger.read_text(encoding="utf-8").splitlines()]
+    assert rows[-1]["event"] == "WORKFLOW_FINISHED"
+    request = json.loads(transport.call_args.args[0].data)
+    assert "You may decline" in request["messages"][0]["content"]
+
+
 def test_choice_cannot_be_requested_for_caller_supplied_inspections(tmp_path):
     with pytest.raises(SystemExit) as exc:
         ario_planner.main(["--inspection-request", "unused.json", "--workspace", str(tmp_path),
