@@ -120,3 +120,13 @@ A field being present, correctly shaped, or self-described as verified is never 
 No trusted authorization issuer, identity enrollment provider, trusted key store, canonical dossier digest standard, trusted clock, revocation registry, or independent corroborating evidence provider has yet been selected or implemented. **These are intentionally UNKNOWN.** Do not implement a pretend verifier that relies on any self-declared string, static hard-coded “trusted reviewer”, or agent-supplied grant.
 
 **Acceptance statement:** RAC-0.1 is a reviewable design proposal, not proof that any reviewer has been authenticated or authorized. Approval of this *document* never confers a real-world privilege.
+
+## Optional preflight in the existing dossier CLI
+
+The existing RAC-0.1 implementation (#62) can now be invoked as a **non-authorizing diagnostic** before EA/ARP screening:
+
+```sh
+python -B implementation/ario_cli.py --evidence-dossier manifest.json events.jsonl request.json --reviewer-grant grant.json
+```
+
+The grant uses the exact existing RAC fields (see `tests/test_reviewer_authorization_preflight.py` for the fixture). Set the request's declared authorization_reference to the grant_id, reviewer_id to principal_id, and keep the policy and both claim scopes identical. The consumer reads the grant with the existing 1 MiB bound, rejects duplicate JSON members, reports its observed byte hash and the unchanged preflight outcome, and checks equality of the declared identifiers and scope. Adverse or inconsistent declarations stop screening; unreadable supplied grants remain UNKNOWN. A nominal grant still has authorization_decision NOT_CHECKED. DECLARATIONS_MATCH_ONLY is not verified identity, candidate binding, time, revocation or authorization. The earlier no-grant screening mode remains unchanged. This does not implement Gate C or Gate D, nor does it pass authorization to ARP. No issuer, signature, canonical digest, admission or authority is created.

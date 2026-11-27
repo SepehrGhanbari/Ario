@@ -135,3 +135,72 @@ def test_combined_cli_rejects_m0_ledger_option(tmp_path):
     child = call(paths, "--ledger", str(dest))
     assert child.returncode == 2
     assert not dest.exists()
+
+
+def prepare_grant(root, request):
+    from test_reviewer_authorization_preflight import grant
+    value = grant()
+    value.update(principal_id=request["review"]["reviewer_id"],
+                 claim_scope=request["review"]["requested_claim_scope"])
+    request["review"]["authorization_reference"] = value["grant_id"]
+    path = root / "grant.json"
+    path.write_text(json.dumps(value), encoding="utf-8")
+    (root / "request.json").write_text(json.dumps(request), encoding="utf-8")
+    return path, value
+
+
+def test_grant_preflight_is_reported_without_authorizing(tmp_path):
+    from reviewer_authorization_preflight import preflight_authorization
+    paths, _, request = prepare(tmp_path)
+    gp, value = prepare_grant(tmp_path, request)
+    before = [p.read_bytes() for p in (*paths, gp)]
+    child = call(paths, "--reviewer-grant", str(gp))
+    assert child.returncode == 1, child.stderr
+    report = json.loads(child.stdout)
+    assert report["authorization_preflight"] == preflight_authorization(value)
+    assert report["authorization_preflight"]["authorization_decision"] == "NOT_CHECKED"
+    assert report["declared_grant_binding"] == "DECLARATIONS_MATCH_ONLY"
+    assert report["review"]["status"] == "UNKNOWN"
+    assert report["admission_decision"] == "NOT_EVALUATED"
+    assert report["input_sha256"]["reviewer_grant"] == hashlib.sha256(before[-1]).hexdigest()
+    assert [p.read_bytes() for p in (*paths, gp)] == before
+
+
+@pytest.mark.parametrize("field,value", [
+    ("revocation_check", "REVOKED"), ("separation_of_duties", "SELF_REVIEW"),
+    ("permitted_action", "ADMIT_EVIDENCE"), ("principal_id", "someone else"),
+    ("claim_scope", "different scope"), ("grant_id", "other grant"),
+])
+def test_adverse_grant_or_mismatched_declaration_prevents_screening(tmp_path, field, value):
+    paths, _, request = prepare(tmp_path)
+    gp, grant = prepare_grant(tmp_path, request)
+    grant[field] = value
+    gp.write_text(json.dumps(grant), encoding="utf-8")
+    report = combined.inspect_dossier_files(*paths, grant_path=gp)
+    assert report["status"] == "REJECTED"
+    assert report["candidate"] is None and report["review"] is None
+    assert report["admission_decision"] == "NOT_EVALUATED"
+
+
+@pytest.mark.parametrize("kind", ["duplicate", "missing", "oversize"])
+def test_unreadable_grant_cannot_be_ignored(tmp_path, kind):
+    paths, _, request = prepare(tmp_path)
+    gp, _ = prepare_grant(tmp_path, request)
+    if kind == "duplicate":
+        gp.write_bytes(b'{"grant_id":"a","grant_id":"b"}')
+    elif kind == "missing":
+        gp.unlink()
+    else:
+        with gp.open("wb") as stream:
+            stream.truncate(1024 * 1024 + 1)
+    report = combined.inspect_dossier_files(*paths, grant_path=gp)
+    assert report["status"] == "UNKNOWN"
+    assert report["candidate"] is None and report["review"] is None
+
+
+def test_grant_option_requires_dossier_mode(tmp_path):
+    child = subprocess.run([sys.executable, "-B", str(CLI), "--input", "unused.json",
+                            "--reviewer-grant", "grant.json"], cwd=CLI.parent,
+                           capture_output=True, text=True, check=False)
+    assert child.returncode == 2
+    assert "--reviewer-grant requires --evidence-dossier" in child.stderr
