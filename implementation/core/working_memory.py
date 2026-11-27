@@ -449,64 +449,83 @@ class WorkingMemoryBuffer:
             if (node is None or node.node_id != parents[0] or node.concept != chunk.concept
                     or node.assertion != chunk.assertion):
                 return {**report, "reason": "UNRESOLVED_RECALL_PARENT"}
-            report["node_id"] = node.node_id
-            report["node_status"] = node.status.value
-            hashes = node.source_event_hashes
-            # Bound work before scanning a potentially large source registry.
-            if len(hashes) > 256 or len(guard._revisions) > 4096:
-                return {**report, "reason": "LINEAGE_INSPECTION_LIMIT"}
-            if sum(len(history) for history in guard._revisions.values()) > 4096:
-                return {**report, "reason": "LINEAGE_INSPECTION_LIMIT"}
-            matches = {h: [] for h in hashes}
-            counts = {h: 0 for h in hashes}
-            # Hashing the same long assertion repeatedly must also be bounded.
-            if len(node.assertion) + len(node.concept) > 16384:
-                return {**report, "reason": "LINEAGE_INSPECTION_LIMIT"}
-            budget = 2_000_000
-            for aid, history in guard._revisions.items():
-                for index, revision in enumerate(history):
-                    if revision.assertion.strip() != node.assertion:
-                        continue
-                    # Legacy event identity does not bind parent edges. Report
-                    # all matching revisions rather than guessing which one.
-                    budget -= len(node.assertion) + len(node.concept) + len(aid)
-                    if budget < 0:
-                        return {**report, "reason": "LINEAGE_INSPECTION_LIMIT"}
-                    event_hash, payload = _working_memory_event(
-                        node.concept, node.assertion, revision, 0.0)
-                    if event_hash not in matches:
-                        continue
-                    payload.pop("saliency_score")
-                    if engine._event_stable_digests.get(event_hash) != _event_digest(payload):
-                        continue
-                    counts[event_hash] += 1
-                    if len(matches[event_hash]) < 8:
-                        matches[event_hash].append({"attribution_id": aid, "revision_index": index,
-                                                    "historical_veracity": revision.veracity_state.value})
-            for h in hashes:
-                ledger_id = "ATTR-LEDGER-" + h
-                ledger = guard._attributions.get(ledger_id)
-                ledger_ref = (ledger_id if ledger is not None
-                              and ledger.source_type == SourceType.LEDGER_REPORT
-                              and ledger.veracity_state == VeracityState.REPORTED_UNVERIFIED
-                              and ledger.provenance is None else None)
-                if counts[h] and ledger_ref:
-                    status = "AMBIGUOUS_LOCAL_REFERENCES"
-                elif counts[h] > 1:
-                    status = "AMBIGUOUS_HISTORICAL_REVISION"
-                elif counts[h] == 1:
-                    status = "MATCHED_WM_EVENT"
-                elif ledger_ref:
-                    status = "LEDGER_REFERENCE_ONLY"
-                else:
-                    status = "UNKNOWN"
-                report["sources"].append({"event_sha256": h, "status": status,
-                    "matching_revision_count": counts[h], "revision_candidates": matches[h],
-                    "ledger_report_id": ledger_ref})
-            report["status"] = ("LOCAL_REFERENCES_INSPECTED" if all(
-                item["status"] == "MATCHED_WM_EVENT" for item in report["sources"])
-                else "PARTIAL_OR_UNRESOLVED")
-            return report
+            return self._inspect_node_lineage_locked(node, engine, guard, report)
+
+    def inspect_semantic_lineage(self, node_id: str) -> dict:
+        """Read an exact semantic node's historical references, without recalling it."""
+        report = {"status": "UNKNOWN", "node_id": None, "sources": [],
+                  "claim_truth": "UNKNOWN", "source_authentication": "UNKNOWN",
+                  "independent_admission_authority": "NONE"}
+        engine, guard = self.consolidation_engine, self.source_guard
+        if engine is None or guard is None:
+            return {**report, "reason": "SOURCE_REGISTRY_UNAVAILABLE"}
+        locks = sorted((engine._batch_lock, guard._lock), key=id)
+        with locks[0], locks[1]:
+            node = engine.get_node(node_id)
+            if node is None or node.node_id != node_id:
+                return {**report, "reason": "EXACT_NODE_NOT_FOUND"}
+            return self._inspect_node_lineage_locked(node, engine, guard, report)
+
+    @staticmethod
+    def _inspect_node_lineage_locked(node, engine, guard, report):
+        report["node_id"] = node.node_id
+        report["node_status"] = node.status.value
+        hashes = node.source_event_hashes
+        # Bound work before scanning a potentially large source registry.
+        if len(hashes) > 256 or len(guard._revisions) > 4096:
+            return {**report, "reason": "LINEAGE_INSPECTION_LIMIT"}
+        if sum(len(history) for history in guard._revisions.values()) > 4096:
+            return {**report, "reason": "LINEAGE_INSPECTION_LIMIT"}
+        matches = {h: [] for h in hashes}
+        counts = {h: 0 for h in hashes}
+        # Hashing the same long assertion repeatedly must also be bounded.
+        if len(node.assertion) + len(node.concept) > 16384:
+            return {**report, "reason": "LINEAGE_INSPECTION_LIMIT"}
+        budget = 2_000_000
+        for aid, history in guard._revisions.items():
+            for index, revision in enumerate(history):
+                if revision.assertion.strip() != node.assertion:
+                    continue
+                # Legacy event identity does not bind parent edges. Report
+                # all matching revisions rather than guessing which one.
+                budget -= len(node.assertion) + len(node.concept) + len(aid)
+                if budget < 0:
+                    return {**report, "reason": "LINEAGE_INSPECTION_LIMIT"}
+                event_hash, payload = _working_memory_event(
+                    node.concept, node.assertion, revision, 0.0)
+                if event_hash not in matches:
+                    continue
+                payload.pop("saliency_score")
+                if engine._event_stable_digests.get(event_hash) != _event_digest(payload):
+                    continue
+                counts[event_hash] += 1
+                if len(matches[event_hash]) < 8:
+                    matches[event_hash].append({"attribution_id": aid, "revision_index": index,
+                                                "historical_veracity": revision.veracity_state.value})
+        for h in hashes:
+            ledger_id = "ATTR-LEDGER-" + h
+            ledger = guard._attributions.get(ledger_id)
+            ledger_ref = (ledger_id if ledger is not None
+                          and ledger.source_type == SourceType.LEDGER_REPORT
+                          and ledger.veracity_state == VeracityState.REPORTED_UNVERIFIED
+                          and ledger.provenance is None else None)
+            if counts[h] and ledger_ref:
+                status = "AMBIGUOUS_LOCAL_REFERENCES"
+            elif counts[h] > 1:
+                status = "AMBIGUOUS_HISTORICAL_REVISION"
+            elif counts[h] == 1:
+                status = "MATCHED_WM_EVENT"
+            elif ledger_ref:
+                status = "LEDGER_REFERENCE_ONLY"
+            else:
+                status = "UNKNOWN"
+            report["sources"].append({"event_sha256": h, "status": status,
+                "matching_revision_count": counts[h], "revision_candidates": matches[h],
+                "ledger_report_id": ledger_ref})
+        report["status"] = ("LOCAL_REFERENCES_INSPECTED" if all(
+            item["status"] == "MATCHED_WM_EVENT" for item in report["sources"])
+            else "PARTIAL_OR_UNRESOLVED")
+        return report
 
     def flush_to_long_term(self, min_salience: float = 0.0) -> List[str]:
         """Explicitly flushes/consolidates qualifying active chunks into Long-Term Memory."""

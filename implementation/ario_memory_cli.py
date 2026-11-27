@@ -1,6 +1,7 @@
 """Opt-in research interface; existing M0 ario_cli.py is deliberately unchanged."""
 from __future__ import annotations
 import argparse
+import re
 import json
 import sys
 from pathlib import Path
@@ -14,6 +15,68 @@ def _ascii_decimal_or_none(text):
     significant = text.lstrip("0") or "0"
     # The maximum permitted value is 10000. Avoid unbounded int conversion.
     return int(significant) if len(significant) <= 5 else None
+
+
+def _inspect_memory_lineage(args) -> int:
+    """Inspect disposable candidates only; never restore into live memory."""
+    from core.memory_consolidation import ConsolidationEngine
+    from core.memory_snapshot import MAX_SNAPSHOT_BYTES, decode_cognitive_memory_snapshot
+    from core.source_monitoring import ALLOWLISTED_TOOLS
+    from core.ledger_memory_bridge import EpistemicLedgerBridge
+    from core.working_memory import WorkingMemoryBuffer
+    from research.w38_receipt_fd_guard import read_bounded_regular
+
+    try:
+        if bool(args.ledger) == bool(args.snapshot):
+            raise ValueError("choose exactly one of --ledger and --snapshot")
+        pin = args.expected_sha256
+        if not isinstance(pin, str) or re.fullmatch(r"[0-9a-fA-F]{64}", pin) is None:
+            raise ValueError("a retained --expected-sha256 pin is required")
+        pin = pin.lower()
+        if args.node_id is not None and (not args.node_id.strip() or len(args.node_id) > 256):
+            raise ValueError("invalid exact node ID")
+        if args.snapshot:
+            raw = read_bounded_regular(Path(args.snapshot), min(MAX_SNAPSHOT_BYTES, 16 * 1024 * 1024))
+            engine, guard = decode_cognitive_memory_snapshot(
+                ConsolidationEngine, raw, expected_sha256=pin,
+                allowlisted_tools=set(ALLOWLISTED_TOOLS))
+            kind = "JOINT_SNAPSHOT"
+        else:
+            # Bridge candidates are isolated and never installed or exported.
+            # The digest covers exactly the ledger bytes consumed by the bridge.
+            bridge = EpistemicLedgerBridge()
+            bridge.ingest_agent_ledger(Path(args.ledger), expected_sha256=pin)
+            engine, guard = bridge.engine, bridge.guard
+            kind = "AGENT_LEDGER"
+        if args.node_id is None:
+            nodes = engine.nodes
+            result = {
+                "status": "LOCAL_NODE_INDEX", "total_nodes": len(nodes),
+                "truncated": len(nodes) > 100,
+                "nodes": [{"node_id": node.node_id, "concept": node.concept[:160],
+                           "node_status": node.status.value,
+                           "source_event_count": len(node.source_event_hashes)}
+                          for node in sorted(nodes.values(), key=lambda n: n.node_id)[:100]],
+                "claim_truth": "UNKNOWN", "source_authentication": "UNKNOWN",
+                "independent_admission_authority": "NONE",
+            }
+        else:
+            result = WorkingMemoryBuffer(consolidation_engine=engine, source_guard=guard
+                                         ).inspect_semantic_lineage(args.node_id)
+        result["input_kind"] = kind
+        result["input_sha256"] = pin
+        result["freshness"] = "UNKNOWN"
+        rendered = json.dumps(result, indent=2, ensure_ascii=True)
+        if args.output:
+            with Path(args.output).open("x", encoding="utf-8") as output:
+                output.write(rendered)
+        print(rendered)
+        # UNKNOWN is a valid diagnostic result, not a proof of successful resolution.
+        return 1 if result["status"] in {"UNKNOWN", "PARTIAL_OR_UNRESOLVED"} else 0
+    except (OSError, ValueError, UnicodeError) as exc:
+        print(json.dumps({"error": "MEMORY_LINEAGE_INSPECTION_FAILED", "detail": str(exc)},
+                         ensure_ascii=True), file=sys.stderr)
+        return 2
 
 
 def main(argv=None) -> int:
@@ -58,12 +121,23 @@ def main(argv=None) -> int:
         action="store_true",
         help="Audit untrusted agent JSONL into recorded-only cognitive memory; do not activate intentions",
     )
+    parser.add_argument("--memory-lineage", action="store_true",
+                        help="Inspect local source references from a pinned ledger or joint snapshot (JSON)")
+    parser.add_argument("--snapshot", help="Joint memory/source-history snapshot for --memory-lineage")
+    parser.add_argument("--expected-sha256", help="Retained SHA-256 pin for --memory-lineage input")
+    parser.add_argument("--node-id", help="Exact semantic node ID; omit to list up to 100 node IDs")
     args = parser.parse_args(argv)
-    if sum((args.memory_conflicts, args.inspect_ledger, args.bridge_agent_ledger)) != 1:
+    if sum((args.memory_conflicts, args.inspect_ledger, args.bridge_agent_ledger, args.memory_lineage)) != 1:
         parser.error('choose exactly one research operation')
+    if not args.memory_lineage and any(v is not None for v in (
+            args.snapshot, args.expected_sha256, args.node_id)):
+        parser.error('snapshot, expected-sha256 and node-id require --memory-lineage')
     if args.output and (Path(args.output).exists() or Path(args.output).is_symlink()):
         print(json.dumps({'error': 'HOLD_OUTPUT_EXISTS', 'detail': 'Use a new report path; input and previous records are never replaced.'}), file=sys.stderr)
         return 2
+
+    if args.memory_lineage:
+        return _inspect_memory_lineage(args)
 
     # 1. Handle memory conflict reporting
     if args.memory_conflicts:
