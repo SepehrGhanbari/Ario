@@ -76,6 +76,7 @@ def run_phase(args, root, name, fault=False):
         result = {"status": "UNRESOLVED", "stderr": err.decode("utf-8", errors="replace")[-500:]}
     print(json.dumps({"phase": name, "pid": proc.pid, "exit": proc.returncode,
                       "status": result.get("status"), "pair": pair(result),
+                      "choice_reason": (result.get("choice") or {}).get("reason"),
                       "revision_status": (result.get("revision") or {}).get("status"),
                       "repair_verified": (result.get("revision") or {}).get("repair_verified"),
                       "experience": result.get("experience"),
