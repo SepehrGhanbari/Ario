@@ -580,7 +580,7 @@ def _choice_recommendation(proposed, report):
     return proposed["recommendation"]
 
 
-def _deliberation_record(proposed, observation, prior_claim):
+def _deliberation_record(proposed, observation, prior_claim, basis_catalog=None):
     """Match a reported basis to the exact context sent, not to established truth."""
     record = {"status": "UNRESOLVED", "kind": None, "basis": None,
               "prior_claim": prior_claim, "replacement_claim": None,
@@ -608,6 +608,17 @@ def _deliberation_record(proposed, observation, prior_claim):
     if type(reason) is not str or not reason.strip() or len(reason) > 2000:
         record["diagnostic"] = "GROUNDED_REASON_MISSING_OR_INVALID"
         return record
+    selected_basis_id = None
+    if type(basis) is dict and set(basis) == {"source_id"}:
+        selected_basis_id = basis["source_id"]
+        if type(selected_basis_id) is not str or basis_catalog is None:
+            record["diagnostic"] = "BASIS_REFERENCE_INVALID"
+            return record
+        selected = basis_catalog.get(selected_basis_id)
+        if selected is None:
+            record["diagnostic"] = "BASIS_REFERENCE_UNKNOWN"
+            return record
+        basis = {"path": selected["path"], "quote": selected["quote"]}
     if (type(basis) is not dict or set(basis) != {"path", "quote"}
             or type(basis["path"]) is not str or type(basis["quote"]) is not str
             or not 8 <= len(basis["quote"]) <= 512 or not basis["quote"].strip()):
@@ -636,12 +647,14 @@ def _deliberation_record(proposed, observation, prior_claim):
         return record
     record["basis"] = {**basis, "context_sha256": hashlib.sha256(
         matches[0]["content"].encode("utf-8")).hexdigest()}
+    if selected_basis_id is not None:
+        record["basis"]["source_id"] = selected_basis_id
     record["status"] = "BASIS_MATCHED_SENT_CONTEXT"
     return record
 
 
-def _deliberative_recommendation(proposed, observation, prior_claim, report):
-    detail = _deliberation_record(proposed, observation, prior_claim)
+def _deliberative_recommendation(proposed, observation, prior_claim, report, basis_catalog=None):
+    detail = _deliberation_record(proposed, observation, prior_claim, basis_catalog)
     report["deliberation"] = detail
     if type(proposed) is not dict or set(proposed) != {
             "intent", "reason", "recommendation", "deliberation"}:
@@ -658,7 +671,7 @@ def _deliberative_recommendation(proposed, observation, prior_claim, report):
     return recommendation
 
 
-def _deliberation_output_schema(observation, prior_claim, execution_feedback=None):
+def _deliberation_output_schema(observation, prior_claim, execution_feedback=None, basis_catalog=None):
     """Offer valid decision shapes; never supply a reason or select intent for the model."""
     def obj(properties):
         return {"type": "object", "properties": properties,
@@ -712,8 +725,14 @@ def _deliberation_output_schema(observation, prior_claim, execution_feedback=Non
                 continue
             rec = obj({"implementation_path": enum(impl), "test_path": enum(test),
                        "engineering_question": text, "rationale": text})
-            support = obj({"path": enum(impl, test),
-                           "quote": {"type": "string", "minLength": 8, "maxLength": 512}})
+            if basis_catalog is not None:
+                ids = [key for key, row in basis_catalog.items() if row["path"] in pair]
+                if not ids:
+                    continue
+                support = obj({"source_id": enum(*ids)})
+            else:
+                support = obj({"path": enum(impl, test),
+                               "quote": {"type": "string", "minLength": 8, "maxLength": 512}})
             choices.append(shape("CONTINUE", "CORRECTION", explanation,
                                  rec, support, explanation))
     return {"anyOf": choices}
@@ -850,9 +869,16 @@ def request_plan(
             "Return the choice envelope including deliberation; no recommendation is required for STOP."
         )
     output_format = "json"
+    basis_catalog = None
     if deliberate:
-        output_format = _deliberation_output_schema(observation, prior_claim, execution_feedback)
         user_payload["basis_examples"] = _deliberation_basis_examples(observation)
+        if execution_feedback is not None:
+            basis_catalog = {
+                f"S{i:02d}": row for i, row in enumerate(user_payload["basis_examples"], 1)
+            }
+            user_payload["basis_catalog"] = basis_catalog
+        output_format = _deliberation_output_schema(
+            observation, prior_claim, execution_feedback, basis_catalog)
         system_prompt += (
             "\nReturn exactly ONE top-level JSON object, not just the nested recommendation. "
             "For example, the following is a valid unreasoned STOP: "
@@ -873,6 +899,10 @@ def request_plan(
             "\nFor this revision ONLY: either STOP or CONTINUE with CORRECTION. "
             "A normal CONTINUE is not a valid revision. The schema lists only "
             "available disjoint source pairs for a continuing correction. "
+            "For a continuing CORRECTION, use basis with exactly source_id, selected from "
+            "basis_catalog for the alternate pair. Do not copy or invent a quote. "
+            "The engine resolves that identifier to the exact excerpt sent. "
+            "For STOP, the ordinary null basis remains available. "
             "If no useful grounded correction is available, STOP remains valid."
         )
     messages = [
@@ -928,7 +958,7 @@ def request_plan(
                 _choice_pause(report, "MALFORMED_MODEL_RESPONSE")
             raise AgentRequestError("Ollama did not return a valid JSON recommendation") from exc
         if deliberate:
-            proposed = _deliberative_recommendation(proposed, observation, prior_claim, report)
+            proposed = _deliberative_recommendation(proposed, observation, prior_claim, report, basis_catalog)
         elif respect_choice:
             proposed = _choice_recommendation(proposed, report)
         try:
