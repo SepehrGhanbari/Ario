@@ -113,3 +113,19 @@ Malformed, missing, ambiguous, or colliding references never default to acceptab
 - How should canonical dossier serialization be defined for stable signing and integrity? **NOT SPECIFIED.**
 
 No defaults may silently fill these gaps. This document is a review policy proposal, not proof of implementation or authorization to admit evidence.
+
+## Combined CLI screening
+
+From the repository root:
+
+```sh
+python -B implementation/ario_cli.py --evidence-dossier manifest.json events.jsonl request.json
+```
+
+Request example (choose an actual existing line; all reviewer and time fields are caller declarations):
+
+```json
+{"proposal":{"line":2,"claim_id":"c1","claim_scope":"ledger reports completion","proposed_support_relation":"Only reported status"},"review":{"policy_version":"ARP-0.1","candidate_digest":"UNKNOWN","reviewer_id":"declared-reviewer","reviewer_role":"declared","authorization_reference":null,"requested_claim_id":"c1","requested_claim_scope":"ledger reports completion","requested_support_relation":"Only reported status","corroboration_refs":[],"review_rule_ids":["ARP-0.1"],"limitations":"No independent authentication","recorded_at":"declared time","decision":"NOT_EVALUATED"}}
+```
+
+The original builder constructs the candidate; the original reviewer screens a fresh reconstruction against the same manifest. A caller cannot supply a substitute candidate or implicitly change the requested review scope. Inputs remain unchanged. Output includes exact observed file digests, the candidate and review outcomes separately, and explicit unknown authority. The outer SCREENED status describes a completed screening with review UNKNOWN, never an evidentiary verdict. Exit 1 for SCREENED, 2 for invalid/unavailable inputs or unsuccessful candidate/review. Neither exit is a passing M0 status. No M0 ledger option is allowed. Digests do not define a canonical candidate digest; that field remains UNKNOWN under ARP-0.1. No reviewer authentication, historical custody, independent corroboration, live memory, signature or admission is implemented here.

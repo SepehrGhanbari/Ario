@@ -111,3 +111,7 @@ At each stage, tests must actually be executed and results recorded against a sp
 Append-only historical artifacts and archived records remain untouched. New implementation work requires focused tests, a non-destructive diff review, a local commit after demonstrated success, and a protected-branch Pull Request. No force-push or direct push to protected `main`.
 
 **Open question:** Who or what is trusted to authenticate ledger origin, and under which versioned policy? Remains `UNKNOWN` until independently specified and tested.
+
+## Existing EA/ARP consumer (explicit screening only)
+
+The implemented EA-0.1 builder (#60) and ARP-0.1 evaluator (#61) can be used together via the existing audit CLI. The caller supplies an existing execution ledger (not a cognitive-memory ledger), its observation manifest, and an explicit JSON request. See the [combined request example and exit codes](ADMISSION_REVIEW_POLICY_V0_1.md#combined-cli-screening). This is a read-only orchestration of the existing implementation stages, not Stage D M0 conversion or an admission policy revision. Earlier contract wording remains historical. The evaluator rebuilds against a fresh ledger read and retains its original outcomes.
