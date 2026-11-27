@@ -1,0 +1,3 @@
+# Byte-pinned Integrity Gate dependencies: preserve exact Git blob bytes on checkout.
+/scripts/ario_verified_release.py -text
+/scripts/ario_verify_coverage.py -text

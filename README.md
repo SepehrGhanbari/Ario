@@ -633,3 +633,5 @@ From a separately trusted copy of the tools (Python 3.10+, standard library), us
 ## Ario Integrity Gate V1 — research entrypoint
 
 Use the [Integrity Gate V1 guide](docs/ARIO_INTEGRITY_GATE_V1.md) and `RUN_INTEGRITY_GATE.cmd` from a separately trusted copy for verified acquisition, archive preparation and the explicitly selected fixed synthetic M0 startup probe. The [bounded closeout](docs/integrity-gate-v1-evidence/README.md) records owner-supplied Windows results: 473/473 fixed checkout files and 204/204 restored historical ZIP files matched; the synthetic M0 verdict remained UNKNOWN. Normal clone/download and direct legacy entrypoints do not invoke the gate. This is a bounded byte-consistency check, not a digital signature, publisher identity proof, independent custody or production authorization. RESEARCH_ONLY.
+
+The explicit non-memory `runtime-audit` mode of the [Integrity Gate](docs/ARIO_INTEGRITY_GATE_V1.md#explicit-verified-runtime-audit-non-memory-integration) checks the selected fixed merged runtime and invokes only M0 on a supplied bounded JSON request. It does not activate a signer or live memory.

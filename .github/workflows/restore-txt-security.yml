@@ -36,6 +36,8 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Run manifest builder unit tests
         run: python -m unittest discover -s scripts -p test_public_package_manifest_v3.py -v
+      - name: Run existing Integrity Gate regression suite
+        run: python -m unittest discover -s scripts -p test_ario_integrity_gate.py -v
       - name: Rebuild V3 from pinned Git blobs
         run: >-
           python scripts/build_public_package_manifest_v3.py
