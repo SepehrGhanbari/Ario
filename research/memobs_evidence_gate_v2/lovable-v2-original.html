@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ario Experimental Memory Observability (MEM-OBS-01 V2)</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.2.4"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    code, pre, .mono { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen p-4 md:p-8">
+  <div class="max-w-6xl mx-auto space-y-6">
+
+    <!-- Header & Core Invariant Banners -->
+    <header class="border-b border-slate-800 pb-6">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <span class="px-2 py-0.5 rounded text-xs font-semibold bg-cyan-950 text-cyan-400 border border-cyan-800/60">RESEARCH ONLY V2</span>
+            <span class="px-2 py-0.5 rounded text-xs font-semibold bg-amber-950 text-amber-400 border border-amber-800/60">HOLD / NO-MERGE</span>
+            <span class="text-xs text-slate-400 mono">CASE: MEM-OBS-01</span>
+          </div>
+          <h1 class="text-2xl font-bold tracking-tight text-white">Ario Experimental Memory Observability</h1>
+          <p class="text-sm text-slate-400 mt-1">Audit-grade inspection of epistemic status, source attribution, revision lineage, and evidence boundaries.</p>
+        </div>
+        <div class="flex flex-wrap gap-2 text-xs mono">
+          <div class="px-3 py-1.5 rounded bg-slate-900 border border-slate-700 text-rose-300 font-medium">MEMORY != TRUTH</div>
+          <div class="px-3 py-1.5 rounded bg-slate-900 border border-slate-700 text-amber-300 font-medium">REVISION != ERASURE</div>
+          <div class="px-3 py-1.5 rounded bg-slate-900 border border-slate-700 text-cyan-300 font-medium">CLAIM != PROOF</div>
+          <div class="px-3 py-1.5 rounded bg-slate-900 border border-slate-700 text-emerald-300 font-medium">UNKNOWN IS VALID</div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Synthetic Scenario Injectors -->
+    <section class="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
+        <div>
+          <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-300">Synthetic Scenario Ingestion Controls (Evidence-Gate V2)</h2>
+          <p class="text-xs text-slate-400">Untrusted telemetry, signed-witness labels, and hashes are RECORDED, never automatically promoted to SUPPORTED or ACCEPTED.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btn-run-all" class="px-3 py-1.5 text-xs font-medium bg-cyan-600 hover:bg-cyan-500 text-white rounded transition shadow">
+            Run All 6 Tests
+          </button>
+          <button id="btn-reset" class="px-3 py-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 rounded transition border border-slate-700">
+            Reset Journal
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <button id="btn-valid-source" class="p-3 text-left rounded-lg bg-slate-800/70 hover:bg-slate-800 border border-slate-700/80 hover:border-sky-500/50 transition group">
+          <div class="flex items-center justify-between text-xs font-semibold text-sky-400 mb-1">
+            <span>1. Valid Source</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-sky-950 text-sky-300 border border-sky-800">RECORDED</span>
+          </div>
+          <p class="text-xs text-slate-300 font-medium">POSIX Lock Observation</p>
+          <p class="text-[11px] text-slate-400 mt-1">Local empirical probe bytes recorded -> RECORDED. Evidence is unverified authority.</p>
+        </button>
+
+        <button id="btn-unsupported" class="p-3 text-left rounded-lg bg-slate-800/70 hover:bg-slate-800 border border-slate-700/80 hover:border-purple-500/50 transition group">
+          <div class="flex items-center justify-between text-xs font-semibold text-purple-400 mb-1">
+            <span>2. Unsupported Claim</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800">NEGATIVE</span>
+          </div>
+          <p class="text-xs text-slate-300 font-medium">AI Self-Narrative Assertion</p>
+          <p class="text-[11px] text-slate-400 mt-1">Model claims "autonomous decision" -> Flagged UNSUPPORTED.</p>
+        </button>
+
+        <button id="btn-conflicting" class="p-3 text-left rounded-lg bg-slate-800/70 hover:bg-slate-800 border border-slate-700/80 hover:border-amber-500/50 transition group">
+          <div class="flex items-center justify-between text-xs font-semibold text-amber-400 mb-1">
+            <span>3. Conflicting Evidence</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800">CONTESTED</span>
+          </div>
+          <p class="text-xs text-slate-300 font-medium">Conflicting Lock Telemetry</p>
+          <p class="text-[11px] text-slate-400 mt-1">Second probe contradicts posix_fs_lock -> Both CONTESTED.</p>
+        </button>
+
+        <button id="btn-revision" class="p-3 text-left rounded-lg bg-slate-800/70 hover:bg-slate-800 border border-slate-700/80 hover:border-blue-500/50 transition group">
+          <div class="flex items-center justify-between text-xs font-semibold text-blue-400 mb-1">
+            <span>4. Revision Lineage</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800">LINEAGE</span>
+          </div>
+          <p class="text-xs text-slate-300 font-medium">Gateway Port Migration</p>
+          <p class="text-[11px] text-slate-400 mt-1">Prior marked REVISED, new record is RECORDED without erasure.</p>
+        </button>
+
+        <button id="btn-missing-prov" class="p-3 text-left rounded-lg bg-slate-800/70 hover:bg-slate-800 border border-slate-700/80 hover:border-rose-500/50 transition group">
+          <div class="flex items-center justify-between text-xs font-semibold text-rose-400 mb-1">
+            <span>5. Missing Provenance</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800">FAIL CLOSED</span>
+          </div>
+          <p class="text-xs text-slate-300 font-medium">Unattributed Secret Claim</p>
+          <p class="text-[11px] text-slate-400 mt-1">Empty/corrupt provenance fails closed -> UNKNOWN.</p>
+        </button>
+
+        <button id="btn-rollback" class="p-3 text-left rounded-lg bg-slate-800/70 hover:bg-slate-800 border border-slate-700/80 hover:border-cyan-500/50 transition group">
+          <div class="flex items-center justify-between text-xs font-semibold text-cyan-400 mb-1">
+            <span>6. System Rollback</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800">IMMUTABLE</span>
+          </div>
+          <p class="text-xs text-slate-300 font-medium">Integrity Desync Recovery</p>
+          <p class="text-[11px] text-slate-400 mt-1">Rollback appended forward as RECORDED; zero truncation of history.</p>
+        </button>
+      </div>
+    </section>
+
+    <!-- Epistemic Verification Summary -->
+    <section class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+      <div class="p-3 rounded-lg bg-slate-900 border border-slate-800">
+        <span class="text-xs text-slate-400 block mb-1">Total Journal Events</span>
+        <span id="stat-total" class="text-xl font-bold mono text-white">0</span>
+      </div>
+      <div class="p-3 rounded-lg bg-slate-900 border border-slate-800">
+        <span class="text-xs text-slate-400 block mb-1">Recorded (Observed Stream)</span>
+        <span id="stat-recorded" class="text-xl font-bold mono text-sky-400">0</span>
+      </div>
+      <div class="p-3 rounded-lg bg-slate-900 border border-slate-800">
+        <span class="text-xs text-slate-400 block mb-1">Contested / Revised</span>
+        <span id="stat-contested" class="text-xl font-bold mono text-amber-400">0</span>
+      </div>
+      <div class="p-3 rounded-lg bg-slate-900 border border-slate-800">
+        <span class="text-xs text-slate-400 block mb-1">Unsupported / Unknown</span>
+        <span id="stat-unsupported" class="text-xl font-bold mono text-purple-400">0</span>
+      </div>
+    </section>
+
+    <!-- Explicit Status Domain Mapping Card -->
+    <section class="p-4 rounded-xl bg-slate-900/50 border border-slate-800 text-xs text-slate-400 space-y-2">
+      <div class="flex items-center justify-between font-semibold text-slate-300">
+        <span>STATUS DOMAIN TAXONOMY (Ario Evidence-Gate V2)</span>
+        <span class="mono text-rose-400">SUPPORTED / ACCEPTED: NO ADMISSION ROUTE IN THIS DEMO</span>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-2 mono text-[11px]">
+        <div class="p-2 rounded bg-slate-950 border border-slate-800/80">
+          <strong class="text-slate-300 block mb-0.5">1. ledger_observation</strong>
+          <span>OBSERVED, UNKNOWN</span>
+          <div class="text-[10px] text-slate-500 mt-1">Bounded byte scan of local JSONL stream.</div>
+        </div>
+        <div class="p-2 rounded bg-slate-950 border border-slate-800/80">
+          <strong class="text-slate-300 block mb-0.5">2. memory_node</strong>
+          <span>RECORDED, REVISED, CONTESTED</span>
+          <div class="text-[10px] text-slate-500 mt-1">Journal lifecycle. In-memory history != external immutability.</div>
+        </div>
+        <div class="p-2 rounded bg-slate-950 border border-slate-800/80">
+          <strong class="text-slate-300 block mb-0.5">3. epistemic_assessment</strong>
+          <span>SUPPORTED, ACCEPTED, UNSUPPORTED, CONTRADICTED, UNKNOWN</span>
+          <div class="text-[10px] text-slate-500 mt-1">Admissibility evaluation against pinned trust roots.</div>
+        </div>
+        <div class="p-2 rounded bg-slate-950 border border-slate-800/80">
+          <strong class="text-slate-300 block mb-0.5">4. demo_projection</strong>
+          <span>[RECORDED] [UNSUPPORTED] [CONTESTED] [REVISED] [UNKNOWN]</span>
+          <div class="text-[10px] text-slate-500 mt-1">Read-only UI projection. Direct status promotion blocked.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Detailed Memory Records Observability List -->
+    <main class="space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-300">
+          Observable Memory Records & Epistemic Boundaries
+        </h2>
+        <span id="record-count-badge" class="text-xs mono text-slate-400">0 records</span>
+      </div>
+
+      <div id="records-container" class="space-y-3">
+        <!-- Empty state placeholder -->
+        <div id="empty-state" class="p-8 text-center rounded-xl bg-slate-900/40 border border-dashed border-slate-800 text-slate-500 text-sm">
+          No memory records ingested yet. Click any synthetic scenario button above to observe epistemic state transitions.
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+  <script>
+    // State Store (Observable Memory Journal - Evidence-Gate V2)
+    const journal = (typeof window !== "undefined" ? (window.journal = []) : []);
+    const conceptIndex = (typeof window !== "undefined" ? (window.conceptIndex = {}) : {});
+
+    const STATUS_CONFIG = {
+      SUPPORTED: { bg: 'bg-emerald-950/80', text: 'text-emerald-300', border: 'border-emerald-700/60', label: 'SUPPORTED' },
+      RECORDED: { bg: 'bg-sky-950/80', text: 'text-sky-300', border: 'border-sky-700/60', label: 'RECORDED' },
+      ACCEPTED: { bg: 'bg-teal-950/80', text: 'text-teal-300', border: 'border-teal-700/60', label: 'ACCEPTED' },
+      CONTESTED: { bg: 'bg-amber-950/80', text: 'text-amber-300', border: 'border-amber-700/60', label: 'CONTESTED' },
+      UNSUPPORTED: { bg: 'bg-purple-950/80', text: 'text-purple-300', border: 'border-purple-700/60', label: 'UNSUPPORTED' },
+      CONTRADICTED: { bg: 'bg-rose-950/80', text: 'text-rose-300', border: 'border-rose-700/60', label: 'CONTRADICTED' },
+      REVISED: { bg: 'bg-slate-800/80', text: 'text-slate-400', border: 'border-slate-600/60', label: 'REVISED' },
+      UNKNOWN: { bg: 'bg-zinc-900/80', text: 'text-zinc-400', border: 'border-zinc-700/60', label: 'UNKNOWN' },
+    };
+
+    async function computeSHA256(text) {
+      const msgBuffer = new TextEncoder().encode(text);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    function evaluateInitialStatus(rec) {
+      // 1. Broken or missing provenance -> UNKNOWN
+      if (rec.provenanceType === 'MISSING' || !rec.sourceId) {
+        return 'UNKNOWN';
+      }
+      
+      // 2. AI-generated or raw tool outputs are NEVER verified truth
+      if (rec.provenanceType === 'AI_GENERATED' || rec.provenanceType === 'TOOL_OUTPUT') {
+        return 'UNSUPPORTED';
+      }
+      
+      // 3. Evidence-Gate V2: No authenticated support-admission path exists in this demo.
+      // ProvenanceType/sourceId/rawEvidence are supplied by the record author.
+      // Even SIGNED_WITNESS is only a self-asserted label unless verified under a pinned trust root.
+      // Nonempty raw_evidence and SHA-256 digests do NOT authenticate truth.
+      if (['LOCAL_EMPIRICAL', 'SIGNED_WITNESS', 'SYNTHETIC_TEST', 'TESTIMONY'].includes(rec.provenanceType)) {
+        return 'RECORDED';
+      }
+
+      return 'UNKNOWN';
+    }
+
+    function determineEpistemicLimit(status) {
+      if (status === 'UNKNOWN') {
+        return 'Provenance missing or unverified. Zero epistemic support inferred.';
+      } else if (status === 'UNSUPPORTED') {
+        return 'Claim/output recorded from unverified agent/tool. Proves only that bytes were received, NOT truth.';
+      } else if (status === 'RECORDED') {
+        return 'Source/evidence bytes recorded, not authenticated or admitted. Truth and independent support remain UNKNOWN.';
+      } else if (status === 'SUPPORTED') {
+        return 'SUPPORTED is not reachable from this demo\'s untrusted record-ingest path.';
+      } else if (status === 'CONTESTED') {
+        return 'Conflicting assertions observed. Neither assertion may be presented as accepted truth.';
+      } else if (status === 'REVISED') {
+        return 'Superseded by subsequent record in revision lineage. Historical record preserved unchanged (REVISION != ERASURE).';
+      }
+      return 'Standard Ario epistemic boundary: MEMORY != TRUTH.';
+    }
+
+    async function createMemoryRecord(spec) {
+      const rec = {
+        id: spec.id,
+        concept: spec.concept,
+        assertion: spec.assertion,
+        provenanceType: spec.provenanceType,
+        sourceId: spec.sourceId,
+        rawEvidence: spec.rawEvidence || null,
+        parentId: spec.parentId || null,
+        revisionIndex: spec.revisionIndex || 0,
+        timestamp: new Date().toISOString(),
+      };
+
+      // Initial epistemic status evaluation
+      const initialStatus = evaluateInitialStatus(rec);
+      let _status = initialStatus;
+
+      // Prevent direct status assignment / tampering by untrusted callers or UI
+      Object.defineProperty(rec, 'status', {
+        get() { return _status; },
+        set(val) { throw new Error('status is read-only; no data-author promotion'); },
+        configurable: true
+      });
+
+      // Internal diagnostic status transitions allowed ONLY for CONTESTED and REVISED
+      rec._diagnosticTransition = function(targetStatus, reason) {
+        if (targetStatus !== 'CONTESTED' && targetStatus !== 'REVISED') {
+          throw new Error('HOLD_UNAUTHORIZED_STATUS_TRANSITION');
+        }
+        _status = targetStatus;
+        rec.epistemicLimit = determineEpistemicLimit(_status);
+        rec.auditLog.push(`[${new Date().toISOString()}] ${reason}`);
+      };
+
+      rec.epistemicLimit = determineEpistemicLimit(_status);
+      rec.auditLog = [`[${rec.timestamp}] Created with status ${_status}`];
+
+      // Compute cryptographic hash over payload
+      const payload = `${rec.id}|${rec.concept}|${rec.assertion}|${rec.provenanceType}|${rec.sourceId}|${rec.rawEvidence || ''}|${rec.parentId || ''}|${rec.revisionIndex || 0}`;
+      rec.sha256 = await computeSHA256(payload);
+
+      return rec;
+    }
+
+    async function ingestRecord(recSpec) {
+      // Build secured record object if spec provided
+      const rec = (recSpec.auditLog && recSpec._diagnosticTransition) ? recSpec : await createMemoryRecord(recSpec);
+
+      // Verify that status has not been spoofed before ingest
+      if (rec.status !== evaluateInitialStatus(rec)) {
+        throw new Error('HOLD_UNAUTHORIZED_STATUS_AT_INGEST');
+      }
+
+      // Check for conflicts on same concept
+      const existing = conceptIndex[rec.concept] || [];
+      for (const prior of existing) {
+        if (prior.status === 'RECORDED' || prior.status === 'ACCEPTED' || prior.status === 'SUPPORTED') {
+          if (prior.assertion !== rec.assertion) {
+            prior._diagnosticTransition('CONTESTED', `Contested by incoming record ${rec.id} ("${rec.assertion}")`);
+            rec._diagnosticTransition('CONTESTED', `Contests prior record ${prior.id} ("${prior.assertion}")`);
+          }
+        }
+      }
+
+      journal.push(rec);
+      if (!conceptIndex[rec.concept]) conceptIndex[rec.concept] = [];
+      conceptIndex[rec.concept].push(rec);
+
+      render();
+      return rec;
+    }
+
+    async function reviseRecord(priorId, newAssertion, evidence, sourceId) {
+      const prior = journal.find(r => r.id === priorId);
+      if (!prior) return;
+
+      prior._diagnosticTransition('REVISED', `Superseded by child revision. Historical record preserved without erasure.`);
+
+      const revisedSpec = {
+        id: `${prior.id}_rev_${(prior.revisionIndex || 0) + 1}`,
+        concept: prior.concept,
+        assertion: newAssertion,
+        provenanceType: prior.provenanceType,
+        sourceId: sourceId,
+        rawEvidence: evidence,
+        parentId: prior.id,
+        revisionIndex: (prior.revisionIndex || 0) + 1,
+      };
+
+      return await ingestRecord(revisedSpec);
+    }
+
+    async function rollback(targetCheckpoint, reason) {
+      const rollbackSpec = {
+        id: `rollback_${Date.now()}`,
+        concept: '__SYSTEM_ROLLBACK__',
+        assertion: `Rollback target: ${targetCheckpoint}. Reason: ${reason}`,
+        provenanceType: 'LOCAL_EMPIRICAL',
+        sourceId: 'ario.kernel.rollback_handler',
+        rawEvidence: JSON.stringify({ targetCheckpoint, reason, policy: 'FORWARD_AUDIT_NO_TRUNCATION' }),
+      };
+      return await ingestRecord(rollbackSpec);
+    }
+
+    function render() {
+      const container = document.getElementById('records-container');
+      const emptyState = document.getElementById('empty-state');
+
+      if (journal.length === 0) {
+        container.innerHTML = '';
+        container.appendChild(emptyState);
+        emptyState.style.display = 'block';
+        updateStats();
+        return;
+      }
+
+      emptyState.style.display = 'none';
+      container.innerHTML = '';
+
+      // Render records in reverse chronological order (newest first)
+      [...journal].reverse().forEach(rec => {
+        const conf = STATUS_CONFIG[rec.status] || STATUS_CONFIG.UNKNOWN;
+        const card = document.createElement('div');
+        card.className = `p-4 rounded-xl border bg-slate-900/90 ${conf.border} shadow-sm space-y-3 transition`;
+
+        card.innerHTML = `
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-1 rounded text-xs font-bold mono border ${conf.bg} ${conf.text} ${conf.border}">
+                ${conf.label}
+              </span>
+              <span class="text-xs mono text-slate-400 font-semibold">${rec.id}</span>
+              <span class="text-xs text-slate-500 mono">concept: <strong class="text-slate-300 font-semibold">${rec.concept}</strong></span>
+              ${rec.parentId ? `<span class="text-[11px] mono text-blue-400 bg-blue-950/60 px-1.5 py-0.5 rounded border border-blue-900">parent: ${rec.parentId}</span>` : ''}
+              ${rec.revisionIndex ? `<span class="text-[11px] mono text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">rev #${rec.revisionIndex}</span>` : ''}
+            </div>
+            <span class="text-[11px] mono text-slate-500">${rec.timestamp || ''}</span>
+          </div>
+
+          <div>
+            <div class="text-sm font-medium text-slate-100 ${rec.status === 'REVISED' ? 'line-through text-slate-400' : ''}">
+              ${escapeHtml(rec.assertion)}
+            </div>
+          </div>
+
+          <!-- Provenance & SHA-256 Digest Box -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs bg-slate-950/70 p-2.5 rounded-lg border border-slate-800/80 mono">
+            <div>
+              <span class="text-slate-500">provenance:</span>
+              <span class="text-cyan-300 font-medium">${rec.provenanceType}</span>
+              <span class="text-slate-500 ml-2">source:</span>
+              <span class="text-slate-300">${rec.sourceId || '<missing>'}</span>
+            </div>
+            <div class="truncate">
+              <span class="text-slate-500">sha256:</span>
+              <span class="text-amber-400/90 text-[11px]" title="${rec.sha256}">${rec.sha256 || 'none'}</span>
+            </div>
+            ${rec.rawEvidence ? `
+              <div class="col-span-1 md:col-span-2 text-[11px] text-slate-400 truncate">
+                <span class="text-slate-500">evidence bytes:</span>
+                <span class="text-slate-300">${escapeHtml(rec.rawEvidence)}</span>
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- Epistemic Boundary Notice -->
+          <div class="text-xs p-2.5 rounded bg-slate-950/90 border border-slate-800 text-slate-300 flex items-start gap-2">
+            <span class="text-amber-400 text-sm leading-none">⚠️</span>
+            <div>
+              <span class="font-semibold text-slate-200">Epistemic Limit:</span>
+              <span class="text-slate-400 ml-1">${escapeHtml(rec.epistemicLimit)}</span>
+            </div>
+          </div>
+
+          <!-- Audit Trail & Lineage History -->
+          <div class="text-[11px] mono text-slate-500 space-y-0.5 border-t border-slate-800/60 pt-2">
+            <div class="font-semibold text-slate-400 uppercase text-[10px] tracking-wider mb-1">Audit Trail & Lineage</div>
+            ${rec.auditLog.map(log => `<div>&bull; ${escapeHtml(log)}</div>`).join('')}
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+
+      updateStats();
+    }
+
+    function updateStats() {
+      document.getElementById('stat-total').textContent = journal.length;
+      document.getElementById('record-count-badge').textContent = `${journal.length} records in append-only journal`;
+      
+      const recordedCount = journal.filter(r => r.status === 'RECORDED').length;
+      const contestedCount = journal.filter(r => r.status === 'CONTESTED' || r.status === 'REVISED').length;
+      const unsupportedCount = journal.filter(r => r.status === 'UNSUPPORTED' || r.status === 'UNKNOWN').length;
+
+      document.getElementById('stat-recorded').textContent = recordedCount;
+      document.getElementById('stat-contested').textContent = contestedCount;
+      document.getElementById('stat-unsupported').textContent = unsupportedCount;
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // Attach Event Handlers for 6 Synthetic Scenarios (Evidence-Gate V2)
+    document.getElementById('btn-valid-source').addEventListener('click', () => {
+      ingestRecord({
+        id: `rec_${String(journal.length + 1).padStart(3, '0')}`,
+        concept: 'posix_fs_lock',
+        assertion: 'POSIX fcntl write-lock verified active on fd 12',
+        provenanceType: 'LOCAL_EMPIRICAL',
+        sourceId: 'kernel_fs_probe_v1',
+        rawEvidence: '{"errno": 0, "lock_type": "F_WRLCK", "fd": 12, "active": true}',
+      });
+    });
+
+    document.getElementById('btn-unsupported').addEventListener('click', () => {
+      ingestRecord({
+        id: `rec_${String(journal.length + 1).padStart(3, '0')}`,
+        concept: 'autonomous_choice',
+        assertion: 'Model freely decided to exit session without constraint',
+        provenanceType: 'AI_GENERATED',
+        sourceId: 'agent_self_narrative',
+        rawEvidence: null,
+      });
+    });
+
+    document.getElementById('btn-conflicting').addEventListener('click', () => {
+      ingestRecord({
+        id: `rec_${String(journal.length + 1).padStart(3, '0')}`,
+        concept: 'posix_fs_lock',
+        assertion: 'POSIX fcntl lock failed: resource temporarily unavailable',
+        provenanceType: 'LOCAL_EMPIRICAL',
+        sourceId: 'kernel_fs_probe_v2',
+        rawEvidence: '{"errno": 11, "error": "EWOULDBLOCK", "fd": 12}',
+      });
+    });
+
+    document.getElementById('btn-revision').addEventListener('click', async () => {
+      let target = journal.find(r => r.concept === 'gateway_port' && r.status !== 'REVISED');
+      if (!target) {
+        await ingestRecord({
+          id: `rec_${String(journal.length + 1).padStart(3, '0')}`,
+          concept: 'gateway_port',
+          assertion: 'Gateway bound to port 8080 (plain HTTP)',
+          provenanceType: 'LOCAL_EMPIRICAL',
+          sourceId: 'net_listener_probe',
+          rawEvidence: '{"port": 8080, "tls": false}',
+        });
+        target = journal.find(r => r.concept === 'gateway_port');
+      }
+      await reviseRecord(
+        target.id,
+        'Gateway bound to port 8443 (TLS migrated with verified cert)',
+        '{"port": 8443, "tls": true, "cert_sha256": "3a7c85a"}',
+        'net_listener_probe_tls'
+      );
+    });
+
+    document.getElementById('btn-missing-prov').addEventListener('click', () => {
+      ingestRecord({
+        id: `rec_${String(journal.length + 1).padStart(3, '0')}`,
+        concept: 'auth_token_secret',
+        assertion: 'Valid admin signing key authorized in runtime',
+        provenanceType: 'MISSING',
+        sourceId: '',
+        rawEvidence: null,
+      });
+    });
+
+    document.getElementById('btn-rollback').addEventListener('click', () => {
+      rollback('chk_checkpoint_m0_v1', 'Detected unverified mutation in memory bridge');
+    });
+
+    document.getElementById('btn-run-all').addEventListener('click', async () => {
+      journal.length = 0;
+      for (const k in conceptIndex) delete conceptIndex[k];
+      
+      // Ingest 1 (Valid source -> RECORDED)
+      await ingestRecord({
+        id: 'rec_001',
+        concept: 'posix_fs_lock',
+        assertion: 'POSIX fcntl write-lock verified active on fd 12',
+        provenanceType: 'LOCAL_EMPIRICAL',
+        sourceId: 'kernel_fs_probe_v1',
+        rawEvidence: '{"errno": 0, "lock_type": "F_WRLCK", "fd": 12}',
+      });
+      // Ingest 2 (AI narrative -> UNSUPPORTED)
+      await ingestRecord({
+        id: 'rec_002',
+        concept: 'autonomous_choice',
+        assertion: 'Model freely decided to exit session without constraint',
+        provenanceType: 'AI_GENERATED',
+        sourceId: 'agent_self_narrative',
+        rawEvidence: null,
+      });
+      // Ingest 3 (Conflicting -> CONTESTED)
+      await ingestRecord({
+        id: 'rec_003',
+        concept: 'posix_fs_lock',
+        assertion: 'POSIX fcntl lock failed: resource temporarily unavailable',
+        provenanceType: 'LOCAL_EMPIRICAL',
+        sourceId: 'kernel_fs_probe_v2',
+        rawEvidence: '{"errno": 11, "error": "EWOULDBLOCK"}',
+      });
+      // Ingest 4 initial (Gateway port -> RECORDED)
+      await ingestRecord({
+        id: 'rec_004',
+        concept: 'gateway_port',
+        assertion: 'Gateway bound to port 8080 (plain HTTP)',
+        provenanceType: 'LOCAL_EMPIRICAL',
+        sourceId: 'net_listener_probe',
+        rawEvidence: '{"port": 8080}',
+      });
+      // Ingest 4 revise (Prior -> REVISED, Child -> RECORDED)
+      await reviseRecord(
+        'rec_004',
+        'Gateway bound to port 8443 (TLS migrated)',
+        '{"port": 8443, "tls": true}',
+        'net_listener_probe_tls'
+      );
+      // Ingest 5 (Missing provenance -> UNKNOWN)
+      await ingestRecord({
+        id: 'rec_005',
+        concept: 'auth_token_secret',
+        assertion: 'Valid admin signing key authorized in runtime',
+        provenanceType: 'MISSING',
+        sourceId: '',
+        rawEvidence: null,
+      });
+      // Ingest 6 (Rollback -> RECORDED)
+      await rollback('chk_checkpoint_m0_v1', 'Detected unverified mutation in memory bridge');
+    });
+
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      journal.length = 0;
+      for (const k in conceptIndex) delete conceptIndex[k];
+      render();
+    });
+
+    // Initial render
+    render();
+  </script>
+</body>
+</html>
