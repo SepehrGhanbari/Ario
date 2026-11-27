@@ -180,7 +180,9 @@ def test_revision_schema_only_offers_disjoint_grounded_correction_or_stop(tmp_pa
     rec = props["recommendation"]["properties"]
     assert rec["implementation_path"]["enum"] == [ALT["implementation_path"]]
     assert rec["test_path"]["enum"] == [ALT["test_path"]]
-    assert set(props["deliberation"]["properties"]["basis"]["properties"]["path"]["enum"]) == {
+    ids = props["deliberation"]["properties"]["basis"]["properties"]["source_id"]["enum"]
+    sent = json.loads(request["messages"][1]["content"])
+    assert ids and {sent["basis_catalog"][i]["path"] for i in ids} == {
         ALT["implementation_path"], ALT["test_path"]}
     assert any(x["properties"]["intent"]["enum"] == ["STOP"]
                for x in request["format"]["anyOf"])
@@ -196,3 +198,28 @@ def test_revision_without_disjoint_pair_offers_stop_only():
         observation, "prior claim", {"excluded_paths": [REC["implementation_path"], REC["test_path"]]})
     assert schema["anyOf"]
     assert all(x["properties"]["intent"]["enum"] == ["STOP"] for x in schema["anyOf"])
+
+
+def test_source_reference_resolves_exact_sent_quote_and_rejects_unknown_or_wrong_pair():
+    observation = {"planning_context": [
+        {"path": REC["implementation_path"], "content": "# bounded planner fixture"},
+        {"path": ALT["implementation_path"], "content": "# alternate review fixture"}]}
+    catalog = {"S01": {"path": ALT["implementation_path"], "quote": "# alternate review fixture"},
+               "S02": {"path": REC["implementation_path"], "quote": "# bounded planner fixture"}}
+    data = corrected()
+    data["deliberation"]["basis"] = {"source_id": "S01"}
+    result = ario_planner._deliberation_record(data, observation, "prior decision", catalog)
+    assert result["status"] == "BASIS_MATCHED_SENT_CONTEXT"
+    assert result["basis"]["source_id"] == "S01"
+    assert result["basis"]["quote"] == "# alternate review fixture"
+    assert result["claim_truth"] == "UNKNOWN"
+    data["deliberation"]["basis"] = {"source_id": "S99"}
+    result = ario_planner._deliberation_record(data, observation, "prior decision", catalog)
+    assert result["diagnostic"] == "BASIS_REFERENCE_UNKNOWN"
+    data["deliberation"]["basis"] = {"source_id": "S02"}
+    result = ario_planner._deliberation_record(data, observation, "prior decision", catalog)
+    assert result["diagnostic"] == "BASIS_OUTSIDE_SELECTED_PAIR"
+    data["deliberation"]["basis"] = {"source_id": "S01"}
+    result = ario_planner._deliberation_record(data, observation, "prior decision",
+        {"S01": {"path": ALT["implementation_path"], "quote": "nonexistent quote"}})
+    assert result["diagnostic"] == "BASIS_NOT_IN_SENT_CONTEXT"
